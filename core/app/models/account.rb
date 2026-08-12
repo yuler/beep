@@ -4,6 +4,7 @@ class Account < ApplicationRecord
   include Account::Payable
 
   has_many :users, dependent: :destroy
+  has_many :beeps, class_name: "Beep::Beep", dependent: :destroy
   has_many :invitations, dependent: :destroy
   has_many :slug_holds, class_name: "Account::SlugHold", dependent: :delete_all
   has_one :join_code, dependent: :destroy
