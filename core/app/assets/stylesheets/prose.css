@@ -1,0 +1,32 @@
+@layer components {
+  .prose {
+    color: var(--color-ink);
+    line-height: 1.7;
+    max-inline-size: 70ch;
+
+    :is(h1, h2, h3, h4) {
+      color: var(--color-ink);
+      line-height: 1.25;
+      margin-block: 1.5em 0.6em;
+    }
+
+    :first-child { margin-block-start: 0; }
+
+    h1 { font-size: var(--text-x-large); font-weight: 700; }
+    h2 { font-size: var(--text-large); font-weight: 700; }
+    h3 { font-size: var(--text-medium); font-weight: 600; }
+
+    p { margin-block: 1em; }
+
+    .lead { color: var(--color-ink-dark); font-size: var(--text-medium); }
+
+    a { color: var(--color-link); text-decoration: underline; }
+
+    :is(ul, ol) { margin-block: 1em; padding-inline-start: 1.5em; }
+    li { margin-block: 0.35em; }
+
+    strong { font-weight: 700; }
+
+    table { margin-block: 1.5em; }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "beep",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monorepo for the beep project.",
+  "scripts": {
+    "setup": "mise run setup",
+    "clean": "mise run clean",
+    "dev": "mise run dev",
+    "core": "mise run core",
+    "web:dev": "mise run web:dev",
+    "web:build": "mise run web:build"
+  },
+  "packageManager": "pnpm@10.14.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "lightningcss"
+    ]
+  }
+}

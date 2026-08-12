@@ -1,0 +1,13 @@
+john:
+  name: John
+  identity: john
+  account: john_account
+  role: owner
+  active: true
+
+yuler:
+  name: Yuler
+  identity: yuler
+  account: yuler_account
+  role: owner
+  active: true

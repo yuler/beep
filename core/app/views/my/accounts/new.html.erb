@@ -1,0 +1,27 @@
+<% @page_title = "Create a New Account" %>
+
+<div class="page page--lg">
+  <div class="prose">
+    <h1>Create a New Account</h1>
+  </div>
+
+  <%= form_with model: @account, url: my_accounts_path, class: "form" do |form| %>
+    <%= render "shared/form_errors", model: @account %>
+
+    <div class="field">
+      <%= form.label :name, class: "field__label" do %>
+        <span>Account Name</span>
+      <% end %>
+      <%= form.text_field :name, placeholder: "Account Name", class: "input" %>
+    </div>
+
+    <div class="field">
+      <%= form.label :description, class: "field__label" do %>
+        <span>Account Description</span>
+      <% end %>
+      <%= form.text_area :description, placeholder: "Account Description", class: "textarea" %>
+    </div>
+
+    <%= form.submit "Create Account", class: "btn btn--primary" %>
+  <% end %>
+</div>

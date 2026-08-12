@@ -1,0 +1,12 @@
+<%= form_with model: model, url: account_invitations_path, class: "form" do |form| %>
+  <%= render "shared/form_errors", model: model %>
+
+  <div class="field">
+    <%= form.label :email, class: "field__label" do %>
+      <span>Email Address</span>
+    <% end %>
+    <%= form.email_field :email, placeholder: "colleague@example.com", class: "input" %>
+  </div>
+
+  <%= form.submit "Send Invitation", class: "btn btn--primary" %>
+<% end %>

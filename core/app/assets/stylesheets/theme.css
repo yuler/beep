@@ -1,0 +1,167 @@
+/*
+ * Design tokens — oklch, Fizzy-inspired.
+ *
+ * Two layers:
+ *   1. --lch-* : raw "Lightness Chroma Hue" triplets (no color function).
+ *   2. --color-*: semantic tokens wrapped in oklch(), consumed everywhere.
+ *
+ * Light is the default. Dark applies via html[data-theme="dark"] and, when no
+ * explicit theme is chosen, via prefers-color-scheme as a no-JS fallback.
+ */
+
+:root {
+  /* Spacing */
+  --inline-space: 1ch;
+  --inline-space-half: calc(var(--inline-space) / 2);
+  --inline-space-double: calc(var(--inline-space) * 2);
+  --block-space: 1rem;
+  --block-space-half: calc(var(--block-space) / 2);
+  --block-space-double: calc(var(--block-space) * 2);
+
+  /* Type */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  --text-x-small: 0.75rem;
+  --text-small: 0.85rem;
+  --text-normal: 1rem;
+  --text-medium: 1.125rem;
+  --text-large: 1.5rem;
+  --text-x-large: 1.875rem;
+  --text-xx-large: 3rem;
+
+  /* Radius & borders */
+  --radius: 0.5rem;
+  --radius-small: 0.3rem;
+  --border: 1px solid var(--color-border);
+
+  /* Layout widths */
+  --width-sm: 40rem;
+  --width-md: 48rem;
+  --width-lg: 64rem;
+  --width-xl: 80rem;
+  --main-padding: clamp(1rem, 3vw, 2rem);
+
+  /* Focus ring */
+  --focus-ring-color: var(--color-accent);
+  --focus-ring-size: 2px;
+  --focus-ring-offset: 2px;
+
+  /* Buttons */
+  --btn-size: 2.65em;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px oklch(var(--lch-black) / 0.06), 0 1px 3px oklch(var(--lch-black) / 0.1);
+  --shadow: 0 4px 6px -1px oklch(var(--lch-black) / 0.08), 0 2px 4px -2px oklch(var(--lch-black) / 0.08);
+  --shadow-lg: 0 10px 15px -3px oklch(var(--lch-black) / 0.1), 0 4px 6px -4px oklch(var(--lch-black) / 0.08);
+  --shadow-xl: 0 20px 25px -5px oklch(var(--lch-black) / 0.12), 0 8px 10px -6px oklch(var(--lch-black) / 0.1);
+
+  /* Z-index scale */
+  --z-header: 50;
+  --z-flash: 100;
+
+  /* OKLCH — fixed */
+  --lch-black: 0% 0 0;
+  --lch-white: 100% 0 0;
+
+  /* OKLCH — light mode. Vercel-inspired: black primary, neutral grays, blue accent. */
+  --lch-canvas: var(--lch-white);
+  --lch-ink-inverted: var(--lch-white);
+
+  --lch-ink-darkest: 14% 0.005 285;
+  --lch-ink-darker: 28% 0.004 285;
+  --lch-ink-dark: 45% 0.003 285;
+  --lch-ink-medium: 55% 0.002 285;
+  --lch-ink-light: 80% 0.004 285;
+  --lch-ink-lighter: 93% 0.003 285;
+  --lch-ink-lightest: 97% 0.002 285;
+
+  --lch-accent: 0% 0 0;
+  --lch-accent-dark: 14% 0.005 285;
+  --lch-accent-light: 93% 0.003 285;
+  --lch-accent-lighter: 97% 0.002 285;
+
+  --lch-red: 55% 0.2 25;
+  --lch-green: 58% 0.15 150;
+  --lch-blue: 50% 0.15 255;
+  --lch-yellow: 80% 0.15 85;
+
+  /* Semantic — named */
+  --color-black: oklch(var(--lch-black));
+  --color-white: oklch(var(--lch-white));
+
+  --color-ink: oklch(var(--lch-ink-darkest));
+  --color-ink-darker: oklch(var(--lch-ink-darker));
+  --color-ink-dark: oklch(var(--lch-ink-dark));
+  --color-ink-medium: oklch(var(--lch-ink-medium));
+  --color-ink-light: oklch(var(--lch-ink-light));
+  --color-ink-lighter: oklch(var(--lch-ink-lighter));
+  --color-ink-lightest: oklch(var(--lch-ink-lightest));
+  --color-ink-inverted: oklch(var(--lch-ink-inverted));
+
+  /* Semantic — abstractions */
+  --color-canvas: oklch(var(--lch-canvas));
+  --color-accent: oklch(var(--lch-accent));
+  --color-accent-hover: oklch(var(--lch-accent-dark));
+  --color-accent-subtle: oklch(var(--lch-accent-light));
+  --color-link: oklch(var(--lch-accent));
+  --color-negative: oklch(var(--lch-red));
+  --color-positive: oklch(var(--lch-green));
+  --color-info: oklch(var(--lch-blue));
+  --color-selected: oklch(var(--lch-accent-light));
+  --color-highlight: oklch(var(--lch-yellow));
+
+  --color-border: oklch(var(--lch-ink-lighter));
+  --color-border-strong: oklch(var(--lch-ink-light));
+  --color-shade: oklch(var(--lch-ink-lightest));
+}
+
+/* Dark mode — explicit choice overrides system preference. */
+html[data-theme="dark"] {
+  --lch-canvas: 14% 0.005 285;
+  --lch-ink-inverted: var(--lch-black);
+
+  --lch-ink-darkest: 97% 0.002 285;
+  --lch-ink-darker: 88% 0.003 285;
+  --lch-ink-dark: 72% 0.004 285;
+  --lch-ink-medium: 55% 0.004 285;
+  --lch-ink-light: 40% 0.005 285;
+  --lch-ink-lighter: 26% 0.006 285;
+  --lch-ink-lightest: 20% 0.006 285;
+
+  --lch-accent: 100% 0 0;
+  --lch-accent-dark: 97% 0.002 285;
+  --lch-accent-light: 20% 0.006 285;
+  --lch-accent-lighter: 26% 0.006 285;
+
+  --lch-red: 68% 0.19 25;
+  --lch-green: 72% 0.15 150;
+  --lch-blue: 65% 0.14 255;
+  --lch-yellow: 82% 0.14 85;
+}
+
+/* No explicit choice: follow the OS. */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --lch-canvas: 14% 0.005 285;
+    --lch-ink-inverted: var(--lch-black);
+
+    --lch-ink-darkest: 97% 0.002 285;
+    --lch-ink-darker: 88% 0.003 285;
+    --lch-ink-dark: 72% 0.004 285;
+    --lch-ink-medium: 55% 0.004 285;
+    --lch-ink-light: 40% 0.005 285;
+    --lch-ink-lighter: 26% 0.006 285;
+    --lch-ink-lightest: 20% 0.006 285;
+
+    --lch-accent: 100% 0 0;
+    --lch-accent-dark: 97% 0.002 285;
+    --lch-accent-light: 20% 0.006 285;
+    --lch-accent-lighter: 26% 0.006 285;
+
+    --lch-red: 68% 0.19 25;
+    --lch-green: 72% 0.15 150;
+    --lch-blue: 65% 0.14 255;
+    --lch-yellow: 82% 0.14 85;
+  }
+}

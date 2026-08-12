@@ -1,0 +1,33 @@
+@layer components {
+  .app-shell {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-block-size: 100dvh;
+  }
+
+  #main {
+    display: block;
+  }
+
+  /* Centered content container with width variants. */
+  .page {
+    inline-size: 100%;
+    margin-inline: auto;
+    max-inline-size: var(--page-width, var(--width-lg));
+    padding: var(--block-space-double) var(--main-padding);
+  }
+
+  .page--sm { --page-width: var(--width-sm); }
+  .page--md { --page-width: var(--width-md); }
+  .page--lg { --page-width: var(--width-lg); }
+  .page--xl { --page-width: var(--width-xl); }
+
+  /* Full-height centered stage (auth screens, blank slates). */
+  .stage {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    min-block-size: calc(100dvh - 8rem);
+    padding: var(--main-padding);
+  }
+}

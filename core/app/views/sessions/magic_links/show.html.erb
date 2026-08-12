@@ -1,0 +1,39 @@
+<% @page_title = "Verification Code" %>
+
+<div class="stage">
+  <div class="page page--sm">
+    <div class="card card--raised">
+      <div class="card__body">
+        <h2 class="card__title">Verification Code</h2>
+        <p class="txt-muted">Enter the 6-digit code sent to your email</p>
+
+        <%= form_with url: session_magic_link_path, method: :post do |f| %>
+          <div class="field">
+            <%= f.label :code, "Code", class: "field__label" %>
+            <%= f.text_field :code,
+              class: "input input--code",
+              placeholder: "● ● ● ● ● ●",
+              maxlength: 6,
+              autocomplete: "one-time-code",
+              autofocus: true %>
+            <span class="field__hint">Check your inbox and spam folder</span>
+          </div>
+
+          <%= f.submit "Verify", class: "btn btn--primary btn--large btn--block" %>
+        <% end %>
+      </div>
+    </div>
+
+    <% if Rails.env.development? && flash[:magic_link_code].present? %>
+      <div class="alert alert--info margin-block-start">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="shrink-0" width="24" height="24">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <div>
+          <p class="font-weight-semibold">Development Mode</p>
+          <p class="txt-mono txt-large"><%= flash[:magic_link_code] %></p>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

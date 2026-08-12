@@ -1,0 +1,198 @@
+@layer components {
+  .header {
+    background-color: oklch(var(--lch-canvas) / 0.8);
+    backdrop-filter: blur(8px);
+    border-block-end: 1px solid var(--color-border);
+    inset-block-start: 0;
+    position: sticky;
+    z-index: var(--z-header);
+  }
+
+  .header__bar {
+    align-items: center;
+    display: flex;
+    gap: var(--inline-space-double);
+    justify-content: space-between;
+    margin-inline: auto;
+    max-inline-size: var(--width-xl);
+    padding: var(--block-space-half) var(--main-padding);
+  }
+
+  .header__logo {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.5em;
+    font-weight: 700;
+  }
+
+  .header__logo-mark {
+    align-items: center;
+    color: var(--color-ink);
+    display: inline-flex;
+    justify-content: center;
+    transition:
+      background-color 0.25s ease,
+      color 0.25s ease;
+
+    svg {
+      block-size: 2rem;
+      inline-size: 2rem;
+      display: block;
+    }
+  }
+
+  html[data-theme="dark"] .header__logo-mark {
+    background-color: var(--color-black);
+    border-radius: var(--radius);
+    color: var(--color-white);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme]) .header__logo-mark {
+      background-color: var(--color-black);
+      border-radius: var(--radius);
+      color: var(--color-white);
+    }
+  }
+
+  .header__actions {
+    align-items: center;
+    display: flex;
+    gap: var(--inline-space);
+  }
+
+  .header__skip-navigation {
+    position: absolute;
+    inset-block-start: -100vh;
+
+    &:focus {
+      inset-block-start: 0.5rem;
+      inset-inline-start: 0.5rem;
+      z-index: 1;
+    }
+  }
+
+  /* Theme toggle */
+  .theme-toggle {
+    align-items: center;
+    aspect-ratio: 1;
+    background-color: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 99rem;
+    block-size: 2.25rem;
+    color: var(--color-ink-dark);
+    display: inline-flex;
+    inline-size: 2.25rem;
+    justify-content: center;
+
+    @media (any-hover: hover) {
+      &:hover { background-color: var(--color-shade); color: var(--color-ink); }
+    }
+  }
+
+  /* Dropdown menu (avatar / nav) */
+  .menu {
+    position: relative;
+  }
+
+  .menu__trigger {
+    align-items: center;
+    aspect-ratio: 1;
+    background-color: var(--color-accent);
+    border: 0;
+    border-radius: 99rem;
+    block-size: 2.5rem;
+    color: var(--color-white);
+    cursor: pointer;
+    display: inline-flex;
+    font-weight: 700;
+    inline-size: 2.5rem;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Dark mode — accent is white, so trigger gets black text */
+  html[data-theme="dark"] .menu__trigger {
+    color: var(--color-black);
+  }
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme]) .menu__trigger { color: var(--color-black); }
+  }
+
+  .menu__content {
+    background-color: var(--color-canvas);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    display: none;
+    inset-block-start: calc(100% + 0.5rem);
+    inset-inline-end: 0;
+    min-inline-size: 14rem;
+    padding: var(--block-space-half);
+    position: absolute;
+    z-index: var(--z-header);
+  }
+
+  .menu[open] .menu__content,
+  .menu:focus-within .menu__content {
+    display: block;
+  }
+
+  .menu__title {
+    color: var(--color-ink-dark);
+    font-size: var(--text-x-small);
+    padding: 0.4em 0.6em;
+  }
+
+  .menu__group {
+    border-block-start: 1px solid var(--color-border);
+    color: var(--color-ink-medium);
+    font-size: var(--text-x-small);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-block-start: 0.35rem;
+    padding: 0.55em 0.6em 0.25em;
+    text-transform: uppercase;
+  }
+
+  .menu__item {
+    align-items: center;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-small);
+    cursor: pointer;
+    display: flex;
+    font: inherit;
+    gap: 0.5em;
+    padding: 0.5em 0.6em;
+    inline-size: 100%;
+    text-align: start;
+    text-decoration: none;
+
+    &:not(.btn--danger) { color: var(--color-ink); }
+
+    svg { block-size: 1.1em; inline-size: 1.1em; color: currentColor; }
+
+    &.is-active {
+      background-color: var(--color-shade);
+      color: var(--color-ink);
+      font-weight: 600;
+    }
+
+    @media (any-hover: hover) {
+      &:hover:not(.btn--danger) { background-color: var(--color-shade); }
+    }
+  }
+
+  .menu__content > .button_to {
+    border-block-start: 1px solid var(--color-border);
+    display: block;
+    margin-block-start: 0.35rem;
+    padding-block-start: 0.35rem;
+
+    .menu__item {
+      inline-size: 100%;
+    }
+  }
+}

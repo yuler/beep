@@ -1,0 +1,7 @@
+<%# locals: (model:) %>
+
+<% if model&.errors&.any? %>
+  <div role="alert" class="alert alert--error">
+    <%= model.errors.full_messages.to_sentence %>
+  </div>
+<% end %>

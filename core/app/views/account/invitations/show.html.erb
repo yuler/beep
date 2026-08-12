@@ -1,0 +1,81 @@
+<% @page_title = "Join #{@account_invitation.account.name}" %>
+
+<div class="stage">
+  <div class="page page--sm">
+    <div class="card card--raised">
+      <div class="card__body text-center">
+        <h2 class="card__title">Join <%= @account_invitation.account.name %></h2>
+
+        <% if @account_invitation.account.description.present? %>
+          <p class="txt-muted"><%= @account_invitation.account.description %></p>
+        <% end %>
+
+        <p class="txt-muted">
+          <strong><%= @account_invitation.invited_by.name %></strong>
+          invited <strong><%= @account_invitation.email %></strong>
+        </p>
+
+        <% email_matches = authenticated? && Current.identity.email == @account_invitation.email %>
+
+        <% if email_matches %>
+          <div class="divider">Signed in as <%= Current.identity.email %></div>
+
+          <% if @account_invitation.accepted? %>
+            <p class="txt-muted">
+              You joined <strong><%= @account_invitation.account.name %></strong>
+              on <%= l(@account_invitation.acceptance.created_at, format: :long) %>.
+            </p>
+          <% elsif @account_invitation.declined? %>
+            <p class="txt-muted">
+              You declined the invitation to <strong><%= @account_invitation.account.name %></strong>
+              on <%= l(@account_invitation.decline.created_at, format: :long) %>.
+            </p>
+          <% else %>
+            <div class="flex gap items-center justify-center">
+              <%= button_to "Accept invitation",
+                    account_invitation_acceptance_path(@account_invitation.token),
+                    method: :post,
+                    class: "btn btn--primary" %>
+
+              <%= button_to "Decline",
+                    account_invitation_decline_path(@account_invitation.token),
+                    method: :post,
+                    class: "btn btn--ghost" %>
+            </div>
+          <% end %>
+        <% else %>
+          <% if authenticated? %>
+            <div class="divider">Signed in as <%= Current.identity.email %></div>
+
+            <p class="txt-muted">
+              This invitation was sent to <strong><%= @account_invitation.email %></strong>.
+              Log in with that email to accept or decline.
+            </p>
+
+            <%= button_to "Login",
+                  session_path(script_name: nil),
+                  method: :delete,
+                  params: {
+                    return_to: account_invitation_path(
+                      @account_invitation.token,
+                      script_name: @account_invitation.account.slug_path
+                    ),
+                    email: @account_invitation.email
+                  },
+                  class: "btn btn--primary" %>
+          <% else %>
+            <div class="divider">Login required</div>
+
+            <p class="txt-muted">
+              Log in as <strong><%= @account_invitation.email %></strong> to accept or decline this invitation.
+            </p>
+
+            <%= link_to "Login",
+                  new_session_path(script_name: nil, email: @account_invitation.email),
+                  class: "btn btn--primary" %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

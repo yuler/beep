@@ -1,0 +1,7 @@
+<!-- Flash Messages -->
+<% if notice = flash[:notice] || flash[:alert] %>
+  <div class="flash alert <%= flash[:alert] ? 'alert--error' : 'alert--success' %>" role="alert" data-controller="element-removal" data-action="animationend->element-removal#remove">
+    <%= icon_tag flash[:alert] ? "circle-x" : "circle-check" %>
+    <span><%= notice %></span>
+  </div>
+<% end %>

@@ -1,0 +1,17 @@
+default_options: &default_options
+  store_options:
+    max_age: <%= 60.days.to_i %>
+    # max_size: <%= 256.megabytes %>
+    namespace: <%= Rails.env %>
+
+default_connection: &default_connection
+  database: cache
+
+default: &default
+  <<: *default_connection
+  <<: *default_options
+
+development: *default
+test: *default_options
+staging: *default
+production: *default

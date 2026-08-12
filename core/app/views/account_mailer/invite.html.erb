@@ -1,0 +1,14 @@
+<h1>You're invited to join <%= @account.name %></h1>
+
+<p>
+  <strong><%= @invited_by.name %></strong> invited you to join
+  <strong><%= @account.name %></strong> on <strong><%= ENV.fetch("SITE_NAME") %></strong>.
+</p>
+
+<p>
+  Open the invitation to accept or decline.
+</p>
+
+<p>
+  <%= link_to "View invitation", @invitation.accept_url %>
+</p>

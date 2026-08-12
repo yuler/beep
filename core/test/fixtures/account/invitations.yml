@@ -1,0 +1,8 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+# one:
+#   account: yuler_team_account_one
+#   email: account_invitation_one@yuler.cc
+#   token: secure_token
+#   role: member
+#   invited_by: yuler

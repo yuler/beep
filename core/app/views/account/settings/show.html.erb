@@ -1,0 +1,41 @@
+<% @page_title = "Account Settings" %>
+
+<div class="page page--md">
+  <div class="prose">
+    <h1>Account Settings</h1>
+    <p class="lead">
+      <% if @account.personal? %>
+        Your username is the URL slug for your personal account.
+      <% else %>
+        The account slug appears in every URL for this team.
+      <% end %>
+      Changing it frees the old URL immediately (no redirect). The old slug stays reserved for 30 days so others cannot claim it.
+    </p>
+  </div>
+
+  <%= form_with model: @account, url: account_settings_path, method: :patch, class: "form" do |form| %>
+    <%= render "shared/form_errors", model: @account %>
+
+    <div class="field">
+      <%= form.label :name, class: "field__label" do %>
+        <span>Name</span>
+      <% end %>
+      <%= form.text_field :name, class: "input", required: true %>
+    </div>
+
+    <div class="field">
+      <%= form.label :slug, (@account.personal? ? "Username" : "Slug"), class: "field__label" %>
+      <%= form.text_field :slug, class: "input", required: true, pattern: "[a-zA-Z0-9_\\-]{4,16}", maxlength: 16 %>
+      <p class="field__hint">4–16 characters: letters, numbers, hyphens, underscores. Old slug is held for 30 days and is not redirected.</p>
+    </div>
+
+    <div class="field">
+      <%= form.label :description, class: "field__label" do %>
+        <span>Description</span>
+      <% end %>
+      <%= form.text_field :description, class: "input" %>
+    </div>
+
+    <%= form.submit "Save", class: "btn btn--primary" %>
+  <% end %>
+</div>

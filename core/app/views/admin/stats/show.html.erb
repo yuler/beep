@@ -1,0 +1,63 @@
+<% @page_title = "Account Statistics" %>
+
+<div class="page page--xl">
+  <h1 class="txt-x-large font-weight-bold margin-block">Account Statistics</h1>
+
+  <div class="stats margin-block">
+    <div class="stat">
+      <div class="stat__title">Accounts Created - Total</div>
+      <div class="stat__value txt-accent"><%= @accounts_total %></div>
+    </div>
+    <div class="stat">
+      <div class="stat__title">Accounts Created - 7 days</div>
+      <div class="stat__value"><%= @accounts_last_7_days %></div>
+    </div>
+    <div class="stat">
+      <div class="stat__title">Accounts Created - 24 hours</div>
+      <div class="stat__value"><%= @accounts_last_24_hours %></div>
+    </div>
+  </div>
+
+  <div class="stats margin-block">
+    <div class="stat">
+      <div class="stat__title">Identities Created - Total</div>
+      <div class="stat__value txt-accent"><%= @identities_total %></div>
+    </div>
+    <div class="stat">
+      <div class="stat__title">Identities Created - 7 days</div>
+      <div class="stat__value"><%= @identities_last_7_days %></div>
+    </div>
+    <div class="stat">
+      <div class="stat__title">Identities Created - 24 hours</div>
+      <div class="stat__value"><%= @identities_last_24_hours %></div>
+    </div>
+  </div>
+
+  <% if @recent_accounts.any? %>
+    <div class="card margin-block">
+      <div class="card__body">
+        <h2 class="card__title">Recent Accounts</h2>
+        <div class="table-scroll">
+          <table class="table table--zebra">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Slug</th>
+                <th>Created At</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @recent_accounts.each do |account| %>
+                <tr>
+                  <td><%= account.name %></td>
+                  <td><%= account.slug %></td>
+                  <td><%= account.created_at.strftime("%Y-%m-%d %H:%M") %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

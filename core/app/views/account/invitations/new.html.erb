@@ -1,0 +1,22 @@
+<% @page_title = "Invite a New Member" %>
+
+<div class="page page--lg">
+  <div class="prose">
+    <h1>Invite a New Member</h1>
+    <p>Invite someone to join <strong><%= Current.account.name %></strong>.</p>
+  </div>
+
+  <%= form_with(model: @invitation, url: account_invitations_path, class: "form") do |form| %>
+    <%= render "shared/form_errors", model: @invitation %>
+
+    <div class="field">
+      <%= form.label :email, class: "field__label" %>
+      <%= form.email_field :email, required: true, class: "input", placeholder: "colleague@example.com" %>
+    </div>
+
+    <div class="flex gap">
+      <%= form.submit "Send Invitation", class: "btn btn--primary" %>
+      <%= link_to "Cancel", account_users_path, class: "btn btn--ghost" %>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,66 @@
+<% @page_title = "Sign in" %>
+<% @hide_footer = true %>
+
+<section class="auth-stage" aria-labelledby="auth-title">
+  <div class="auth-shell">
+    <div class="auth-story">
+      <div class="auth-brand">
+        <span class="auth-brand__mark"><%= render "shared/logo_mark" %></span>
+        <span>beep</span>
+      </div>
+
+      <div class="auth-story__copy">
+        <p class="auth-eyebrow">Passwordless access</p>
+        <h1 id="auth-title">Sign in to your workspace.</h1>
+        <p>Enter your email and we will send a one-time verification code.</p>
+      </div>
+
+      <div class="auth-preview" aria-hidden="true">
+        <div class="auth-preview__row">
+          <span class="auth-preview__dot"></span>
+          <span class="auth-preview__line auth-preview__line--wide"></span>
+          <span class="auth-preview__pill"></span>
+        </div>
+        <div class="auth-preview__row">
+          <span class="auth-preview__dot"></span>
+          <span class="auth-preview__line"></span>
+          <span class="auth-preview__pill auth-preview__pill--muted"></span>
+        </div>
+        <div class="auth-preview__row">
+          <span class="auth-preview__dot"></span>
+          <span class="auth-preview__line auth-preview__line--short"></span>
+          <span class="auth-preview__pill"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-panel">
+      <div class="auth-panel__header">
+        <h2>Welcome back</h2>
+        <p>Use the email connected to your account.</p>
+      </div>
+
+      <%= form_with url: session_path, class: "form auth-form" do |form| %>
+        <div class="field field--with-icon">
+          <%= form.label :email, "Email address", class: "field__label" %>
+          <div class="field__control">
+            <span class="field__icon"><%= icon_tag "email" %></span>
+            <%= form.email_field :email,
+              required: true,
+              autofocus: true,
+              autocomplete: "username",
+              placeholder: "you@example.com",
+              value: params[:email],
+              class: "input auth-input" %>
+          </div>
+        </div>
+
+        <%= form.submit "Continue", class: "btn btn--primary btn--large btn--block auth-submit" %>
+      <% end %>
+
+      <p class="auth-terms">
+        By continuing, you agree to our <%= link_to "Terms of Service", "#", class: "txt-link" %>.
+      </p>
+    </div>
+  </div>
+</section>

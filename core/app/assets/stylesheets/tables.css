@@ -1,0 +1,28 @@
+@layer components {
+  .table {
+    border-collapse: collapse;
+    inline-size: 100%;
+    text-align: start;
+
+    :is(th, td) {
+      border-block-end: 1px solid var(--color-border);
+      padding: 0.6em 0.8em;
+      text-align: start;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--color-ink-dark);
+      font-size: var(--text-small);
+      font-weight: 600;
+    }
+
+    tbody tr:last-child :is(th, td) { border-block-end: 0; }
+  }
+
+  .table--zebra tbody tr:nth-child(even) {
+    background-color: var(--color-shade);
+  }
+
+  .table-scroll { overflow-x: auto; }
+}

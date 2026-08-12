@@ -1,0 +1,17 @@
+@layer components {
+  .footer {
+    color: var(--color-ink-dark);
+    font-size: var(--text-small);
+    margin-block-start: var(--block-space-double);
+    margin-inline: auto;
+    max-inline-size: var(--width-xl);
+    padding: var(--block-space) var(--main-padding);
+  }
+
+  .footer__meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--inline-space);
+  }
+}
