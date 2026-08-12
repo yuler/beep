@@ -1,0 +1,56 @@
+<head>
+  <%= page_title_tag %>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d181d" media="(prefers-color-scheme: dark)">
+
+  <%# Set the theme before first paint to avoid a flash of the wrong theme.
+      Only an explicit choice is applied; with no stored choice the stylesheet
+      follows the OS preference (via `html:not([data-theme])`). %>
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.setAttribute("data-theme", theme);
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <%= tag.meta name: "current-user-id", content: Current.user.id if Current.user %>
+
+  <%# Loaded individually (not @import-aggregated) so Hotwire Spark can
+      hot-reload each stylesheet per-file. `application.css` declares the
+      cascade layers first; the rest participate via their @layer blocks. %>
+  <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+  <%= stylesheet_link_tag "reset", "base", "theme", "layout", "utilities",
+                          "buttons", "forms", "tables", "components", "prose",
+                          "header", "footer", "flash", "data-turbo-track": "reload" %>
+  <%= javascript_importmap_tags %>
+
+  <%= yield :head %>
+
+  <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
+  <%= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link id="favicon-theme" rel="icon" href="/icon-light.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+  <script>
+    (function () {
+      try {
+        var theme = document.documentElement.getAttribute("data-theme");
+        if (theme !== "light" && theme !== "dark") {
+          theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        var link = document.getElementById("favicon-theme");
+        if (link) link.href = theme === "dark" ? "/icon-dark.svg" : "/icon-light.svg";
+      } catch (e) {}
+    })();
+  </script>
+</head>

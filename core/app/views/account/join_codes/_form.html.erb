@@ -1,0 +1,16 @@
+<%= form_with model: join_code, url: account_join_code_path, method: :patch, class: "form" do |form| %>
+  <%= render "shared/form_errors", model: join_code %>
+
+  <div class="field">
+    <%= form.label :usage_limit, class: "field__label" do %>
+      <span class="font-weight-semibold">Usage Limit</span>
+    <% end %>
+    <%= form.number_field :usage_limit, class: "input", min: join_code.usage_count %>
+    <span class="field__hint">Currently used <%= join_code.usage_count %> times</span>
+  </div>
+
+  <div class="flex gap">
+    <%= form.submit "Update Limit", class: "btn btn--primary" %>
+    <%= link_to "Cancel", edit_account_join_code_path, class: "btn btn--ghost" %>
+  </div>
+<% end %>

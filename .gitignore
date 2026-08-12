@@ -1,0 +1,64 @@
+# Editors
+.vscode
+
+# Node.js
+node_modules/
+pnpm-debug.log*
+
+# Environment files (repo-root only; do not keep core/.env)
+.env*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# The `core` Ruby/Rails app (monorepo paths)
+core/.bundle
+core/log/*
+core/tmp/*
+!core/log/.keep
+!core/tmp/.keep
+# Ignore pidfiles, but keep the directory.
+core/tmp/pids/*
+!core/tmp/pids/
+!core/tmp/pids/.keep
+# Ignore storage (uploaded files in development and any SQLite databases).
+core/storage/*
+!core/storage/.keep
+core/tmp/storage/*
+!core/tmp/storage/
+!core/tmp/storage/.keep
+core/public/assets
+core/config/*.key
+core/app/assets/builds/*
+!core/app/assets/builds/.keep
+# Bundler path installs (CI / local)
+core/vendor/bundle
+
+# apps/web (TanStack Start / Vite)
+apps/web/dist
+apps/web/dist-ssr
+apps/web/*.local
+apps/web/.nitro
+apps/web/.tanstack
+apps/web/.wrangler
+apps/web/.output
+apps/web/.vinxi
+apps/web/__unconfig*
+apps/web/todos.json
+
+# Gemini / Antigravity (shared configs)
+!.gemini/
+!.antigravity/
+# MiMoCode
+.mimocode/
+
+# Shared
+TODO.md
+
+# Docker Compose (local copy from compose.example.yml)
+compose.yml
+
+# Docs
+docs/superpowers

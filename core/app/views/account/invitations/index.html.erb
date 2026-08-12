@@ -1,0 +1,32 @@
+<% @page_title = "Invitations" %>
+
+<div class="page page--lg">
+  <div class="prose">
+    <h1>Invitations</h1>
+  </div>
+
+  <%= render "form", model: @account_invitation %>
+
+  <div class="table-scroll margin-block">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Invited By</th>
+          <th>Created At</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @invitations.each do |invitation| %>
+          <tr>
+            <td><%= invitation.email %></td>
+            <td><span class="badge"><%= invitation.status.to_s.humanize %></span></td>
+            <td><%= invitation.invited_by&.name || "N/A" %></td>
+            <td><%= invitation.created_at %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

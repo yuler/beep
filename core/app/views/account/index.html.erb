@@ -1,0 +1,32 @@
+<% @page_title = "Accounts" %>
+
+<div class="page page--lg">
+  <div class="prose">
+    <h1>Accounts</h1>
+  </div>
+
+  <div class="table-scroll margin-block">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Created At</th>
+          <th>Updated At</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @accounts.each do |account| %>
+          <tr>
+            <td><%= link_to account.name, root_path(script_name: account.slug_path) %></td>
+            <td><%= account.description %></td>
+            <td><%= account.created_at %></td>
+            <td><%= account.updated_at %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <%= link_to "New Account", new_account_path, class: "btn btn--primary" %>
+</div>

@@ -1,0 +1,86 @@
+# ===========================================================================
+# beep — Docker Compose quick start (local)
+# ===========================================================================
+#
+#   cp .env.example .env
+#   # Set SECRET_KEY_BASE (`cd core && bin/rails secret`)
+#   cp compose.example.yml compose.yml
+#   docker compose pull   # or: docker compose build
+#   docker compose up -d
+#
+# Web (TanStack Start SSR + /api → core): http://localhost:${WEB_PORT:-3000}
+# Core (direct, optional):                http://localhost:${CORE_PORT:-3001}
+#
+# Images:
+#   ghcr.io/yuler/beep:main      (Rails core)
+#   ghcr.io/yuler/beep-web:main  (apps/web Node SSR)
+#
+# To build web locally instead of pulling:
+#   docker compose build web
+# ===========================================================================
+
+x-core-env:
+  &core_env
+  # `cd core && bin/rails secret` or `openssl rand -hex 64`
+  SECRET_KEY_BASE: ${SECRET_KEY_BASE:-e84aa0d3f501eaeb64b6c4ddbb6ba2d27f25bf980b3f855e9b525dc80fd65fbdfdf46bdee5c0de6cf51642f332e030ef1afc17f0788af447a16cacb789b6e868}
+  # Force Mode B for Compose even if root `.env` is set up for `mise dev` (Mode A).
+  SESSION_COOKIE_DOMAIN: ""
+  SOLID_QUEUE_IN_PUMA: "false"
+  SITE_DOMAIN: ${SITE_DOMAIN:-localhost:3000}
+
+services:
+  core:
+    image: ghcr.io/yuler/beep:main
+    volumes:
+      - core-storage:/rails/storage
+    ports:
+      - ${CORE_PORT:-3001}:80
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      <<: *core_env
+    networks:
+      - beep
+
+  worker:
+    image: ghcr.io/yuler/beep:main
+    command: bin/jobs
+    volumes:
+      - core-storage:/rails/storage
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      <<: *core_env
+    depends_on:
+      - core
+    networks:
+      - beep
+
+  # apps/web — TanStack Start (Node SSR); Nitro proxies /api → core (Mode B)
+  web:
+    image: ghcr.io/yuler/beep-web:main
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_CORE_URL: ""
+        CORE_INTERNAL_URL: http://core:80
+    ports:
+      - ${WEB_PORT:-3000}:3000
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      CORE_INTERNAL_URL: http://core:80
+    depends_on:
+      - core
+    networks:
+      - beep
+
+volumes:
+  core-storage:
+
+networks:
+  beep:
+    driver: bridge

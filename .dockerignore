@@ -1,0 +1,34 @@
+# Docker build context is the monorepo root (`docker build -f apps/web/Dockerfile .`).
+# Keep the context small while still sending pnpm workspace files + apps/web.
+
+.git
+.github
+.agents
+.cursor
+.gemini
+.superpowers
+.vscode
+.kamal
+.mimocode
+docs
+materials
+scripts
+core
+packages
+apps/www
+apps/admin
+apps/mobile
+apps/desktop
+apps/web/dist
+apps/web/node_modules
+node_modules
+**/.env*
+**/tmp
+**/log
+**/storage
+**/*.md
+!README.md
+compose*.yml
+Procfile.dev
+.rubocop.yml
+.ruby-version

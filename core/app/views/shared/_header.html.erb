@@ -1,0 +1,79 @@
+<header id="header" class="header">
+  <a href="#main" class="header__skip-navigation btn btn--small" data-turbo="false">Skip to main content</a>
+
+  <div class="header__bar">
+    <div class="header__logo">
+      <%= link_to (current_page?(root_path) ? home_index_path : root_path), aria: { label: "beep" } do %>
+        <span class="header__logo-mark">
+          <%= render "shared/logo_mark" %>
+        </span>
+      <% end %>
+    </div>
+
+    <div class="header__actions">
+      <button type="button"
+              class="theme-toggle"
+              data-controller="theme"
+              data-action="theme#toggle"
+              aria-label="Toggle color theme">
+        <svg data-theme-target="light" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
+        </svg>
+        <svg data-theme-target="dark" hidden xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        </svg>
+      </button>
+
+      <% if Current.identity %>
+        <!-- User Avatar Menu -->
+        <div class="menu">
+          <button type="button" class="menu__trigger" aria-label="Account menu">
+            <span><%= Current.identity.full_name.first.upcase %></span>
+          </button>
+          <div class="menu__content">
+            <div class="menu__title"><%= Current.identity.email %></div>
+            <% accounts_active = menu_item_active?(my_accounts_path) %>
+            <%= link_to my_accounts_path, class: class_names("menu__item", "is-active": accounts_active), aria: ({ current: "page" } if accounts_active) do %>
+              <%= icon_tag "users" %>
+              <span>My Accounts</span>
+            <% end %>
+
+            <% if Rails.env.development? %>
+              <div class="menu__group">Dev</div>
+              <% letters_active = menu_item_active?(letter_opener_web_path) %>
+              <%= link_to letter_opener_web_path, class: class_names("menu__item", "is-active": letters_active), aria: ({ current: "page" } if letters_active) do %>
+                <span>Letters</span>
+              <% end %>
+            <% end %>
+
+            <% if Current.identity.staff? %>
+              <div class="menu__group">Admin</div>
+              <% jobs_active = menu_item_active?(admin_mission_control_jobs_path) %>
+              <%= link_to admin_mission_control_jobs_path, class: class_names("menu__item", "is-active": jobs_active), aria: ({ current: "page" } if jobs_active) do %>
+                <span>Jobs</span>
+              <% end %>
+              <% stats_active = menu_item_active?(admin_stats_path) %>
+              <%= link_to admin_stats_path, class: class_names("menu__item", "is-active": stats_active), aria: ({ current: "page" } if stats_active) do %>
+                <span>Stats</span>
+              <% end %>
+            <% end %>
+
+            <%= button_to sign_out_path, method: :delete, class: "menu__item btn--danger", data: { turbo: false } do %>
+              <%= icon_tag "log-out" %>
+              <span>Sign Out</span>
+            <% end %>
+          </div>
+        </div>
+      <% elsif !current_page?(sign_in_path) %>
+        <div class="header__actions">
+          <%= link_to sign_in_path, class: "btn btn--primary" do %>
+            Sign In
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%= yield :header %>
+</header>

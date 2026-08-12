@@ -1,0 +1,64 @@
+name: PR Autofix
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: autofix-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    # Fork PRs cannot receive pushes from GITHUB_TOKEN on the contributor branch.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout PR head branch
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4.2.0
+        with:
+          version: 10.14.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1.319.0
+        with:
+          bundler-cache: true
+          working-directory: core
+
+      - name: Format fix (Biome + RuboCop)
+        env:
+          CI: "1"
+          RUBOCOP_CACHE_ROOT: tmp/rubocop
+        run: |
+          set -euo pipefail
+          pnpm --filter web format:fix
+          (
+            cd core
+            bin/rubocop -A
+          )
+
+      - name: Commit and push fixes
+        uses: stefanzweifel/git-auto-commit-action@v7.2.0
+        with:
+          commit_message: "💄 [ci] Autofix code format"
+          branch: ${{ github.head_ref }}
+          # Only update tracked files — never stage untracked vendor/bundle, etc.
+          add_options: "-u"

@@ -1,0 +1,19 @@
+.flash {
+  position: fixed;
+  inset-block-start: 1.25rem;
+  inset-inline-end: 1.25rem;
+  z-index: var(--z-flash);
+  max-inline-size: 600px;
+  animation: appear-then-fade 3s 300ms both;
+}
+
+.flash img,
+.flash svg {
+  block-size: 1.4rem;
+  inline-size: 1.4rem;
+}
+
+@keyframes appear-then-fade {
+  0%,100% { opacity: 0; }
+  5%,60%  { opacity: 1; }
+}

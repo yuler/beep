@@ -1,0 +1,15 @@
+# apps/web — TanStack Router generated route tree
+apps/web/src/routeTree.gen.ts linguist-generated
+
+# core — Rails generated schema
+core/db/schema.rb linguist-generated
+
+# core — vendored files
+core/vendor/* linguist-vendored
+
+# core — encrypted credentials (Rails diff driver)
+core/config/credentials/*.yml.enc diff=rails_credentials
+core/config/credentials.yml.enc diff=rails_credentials
+
+# Bun lockfile diff (https://bun.sh/docs/install/lockfile)
+*.lockb diff=lockb

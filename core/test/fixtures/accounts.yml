@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+john_account:
+  slug: john_account
+  name: John's Account
+  description: John's first account
+  personal: true
+
+yuler_account:
+  slug: yuler_account
+  name: Yuler's Account
+  description: Yuler's first account
+  personal: true

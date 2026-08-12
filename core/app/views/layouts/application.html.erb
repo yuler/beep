@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <%= render "shared/head" %>
+
+  <body class="app-shell">
+    <%= render "shared/header" %>
+
+    <%= render "shared/flash" %>
+
+    <main id="main">
+      <%= yield %>
+    </main>
+
+    <%= render "shared/footer" unless @hide_footer %>
+  </body>
+</html>

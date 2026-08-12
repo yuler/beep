@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -e
+
+# mise loads root .env via mise.toml; when running standalone, source it here.
+if [ -z "${MISE_TASK:-}" ]; then
+  ROOT_ENV="$(cd "$(dirname "$0")/../.." && pwd)/.env"
+  if [ -f "$ROOT_ENV" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "$ROOT_ENV"
+    set +a
+  fi
+fi
+
+# Let the debug gem allow remote connections,
+# but avoid loading until `debugger` is called
+export RUBY_DEBUG_OPEN="${RUBY_DEBUG_OPEN:-true}"
+export RUBY_DEBUG_LAZY="${RUBY_DEBUG_LAZY:-true}"
+
+exec bin/rails server -p "${CORE_PORT:-3001}" "$@"

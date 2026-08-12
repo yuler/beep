@@ -1,0 +1,44 @@
+<% @page_title = "Join #{@join_code.account.name}" %>
+
+<div class="stage">
+  <div class="page page--sm">
+    <div class="card card--raised">
+      <div class="card__body text-center">
+        <h2 class="card__title">Join <%= @join_code.account.name %></h2>
+
+        <% if @join_code.account.description.present? %>
+          <p class="txt-muted"><%= @join_code.account.description %></p>
+        <% end %>
+
+        <% if authenticated? %>
+          <div class="divider">Signed in as <%= Current.identity.email %></div>
+
+          <% if Current.user&.active? %>
+            <p class="txt-muted">You're already a member of this account.</p>
+
+            <%= link_to "Continue",
+                  landing_path(script_name: @join_code.account.slug_path),
+                  class: "btn btn--primary" %>
+          <% else %>
+            <div class="flex gap items-center justify-center">
+              <%= button_to "Join account",
+                    account_join_path(params[:code]),
+                    method: :post,
+                    class: "btn btn--primary" %>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="divider">Login required</div>
+
+          <p class="txt-muted">
+            Log in to join <strong><%= @join_code.account.name %></strong>.
+          </p>
+
+          <%= link_to "Login",
+                new_session_path(script_name: nil),
+                class: "btn btn--primary" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
