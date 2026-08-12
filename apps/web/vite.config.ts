@@ -13,8 +13,7 @@ const monorepoRoot = path.resolve(
 
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, monorepoRoot, "");
-	const coreProxy =
-		env.CORE_INTERNAL_URL || "http://core.beep.localhost:3001";
+	const coreProxy = env.CORE_INTERNAL_URL || "http://core.beep.localhost:3001";
 
 	return {
 		envDir: monorepoRoot,
