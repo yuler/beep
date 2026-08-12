@@ -24,12 +24,12 @@ jobs:
           fetch-depth: 0
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4.2.0
+        uses: pnpm/action-setup@v6.0.10
         with:
           version: 10.14.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4.4.0
+        uses: actions/setup-node@v7.0.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -38,7 +38,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.319.0
+        uses: ruby/setup-ruby@v1.321.0
         with:
           bundler-cache: true
           working-directory: core
