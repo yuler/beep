@@ -5,6 +5,7 @@ Domain vocabulary for beep scheduling, delivery, and tenancy.
 | 概念                     | 英文 Term      | 模型 / 表              | 说明                                                                 |
 | ------------------------ | -------------- | ---------------------- | -------------------------------------------------------------------- |
 | 主实体（用户新建的对象） | Beep           | Beep / `beeps`         | 一次性或周期的提醒/通知配置                                          |
+| 内容                     | message        | 字段 `message`         | 提醒要说的话                                                         |
 | 类型                     | kind           | 字段 `kind`            | `once` \| `recurring`                                                |
 | 一次性                   | once           | `kind: "once"`         | 只触发一次，用 `run_at`                                              |
 | 周期                     | recurring      | `kind: "recurring"`    | 按 cron 重复，用 `cron` + `timezone`                                 |

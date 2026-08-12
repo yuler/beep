@@ -1,10 +1,13 @@
 module Beep
   class Beep < ApplicationRecord
+    self.table_name = "beeps"
+
     belongs_to :account
 
     enum :kind, %w[ once recurring ].index_by(&:itself)
     enum :status, %w[ active paused completed cancelled ].index_by(&:itself)
 
+    validates :message, presence: true, length: { maximum: 500 }
     validates :timezone, presence: true
     validates :run_at, presence: true, if: :once?
     validates :run_at, absence: true, if: :recurring?

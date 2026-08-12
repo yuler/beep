@@ -81,20 +81,25 @@ export function requireStaff(me: {
 	}
 }
 
-type LoaderContext = { location: { pathname: string; searchStr: string } };
+type LoaderContext = {
+	location: { pathname: string; searchStr: string };
+	params?: { account_slug: string };
+};
 
 /**
  * Wrap a route loader so a 401 (stale/revoked session) or 403 (role change)
  * redirects like the removed `useAdminResource` hook did, instead of dumping a
  * raw error page through the default error boundary.
  */
-export function withAuthRedirects<R>(load: () => Promise<R>) {
-	return async ({ location }: LoaderContext): Promise<R> => {
+export function withAuthRedirects<C extends LoaderContext, R>(
+	load: (ctx: C) => Promise<R>,
+) {
+	return async (ctx: C): Promise<R> => {
 		try {
-			return await load();
+			return await load(ctx);
 		} catch (err) {
 			if (err instanceof ApiError && err.status === 401) {
-				redirectToSign(`${location.pathname}${location.searchStr}`);
+				redirectToSign(`${ctx.location.pathname}${ctx.location.searchStr}`);
 			}
 			if (err instanceof ApiError && err.status === 403) {
 				throw redirect({ to: "/accounts" });
