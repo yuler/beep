@@ -122,7 +122,11 @@ export function DashboardSidebar({
 										}
 										tooltip="Letters"
 										render={
-											<Link to="/dev/letters" onClick={closeMobileSidebar} />
+											<Link
+												to="/dev/letters"
+												params={{ account_slug: slug }}
+												onClick={closeMobileSidebar}
+											/>
 										}
 									>
 										<Mail />
@@ -147,7 +151,11 @@ export function DashboardSidebar({
 										}
 										tooltip="Jobs"
 										render={
-											<Link to="/admin/jobs" onClick={closeMobileSidebar} />
+											<Link
+												to="/admin/jobs"
+												params={{ account_slug: slug }}
+												onClick={closeMobileSidebar}
+											/>
 										}
 									>
 										<BriefcaseBusiness />
@@ -162,7 +170,11 @@ export function DashboardSidebar({
 										}
 										tooltip="Stats"
 										render={
-											<Link to="/admin/stats" onClick={closeMobileSidebar} />
+											<Link
+												to="/admin/stats"
+												params={{ account_slug: slug }}
+												onClick={closeMobileSidebar}
+											/>
 										}
 									>
 										<Activity />
