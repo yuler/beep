@@ -13,7 +13,7 @@ gem "solid_queue"
 gem "solid_cable"
 
 # Drivers
-gem "sqlite3", ">= 2.8"
+gem "sqlite3", ">= 2.9.6"
 
 # Assets
 gem "propshaft"
