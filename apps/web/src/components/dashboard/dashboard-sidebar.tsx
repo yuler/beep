@@ -4,6 +4,7 @@ import {
 	BriefcaseBusiness,
 	LayoutDashboard,
 	Mail,
+	SlidersHorizontal,
 } from "lucide-react";
 import type * as React from "react";
 
@@ -44,6 +45,7 @@ export function DashboardSidebar({
 	};
 
 	const homePath = `/${slug}`;
+	const fineTunePath = `/${slug}/fine-tune`;
 	const lettersPath = "/dev/letters";
 	const jobsPath = "/admin/jobs";
 	const statsPath = "/admin/stats";
@@ -74,6 +76,25 @@ export function DashboardSidebar({
 								>
 									<LayoutDashboard />
 									<span>Home</span>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									isActive={
+										pathname === fineTunePath ||
+										pathname.startsWith(`${fineTunePath}/`)
+									}
+									tooltip="Fine-tune"
+									render={
+										<Link
+											to="/$account_slug/fine-tune"
+											params={{ account_slug: slug }}
+											onClick={closeMobileSidebar}
+										/>
+									}
+								>
+									<SlidersHorizontal />
+									<span>Fine-tune</span>
 								</SidebarMenuButton>
 							</SidebarMenuItem>
 						</SidebarMenu>
