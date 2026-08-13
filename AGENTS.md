@@ -34,3 +34,7 @@ Local CORS for web → core `/api/v1` is development-only: [`core/config/initial
 - Markdown tables must be auto-aligned (pad columns so pipes line up).
 - Do not use superpower or other speculative-driven skills unless explicitly declared.
 - If something is unclear, ask questions. Keep everything from design to code as simple as possible.
+
+## Core
+
+- `core` API JSON responses use jbuilder views (`.json.jbuilder`), not inline hashes in controllers.
