@@ -48,7 +48,7 @@ export function ChatComposer({
 	dragHandleProps,
 }: {
 	onCollapse?: () => void;
-	dragHandleProps?: HTMLAttributes<HTMLDivElement>;
+	dragHandleProps?: HTMLAttributes<HTMLButtonElement>;
 } = {}) {
 	const [phase, setPhase] = useState<Phase>("done");
 	const [draft, setDraft] = useState("");
