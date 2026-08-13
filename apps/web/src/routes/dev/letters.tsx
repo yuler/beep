@@ -7,7 +7,7 @@ import { ExternalLink, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
 	Card,
 	CardAction,
@@ -24,6 +24,7 @@ import {
 	fetchDevLetters,
 } from "@/lib/api/dev";
 import { withAuthRedirects } from "@/lib/auth/guards";
+import { cn } from "@/lib/utils";
 
 const devRoute = getRouteApi("/dev");
 
@@ -108,20 +109,15 @@ function LettersPage() {
 								Clear all
 							</Button>
 						) : null}
-						<Button
-							variant="outline"
-							render={
-								// biome-ignore lint/a11y/useAnchorContent: children merge via useRender
-								<a
-									href={coreAppUrl("/letter_opener")}
-									target="_blank"
-									rel="noreferrer"
-								/>
-							}
+						<a
+							href={coreAppUrl("/letter_opener")}
+							target="_blank"
+							rel="noreferrer"
+							className={cn(buttonVariants({ variant: "outline" }))}
 						>
 							Open letter opener
 							<ExternalLink data-icon="inline-end" />
-						</Button>
+						</a>
 					</div>
 				</div>
 
@@ -148,22 +144,18 @@ function LettersPage() {
 											{letter.to ? `To ${letter.to}` : letter.id}
 										</CardDescription>
 										<CardAction className="flex items-center gap-2">
-											<Button
-												variant="outline"
-												size="sm"
-												render={
-													// biome-ignore lint/a11y/useAnchorContent: children merge via useRender
-													<a
-														href={coreAppUrl(`/letter_opener/${letter.id}`)}
-														target="_blank"
-														rel="noreferrer"
-														aria-label={`Open letter ${letter.subject ?? letter.id}`}
-													/>
-												}
+											<a
+												href={coreAppUrl(`/letter_opener/${letter.id}`)}
+												target="_blank"
+												rel="noreferrer"
+												aria-label={`Open letter ${letter.subject ?? letter.id}`}
+												className={cn(
+													buttonVariants({ variant: "outline", size: "sm" }),
+												)}
 											>
 												Open
 												<ExternalLink data-icon="inline-end" />
-											</Button>
+											</a>
 											<Button
 												variant="destructive"
 												size="sm"

@@ -14,6 +14,14 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Item,
+	ItemActions,
+	ItemContent,
+	ItemDescription,
+	ItemGroup,
+	ItemTitle,
+} from "@/components/ui/item";
 import { fetchBeeps } from "@/lib/api/beeps";
 import { withAuthRedirects } from "@/lib/auth/guards";
 
@@ -84,23 +92,31 @@ function AccountHomePage() {
 								<CardTitle>Beeps</CardTitle>
 								<CardDescription>Newest first.</CardDescription>
 							</CardHeader>
-							<CardContent className="flex flex-col gap-3">
-								{beeps.map((beep) => (
-									<div
-										key={beep.id}
-										className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
-									>
-										<div className="min-w-0">
-											<p className="truncate font-medium">{beep.message}</p>
-											<p className="truncate text-xs text-muted-foreground">
-												{beep.run_at
-													? new Date(beep.run_at).toLocaleString()
-													: "No time"}
-											</p>
-										</div>
-										<Badge variant="secondary">{beep.status}</Badge>
-									</div>
-								))}
+							<CardContent>
+								<ItemGroup className="gap-2">
+									{beeps.map((beep) => (
+										<Item
+											key={beep.id}
+											variant="outline"
+											size="sm"
+											role="listitem"
+										>
+											<ItemContent>
+												<ItemTitle className="truncate">
+													{beep.message}
+												</ItemTitle>
+												<ItemDescription className="truncate">
+													{beep.run_at
+														? new Date(beep.run_at).toLocaleString()
+														: "No time"}
+												</ItemDescription>
+											</ItemContent>
+											<ItemActions>
+												<Badge variant="secondary">{beep.status}</Badge>
+											</ItemActions>
+										</Item>
+									))}
+								</ItemGroup>
 							</CardContent>
 						</Card>
 					</>

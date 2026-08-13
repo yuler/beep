@@ -1,14 +1,14 @@
 import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createBeep } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
 
-function toDatetimeLocalValue(date: Date) {
-	const pad = (value: number) => String(value).padStart(2, "0");
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+function defaultRunAt() {
+	return new Date(Date.now() + 60 * 60 * 1000);
 }
 
 export function CreateBeepForm({
@@ -19,9 +19,7 @@ export function CreateBeepForm({
 	onCreated: () => Promise<void> | void;
 }) {
 	const [message, setMessage] = useState("");
-	const [runAt, setRunAt] = useState(() =>
-		toDatetimeLocalValue(new Date(Date.now() + 60 * 60 * 1000)),
-	);
+	const [runAt, setRunAt] = useState(defaultRunAt);
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
 
@@ -33,9 +31,10 @@ export function CreateBeepForm({
 		try {
 			await createBeep(slug, {
 				message: message.trim(),
-				run_at: new Date(runAt).toISOString(),
+				run_at: runAt.toISOString(),
 			});
 			setMessage("");
+			setRunAt(defaultRunAt());
 			await onCreated();
 		} catch (err) {
 			setError(err instanceof ApiError ? err.message : "Something went wrong.");
@@ -58,17 +57,12 @@ export function CreateBeepForm({
 					placeholder="Call mom"
 				/>
 			</div>
-			<div className="flex flex-col gap-2">
-				<Label htmlFor="beep-run-at">When</Label>
-				<Input
-					id="beep-run-at"
-					name="run_at"
-					type="datetime-local"
-					required
-					value={runAt}
-					onChange={(event) => setRunAt(event.target.value)}
-				/>
-			</div>
+			<DateTimePicker
+				id="beep-run-at"
+				value={runAt}
+				onChange={setRunAt}
+				disabled={pending}
+			/>
 			{error ? (
 				<p className="text-sm text-destructive" role="alert">
 					{error}

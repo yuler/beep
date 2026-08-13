@@ -1,13 +1,13 @@
 require "test_helper"
 
-class Beep::BeepTest < ActiveSupport::TestCase
+class BeepTest < ActiveSupport::TestCase
   setup do
     @account = accounts(:john_account)
   end
 
   test "once beep copies run_at to next_run_at on create" do
     run_at = 1.hour.from_now.change(usec: 0)
-    beep = Beep::Beep.create!(
+    beep = Beep.create!(
       account: @account,
       kind: :once,
       message: "Call mom",
@@ -20,7 +20,7 @@ class Beep::BeepTest < ActiveSupport::TestCase
   end
 
   test "once beep requires message and run_at" do
-    beep = Beep::Beep.new(account: @account, kind: :once)
+    beep = Beep.new(account: @account, kind: :once)
 
     assert_not beep.valid?
     assert beep.errors[:message].any?
@@ -28,7 +28,7 @@ class Beep::BeepTest < ActiveSupport::TestCase
   end
 
   test "once beep rejects cron" do
-    beep = Beep::Beep.new(
+    beep = Beep.new(
       account: @account,
       kind: :once,
       message: "Call mom",
