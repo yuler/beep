@@ -29,6 +29,7 @@ This is closer to “send a reminder to future me” than a full todo / GTD app.
 | Browser extension            | Best Reminder App       | https://chromewebstore.google.com/detail/best-reminder-app-set-tab/dnpkpjllkijgiiedcbjjkccmhcgoebbf            | Tab / note reminders                               | Quick chips (30m / 1h / 1d / 1w)  | Extension notifications          | None              | Relative-time UX worth copying                        |
 | Desktop novelty              | guguFly (咕咕机长)      | https://github.com/pumf/guguFly                                                                               | Local desktop timed / holiday / anniversary        | Task list + schedule              | On-screen plane animation        | Local-first       | Experience experiment, not SaaS                       |
 | Full todo suite              | TickTick (滴答清单) 等  | Product sites                                                                                                 | Tasks + calendar + habits                          | Full productivity UI              | App / push / email               | Required          | Overlap on reminders; different product center        |
+| Scheduling infrastructure    | Crontap                 | https://crontap.com/                                                                                          | Hosted HTTP cron scheduler                         | URL + cron / plain-English        | HTTP webhook call                | Free tier         | Hosted fire engine for recurring; not a user reminder |
 
 ---
 
