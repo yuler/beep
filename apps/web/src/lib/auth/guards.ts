@@ -41,7 +41,9 @@ export type RootRouteContext = {
  * Mode A: `session_id` is sent to Core, not always to the web document request.
  * SSR `me: null` is not logged-out — only the browser probe is authoritative.
  */
-async function probeSession(context: RootRouteContext): Promise<MeResponse | null> {
+async function probeSession(
+	context: RootRouteContext,
+): Promise<MeResponse | null> {
 	if (import.meta.env.SSR) {
 		return context.me ?? (await fetchMeOrNull());
 	}
