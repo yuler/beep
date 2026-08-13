@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type HTMLAttributes, useEffect, useRef, useState } from "react";
 
 import {
 	mockChatReplies,
@@ -43,7 +43,13 @@ function Section({
 	);
 }
 
-export function ChatComposer() {
+export function ChatComposer({
+	onCollapse,
+	dragHandleProps,
+}: {
+	onCollapse?: () => void;
+	dragHandleProps?: HTMLAttributes<HTMLDivElement>;
+} = {}) {
 	const [phase, setPhase] = useState<Phase>("done");
 	const [draft, setDraft] = useState("");
 	const [submitted, setSubmitted] = useState(mockStarterMessage);
@@ -74,22 +80,69 @@ export function ChatComposer() {
 	};
 
 	return (
-		<div className="flex h-full min-h-[420px] w-full max-w-95 flex-col overflow-hidden rounded-[14px] bg-surface shadow-card">
+		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			<div className="flex shrink-0 items-center justify-between border-b border-line p-1.5">
-				<div className="flex items-center">
-					{mockChatTabs.map((item) => (
+				<div className="flex min-w-0 items-center gap-0.5">
+					{dragHandleProps ? (
 						<button
-							key={item}
 							type="button"
-							aria-pressed={tab === item}
-							onClick={() => setTab(item)}
-							className={`rounded-[6px] px-2 py-[3px] text-[13px] text-ink transition-[background-color,opacity] duration-100 ${tab === item ? "bg-field" : "opacity-50 hover:opacity-75"}`}
+							aria-label="Drag chat"
+							className="flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-[6px] text-ink-3 active:cursor-grabbing hover:bg-hover hover:text-ink-2"
+							{...dragHandleProps}
 						>
-							{item}
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								aria-hidden="true"
+							>
+								<circle cx="9" cy="6" r="1.5" />
+								<circle cx="15" cy="6" r="1.5" />
+								<circle cx="9" cy="12" r="1.5" />
+								<circle cx="15" cy="12" r="1.5" />
+								<circle cx="9" cy="18" r="1.5" />
+								<circle cx="15" cy="18" r="1.5" />
+							</svg>
 						</button>
-					))}
+					) : null}
+					<div className="flex items-center">
+						{mockChatTabs.map((item) => (
+							<button
+								key={item}
+								type="button"
+								aria-pressed={tab === item}
+								onClick={() => setTab(item)}
+								className={`rounded-[6px] px-2 py-[3px] text-[13px] text-ink transition-[background-color,opacity] duration-100 ${tab === item ? "bg-field" : "opacity-50 hover:opacity-75"}`}
+							>
+								{item}
+							</button>
+						))}
+					</div>
 				</div>
 				<div className="flex items-center gap-1">
+					{onCollapse ? (
+						<button
+							type="button"
+							aria-label="Collapse chat"
+							onClick={onCollapse}
+							className="flex size-6 items-center justify-center rounded-full text-ink-3 transition-colors duration-100 hover:bg-hover hover:text-ink-2"
+						>
+							<svg
+								width="15"
+								height="15"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="2"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								aria-hidden="true"
+							>
+								<path d="M5 12h14" />
+							</svg>
+						</button>
+					) : null}
 					{(
 						[
 							{ key: "add", label: "Add", icon: <path d="M12 5v14M5 12h14" /> },

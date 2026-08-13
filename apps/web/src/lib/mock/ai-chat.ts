@@ -23,5 +23,3 @@ export const mockChatReplies: MockChatReply[] = [
 		body: "Most beeps land on weekday mornings. Want me to batch new ones into a morning digest?",
 	},
 ];
-
-export const mockFineTuneTypes = ["Seasonal", "Classic", "Limited"] as const;

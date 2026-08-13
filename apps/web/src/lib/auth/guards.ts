@@ -1,12 +1,11 @@
 import { type NavigateOptions, redirect } from "@tanstack/react-router";
 
 import { ApiError } from "@/lib/api/client";
-import type { MeResponse } from "@/lib/api/session";
+import { fetchMeOrNull, type MeResponse } from "@/lib/api/session";
 import {
 	type AccountSummary,
 	type PostAuthTarget,
 	resolveDashboardTarget,
-	resolvePostAuthTarget,
 } from "@/lib/auth/account";
 import { safeReturnTo } from "@/lib/auth/return-to";
 
@@ -39,37 +38,57 @@ export type RootRouteContext = {
 };
 
 /**
- * Like core `Authentication#require_authentication` after `resume_session`:
- * root `beforeLoad` already probed the cookie; no identity → redirect to sign.
+ * Mode A: `session_id` is sent to Core, not always to the web document request.
+ * SSR `me: null` is not logged-out — only the browser probe is authoritative.
  */
-export function requireSession({
+async function probeSession(context: RootRouteContext): Promise<MeResponse | null> {
+	if (import.meta.env.SSR) {
+		return context.me ?? (await fetchMeOrNull());
+	}
+	return fetchMeOrNull();
+}
+
+/**
+ * Like core `Authentication#require_authentication` after `resume_session`.
+ * Must not 302 on SSR when the cookie is missing from the web request — the
+ * browser would follow /sign before the client can call Core with credentials.
+ * Auth-gated routes set `ssr: false` so this runs in the browser.
+ */
+export async function requireSession({
 	context,
 	location,
 }: {
 	context: RootRouteContext;
 	location: { pathname: string; searchStr: string };
-}): MeResponse {
-	if (!context.me) {
+}): Promise<MeResponse> {
+	const me = await probeSession(context);
+	if (!me) {
+		if (import.meta.env.SSR) {
+			// Do not 302 to /sign — the document request may lack session_id
+			// (Mode A). Auth routes set `ssr: false` so the client probe runs.
+			return undefined as unknown as MeResponse;
+		}
 		redirectToSign(`${location.pathname}${location.searchStr}`);
 	}
-	return context.me;
+	return me;
 }
 
 /**
- * Like core `redirect_authenticated_user`: root already resumed the session;
- * signed-in users should not see the sign-in flow.
+ * Like core `redirect_authenticated_user`.
+ * Signed-in: `return_to` if safe, otherwise `/accounts` (picker / single dashboard).
  */
-export function requireGuest({
+export async function requireGuest({
 	context,
 	search,
 }: {
 	context: RootRouteContext;
 	search: { return_to?: string };
 }) {
-	if (!context.me) return;
-	redirectForTarget(
-		resolvePostAuthTarget(context.me.accounts, search.return_to),
-	);
+	const me = await probeSession(context);
+	if (!me) return;
+	const safe = safeReturnTo(search.return_to);
+	if (safe) throw redirect({ href: safe });
+	throw redirect({ to: "/accounts" });
 }
 
 export function requireStaff(me: {

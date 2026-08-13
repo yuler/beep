@@ -16,7 +16,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as DevRouteImport } from './routes/dev'
 import { Route as SignRouteImport } from './routes/sign'
 import { Route as Account_slugIndexRouteImport } from './routes/$account_slug/index'
-import { Route as Account_slugFineTuneRouteImport } from './routes/$account_slug/fine-tune'
+import { Route as Account_slugBeepsRouteImport } from './routes/$account_slug/beeps'
 import { Route as AdminJobsRouteImport } from './routes/admin/jobs'
 import { Route as AdminStatsRouteImport } from './routes/admin/stats'
 import { Route as DevLettersRouteImport } from './routes/dev/letters'
@@ -58,9 +58,9 @@ const Account_slugIndexRoute = Account_slugIndexRouteImport.update({
   path: '/',
   getParentRoute: () => Account_slugRoute,
 } as any)
-const Account_slugFineTuneRoute = Account_slugFineTuneRouteImport.update({
-  id: '/fine-tune',
-  path: '/fine-tune',
+const Account_slugBeepsRoute = Account_slugBeepsRouteImport.update({
+  id: '/beeps',
+  path: '/beeps',
   getParentRoute: () => Account_slugRoute,
 } as any)
 const AdminJobsRoute = AdminJobsRouteImport.update({
@@ -96,7 +96,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/dev': typeof DevRouteWithChildren
   '/sign': typeof SignRouteWithChildren
-  '/$account_slug/fine-tune': typeof Account_slugFineTuneRoute
+  '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
@@ -109,7 +109,7 @@ export interface FileRoutesByTo {
   '/accounts': typeof AccountsRoute
   '/admin': typeof AdminRouteWithChildren
   '/dev': typeof DevRouteWithChildren
-  '/$account_slug/fine-tune': typeof Account_slugFineTuneRoute
+  '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
@@ -125,7 +125,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/dev': typeof DevRouteWithChildren
   '/sign': typeof SignRouteWithChildren
-  '/$account_slug/fine-tune': typeof Account_slugFineTuneRoute
+  '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
@@ -142,7 +142,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dev'
     | '/sign'
-    | '/$account_slug/fine-tune'
+    | '/$account_slug/beeps'
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
@@ -155,7 +155,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/admin'
     | '/dev'
-    | '/$account_slug/fine-tune'
+    | '/$account_slug/beeps'
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
@@ -170,7 +170,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dev'
     | '/sign'
-    | '/$account_slug/fine-tune'
+    | '/$account_slug/beeps'
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
@@ -239,11 +239,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Account_slugIndexRouteImport
       parentRoute: typeof Account_slugRoute
     }
-    '/$account_slug/fine-tune': {
-      id: '/$account_slug/fine-tune'
-      path: '/fine-tune'
-      fullPath: '/$account_slug/fine-tune'
-      preLoaderRoute: typeof Account_slugFineTuneRouteImport
+    '/$account_slug/beeps': {
+      id: '/$account_slug/beeps'
+      path: '/beeps'
+      fullPath: '/$account_slug/beeps'
+      preLoaderRoute: typeof Account_slugBeepsRouteImport
       parentRoute: typeof Account_slugRoute
     }
     '/admin/jobs': {
@@ -285,12 +285,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface Account_slugRouteChildren {
-  Account_slugFineTuneRoute: typeof Account_slugFineTuneRoute
+  Account_slugBeepsRoute: typeof Account_slugBeepsRoute
   Account_slugIndexRoute: typeof Account_slugIndexRoute
 }
 
 const Account_slugRouteChildren: Account_slugRouteChildren = {
-  Account_slugFineTuneRoute: Account_slugFineTuneRoute,
+  Account_slugBeepsRoute: Account_slugBeepsRoute,
   Account_slugIndexRoute: Account_slugIndexRoute,
 }
 

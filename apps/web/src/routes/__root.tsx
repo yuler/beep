@@ -26,7 +26,15 @@ const themeBootScript = `(() => {
 })();`;
 
 export const Route = createRootRoute({
+	// Re-run on each navigation; fetchMe dedupes within ME_STALE_MS.
+	staleTime: 0,
 	beforeLoad: async () => {
+		// Mode A: the document request to web.* may not include session_id
+		// (cookie lives on Core). Do not dehydrate a guest `me` that auth
+		// guards would treat as logged-out.
+		if (import.meta.env.SSR) {
+			return { me: null };
+		}
 		const me = await fetchMeOrNull();
 		return { me };
 	},

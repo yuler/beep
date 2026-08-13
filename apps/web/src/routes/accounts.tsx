@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Building2, Check, UserRound } from "lucide-react";
 
-import { AuthCard, AuthLayout } from "@/components/layout";
+import { AuthCard, AuthLayout, AuthPending } from "@/components/layout";
 import { buttonVariants } from "@/components/ui/button";
 import { coreAppUrl } from "@/config";
 import type { AccountSummary } from "@/lib/auth/account";
@@ -9,8 +9,10 @@ import { requireSession } from "@/lib/auth/guards";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/accounts")({
-	beforeLoad: ({ context, location }) => {
-		const me = requireSession({ context, location });
+	ssr: false,
+	pendingComponent: AuthPending,
+	beforeLoad: async ({ context, location }) => {
+		const me = await requireSession({ context, location });
 		if (me.accounts.length === 0) {
 			throw redirect({ to: "/sign" });
 		}

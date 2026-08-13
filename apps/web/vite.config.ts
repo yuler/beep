@@ -32,6 +32,11 @@ export default defineConfig(({ mode }) => {
 			tailwindcss(),
 			tanstackStart({
 				srcDirectory: "src",
+				importProtection: {
+					// lib/api/client.ts dynamically imports @tanstack/react-start/server
+					// to forward cookies only during SSR (guarded by import.meta.env.SSR).
+					ignoreImporters: ["**/src/lib/api/client.ts"],
+				},
 			}),
 			viteReact(),
 			nitro({

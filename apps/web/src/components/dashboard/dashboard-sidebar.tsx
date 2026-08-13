@@ -1,10 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
 	Activity,
+	Bell,
 	BriefcaseBusiness,
 	LayoutDashboard,
 	Mail,
-	SlidersHorizontal,
 } from "lucide-react";
 import type * as React from "react";
 
@@ -45,7 +45,7 @@ export function DashboardSidebar({
 	};
 
 	const homePath = `/${slug}`;
-	const fineTunePath = `/${slug}/fine-tune`;
+	const beepsPath = `/${slug}/beeps`;
 	const lettersPath = "/dev/letters";
 	const jobsPath = "/admin/jobs";
 	const statsPath = "/admin/stats";
@@ -78,23 +78,31 @@ export function DashboardSidebar({
 									<span>Home</span>
 								</SidebarMenuButton>
 							</SidebarMenuItem>
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</SidebarGroup>
+
+				<SidebarGroup>
+					<SidebarGroupLabel>Workspace</SidebarGroupLabel>
+					<SidebarGroupContent>
+						<SidebarMenu>
 							<SidebarMenuItem>
 								<SidebarMenuButton
 									isActive={
-										pathname === fineTunePath ||
-										pathname.startsWith(`${fineTunePath}/`)
+										pathname === beepsPath ||
+										pathname.startsWith(`${beepsPath}/`)
 									}
-									tooltip="Fine-tune"
+									tooltip="Beeps"
 									render={
 										<Link
-											to="/$account_slug/fine-tune"
+											to="/$account_slug/beeps"
 											params={{ account_slug: slug }}
 											onClick={closeMobileSidebar}
 										/>
 									}
 								>
-									<SlidersHorizontal />
-									<span>Fine-tune</span>
+									<Bell />
+									<span>Beeps</span>
 								</SidebarMenuButton>
 							</SidebarMenuItem>
 						</SidebarMenu>
