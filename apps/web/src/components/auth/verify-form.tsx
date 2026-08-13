@@ -1,4 +1,4 @@
-import { useNavigate, useRouter } from "@tanstack/react-router";
+import { isRedirect, useNavigate, useRouter } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -48,14 +48,15 @@ export function VerifyForm({
 			}
 
 			const me = await fetchMe();
-			await router.invalidate();
 			await navigateForTarget(
 				navigate,
 				resolvePostAuthTarget(me.accounts, returnTo),
 			);
+			await router.invalidate();
 
 			onVerified?.();
 		} catch (err) {
+			if (isRedirect(err)) throw err;
 			setError(err instanceof ApiError ? err.message : "Something went wrong.");
 		} finally {
 			setPending(false);

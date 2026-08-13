@@ -65,7 +65,7 @@ export function ChatWidget() {
 	if (collapsed) {
 		return (
 			<div
-				className="pointer-events-none fixed right-6 bottom-6 z-50"
+				className="bui pointer-events-none fixed right-6 bottom-6 z-50"
 				style={positionStyle}
 			>
 				<button
@@ -94,7 +94,7 @@ export function ChatWidget() {
 
 	return (
 		<div
-			className="pointer-events-none fixed right-6 bottom-6 z-50 max-w-[calc(100vw-3rem)]"
+			className="bui pointer-events-none fixed right-6 bottom-6 z-50 max-w-[calc(100vw-3rem)]"
 			style={positionStyle}
 		>
 			<div className={cn("pointer-events-auto", PANEL_CLASS)}>
