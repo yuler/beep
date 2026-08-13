@@ -3,19 +3,22 @@ default: &default
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   timeout: 5000
 
+# Local `mise` loads root `.env`, which sets DB_NAME* for Docker Compose /
+# production. Development and test must not honor those, or Solid Queue and
+# other multi-db tables resolve to empty production_*.sqlite3 files.
 development:
   primary:
     <<: *default
-    database: <%= ENV.fetch("DB_NAME", "storage/development.sqlite3") %>
+    database: storage/development.sqlite3
     schema_dump: schema.rb
   queue:
     <<: *default
-    database: <%= ENV.fetch("DB_NAME_QUEUE", "storage/development_queue.sqlite3") %>
+    database: storage/development_queue.sqlite3
     migrations_paths: db/queue_migrate
     schema_dump: queue_schema.rb
   cable:
     <<: *default
-    database: <%= ENV.fetch("DB_NAME_CABLE", "storage/development_cable.sqlite3") %>
+    database: storage/development_cable.sqlite3
     migrations_paths: db/cable_migrate
     schema_dump: cable_schema.rb
 
@@ -31,7 +34,7 @@ test:
     schema_dump: queue_schema.rb
   cable:
     <<: *default
-    database: <%= ENV.fetch("DB_NAME_CABLE", "storage/test_cable.sqlite3") %>
+    database: <%= ENV.fetch("DB_NAME_CABLE_TEST", "storage/test_cable.sqlite3") %>
     migrations_paths: db/cable_migrate
     schema_dump: cable_schema.rb
 

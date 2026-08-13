@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { LogoMark } from "@/components/logo-mark";
@@ -9,6 +10,18 @@ import {
 	CardHeader,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+
+/** Shown while client-only auth routes probe `session_id` on Core. */
+export function AuthPending() {
+	return (
+		<div className="flex min-h-svh items-center justify-center bg-background">
+			<Loader2
+				className="size-6 animate-spin text-muted-foreground"
+				aria-label="Checking session"
+			/>
+		</div>
+	);
+}
 
 export function AuthLayout({ children }: { children: ReactNode }) {
 	return (

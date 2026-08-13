@@ -119,7 +119,7 @@ Passwordless magic-link authentication:
 | Local A    | `http://core…:3001`       | `.beep.localhost`    | `development_cors.rb` only                         |
 | Production | `""` (relative `/api/v1`) | unset (host-only cookie) | Nitro `/api` proxy → core (Mode B, TanStack Start) |
 
-`SESSION_COOKIE_DOMAIN` is shared by Rails `_mono_solo_session`, `session_id`, and pending-auth cookies. `VITE_CORE_URL` can interpolate `${CORE_PORT}`. Session cookies use `SameSite=Lax`. CSRF uses Rails 8.2 `protect_from_forgery using: :header_only` (`Sec-Fetch-Site` from the browser); JSON API clients without that header (curl, native apps) are allowed via [`RequestForgeryProtection`](../../core/app/controllers/concerns/request_forgery_protection.rb). Local CORS for the web ↔ core split is documented under [Local CORS](#local-cors-development-only).
+`SESSION_COOKIE_DOMAIN` is shared by Rails `_beep_session`, `session_id`, and pending-auth cookies. `VITE_CORE_URL` can interpolate `${CORE_PORT}`. Session cookies use `SameSite=Lax`. CSRF uses Rails 8.2 `protect_from_forgery using: :header_only` (`Sec-Fetch-Site` from the browser); JSON API clients without that header (curl, native apps) are allowed via [`RequestForgeryProtection`](../../core/app/controllers/concerns/request_forgery_protection.rb). Local CORS for the web ↔ core split is documented under [Local CORS](#local-cors-development-only).
 
 ### Core Domain Models
 

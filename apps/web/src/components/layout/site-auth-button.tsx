@@ -1,13 +1,13 @@
-import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
 import type { ComponentProps } from "react";
 
 import { SignInDialog } from "@/components/auth/sign-in-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { resolveDashboardTarget } from "@/lib/auth/account";
 import { navigateForTarget } from "@/lib/auth/guards";
+import { useMe } from "@/lib/auth/use-me";
 import { cn } from "@/lib/utils";
-
-const rootRoute = getRouteApi("__root__");
 
 type ButtonProps = ComponentProps<typeof Button>;
 
@@ -25,9 +25,24 @@ export function SiteAuthButton({
 	className?: string;
 }) {
 	const navigate = useNavigate();
-	const { me } = rootRoute.useRouteContext();
+	const { me, isLoading } = useMe();
 	const target =
 		me && me.accounts.length > 0 ? resolveDashboardTarget(me.accounts) : null;
+
+	if (isLoading) {
+		return (
+			<Button
+				size={size}
+				variant={variant}
+				className={cn("pointer-events-none min-w-20", className)}
+				disabled
+				aria-busy="true"
+				aria-label="Checking session"
+			>
+				<Loader2 className="size-4 animate-spin" />
+			</Button>
+		);
+	}
 
 	if (!target || target.kind === "sign") {
 		return (

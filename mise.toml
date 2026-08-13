@@ -23,6 +23,11 @@ dir = "core"
 env = { RUBY_DEBUG_OPEN = "true", RUBY_DEBUG_LAZY = "true" }
 run = "bin/rails server -p ${CORE_PORT:-3001}"
 
+[tasks."core:console"]
+description = "Open the Rails console"
+dir = "core"
+run = "bin/rails console"
+
 [tasks."web:dev"]
 description = "Start the Vite development server"
 dir = "apps/web"

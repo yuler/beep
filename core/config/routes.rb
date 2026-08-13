@@ -61,6 +61,8 @@ Rails.application.routes.draw do
       get "me", to: "me#show"
       put "me/last_account", to: "me#update_last_account"
 
+      resources :beeps, only: %i[ index create ]
+
       namespace :admin do
         resource :stats, only: :show
         resource :jobs, only: :show

@@ -6,16 +6,19 @@ import {
 } from "@tanstack/react-router";
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { AuthPending } from "@/components/layout";
 import { resolveShellAccount } from "@/lib/auth/account";
 import { requireSession } from "@/lib/auth/guards";
 
 export const Route = createFileRoute("/dev")({
-	beforeLoad: ({ context, location }) => {
+	ssr: false,
+	pendingComponent: AuthPending,
+	beforeLoad: async ({ context, location }) => {
 		if (!import.meta.env.DEV) {
 			throw notFound();
 		}
 
-		const me = requireSession({ context, location });
+		const me = await requireSession({ context, location });
 		const account = resolveShellAccount(me);
 		if (!account) {
 			throw redirect({ to: "/sign" });

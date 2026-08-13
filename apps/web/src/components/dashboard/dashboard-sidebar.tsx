@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
 	Activity,
+	Bell,
 	BriefcaseBusiness,
 	LayoutDashboard,
 	Mail,
@@ -44,6 +45,7 @@ export function DashboardSidebar({
 	};
 
 	const homePath = `/${slug}`;
+	const beepsPath = `/${slug}/beeps`;
 	const lettersPath = "/dev/letters";
 	const jobsPath = "/admin/jobs";
 	const statsPath = "/admin/stats";
@@ -80,6 +82,33 @@ export function DashboardSidebar({
 					</SidebarGroupContent>
 				</SidebarGroup>
 
+				<SidebarGroup>
+					<SidebarGroupLabel>Workspace</SidebarGroupLabel>
+					<SidebarGroupContent>
+						<SidebarMenu>
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									isActive={
+										pathname === beepsPath ||
+										pathname.startsWith(`${beepsPath}/`)
+									}
+									tooltip="Beeps"
+									render={
+										<Link
+											to="/$account_slug/beeps"
+											params={{ account_slug: slug }}
+											onClick={closeMobileSidebar}
+										/>
+									}
+								>
+									<Bell />
+									<span>Beeps</span>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</SidebarGroup>
+
 				{import.meta.env.DEV ? (
 					<SidebarGroup>
 						<SidebarGroupLabel>Dev</SidebarGroupLabel>
@@ -93,7 +122,11 @@ export function DashboardSidebar({
 										}
 										tooltip="Letters"
 										render={
-											<Link to="/dev/letters" onClick={closeMobileSidebar} />
+											<Link
+												to="/dev/letters"
+												params={{ account_slug: slug }}
+												onClick={closeMobileSidebar}
+											/>
 										}
 									>
 										<Mail />
@@ -118,7 +151,11 @@ export function DashboardSidebar({
 										}
 										tooltip="Jobs"
 										render={
-											<Link to="/admin/jobs" onClick={closeMobileSidebar} />
+											<Link
+												to="/admin/jobs"
+												params={{ account_slug: slug }}
+												onClick={closeMobileSidebar}
+											/>
 										}
 									>
 										<BriefcaseBusiness />
@@ -133,7 +170,11 @@ export function DashboardSidebar({
 										}
 										tooltip="Stats"
 										render={
-											<Link to="/admin/stats" onClick={closeMobileSidebar} />
+											<Link
+												to="/admin/stats"
+												params={{ account_slug: slug }}
+												onClick={closeMobileSidebar}
+											/>
 										}
 									>
 										<Activity />

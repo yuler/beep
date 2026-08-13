@@ -1,0 +1,216 @@
+/*
+ * Beautiful UI tokens — adapted from https://www.beautifului.dev/
+ * Scoped to .bui so shadcn theme tokens stay primary outside AI surfaces.
+ */
+
+.bui {
+	--spacing: 0.25rem;
+	--page: #fafafb;
+	--canvas: #f1f2f3;
+	--surface: #fff;
+	--inset: #f7f8f9;
+	--hover: #f4f5f6;
+	--hover-2: #e7e9eb;
+	--ink: #1f2124;
+	--ink-2: #62656b;
+	--ink-3: #9a9da3;
+	--line: #ecedef;
+	--line-strong: #e0e2e5;
+	--field: #f2f2f3;
+	--accent: #0285ff;
+	--accent-ink: #0170dd;
+	--accent-tint: #e9f3ff;
+	--green: #189a4d;
+	--red: #e3474c;
+	--shadow-hairline: 0 0 0 1px var(--line);
+	--shadow-btn: 0 0 0 1px var(--line-strong), 0 1px 2px rgb(16 24 40 / 8%);
+	--shadow-card:
+		0 0 0 1px var(--line), 0 1px 2px rgb(16 24 40 / 4%),
+		0 2px 6px rgb(16 24 40 / 4%);
+	--shadow-raised: 0 0 0 1px var(--line), 0 4px 12px rgb(16 24 40 / 8%);
+	--shadow-overlay: 0 0 0 1px var(--line), 0 16px 48px rgb(16 24 40 / 16%);
+	color: var(--ink);
+}
+
+.dark .bui {
+	--page: #17181a;
+	--canvas: #1c1d1f;
+	--surface: #232427;
+	--inset: #1f2022;
+	--hover: #2a2b2e;
+	--hover-2: #313236;
+	--ink: #f2f3f4;
+	--ink-2: #a5a8ad;
+	--ink-3: #6c6f75;
+	--line: #2e3033;
+	--line-strong: #3a3c40;
+	--field: #2b2c2f;
+	--accent: #3d9aff;
+	--accent-ink: #7ec0ff;
+	--accent-tint: rgb(61 154 255 / 16%);
+	--green: #3dbb72;
+	--red: #ee5c61;
+	--shadow-hairline: 0 0 0 1px var(--line);
+	--shadow-btn: 0 0 0 1px var(--line-strong), 0 1px 2px rgb(0 0 0 / 30%);
+	--shadow-card:
+		0 0 0 1px var(--line), 0 1px 2px rgb(0 0 0 / 19%),
+		0 2px 6px rgb(0 0 0 / 19%);
+	--shadow-raised: 0 0 0 1px var(--line), 0 4px 12px rgb(0 0 0 / 28%);
+	--shadow-overlay: 0 0 0 1px var(--line), 0 16px 48px rgb(0 0 0 / 42%);
+}
+
+@keyframes bui-pop-in {
+	from {
+		opacity: 0;
+		transform: scale(0.96);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes bui-fade-up {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes bui-shimmer-text {
+	from {
+		background-position: 100% 0;
+	}
+	to {
+		background-position: -100% 0;
+	}
+}
+
+@keyframes bui-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.bui .text-ink {
+	color: var(--ink);
+}
+.bui .text-ink-2 {
+	color: var(--ink-2);
+}
+.bui .text-ink-3 {
+	color: var(--ink-3);
+}
+.bui .text-accent {
+	color: var(--accent);
+}
+.bui .text-accent-ink {
+	color: var(--accent-ink);
+}
+.bui .text-green {
+	color: var(--green);
+}
+.bui .text-canvas {
+	color: var(--canvas);
+}
+.bui .bg-surface {
+	background-color: var(--surface);
+}
+.bui .bg-canvas {
+	background-color: var(--canvas);
+}
+.bui .bg-field {
+	background-color: var(--field);
+}
+.bui .bg-inset {
+	background-color: var(--inset);
+}
+.bui .bg-hover {
+	background-color: var(--hover);
+}
+.bui .bg-accent-tint {
+	background-color: var(--accent-tint);
+}
+.bui .border-line {
+	border-color: var(--line);
+}
+.bui .border-line-strong {
+	border-color: var(--line-strong);
+}
+.bui .border-accent\/30 {
+	border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.bui .rounded-card {
+	border-radius: 10px;
+}
+.bui .rounded-chip {
+	border-radius: 6px;
+}
+.bui .rounded-control {
+	border-radius: 8px;
+}
+.bui .rounded-window {
+	border-radius: 14px;
+}
+.bui .shadow-hairline {
+	box-shadow: var(--shadow-hairline);
+}
+.bui .shadow-btn {
+	box-shadow: var(--shadow-btn);
+}
+.bui .shadow-card {
+	box-shadow: var(--shadow-card);
+}
+.bui .shadow-raised {
+	box-shadow: var(--shadow-raised);
+}
+.bui .shadow-overlay {
+	box-shadow: var(--shadow-overlay);
+}
+.bui .max-w-60 {
+	max-width: calc(var(--spacing) * 60);
+}
+.bui .max-w-95 {
+	max-width: calc(var(--spacing) * 95);
+}
+.bui .max-w-105 {
+	max-width: calc(var(--spacing) * 105);
+}
+.bui .w-30 {
+	width: calc(var(--spacing) * 30);
+}
+.bui .h-6\.5 {
+	height: calc(var(--spacing) * 6.5);
+}
+.bui .size-4\.5 {
+	width: calc(var(--spacing) * 4.5);
+	height: calc(var(--spacing) * 4.5);
+}
+.bui .min-h-4\.5 {
+	min-height: calc(var(--spacing) * 4.5);
+}
+.bui .duration-400 {
+	transition-duration: 0.4s;
+}
+.bui .primitive-card-bar {
+	padding: 10px 12px;
+}
+.bui .primitive-card-pad {
+	padding: 12px;
+}
+.bui .primitive-card-footer {
+	padding: 10px 12px;
+}
+.bui .hover\:bg-hover:hover {
+	background-color: var(--hover);
+}
+.bui .hover\:bg-field:hover {
+	background-color: var(--field);
+}
+.bui .hover\:text-ink-2:hover {
+	color: var(--ink-2);
+}

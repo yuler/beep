@@ -16,6 +16,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as DevRouteImport } from './routes/dev'
 import { Route as SignRouteImport } from './routes/sign'
 import { Route as Account_slugIndexRouteImport } from './routes/$account_slug/index'
+import { Route as Account_slugBeepsRouteImport } from './routes/$account_slug/beeps'
 import { Route as AdminJobsRouteImport } from './routes/admin/jobs'
 import { Route as AdminStatsRouteImport } from './routes/admin/stats'
 import { Route as DevLettersRouteImport } from './routes/dev/letters'
@@ -57,6 +58,11 @@ const Account_slugIndexRoute = Account_slugIndexRouteImport.update({
   path: '/',
   getParentRoute: () => Account_slugRoute,
 } as any)
+const Account_slugBeepsRoute = Account_slugBeepsRouteImport.update({
+  id: '/beeps',
+  path: '/beeps',
+  getParentRoute: () => Account_slugRoute,
+} as any)
 const AdminJobsRoute = AdminJobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/dev': typeof DevRouteWithChildren
   '/sign': typeof SignRouteWithChildren
+  '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/accounts': typeof AccountsRoute
   '/admin': typeof AdminRouteWithChildren
   '/dev': typeof DevRouteWithChildren
+  '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/dev': typeof DevRouteWithChildren
   '/sign': typeof SignRouteWithChildren
+  '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dev'
     | '/sign'
+    | '/$account_slug/beeps'
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/admin'
     | '/dev'
+    | '/$account_slug/beeps'
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dev'
     | '/sign'
+    | '/$account_slug/beeps'
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
@@ -227,6 +239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Account_slugIndexRouteImport
       parentRoute: typeof Account_slugRoute
     }
+    '/$account_slug/beeps': {
+      id: '/$account_slug/beeps'
+      path: '/beeps'
+      fullPath: '/$account_slug/beeps'
+      preLoaderRoute: typeof Account_slugBeepsRouteImport
+      parentRoute: typeof Account_slugRoute
+    }
     '/admin/jobs': {
       id: '/admin/jobs'
       path: '/jobs'
@@ -266,10 +285,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface Account_slugRouteChildren {
+  Account_slugBeepsRoute: typeof Account_slugBeepsRoute
   Account_slugIndexRoute: typeof Account_slugIndexRoute
 }
 
 const Account_slugRouteChildren: Account_slugRouteChildren = {
+  Account_slugBeepsRoute: Account_slugBeepsRoute,
   Account_slugIndexRoute: Account_slugIndexRoute,
 }
 

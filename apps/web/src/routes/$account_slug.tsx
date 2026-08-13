@@ -2,17 +2,20 @@ import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { AuthPending } from "@/components/layout";
 import { rememberLastAccount } from "@/lib/api/session";
 import { requireSession } from "@/lib/auth/guards";
 import { isAccountSlug } from "@/lib/auth/slugs";
 
 export const Route = createFileRoute("/$account_slug")({
-	beforeLoad: ({ context, location, params }) => {
+	ssr: false,
+	pendingComponent: AuthPending,
+	beforeLoad: async ({ context, location, params }) => {
 		if (!isAccountSlug(params.account_slug)) {
 			throw notFound();
 		}
 
-		const me = requireSession({ context, location });
+		const me = await requireSession({ context, location });
 		const account = me.accounts.find(
 			(item) => item.slug === params.account_slug,
 		);
