@@ -68,7 +68,11 @@ export async function requireSession({
 		if (import.meta.env.SSR) {
 			// Do not 302 to /sign — the document request may lack session_id
 			// (Mode A). Auth routes set `ssr: false` so the client probe runs.
-			return undefined as unknown as MeResponse;
+			// Reaching this branch means an auth-gated route is missing
+			// `ssr: false`; fail loudly instead of returning undefined.
+			throw new Error(
+				"requireSession: no session on SSR. Auth-gated routes must set ssr: false.",
+			);
 		}
 		redirectToSign(`${location.pathname}${location.searchStr}`);
 	}

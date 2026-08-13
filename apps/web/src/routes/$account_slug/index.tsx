@@ -22,19 +22,25 @@ function AccountHomePage() {
 		<>
 			<DashboardHeader breadcrumbs={[{ label: "Home", isCurrentPage: true }]} />
 
-			<div className="bui flex flex-1 flex-col bg-canvas p-4 md:p-6">
+			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
 				<div className="mx-auto flex w-full max-w-105 flex-col gap-4">
 					<div>
-						<h1 className="font-heading text-2xl font-semibold tracking-tight text-ink">
+						<h1 className="font-heading text-2xl font-semibold tracking-tight">
 							{account?.name ?? "Account"}
 						</h1>
-						<p className="mt-1 text-sm text-ink-2">
-							Ask about beeps, schedule reminders, or explore your history.
-						</p>
+						{import.meta.env.DEV ? (
+							<p className="mt-1 text-sm text-muted-foreground">
+								Ask about beeps, schedule reminders, or explore your history.
+							</p>
+						) : (
+							<p className="mt-1 text-sm text-muted-foreground">
+								/{slug} · identity and membership for this account.
+							</p>
+						)}
 					</div>
 				</div>
 
-				<ChatWidget />
+				{import.meta.env.DEV ? <ChatWidget /> : null}
 			</div>
 		</>
 	);

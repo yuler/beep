@@ -39,4 +39,27 @@ class BeepTest < ActiveSupport::TestCase
     assert_not beep.valid?
     assert beep.errors[:cron].any?
   end
+
+  test "once beep rejects a run_at in the past" do
+    beep = Beep.new(
+      account: @account,
+      kind: :once,
+      message: "Call mom",
+      run_at: 1.hour.ago
+    )
+
+    assert_not beep.valid?
+    assert beep.errors[:run_at].any?
+  end
+
+  test "once beep accepts a run_at in the future" do
+    beep = Beep.new(
+      account: @account,
+      kind: :once,
+      message: "Call mom",
+      run_at: 1.hour.from_now
+    )
+
+    assert beep.valid?
+  end
 end

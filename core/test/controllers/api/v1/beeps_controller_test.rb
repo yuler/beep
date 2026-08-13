@@ -67,6 +67,16 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
   end
 
+  test "create rejects a run_at in the past" do
+    post "/api/v1/#{@account.slug}/beeps",
+      params: { message: "Call mom", run_at: 1.hour.ago.iso8601 },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
+  end
+
   test "create requires authentication" do
     post "/api/v1/#{@account.slug}/beeps",
       params: { message: "Call mom", run_at: @run_at.iso8601 },

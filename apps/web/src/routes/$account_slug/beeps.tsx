@@ -68,19 +68,23 @@ function BeepsPage() {
 					</p>
 				</div>
 
-				{beeps.length === 0 ? (
-					<Card className="max-w-105">
-						<CardHeader>
-							<CardTitle>Create your first beep</CardTitle>
-						</CardHeader>
-						<CardContent>
+				<Card className="max-w-105">
+					<CardHeader>
+						<CardTitle>
+							{beeps.length === 0 ? "Create your first beep" : "New beep"}
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						{beeps.length === 0 ? (
 							<p className="mb-4 text-sm text-muted-foreground">
 								No beeps yet — schedule a one-time reminder to get started.
 							</p>
-							<CreateBeepForm slug={slug} onCreated={handleCreated} />
-						</CardContent>
-					</Card>
-				) : (
+						) : null}
+						<CreateBeepForm slug={slug} onCreated={handleCreated} />
+					</CardContent>
+				</Card>
+
+				{beeps.length > 0 ? (
 					<ul className="flex flex-col gap-3">
 						{beeps.map((beep) => {
 							const nextRunAt = beep.next_run_at ?? beep.run_at;
@@ -110,7 +114,7 @@ function BeepsPage() {
 							);
 						})}
 					</ul>
-				)}
+				) : null}
 			</div>
 		</>
 	);
