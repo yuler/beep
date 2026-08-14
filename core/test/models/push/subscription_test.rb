@@ -113,4 +113,20 @@ class Push::SubscriptionTest < ActiveSupport::TestCase
       assert subscription.valid?, "Expected #{endpoint} to be valid, got errors: #{subscription.errors.full_messages}"
     end
   end
+
+  test "upsert_for! creates then updates the same endpoint" do
+    attributes = {
+      endpoint: "https://fcm.googleapis.com/fcm/send/abc123",
+      p256dh_key: "key",
+      auth_key: "auth",
+      user_agent: "Chrome"
+    }
+
+    created = Push::Subscription.upsert_for!(users(:john), attributes)
+    updated = Push::Subscription.upsert_for!(users(:john), attributes.merge(p256dh_key: "new-key"))
+
+    assert_equal created.id, updated.id
+    assert_equal 1, users(:john).push_subscriptions.where(endpoint: attributes[:endpoint]).count
+    assert_equal "new-key", updated.p256dh_key
+  end
 end

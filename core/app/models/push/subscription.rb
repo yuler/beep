@@ -13,6 +13,22 @@ class Push::Subscription < ApplicationRecord
   validates :endpoint, presence: true
   validate :validate_endpoint_url
 
+  def self.upsert_for!(user, attributes)
+    attributes = attributes.to_h.symbolize_keys
+    subscription = user.push_subscriptions.find_by(endpoint: attributes[:endpoint])
+
+    if subscription
+      subscription.update!(attributes)
+      subscription
+    else
+      user.push_subscriptions.create!(attributes)
+    end
+  rescue ActiveRecord::RecordNotUnique
+    subscription = user.push_subscriptions.find_by!(endpoint: attributes[:endpoint])
+    subscription.update!(attributes)
+    subscription
+  end
+
   def resolved_endpoint_ip
     return @resolved_endpoint_ip if defined?(@resolved_endpoint_ip)
 

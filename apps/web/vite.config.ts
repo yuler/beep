@@ -44,6 +44,12 @@ export default defineConfig(({ mode }) => {
 				routeRules: {
 					"/api/**": { proxy: `${coreProxy}/api/**` },
 					"/up": { proxy: `${coreProxy}/up` },
+					"/service-worker.js": {
+						headers: {
+							"Cache-Control": "no-cache",
+							"Service-Worker-Allowed": "/",
+						},
+					},
 				},
 			}),
 		],

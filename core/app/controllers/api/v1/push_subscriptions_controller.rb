@@ -18,10 +18,7 @@ class Api::V1::PushSubscriptionsController < Api::V1::BaseController
 
   private
     def upsert_push_subscription
-      subscription = Current.user.push_subscriptions.create_with(subscription_attributes)
-        .create_or_find_by!(endpoint: subscription_params[:endpoint])
-      subscription.update!(subscription_attributes)
-      subscription
+      Push::Subscription.upsert_for!(Current.user, subscription_attributes)
     end
 
     def subscription_attributes

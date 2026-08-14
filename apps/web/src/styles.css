@@ -137,8 +137,12 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    @apply bg-sidebar;
+  }
+
   body {
-    @apply bg-background font-sans text-foreground antialiased;
+    @apply bg-sidebar font-sans text-foreground antialiased;
   }
 
   :is([data-slot="button"], .group\/button) {
