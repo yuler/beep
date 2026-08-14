@@ -35,6 +35,7 @@ const RESERVED_FROM_CORE = [
 	"static",
 	"support",
 	"test",
+	"web_push",
 ] as const;
 
 const RESERVED_WEB = ["sign", "dashboard", "accounts"] as const;

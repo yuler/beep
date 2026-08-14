@@ -1,0 +1,1 @@
+json.vapid_public_key @vapid_public_key
