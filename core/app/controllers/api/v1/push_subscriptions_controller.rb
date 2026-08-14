@@ -1,4 +1,9 @@
 class Api::V1::PushSubscriptionsController < Api::V1::BaseController
+  def index
+    @push_subscriptions = Current.user.push_subscriptions.order(created_at: :desc)
+    render :index
+  end
+
   def create
     @push_subscription = upsert_push_subscription
 

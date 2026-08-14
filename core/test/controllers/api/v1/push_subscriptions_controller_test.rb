@@ -73,13 +73,40 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
-  test "create returns not found for another account" do
+	test "create returns not found for another account" do
     post "/api/v1/#{accounts(:yuler_account).slug}/push_subscriptions",
       params: { endpoint: @endpoint, p256dh_key: "key", auth_key: "auth" },
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 
     assert_response :not_found
+  end
+
+  test "index lists the current user's subscriptions" do
+    mine = users(:john).push_subscriptions.create!(
+      endpoint: @endpoint,
+      p256dh_key: "key",
+      auth_key: "auth"
+    )
+    users(:yuler).push_subscriptions.create!(
+      endpoint: "https://fcm.googleapis.com/fcm/send/other",
+      p256dh_key: "key",
+      auth_key: "auth"
+    )
+
+    get "/api/v1/#{@account.slug}/push_subscriptions",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    ids = response.parsed_body["push_subscriptions"].map { |row| row["id"] }
+    assert_equal [ mine.id ], ids
+  end
+
+  test "index requires authentication" do
+    get "/api/v1/#{@account.slug}/push_subscriptions", as: :json
+
+    assert_response :unauthorized
   end
 
   test "destroy deletes the current user's subscription" do

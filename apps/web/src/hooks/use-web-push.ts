@@ -1,17 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError } from "@/lib/api/client";
+import type { PushSubscriptionRecord } from "@/lib/api/push";
 import {
 	disableWebPush,
 	enableWebPush,
+	getBrowserPushEndpoint,
 	getPushPermission,
 	isIosDevice,
 	isMacOS,
 	isStandaloneDisplay,
 	isSubscribedForAccount,
 	isWebPushSupported,
+	listPushSubscriptions,
 	notificationBrowserName,
 	notificationPlatform,
+	removePushSubscription,
 	sendTestPush,
 } from "@/lib/web-push";
 
@@ -48,9 +52,24 @@ export function useWebPush(slug: string) {
 	const [pending, setPending] = useState(false);
 	const [testing, setTesting] = useState(false);
 	const [testSent, setTestSent] = useState(false);
+	const [removingId, setRemovingId] = useState<string | null>(null);
+	const [subscriptions, setSubscriptions] = useState<PushSubscriptionRecord[]>(
+		[],
+	);
+	const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
 	const refresh = useCallback(async () => {
+		const endpoint = await getBrowserPushEndpoint();
+		setCurrentEndpoint(endpoint);
+
+		try {
+			setSubscriptions(await listPushSubscriptions(slug));
+		} catch (err) {
+			setError(errorMessage(err));
+			setSubscriptions([]);
+		}
+
 		if (!isWebPushSupported()) {
 			setStatus({
 				supported: false,
@@ -137,15 +156,36 @@ export function useWebPush(slug: string) {
 		}
 	}, [refresh, slug]);
 
+	const remove = useCallback(
+		async (record: PushSubscriptionRecord) => {
+			setRemovingId(record.id);
+			setError(null);
+			try {
+				await removePushSubscription(slug, record);
+				await refresh();
+			} catch (err) {
+				setError(errorMessage(err));
+				await refresh();
+			} finally {
+				setRemovingId(null);
+			}
+		},
+		[refresh, slug],
+	);
+
 	return {
 		status,
 		ready,
 		pending,
 		testing,
 		testSent,
+		removingId,
+		subscriptions,
+		currentEndpoint,
 		error,
 		enable,
 		disable,
 		sendTest,
+		remove,
 	};
 }

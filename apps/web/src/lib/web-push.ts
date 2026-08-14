@@ -2,6 +2,7 @@ import { ApiError } from "@/lib/api/client";
 import {
 	createPushSubscription,
 	destroyPushSubscription,
+	fetchPushSubscriptions,
 	fetchWebPushConfig,
 	testPushSubscription,
 } from "@/lib/api/push";
@@ -56,7 +57,23 @@ export function notificationPlatform(): NotificationPlatform {
 
 export function notificationBrowserName() {
 	if (typeof navigator === "undefined") return "this browser";
-	const ua = navigator.userAgent;
+	return browserNameFromUserAgent(navigator.userAgent);
+}
+
+export function describePushDevice(userAgent: string | null) {
+	if (!userAgent) return "Unknown device";
+	if (/^curl\//i.test(userAgent)) return "curl";
+
+	const browser = browserNameFromUserAgent(userAgent);
+	if (/iPhone|iPad|iPod/i.test(userAgent)) return `${browser} on iOS`;
+	if (/Android/i.test(userAgent)) return `${browser} on Android`;
+	if (/Mac OS X|Macintosh/i.test(userAgent)) return `${browser} on Mac`;
+	if (/Windows/i.test(userAgent)) return `${browser} on Windows`;
+	if (/Linux|X11/i.test(userAgent)) return `${browser} on Linux`;
+	return browser;
+}
+
+function browserNameFromUserAgent(ua: string) {
 	if (/Edg\//.test(ua)) return "Microsoft Edge";
 	if (/OPR\/|Opera/.test(ua)) return "Opera";
 	if (/Firefox\//.test(ua)) return "Firefox";
@@ -133,6 +150,37 @@ export async function disableWebPush(slug: string) {
 		} catch {
 			// Browser is already unsubscribed; ignore a missing server row.
 		}
+		clearStoredSubscription(slug);
+	}
+}
+
+export async function getBrowserPushEndpoint() {
+	if (!isWebPushSupported()) return null;
+	const registration = await navigator.serviceWorker.getRegistration("/");
+	const subscription = await registration?.pushManager.getSubscription();
+	return subscription?.endpoint ?? null;
+}
+
+export async function listPushSubscriptions(slug: string) {
+	const { push_subscriptions } = await fetchPushSubscriptions(slug);
+	return push_subscriptions;
+}
+
+export async function removePushSubscription(
+	slug: string,
+	record: { id: string; endpoint: string },
+) {
+	const currentEndpoint = await getBrowserPushEndpoint();
+	const stored = readStoredSubscription(slug);
+	const isCurrent =
+		currentEndpoint === record.endpoint || stored?.id === record.id;
+
+	await destroyPushSubscription(slug, record.id);
+
+	if (isCurrent) {
+		const registration = await navigator.serviceWorker.getRegistration("/");
+		const subscription = await registration?.pushManager.getSubscription();
+		if (subscription) await subscription.unsubscribe();
 		clearStoredSubscription(slug);
 	}
 }

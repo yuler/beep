@@ -11,8 +11,19 @@ export type PushSubscriptionRecord = {
 	created_at: string;
 };
 
+export type PushSubscriptionsResponse = {
+	push_subscriptions: PushSubscriptionRecord[];
+};
+
 export function fetchWebPushConfig() {
 	return apiFetch<WebPushConfig>("/api/v1/web_push", { method: "GET" });
+}
+
+export function fetchPushSubscriptions(slug: string) {
+	return apiFetch<PushSubscriptionsResponse>(
+		`/api/v1/${slug}/push_subscriptions`,
+		{ method: "GET" },
+	);
 }
 
 export function createPushSubscription(

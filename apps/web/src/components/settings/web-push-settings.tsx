@@ -1,6 +1,7 @@
-import { Bell, BellOff, BellRing } from "lucide-react";
+import { Bell, BellOff, BellRing, Trash2 } from "lucide-react";
 
 import { WebPushHelpDialog } from "@/components/settings/web-push-help-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -11,6 +12,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { useWebPush } from "@/hooks/use-web-push";
+import { describePushDevice } from "@/lib/web-push";
 
 export function WebPushSettings({ slug }: { slug: string }) {
 	const {
@@ -19,22 +21,26 @@ export function WebPushSettings({ slug }: { slug: string }) {
 		pending,
 		testing,
 		testSent,
+		removingId,
+		subscriptions,
+		currentEndpoint,
 		error,
 		enable,
 		disable,
 		sendTest,
+		remove,
 	} = useWebPush(slug);
 
 	const needsIosInstall = status.ios && !status.standalone;
 	const denied = status.supported && status.permission === "denied";
-	const busy = pending || testing;
+	const busy = pending || testing || removingId !== null;
 
 	return (
-		<Card className="max-w-105">
+		<Card className="max-w-lg">
 			<CardHeader>
 				<CardTitle>Browser notifications</CardTitle>
 				<CardDescription>
-					Get a system notification when a beep is due on this device.
+					Devices that can receive a system notification when a beep is due.
 				</CardDescription>
 				<CardAction>
 					<WebPushHelpDialog
@@ -66,8 +72,8 @@ export function WebPushSettings({ slug }: { slug: string }) {
 					<>
 						<p className="text-sm text-muted-foreground">
 							{status.subscribed
-								? "This device is subscribed for this workspace."
-								: "Chrome, Firefox, Edge, and desktop Safari are supported. iOS requires the Home Screen app."}
+								? "This browser is subscribed for this workspace."
+								: "Enable on each device you want to notify."}
 						</p>
 						<div className="flex flex-wrap gap-2">
 							<Button
@@ -89,8 +95,8 @@ export function WebPushSettings({ slug }: { slug: string }) {
 										? "Turning off…"
 										: "Enabling…"
 									: status.subscribed
-										? "Turn off"
-										: "Enable notifications"}
+										? "Turn off this browser"
+										: "Enable this browser"}
 							</Button>
 							{status.subscribed ? (
 								<Button
@@ -113,6 +119,56 @@ export function WebPushSettings({ slug }: { slug: string }) {
 						) : null}
 					</>
 				)}
+
+				{ready ? (
+					<div className="flex flex-col gap-2">
+						<p className="text-sm font-medium">Devices</p>
+						{subscriptions.length === 0 ? (
+							<p className="text-sm text-muted-foreground">
+								No devices subscribed yet.
+							</p>
+						) : (
+							<ul className="flex flex-col gap-2">
+								{subscriptions.map((record) => {
+									const current = record.endpoint === currentEndpoint;
+									return (
+										<li
+											key={record.id}
+											className="flex items-start justify-between gap-3 rounded-lg border border-border px-3 py-2"
+										>
+											<div className="min-w-0">
+												<div className="flex flex-wrap items-center gap-2">
+													<p className="truncate text-sm font-medium">
+														{describePushDevice(record.user_agent)}
+													</p>
+													{current ? (
+														<Badge variant="secondary">This browser</Badge>
+													) : null}
+												</div>
+												<p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+													Added {new Date(record.created_at).toLocaleString()}
+												</p>
+											</div>
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon-sm"
+												disabled={busy}
+												aria-label={`Remove ${describePushDevice(record.user_agent)}`}
+												onClick={() => {
+													void remove(record);
+												}}
+											>
+												<Trash2 />
+											</Button>
+										</li>
+									);
+								})}
+							</ul>
+						)}
+					</div>
+				) : null}
+
 				{error ? (
 					<p className="text-sm text-destructive" role="alert">
 						{error}
