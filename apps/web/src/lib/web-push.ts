@@ -1,7 +1,9 @@
+import { ApiError } from "@/lib/api/client";
 import {
 	createPushSubscription,
 	destroyPushSubscription,
 	fetchWebPushConfig,
+	testPushSubscription,
 } from "@/lib/api/push";
 
 const SERVICE_WORKER_URL = "/service-worker.js";
@@ -24,6 +26,43 @@ export function isWebPushSupported() {
 export function isIosDevice() {
 	if (typeof navigator === "undefined") return false;
 	return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+export function isMacOS() {
+	if (typeof navigator === "undefined") return false;
+	if (isIosDevice()) return false;
+	if (!/Mac OS X|Macintosh/i.test(navigator.userAgent)) return false;
+	// iPadOS "Request Desktop Website" uses a Macintosh UA.
+	return navigator.maxTouchPoints <= 1;
+}
+
+export type NotificationPlatform =
+	| "ios"
+	| "macos"
+	| "windows"
+	| "linux"
+	| "other";
+
+export function notificationPlatform(): NotificationPlatform {
+	if (typeof navigator === "undefined") return "other";
+	if (isIosDevice()) return "ios";
+	if (isMacOS()) return "macos";
+	const ua = navigator.userAgent;
+	if (/Android/i.test(ua)) return "other";
+	if (/Windows/i.test(ua)) return "windows";
+	if (/Linux|X11/i.test(ua)) return "linux";
+	return "other";
+}
+
+export function notificationBrowserName() {
+	if (typeof navigator === "undefined") return "this browser";
+	const ua = navigator.userAgent;
+	if (/Edg\//.test(ua)) return "Microsoft Edge";
+	if (/OPR\/|Opera/.test(ua)) return "Opera";
+	if (/Firefox\//.test(ua)) return "Firefox";
+	if (/Safari/.test(ua) && !/Chrome|Chromium|Edg\//.test(ua)) return "Safari";
+	if (/Chrome|Chromium/.test(ua)) return "Google Chrome";
+	return "this browser";
 }
 
 export function isStandaloneDisplay() {
@@ -98,10 +137,36 @@ export async function disableWebPush(slug: string) {
 	}
 }
 
+export async function sendTestPush(slug: string) {
+	const registration = await ensureServiceWorker();
+	const subscription = await registration.pushManager.getSubscription();
+	if (!subscription) {
+		clearStoredSubscription(slug);
+		throw new Error("This device is not subscribed.");
+	}
+
+	const record = await createPushSubscription(
+		slug,
+		pushSubscriptionPayload(subscription),
+	);
+	storeSubscription(slug, {
+		id: record.id,
+		endpoint: record.endpoint,
+	});
+
+	try {
+		await testPushSubscription(slug, record.id);
+	} catch (error) {
+		if (error instanceof ApiError && error.status === 410) {
+			clearStoredSubscription(slug);
+		}
+		throw error;
+	}
+}
+
 async function ensureServiceWorker() {
-	const existing = await navigator.serviceWorker.getRegistration("/");
-	if (existing) return existing;
-	return navigator.serviceWorker.register(SERVICE_WORKER_URL, { scope: "/" });
+	await navigator.serviceWorker.register(SERVICE_WORKER_URL, { scope: "/" });
+	return navigator.serviceWorker.ready;
 }
 
 async function ensureNotificationPermission() {
@@ -122,6 +187,9 @@ async function subscribePushManager(
 	registration: ServiceWorkerRegistration,
 	vapidPublicKey: string,
 ) {
+	const existing = await registration.pushManager.getSubscription();
+	if (existing) return existing;
+
 	const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
 	try {
 		return await registration.pushManager.subscribe({
@@ -129,8 +197,8 @@ async function subscribePushManager(
 			applicationServerKey,
 		});
 	} catch {
-		const existing = await registration.pushManager.getSubscription();
-		await existing?.unsubscribe();
+		const leftover = await registration.pushManager.getSubscription();
+		await leftover?.unsubscribe();
 		return registration.pushManager.subscribe({
 			userVisibleOnly: true,
 			applicationServerKey,

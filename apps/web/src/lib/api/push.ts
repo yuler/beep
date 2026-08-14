@@ -33,3 +33,9 @@ export function destroyPushSubscription(slug: string, id: string) {
 		method: "DELETE",
 	});
 }
+
+export function testPushSubscription(slug: string, id: string) {
+	return apiFetch<void>(`/api/v1/${slug}/push_subscriptions/${id}/test`, {
+		method: "POST",
+	});
+}

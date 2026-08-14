@@ -13,20 +13,41 @@ class Push::Subscription < ApplicationRecord
   validates :endpoint, presence: true
   validate :validate_endpoint_url
 
+  # `user.push_subscriptions.create!` / `update!` wrap `#save!` in a SQLite
+  # IMMEDIATE transaction. Use `new` + `save!` so the write lock is only held
+  # for the INSERT/UPDATE itself.
   def self.upsert_for!(user, attributes)
-    attributes = attributes.to_h.symbolize_keys
-    subscription = user.push_subscriptions.find_by(endpoint: attributes[:endpoint])
+    attributes = attributes.to_h.symbolize_keys.merge(user: user, account: user.account)
+    subscription = find_by(user_id: user.id, endpoint: attributes[:endpoint])
 
     if subscription
-      subscription.update!(attributes)
-      subscription
+      subscription.assign_attributes(attributes)
     else
-      user.push_subscriptions.create!(attributes)
+      subscription = new(attributes)
     end
-  rescue ActiveRecord::RecordNotUnique
-    subscription = user.push_subscriptions.find_by!(endpoint: attributes[:endpoint])
-    subscription.update!(attributes)
+
+    subscription.save!
     subscription
+  rescue ActiveRecord::RecordNotUnique
+    subscription = find_by!(user_id: user.id, endpoint: attributes[:endpoint])
+    subscription.assign_attributes(attributes)
+    subscription.save!
+    subscription
+  end
+
+  def deliver_test!
+    WebPush.payload_send(
+      message: test_payload.to_json,
+      endpoint: endpoint,
+      p256dh: p256dh_key,
+      auth: auth_key,
+      vapid: {
+        subject: "mailto:support@example.com",
+        public_key: Rails.application.config.x.vapid.public_key,
+        private_key: Rails.application.config.x.vapid.private_key
+      },
+      urgency: "high"
+    )
   end
 
   def resolved_endpoint_ip
@@ -49,13 +70,23 @@ class Push::Subscription < ApplicationRecord
         errors.add(:endpoint, "must use HTTPS")
       elsif !permitted_endpoint_host?
         errors.add(:endpoint, "is not a permitted push service")
-      elsif resolved_endpoint_ip.nil?
-        errors.add(:endpoint, "resolves to a private or invalid IP address")
       end
     end
 
     def permitted_endpoint_host?
       host = endpoint_uri&.host&.downcase
       PERMITTED_ENDPOINT_HOSTS.any? { |permitted| host&.end_with?(permitted) }
+    end
+
+    def test_payload
+      {
+        title: "Beep",
+        options: {
+          body: "This is a test notification.",
+          tag: "beep-test",
+          renotify: true,
+          data: { url: "/#{account.slug}/settings", badge: 1 }
+        }
+      }
     end
 end

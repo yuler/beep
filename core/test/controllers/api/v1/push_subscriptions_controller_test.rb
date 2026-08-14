@@ -8,6 +8,15 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     @session = @identity.sessions.create!
     @token = @session.signed_id
     @endpoint = "https://fcm.googleapis.com/fcm/send/abc123"
+    @previous_public_key = Rails.application.config.x.vapid.public_key
+    @previous_private_key = Rails.application.config.x.vapid.private_key
+    Rails.application.config.x.vapid.public_key = "test-vapid-public"
+    Rails.application.config.x.vapid.private_key = "test-vapid-private"
+  end
+
+  teardown do
+    Rails.application.config.x.vapid.public_key = @previous_public_key
+    Rails.application.config.x.vapid.private_key = @previous_private_key
   end
 
   test "create stores a subscription for the current user" do
@@ -103,4 +112,68 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     assert Push::Subscription.exists?(subscription.id)
   end
+
+  test "test sends a notification for the current user's subscription" do
+    subscription = users(:john).push_subscriptions.create!(
+      endpoint: @endpoint,
+      p256dh_key: "key",
+      auth_key: "auth"
+    )
+    sent = false
+
+    stub_web_push_payload_send(->(**_kwargs) { sent = true }) do
+      post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/test",
+        headers: { "Authorization" => "Bearer #{@token}" },
+        as: :json
+    end
+
+    assert_response :no_content
+    assert sent
+  end
+
+  test "test destroys an expired subscription" do
+    subscription = users(:john).push_subscriptions.create!(
+      endpoint: @endpoint,
+      p256dh_key: "key",
+      auth_key: "auth"
+    )
+    push_response = Object.new
+    def push_response.body = "Gone"
+    expired = WebPush::ExpiredSubscription.new(push_response, "fcm.googleapis.com")
+
+    stub_web_push_payload_send(->(**_kwargs) { raise expired }) do
+      post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/test",
+        headers: { "Authorization" => "Bearer #{@token}" },
+        as: :json
+    end
+
+    assert_response :gone
+    assert_equal "PUSH_SUBSCRIPTION_EXPIRED", response.parsed_body["code"]
+    assert_not Push::Subscription.exists?(subscription.id)
+  end
+
+  test "test does not send for another user's subscription" do
+    subscription = users(:yuler).push_subscriptions.create!(
+      endpoint: @endpoint,
+      p256dh_key: "key",
+      auth_key: "auth"
+    )
+
+    post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/test",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :not_found
+  end
+
+  private
+    def stub_web_push_payload_send(callable)
+      singleton = WebPush.singleton_class
+      singleton.alias_method :__orig_payload_send, :payload_send
+      singleton.define_method(:payload_send) { |**kwargs| callable.call(**kwargs) }
+      yield
+    ensure
+      singleton.alias_method :payload_send, :__orig_payload_send
+      singleton.remove_method :__orig_payload_send
+    end
 end

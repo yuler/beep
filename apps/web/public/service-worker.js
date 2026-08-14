@@ -1,4 +1,4 @@
-// beep-web-push v1 — keep this URL unhashed; bump the comment to roll clients.
+// beep-web-push v3 — keep this URL unhashed; bump the comment to roll clients.
 
 self.addEventListener("install", (event) => {
 	event.waitUntil(self.skipWaiting());
@@ -9,20 +9,27 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-	const payload = event.data ? event.data.json() : {};
-	const title = payload.title || "Beep";
-	const options = payload.options || {};
-
-	event.waitUntil(
-		(async () => {
-			await self.registration.showNotification(title, options);
-			const badge = options.data?.badge;
-			if (typeof badge === "number" && navigator.setAppBadge) {
-				await navigator.setAppBadge(badge);
-			}
-		})(),
-	);
+	event.waitUntil(showPushNotification(event));
 });
+
+async function showPushNotification(event) {
+	let title = "Beep";
+	let options = { body: "You have a new notification." };
+
+	try {
+		const payload = event.data ? await event.data.json() : {};
+		title = payload.title || title;
+		options = payload.options || options;
+	} catch {
+		// Still show a notification so Chrome does not drop a focused-tab push.
+	}
+
+	await self.registration.showNotification(title, options);
+	const badge = options.data?.badge;
+	if (typeof self.navigator.setAppBadge === "function") {
+		await self.navigator.setAppBadge(typeof badge === "number" ? badge : 0);
+	}
+}
 
 self.addEventListener("notificationclick", (event) => {
 	event.notification.close();

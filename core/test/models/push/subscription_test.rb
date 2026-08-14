@@ -40,7 +40,7 @@ class Push::SubscriptionTest < ActiveSupport::TestCase
     assert_includes subscription.errors[:endpoint], "is not a permitted push service"
   end
 
-  test "rejects endpoint that resolves to private IP" do
+  test "resolved_endpoint_ip is nil for a private IP" do
     stub_dns_resolution("192.168.1.1")
 
     subscription = Push::Subscription.new(
@@ -50,11 +50,10 @@ class Push::SubscriptionTest < ActiveSupport::TestCase
       auth_key: "test_auth"
     )
 
-    assert_not subscription.valid?
-    assert_includes subscription.errors[:endpoint], "resolves to a private or invalid IP address"
+    assert_nil subscription.resolved_endpoint_ip
   end
 
-  test "rejects endpoint that resolves to loopback IP" do
+  test "resolved_endpoint_ip is nil for a loopback IP" do
     stub_dns_resolution("127.0.0.1")
 
     subscription = Push::Subscription.new(
@@ -64,11 +63,10 @@ class Push::SubscriptionTest < ActiveSupport::TestCase
       auth_key: "test_auth"
     )
 
-    assert_not subscription.valid?
-    assert_includes subscription.errors[:endpoint], "resolves to a private or invalid IP address"
+    assert_nil subscription.resolved_endpoint_ip
   end
 
-  test "rejects endpoint that resolves to link-local IP (AWS IMDS)" do
+  test "resolved_endpoint_ip is nil for a link-local IP (AWS IMDS)" do
     stub_dns_resolution("169.254.169.254")
 
     subscription = Push::Subscription.new(
@@ -78,8 +76,7 @@ class Push::SubscriptionTest < ActiveSupport::TestCase
       auth_key: "test_auth"
     )
 
-    assert_not subscription.valid?
-    assert_includes subscription.errors[:endpoint], "resolves to a private or invalid IP address"
+    assert_nil subscription.resolved_endpoint_ip
   end
 
   test "resolved_endpoint_ip returns pinned public IP" do

@@ -6,9 +6,13 @@ import {
 	enableWebPush,
 	getPushPermission,
 	isIosDevice,
+	isMacOS,
 	isStandaloneDisplay,
 	isSubscribedForAccount,
 	isWebPushSupported,
+	notificationBrowserName,
+	notificationPlatform,
+	sendTestPush,
 } from "@/lib/web-push";
 
 export type WebPushStatus = {
@@ -16,7 +20,10 @@ export type WebPushStatus = {
 	permission: NotificationPermission;
 	subscribed: boolean;
 	ios: boolean;
+	macos: boolean;
 	standalone: boolean;
+	browserName: string;
+	platform: ReturnType<typeof notificationPlatform>;
 };
 
 const INITIAL_STATUS: WebPushStatus = {
@@ -24,7 +31,10 @@ const INITIAL_STATUS: WebPushStatus = {
 	permission: "default",
 	subscribed: false,
 	ios: false,
+	macos: false,
 	standalone: false,
+	browserName: "this browser",
+	platform: "other",
 };
 
 function errorMessage(err: unknown) {
@@ -36,6 +46,8 @@ export function useWebPush(slug: string) {
 	const [status, setStatus] = useState<WebPushStatus>(INITIAL_STATUS);
 	const [ready, setReady] = useState(false);
 	const [pending, setPending] = useState(false);
+	const [testing, setTesting] = useState(false);
+	const [testSent, setTestSent] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const refresh = useCallback(async () => {
@@ -45,7 +57,10 @@ export function useWebPush(slug: string) {
 				permission: "denied",
 				subscribed: false,
 				ios: isIosDevice(),
+				macos: isMacOS(),
 				standalone: isStandaloneDisplay(),
+				browserName: notificationBrowserName(),
+				platform: notificationPlatform(),
 			});
 			return;
 		}
@@ -59,7 +74,10 @@ export function useWebPush(slug: string) {
 			permission,
 			subscribed,
 			ios: isIosDevice(),
+			macos: isMacOS(),
 			standalone: isStandaloneDisplay(),
+			browserName: notificationBrowserName(),
+			platform: notificationPlatform(),
 		});
 	}, [slug]);
 
@@ -76,6 +94,7 @@ export function useWebPush(slug: string) {
 	const enable = useCallback(async () => {
 		setPending(true);
 		setError(null);
+		setTestSent(false);
 		try {
 			await enableWebPush(slug);
 			await refresh();
@@ -90,6 +109,7 @@ export function useWebPush(slug: string) {
 	const disable = useCallback(async () => {
 		setPending(true);
 		setError(null);
+		setTestSent(false);
 		try {
 			await disableWebPush(slug);
 			await refresh();
@@ -101,5 +121,31 @@ export function useWebPush(slug: string) {
 		}
 	}, [refresh, slug]);
 
-	return { status, ready, pending, error, enable, disable };
+	const sendTest = useCallback(async () => {
+		setTesting(true);
+		setError(null);
+		setTestSent(false);
+		try {
+			await sendTestPush(slug);
+			setTestSent(true);
+			await refresh();
+		} catch (err) {
+			setError(errorMessage(err));
+			await refresh();
+		} finally {
+			setTesting(false);
+		}
+	}, [refresh, slug]);
+
+	return {
+		status,
+		ready,
+		pending,
+		testing,
+		testSent,
+		error,
+		enable,
+		disable,
+		sendTest,
+	};
 }
