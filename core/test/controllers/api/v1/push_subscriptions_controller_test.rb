@@ -73,7 +73,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
-	test "create returns not found for another account" do
+  test "create returns not found for another account" do
     post "/api/v1/#{accounts(:yuler_account).slug}/push_subscriptions",
       params: { endpoint: @endpoint, p256dh_key: "key", auth_key: "auth" },
       headers: { "Authorization" => "Bearer #{@token}" },

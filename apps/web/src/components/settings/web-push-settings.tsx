@@ -113,9 +113,9 @@ export function WebPushSettings({ slug }: { slug: string }) {
 							) : null}
 						</div>
 						{testSent ? (
-							<p className="text-sm text-muted-foreground" role="status">
+							<output className="text-sm text-muted-foreground">
 								Test sent. If nothing appeared, open Tips.
-							</p>
+							</output>
 						) : null}
 					</>
 				)}
