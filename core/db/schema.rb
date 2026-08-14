@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_08_12_120000) do
+ActiveRecord::Schema[8.2].define(version: 2026_08_14_090000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.integer "amount", null: false
@@ -207,6 +207,19 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_12_120000) do
     t.index ["identity_id"], name: "index_magic_links_on_identity_id"
   end
 
+  create_table "push_subscriptions", id: :uuid, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.uuid "user_id", null: false
+    t.text "endpoint"
+    t.string "p256dh_key"
+    t.string "auth_key"
+    t.string "user_agent", limit: 4096
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_push_subscriptions_on_account_id"
+    t.index ["user_id", "endpoint"], name: "index_push_subscriptions_on_user_id_and_endpoint", unique: true
+  end
+
   create_table "sessions", id: :uuid, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.uuid "identity_id", null: false
@@ -237,4 +250,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_12_120000) do
   add_foreign_key "account_invitation_declines", "identities"
   add_foreign_key "account_slug_holds", "accounts"
   add_foreign_key "beeps", "accounts"
+  add_foreign_key "push_subscriptions", "accounts"
+  add_foreign_key "push_subscriptions", "users"
 end

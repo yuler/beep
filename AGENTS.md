@@ -37,4 +37,5 @@ Local CORS for web → core `/api/v1` is development-only: [`core/config/initial
 
 ## Core
 
-- `core` API JSON responses use jbuilder views (`.json.jbuilder`), not inline hashes in controllers.
+- API JSON responses use jbuilder views (`.json.jbuilder`), not inline hashes in controllers.
+- Do not add gems or other package dependencies without asking first.
