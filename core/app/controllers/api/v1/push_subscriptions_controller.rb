@@ -5,7 +5,7 @@ class Api::V1::PushSubscriptionsController < Api::V1::BaseController
   end
 
   def create
-    @push_subscription = upsert_push_subscription
+    @push_subscription = Push::Subscription.upsert_for!(Current.user, subscription_attributes)
 
     render :create, status: :created
   rescue ActiveRecord::RecordInvalid => error
@@ -36,10 +36,6 @@ class Api::V1::PushSubscriptionsController < Api::V1::BaseController
   end
 
   private
-    def upsert_push_subscription
-      Push::Subscription.upsert_for!(Current.user, subscription_attributes)
-    end
-
     def subscription_attributes
       subscription_params.merge(user_agent: request.user_agent.to_s.truncate(4096))
     end

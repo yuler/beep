@@ -64,8 +64,8 @@ iOS copy is duplicated: settings card Home Screen text vs Tips dialog `ios` step
 
 `GET /api/v1/web_push` as its own controller is fine (VAPID is user-scoped, no account slug). Do not merge with subscriptions.
 
-- [ ] Delete or inline the wrappers above
-- [ ] Fold hook mutations into one helper
+- [x] Delete or inline the wrappers above
+- [x] Fold hook mutations into one helper
 
 ---
 

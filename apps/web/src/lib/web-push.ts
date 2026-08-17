@@ -94,19 +94,6 @@ export function isStandaloneDisplay() {
 	return media || safariStandalone;
 }
 
-export async function getPushPermission(): Promise<NotificationPermission> {
-	if (!isWebPushSupported()) return "denied";
-	return Notification.permission;
-}
-
-export async function hasBrowserPushSubscription() {
-	if (!isWebPushSupported()) return false;
-	const registration = await navigator.serviceWorker.getRegistration("/");
-	if (!registration) return false;
-	const subscription = await registration.pushManager.getSubscription();
-	return subscription !== null;
-}
-
 export function isSubscribedForAccount(
 	endpoint: string | null,
 	records: { endpoint: string }[],
@@ -160,11 +147,6 @@ export async function getBrowserPushEndpoint() {
 	const registration = await navigator.serviceWorker.getRegistration("/");
 	const subscription = await registration?.pushManager.getSubscription();
 	return subscription?.endpoint ?? null;
-}
-
-export async function listPushSubscriptions(slug: string) {
-	const { push_subscriptions } = await fetchPushSubscriptions(slug);
-	return push_subscriptions;
 }
 
 export async function removePushSubscription(
@@ -253,8 +235,11 @@ async function subscriptionIdForEndpoint(
 	endpoint: string | null,
 ) {
 	if (!endpoint) return null;
-	const records = await listPushSubscriptions(slug);
-	return records.find((record) => record.endpoint === endpoint)?.id ?? null;
+	const { push_subscriptions } = await fetchPushSubscriptions(slug);
+	return (
+		push_subscriptions.find((record) => record.endpoint === endpoint)?.id ??
+		null
+	);
 }
 
 function urlBase64ToUint8Array(base64String: string) {

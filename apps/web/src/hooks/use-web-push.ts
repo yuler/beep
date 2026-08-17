@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/lib/api/client";
-import type { PushSubscriptionRecord } from "@/lib/api/push";
+import {
+	fetchPushSubscriptions,
+	type PushSubscriptionRecord,
+} from "@/lib/api/push";
 import {
 	disableWebPush,
 	enableWebPush,
 	getBrowserPushEndpoint,
-	getPushPermission,
 	isStandaloneDisplay,
 	isSubscribedForAccount,
 	isWebPushSupported,
-	listPushSubscriptions,
 	type NotificationPlatform,
 	notificationBrowserName,
 	notificationPlatform,
@@ -36,9 +37,19 @@ const INITIAL_STATUS: WebPushStatus = {
 	platform: "other",
 };
 
+type DeviceIdentity = Pick<
+	WebPushStatus,
+	"standalone" | "browserName" | "platform"
+>;
+
 function errorMessage(err: unknown) {
 	if (err instanceof ApiError || err instanceof Error) return err.message;
 	return "Something went wrong.";
+}
+
+function pushPermission() {
+	if (!isWebPushSupported()) return "denied";
+	return Notification.permission;
 }
 
 export function useWebPush(slug: string) {
@@ -53,6 +64,16 @@ export function useWebPush(slug: string) {
 	);
 	const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const identityRef = useRef<DeviceIdentity | null>(null);
+
+	const deviceIdentity = useCallback((): DeviceIdentity => {
+		identityRef.current ??= {
+			standalone: isStandaloneDisplay(),
+			browserName: notificationBrowserName(),
+			platform: notificationPlatform(),
+		};
+		return identityRef.current;
+	}, []);
 
 	const refresh = useCallback(async () => {
 		const endpoint = await getBrowserPushEndpoint();
@@ -60,35 +81,21 @@ export function useWebPush(slug: string) {
 
 		let records: PushSubscriptionRecord[] = [];
 		try {
-			records = await listPushSubscriptions(slug);
+			const response = await fetchPushSubscriptions(slug);
+			records = response.push_subscriptions;
 			setSubscriptions(records);
 		} catch (err) {
 			setError(errorMessage(err));
 			setSubscriptions([]);
 		}
 
-		if (!isWebPushSupported()) {
-			setStatus({
-				supported: false,
-				permission: "denied",
-				subscribed: false,
-				standalone: isStandaloneDisplay(),
-				browserName: notificationBrowserName(),
-				platform: notificationPlatform(),
-			});
-			return;
-		}
-
-		const permission = await getPushPermission();
 		setStatus({
-			supported: true,
-			permission,
+			...deviceIdentity(),
+			supported: isWebPushSupported(),
+			permission: pushPermission(),
 			subscribed: isSubscribedForAccount(endpoint, records),
-			standalone: isStandaloneDisplay(),
-			browserName: notificationBrowserName(),
-			platform: notificationPlatform(),
 		});
-	}, [slug]);
+	}, [deviceIdentity, slug]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -100,67 +107,58 @@ export function useWebPush(slug: string) {
 		};
 	}, [refresh]);
 
-	const enable = useCallback(async () => {
-		setPending(true);
-		setError(null);
-		setTestSent(false);
-		try {
-			await enableWebPush(slug);
-			await refresh();
-		} catch (err) {
-			setError(errorMessage(err));
-			await refresh();
-		} finally {
-			setPending(false);
-		}
-	}, [refresh, slug]);
-
-	const disable = useCallback(async () => {
-		setPending(true);
-		setError(null);
-		setTestSent(false);
-		try {
-			await disableWebPush(slug);
-			await refresh();
-		} catch (err) {
-			setError(errorMessage(err));
-			await refresh();
-		} finally {
-			setPending(false);
-		}
-	}, [refresh, slug]);
-
-	const sendTest = useCallback(async () => {
-		setTesting(true);
-		setError(null);
-		setTestSent(false);
-		try {
-			await sendTestPush(slug);
-			setTestSent(true);
-			await refresh();
-		} catch (err) {
-			setError(errorMessage(err));
-			await refresh();
-		} finally {
-			setTesting(false);
-		}
-	}, [refresh, slug]);
-
-	const remove = useCallback(
-		async (record: PushSubscriptionRecord) => {
-			setRemovingId(record.id);
+	const run = useCallback(
+		async (
+			action: () => Promise<void>,
+			busy: {
+				pending?: boolean;
+				testing?: boolean;
+				removingId?: string;
+				markTestSent?: boolean;
+			},
+		) => {
 			setError(null);
+			if (busy.pending || busy.testing) setTestSent(false);
+			if (busy.pending) setPending(true);
+			if (busy.testing) setTesting(true);
+			if (busy.removingId) setRemovingId(busy.removingId);
 			try {
-				await removePushSubscription(slug, record);
-				await refresh();
+				await action();
+				if (busy.markTestSent) setTestSent(true);
 			} catch (err) {
 				setError(errorMessage(err));
-				await refresh();
 			} finally {
-				setRemovingId(null);
+				await refresh();
+				if (busy.pending) setPending(false);
+				if (busy.testing) setTesting(false);
+				if (busy.removingId) setRemovingId(null);
 			}
 		},
-		[refresh, slug],
+		[refresh],
+	);
+
+	const enable = useCallback(() => {
+		return run(() => enableWebPush(slug), { pending: true });
+	}, [run, slug]);
+
+	const disable = useCallback(() => {
+		return run(() => disableWebPush(slug), { pending: true });
+	}, [run, slug]);
+
+	const sendTest = useCallback(() => {
+		return run(() => sendTestPush(slug), {
+			testing: true,
+			markTestSent: true,
+		});
+	}, [run, slug]);
+
+	const remove = useCallback(
+		(record: PushSubscriptionRecord) => {
+			return run(() => removePushSubscription(slug, record), {
+				removingId: record.id,
+			});
+		},
+		[run, slug],
 	);
 
 	return {
