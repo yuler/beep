@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_08_14_090000) do
+ActiveRecord::Schema[8.2].define(version: 2026_08_17_100000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.integer "amount", null: false
@@ -163,6 +163,16 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_14_090000) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "beep_runs", id: :uuid, force: :cascade do |t|
+    t.uuid "beep_id", null: false
+    t.datetime "scheduled_for", null: false
+    t.string "status", default: "pending", null: false
+    t.json "result"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["beep_id", "scheduled_for"], name: "index_beep_runs_on_beep_id_and_scheduled_for", unique: true
+  end
+
   create_table "beeps", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.string "kind", null: false
@@ -249,6 +259,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_14_090000) do
   add_foreign_key "account_invitation_declines", "account_invitations", column: "invitation_id"
   add_foreign_key "account_invitation_declines", "identities"
   add_foreign_key "account_slug_holds", "accounts"
+  add_foreign_key "beep_runs", "beeps"
   add_foreign_key "beeps", "accounts"
   add_foreign_key "push_subscriptions", "accounts"
   add_foreign_key "push_subscriptions", "users"

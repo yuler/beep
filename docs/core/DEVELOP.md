@@ -160,7 +160,8 @@ Database-backed job queue (no Redis):
 
 Key recurring tasks (via [`config/recurring.yml`](../../core/config/recurring.yml)):
 
-- Cleanup jobs for expired links, deliveries
+- `BeepPollerJob` every 10 seconds (due `once` beeps)
+- Production: cleanup of finished Solid Queue jobs
 
 ### Chrome MCP (Local Dev)
 

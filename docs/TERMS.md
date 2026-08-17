@@ -14,7 +14,7 @@ Domain vocabulary for beep scheduling, delivery, and tenancy.
 | Last fire time                   | last_run_at    | field `last_run_at`    | When it was last claimed/executed                                    |
 | Timezone                         | timezone       | field `timezone`       | Interprets cron / display; default UTC                               |
 | Recurrence expression            | cron           | field `cron`           | Only for `recurring`; standard cron                                  |
-| Beep status                      | status (Beep)  | field `status`         | `active` \| `paused` \| `completed` \| `cancelled`                   |
+| Beep status                      | status (Beep)  | field `status`         | `active` \| `paused` \| `completed` \| `cancelled` \| `firing`       |
 | Execution record                 | Run            | BeepRun / `beep_runs`  | One record per actual fire                                           |
 | Planned execution point          | scheduled_for  | field `scheduled_for`  | Part of the idempotency key (unique with `beep_id`)                  |
 | Run status                       | status (Run)   | field `status`         | `pending` \| `running` \| `succeeded` \| `failed` \| `skipped`       |
@@ -22,5 +22,5 @@ Domain vocabulary for beep scheduling, delivery, and tenancy.
 | Channel type                     | channel type   | field `type` or equiv. | `email` \| `web_push` (MVP)                                          |
 | Delivery result summary          | result         | `beep_runs.result`     | Per-channel success/failure info                                     |
 | Tenant                           | Account        | existing               | Personal or team; all data carries `account_id`                      |
-| Schedule scan                    | Poller         | `BeepPollerJob`        | Solid Queue job scanning `next_run_at <= now`                        |
+| Schedule scan                    | Poller         | `BeepPollerJob`        | Every 10s; claims due `once` beeps (`next_run_at <= now`)            |
 | Delivery job                     | Deliver        | `DeliverBeepRunJob`    | Actually sends via each channel                                      |

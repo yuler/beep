@@ -7,7 +7,7 @@ overmind = "2.5.1"
 tmux = "3.7b"
 
 [env]
-_.file = ".env"
+_.file = [".env", ".env.local"]
 
 [tasks.setup]
 description = "Set up the development environment (gems, deps, db)"

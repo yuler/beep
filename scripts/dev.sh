@@ -55,12 +55,14 @@ ensure_ports_free() {
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-if [ -f .env ]; then
-  set -a
-  # shellcheck disable=SC1091
-  . ./.env
-  set +a
-fi
+for env_file in .env .env.local; do
+  if [ -f "$env_file" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . "./$env_file"
+    set +a
+  fi
+done
 
 CORE_PORT="${CORE_PORT:-3001}"
 WEB_PORT="${WEB_PORT:-3000}"
