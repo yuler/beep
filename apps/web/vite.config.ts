@@ -1,5 +1,7 @@
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
+import { parseEnv } from "node:util";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
@@ -61,8 +63,50 @@ load it. Use the canonical URL:</p>
 	};
 }
 
+function parseEnvFile(filePath: string): Record<string, string> {
+	if (!fs.existsSync(filePath)) return {};
+	const parsed = parseEnv(fs.readFileSync(filePath, "utf8"));
+	const out: Record<string, string> = {};
+	for (const [key, value] of Object.entries(parsed)) {
+		if (value !== undefined) out[key] = value;
+	}
+	return out;
+}
+
+// Expand `${VAR}` using the merged file map (local APP_HOST must win).
+function expandEnv(env: Record<string, string>): Record<string, string> {
+	const out = { ...env };
+	for (let i = 0; i < 3; i++) {
+		for (const key of Object.keys(out)) {
+			out[key] = out[key].replace(
+				/\$\{([^}]+)\}/g,
+				(_, name: string) => out[name] ?? process.env[name] ?? "",
+			);
+		}
+	}
+	return out;
+}
+
+// Vite ranks `.env.[mode]` above `.env.local`. Re-apply `*.local` last so they
+// overwrite `.env` / `.env.[mode]` — same overlay as Rails dotenv, mise, and
+// `scripts/dev.sh`.
+function loadMonorepoEnv(mode: string, envDir: string): Record<string, string> {
+	const env = loadEnv(mode, envDir, "");
+	Object.assign(
+		env,
+		parseEnvFile(path.join(envDir, ".env.local")),
+		parseEnvFile(path.join(envDir, `.env.${mode}.local`)),
+	);
+	return expandEnv(env);
+}
+
 export default defineConfig(({ mode }) => {
-	const env = loadEnv(mode, monorepoRoot, "");
+	const env = loadMonorepoEnv(mode, monorepoRoot);
+	// Vite's `import.meta.env` prefers already-exported process.env (mise
+	// activate / `.env`). Overwrite so the browser sees `.env.local` too.
+	for (const [key, value] of Object.entries(env)) {
+		process.env[key] = value;
+	}
 	const appHost = env.APP_HOST || "beep.localhost";
 	const coreProxy = env.CORE_INTERNAL_URL || `http://core.${appHost}:3001`;
 

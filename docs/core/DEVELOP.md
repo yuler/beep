@@ -13,7 +13,7 @@ bin/setup
 bin/dev
 ```
 
-Development URLs (login with `john@example.com`, `APP_HOST` from root `.env`, default `beep.localhost`):
+Development URLs (login with `john@example.com`, `APP_HOST` from repo-root `.env` / `.env.local`, default `beep.localhost`):
 
 | URL                                      | Notes                                              |
 | ---------------------------------------- | -------------------------------------------------- |

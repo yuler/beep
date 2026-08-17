@@ -5,6 +5,21 @@ require "rails/all"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
+# Monorepo env lives at the repo root. Rails.root is `core/`, so the gem's
+# default `.env*` lookup would miss `.env` / `.env.local`. First file wins
+# unless overwrite is on; overwrite lets `.env.local` replace a stale
+# `mise activate` / `.env` value (same overlay as `scripts/dev.sh`).
+if defined?(Dotenv::Rails) && !Rails.env.test?
+  repo_root = File.expand_path("../..", __dir__)
+  Dotenv::Rails.files = [
+    "#{repo_root}/.env.#{Rails.env}.local",
+    "#{repo_root}/.env.local",
+    "#{repo_root}/.env.#{Rails.env}",
+    "#{repo_root}/.env"
+  ]
+  Dotenv::Rails.overwrite = true
+end
+
 module BeepCore
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.

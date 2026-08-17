@@ -55,6 +55,7 @@ ensure_ports_free() {
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# Later files win (bash assignment). `.env.local` overrides `.env`.
 for env_file in .env .env.local; do
   if [ -f "$env_file" ]; then
     set -a
@@ -64,12 +65,11 @@ for env_file in .env .env.local; do
   fi
 done
 
-CORE_PORT="${CORE_PORT:-3001}"
-WEB_PORT="${WEB_PORT:-3000}"
-APP_HOST="${APP_HOST:-beep.localhost}"
-
-CORE_URL="http://core.${APP_HOST}:${CORE_PORT}"
-WEB_URL="http://web.${APP_HOST}:${WEB_PORT}"
+export CORE_PORT="${CORE_PORT:-3001}"
+export WEB_PORT="${WEB_PORT:-3000}"
+export APP_HOST="${APP_HOST:-beep.localhost}"
+export CORE_URL="${CORE_URL:-http://core.${APP_HOST}:${CORE_PORT}}"
+export WEB_URL="${WEB_URL:-http://web.${APP_HOST}:${WEB_PORT}}"
 
 step "Local subdomain URLs (*.localhost → 127.0.0.1)"
 ok "core  ${CORE_URL}"

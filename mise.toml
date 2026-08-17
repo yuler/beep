@@ -7,6 +7,9 @@ overmind = "2.5.1"
 tmux = "3.7b"
 
 [env]
+# `.env.local` is loaded second so it can override `.env` for keys mise
+# has not already exported. `mise dev` always re-sources both in bash
+# (later file wins) before starting overmind.
 _.file = [".env", ".env.local"]
 
 [tasks.setup]
