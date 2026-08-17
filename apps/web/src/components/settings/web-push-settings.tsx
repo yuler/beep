@@ -12,7 +12,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { useWebPush } from "@/hooks/use-web-push";
-import { describePushDevice } from "@/lib/web-push";
+import { describePushDevice, IOS_HOME_SCREEN_HINT } from "@/lib/web-push";
 
 export function WebPushSettings({ slug }: { slug: string }) {
 	const {
@@ -31,7 +31,7 @@ export function WebPushSettings({ slug }: { slug: string }) {
 		remove,
 	} = useWebPush(slug);
 
-	const needsIosInstall = status.ios && !status.standalone;
+	const needsIosInstall = status.platform === "ios" && !status.standalone;
 	const denied = status.supported && status.permission === "denied";
 	const busy = pending || testing || removingId !== null;
 
@@ -60,8 +60,7 @@ export function WebPushSettings({ slug }: { slug: string }) {
 					</p>
 				) : needsIosInstall ? (
 					<p className="text-sm text-muted-foreground">
-						On iPhone and iPad, add Beep to your Home Screen, then open it from
-						there to enable notifications.
+						{IOS_HOME_SCREEN_HINT}
 					</p>
 				) : denied ? (
 					<p className="text-sm text-muted-foreground">

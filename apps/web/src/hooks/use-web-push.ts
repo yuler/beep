@@ -7,12 +7,11 @@ import {
 	enableWebPush,
 	getBrowserPushEndpoint,
 	getPushPermission,
-	isIosDevice,
-	isMacOS,
 	isStandaloneDisplay,
 	isSubscribedForAccount,
 	isWebPushSupported,
 	listPushSubscriptions,
+	type NotificationPlatform,
 	notificationBrowserName,
 	notificationPlatform,
 	removePushSubscription,
@@ -23,19 +22,15 @@ export type WebPushStatus = {
 	supported: boolean;
 	permission: NotificationPermission;
 	subscribed: boolean;
-	ios: boolean;
-	macos: boolean;
 	standalone: boolean;
 	browserName: string;
-	platform: ReturnType<typeof notificationPlatform>;
+	platform: NotificationPlatform;
 };
 
 const INITIAL_STATUS: WebPushStatus = {
 	supported: false,
 	permission: "default",
 	subscribed: false,
-	ios: false,
-	macos: false,
 	standalone: false,
 	browserName: "this browser",
 	platform: "other",
@@ -77,8 +72,6 @@ export function useWebPush(slug: string) {
 				supported: false,
 				permission: "denied",
 				subscribed: false,
-				ios: isIosDevice(),
-				macos: isMacOS(),
 				standalone: isStandaloneDisplay(),
 				browserName: notificationBrowserName(),
 				platform: notificationPlatform(),
@@ -91,8 +84,6 @@ export function useWebPush(slug: string) {
 			supported: true,
 			permission,
 			subscribed: isSubscribedForAccount(endpoint, records),
-			ios: isIosDevice(),
-			macos: isMacOS(),
 			standalone: isStandaloneDisplay(),
 			browserName: notificationBrowserName(),
 			platform: notificationPlatform(),

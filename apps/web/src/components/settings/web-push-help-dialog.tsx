@@ -10,7 +10,10 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import type { NotificationPlatform } from "@/lib/web-push";
+import {
+	IOS_HOME_SCREEN_HINT,
+	type NotificationPlatform,
+} from "@/lib/web-push";
 
 const OS_STEP: Record<
 	NotificationPlatform,
@@ -33,8 +36,7 @@ const OS_STEP: Record<
 	},
 	ios: {
 		title: "iPhone and iPad",
-		body: () =>
-			"Add Beep to the Home Screen, then open it from that icon. Web push only works in the Home Screen app.",
+		body: () => IOS_HOME_SCREEN_HINT,
 	},
 	other: {
 		title: "System",

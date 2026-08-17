@@ -17,19 +17,6 @@ export function isWebPushSupported() {
 	);
 }
 
-export function isIosDevice() {
-	if (typeof navigator === "undefined") return false;
-	return /iphone|ipad|ipod/i.test(navigator.userAgent);
-}
-
-export function isMacOS() {
-	if (typeof navigator === "undefined") return false;
-	if (isIosDevice()) return false;
-	if (!/Mac OS X|Macintosh/i.test(navigator.userAgent)) return false;
-	// iPadOS "Request Desktop Website" uses a Macintosh UA.
-	return navigator.maxTouchPoints <= 1;
-}
-
 export type NotificationPlatform =
 	| "ios"
 	| "macos"
@@ -37,15 +24,17 @@ export type NotificationPlatform =
 	| "linux"
 	| "other";
 
+type DetectedPlatform = NotificationPlatform | "android";
+
+export const IOS_HOME_SCREEN_HINT =
+	"On iPhone and iPad, add Beep to your Home Screen, then open it from there to enable notifications.";
+
 export function notificationPlatform(): NotificationPlatform {
 	if (typeof navigator === "undefined") return "other";
-	if (isIosDevice()) return "ios";
-	if (isMacOS()) return "macos";
-	const ua = navigator.userAgent;
-	if (/Android/i.test(ua)) return "other";
-	if (/Windows/i.test(ua)) return "windows";
-	if (/Linux|X11/i.test(ua)) return "linux";
-	return "other";
+	const detected = platformFromUserAgent(navigator.userAgent, {
+		maxTouchPoints: navigator.maxTouchPoints,
+	});
+	return detected === "android" ? "other" : detected;
 }
 
 export function notificationBrowserName() {
@@ -58,12 +47,33 @@ export function describePushDevice(userAgent: string | null) {
 	if (/^curl\//i.test(userAgent)) return "curl";
 
 	const browser = browserNameFromUserAgent(userAgent);
-	if (/iPhone|iPad|iPod/i.test(userAgent)) return `${browser} on iOS`;
-	if (/Android/i.test(userAgent)) return `${browser} on Android`;
-	if (/Mac OS X|Macintosh/i.test(userAgent)) return `${browser} on Mac`;
-	if (/Windows/i.test(userAgent)) return `${browser} on Windows`;
-	if (/Linux|X11/i.test(userAgent)) return `${browser} on Linux`;
-	return browser;
+	const os = DEVICE_OS_LABEL[platformFromUserAgent(userAgent)];
+	return os ? `${browser} on ${os}` : browser;
+}
+
+const DEVICE_OS_LABEL: Record<DetectedPlatform, string | null> = {
+	ios: "iOS",
+	macos: "Mac",
+	windows: "Windows",
+	linux: "Linux",
+	android: "Android",
+	other: null,
+};
+
+function platformFromUserAgent(
+	ua: string,
+	options?: { maxTouchPoints?: number },
+): DetectedPlatform {
+	if (/iphone|ipad|ipod/i.test(ua)) return "ios";
+	if (/Mac OS X|Macintosh/i.test(ua)) {
+		// iPadOS "Request Desktop Website" uses a Macintosh UA.
+		if ((options?.maxTouchPoints ?? 0) > 1) return "ios";
+		return "macos";
+	}
+	if (/Android/i.test(ua)) return "android";
+	if (/Windows/i.test(ua)) return "windows";
+	if (/Linux|X11/i.test(ua)) return "linux";
+	return "other";
 }
 
 function browserNameFromUserAgent(ua: string) {
@@ -238,7 +248,10 @@ function pushSubscriptionPayload(subscription: PushSubscription) {
 	return { endpoint, p256dh_key: p256dh, auth_key: auth };
 }
 
-async function subscriptionIdForEndpoint(slug: string, endpoint: string | null) {
+async function subscriptionIdForEndpoint(
+	slug: string,
+	endpoint: string | null,
+) {
 	if (!endpoint) return null;
 	const records = await listPushSubscriptions(slug);
 	return records.find((record) => record.endpoint === endpoint)?.id ?? null;

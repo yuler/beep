@@ -45,9 +45,9 @@ Keep on status: `supported`, `permission`, `subscribed`, `standalone`, `browserN
 
 iOS copy is duplicated: settings card Home Screen text vs Tips dialog `ios` step.
 
-- [ ] Drop `ios` / `macos` from status; use `platform`
-- [ ] Share one UA → platform/browser helper
-- [ ] One iOS Home Screen sentence
+- [x] Drop `ios` / `macos` from status; use `platform`
+- [x] Share one UA → platform/browser helper
+- [x] One iOS Home Screen sentence
 
 ---
 
