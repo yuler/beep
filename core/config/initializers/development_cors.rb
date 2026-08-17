@@ -1,10 +1,11 @@
-# Development-only CORS for apps/web calling /api/v1 from localhost / *.localhost.
+# Development-only CORS for apps/web calling /api/v1 from the canonical web host.
 if Rails.env.development?
   class DevelopmentCors
     API_PREFIX = "/api/v1"
-    # Align with config.hosts: any *.localhost (optional port), plus loopback IPs.
-    LOCALHOST_ORIGIN = %r{\Ahttps?://(.+\.)?localhost(:\d+)?\z}i
-    LOOPBACK_ORIGIN = %r{\Ahttps?://(127\.0\.0\.1|\[::1\])(:\d+)?\z}i
+    # Align with config.hosts: only the canonical web host (from APP_HOST) is an
+    # allowed origin. A wrong *.localhost origin is refused.
+    WEB_HOST = ENV.fetch("APP_HOST", "beep.localhost")
+    WEB_ORIGIN = %r{\Ahttps?://web\.#{Regexp.escape(WEB_HOST)}(:\d+)?\z}i
 
     def initialize(app)
       @app = app
@@ -35,7 +36,7 @@ if Rails.env.development?
       def allowed_origin?(origin)
         return false if origin.blank?
 
-        origin.match?(LOCALHOST_ORIGIN) || origin.match?(LOOPBACK_ORIGIN)
+        origin.match?(WEB_ORIGIN)
       end
 
       def preflight_response(origin)

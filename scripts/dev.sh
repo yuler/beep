@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-log()   { gum style --foreground 212 "✦ $*"; }
 ok()    { gum style --foreground 78  "✔ $*"; }
 warn()  { gum style --foreground 227 "⚠ $*"; }
 step()  { gum style --foreground 99  "▶ $*"; }
@@ -65,14 +64,14 @@ fi
 
 CORE_PORT="${CORE_PORT:-3001}"
 WEB_PORT="${WEB_PORT:-3000}"
+APP_HOST="${APP_HOST:-beep.localhost}"
 
-CORE_URL="http://core.beep.localhost:${CORE_PORT}"
-WEB_URL="http://web.beep.localhost:${WEB_PORT}"
+CORE_URL="http://core.${APP_HOST}:${CORE_PORT}"
+WEB_URL="http://web.${APP_HOST}:${WEB_PORT}"
 
 step "Local subdomain URLs (*.localhost → 127.0.0.1)"
 ok "core  ${CORE_URL}"
 ok "web   ${WEB_URL}"
-log "Also: http://localhost:${CORE_PORT}  ·  http://localhost:${WEB_PORT}"
 echo
 
 step "Checking ports ${WEB_PORT} (web) and ${CORE_PORT} (core)…"

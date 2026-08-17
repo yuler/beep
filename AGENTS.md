@@ -19,10 +19,10 @@ mise dev
 
 `mise dev` → `scripts/dev.sh` prints subdomain URLs, then starts [`Procfile.dev`](Procfile.dev) via overmind:
 
-- Core: http://core.beep.localhost:3001 (also http://localhost:3001)
-- Web: http://web.beep.localhost:3000 (also http://localhost:3000)
+- Core: http://core.${APP_HOST}:${CORE_PORT}
+- Web: http://web.${APP_HOST}:${WEB_PORT}
 
-`*.localhost` resolves to `127.0.0.1` (no hosts file). Login: `john@example.com`
+`*.localhost` resolves to `127.0.0.1` (no hosts file). Login: `john@example.com`. Development is host-locked to `web.${APP_HOST}` / `core.${APP_HOST}`; `localhost` and any wrong `*.localhost` fail fast with a page showing the canonical URL.
 
 Local CORS for web → core `/api/v1` is development-only: [`core/config/initializers/development_cors.rb`](core/config/initializers/development_cors.rb). Details: [`docs/core/DEVELOP.md`](docs/core/DEVELOP.md#local-cors-development-only).
 

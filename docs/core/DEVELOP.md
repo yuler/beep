@@ -13,25 +13,26 @@ bin/setup
 bin/dev
 ```
 
-Development URLs (login with `john@example.com`):
+Development URLs (login with `john@example.com`, `APP_HOST` from root `.env`, default `beep.localhost`):
 
-| URL                                 | Notes                                     |
-| ----------------------------------- | ----------------------------------------- |
-| http://core.beep.localhost:3001 | Preferred local subdomain (`*.localhost`) |
-| http://localhost:3001               | Same process, plain loopback              |
+| URL                                      | Notes                                              |
+| ---------------------------------------- | -------------------------------------------------- |
+| http://core.${APP_HOST}:${CORE_PORT} | Preferred local subdomain (host-locked; required) |
+
+`localhost` is deliberately refused (Mode A login from loopback is cookie/CSRF-unsafe). Use `core.${APP_HOST}`.
 
 From the monorepo root prefer `mise setup` / `mise dev` (runs [`scripts/dev.sh`](../../scripts/dev.sh): prints subdomain URLs, then `overmind start -f Procfile.dev`).
 
-### Local subdomains (`*.localhost`)
+### Local subdomains (`.localhost`)
 
 Modern OS/browsers resolve `*.localhost` to `127.0.0.1` — no `/etc/hosts` entry required.
 
-| App  | Subdomain                                   | Port env                     |
-| ---- | ------------------------------------------- | ---------------------------- |
-| web  | http://web.beep.localhost:${WEB_PORT}   | `WEB_PORT` (default `3000`)  |
-| core | http://core.beep.localhost:${CORE_PORT} | `CORE_PORT` (default `3001`) |
+| App  | Subdomain                                        | Port env                    |
+| ---- | ------------------------------------------------ | --------------------------- |
+| web  | http://web.${APP_HOST}:${WEB_PORT}          | `WEB_PORT` (default `3000`) |
+| core | http://core.${APP_HOST}:${CORE_PORT}        | `CORE_PORT` (default `3001`) |
 
-Host authorization in development allows any `*.localhost` host (optional port) via `config.hosts` in [`config/environments/development.rb`](../../core/config/environments/development.rb). This is for local hostname convenience only — multi-tenancy remains path-based (`/{slug}/...`), not subdomain-based.
+Development is **host-locked**: [`config/environments/development.rb`](../../core/config/environments/development.rb) accepts only `core.${APP_HOST}` (plus trycloudflare) and Vite accepts only `web.${APP_HOST}`. Plain `localhost` and any other `*.localhost` host are refused — a wrong host fails fast with a page telling you the canonical URL, instead of silently serving beep. Multi-tenancy remains path-based (`/{slug}/...`), not subdomain-based. Blocked hosts on core render a custom 403 page (`config/initializers/development_host_authorization.rb`).
 
 ### Local CORS (development only)
 
@@ -41,10 +42,11 @@ Host authorization in development allows any `*.localhost` host (optional port) 
 
 Allowed origins (credentials enabled):
 
-| Origin                             | Notes                           |
-| ---------------------------------- | ------------------------------- |
-| `http(s)://*.localhost` (any port) | Any localhost / subdomain       |
-| `http(s)://127.0.0.1` / `[::1]`    | IPv4 / IPv6 loopback (any port) |
+| Origin                                  | Notes                         |
+| --------------------------------------- | ----------------------------- |
+| `http(s)://web.${APP_HOST}` (any port)  | Canonical web host (only)     |
+
+`localhost` / loopback origins are refused — same host lock as `config.hosts`.
 
 Rails has no built-in “allow CORS” config switch. This middleware is **development-only**. In production, TanStack Start (Nitro) proxies `/api` to core same-origin (Mode B).
 
@@ -114,10 +116,10 @@ Passwordless magic-link authentication:
 
 **Browser apps (`apps/web`)** call `/api/v1` with `credentials: "include"` and rely on the HttpOnly `session_id` cookie (no bearer token in localStorage). After magic-link verify, Core sets the session cookie; the JSON body still includes `session_token` for non-browser clients (mobile/CLI).
 
-| Deployment | `VITE_CORE_URL`           | `SESSION_COOKIE_DOMAIN`  | API access                                         |
-| ---------- | ------------------------- | ------------------------ | -------------------------------------------------- |
-| Local A    | `http://core…:3001`       | `.beep.localhost`    | `development_cors.rb` only                         |
-| Production | `""` (relative `/api/v1`) | unset (host-only cookie) | Nitro `/api` proxy → core (Mode B, TanStack Start) |
+| Deployment | `VITE_CORE_URL`                  | `SESSION_COOKIE_DOMAIN`  | API access                                         |
+| ---------- | -------------------------------- | ------------------------ | -------------------------------------------------- |
+| Local A    | `http://core…:${CORE_PORT}`      | `.${APP_HOST}`       | `development_cors.rb` only                         |
+| Production | `""` (relative `/api/v1`)        | unset (host-only cookie) | Nitro `/api` proxy → core (Mode B, TanStack Start) |
 
 `SESSION_COOKIE_DOMAIN` is shared by Rails `_beep_session`, `session_id`, and pending-auth cookies. `VITE_CORE_URL` can interpolate `${CORE_PORT}`. Session cookies use `SameSite=Lax`. CSRF uses Rails 8.2 `protect_from_forgery using: :header_only` (`Sec-Fetch-Site` from the browser); JSON API clients without that header (curl, native apps) are allowed via [`RequestForgeryProtection`](../../core/app/controllers/concerns/request_forgery_protection.rb). Local CORS for the web ↔ core split is documented under [Local CORS](#local-cors-development-only).
 
@@ -162,7 +164,7 @@ Key recurring tasks (via [`config/recurring.yml`](../../core/config/recurring.ym
 
 ### Chrome MCP (Local Dev)
 
-App URL: http://core.beep.localhost:3001 (or http://localhost:3001)  
+App URL: http://core.${APP_HOST}:${CORE_PORT}  
 Login: `john@example.com` (passwordless magic link — check Rails console for the link)
 
 Use Chrome MCP tools against the running dev app for UI testing and debugging.
