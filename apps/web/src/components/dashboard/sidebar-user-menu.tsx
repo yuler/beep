@@ -1,5 +1,5 @@
-import { useNavigate, useRouter } from "@tanstack/react-router";
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
 import { useState } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -22,7 +22,13 @@ import { ApiError } from "@/lib/api/client";
 import type { MeResponse } from "@/lib/api/session";
 import { destroySession } from "@/lib/api/session";
 
-export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
+export function SidebarUserMenu({
+	user,
+	slug,
+}: {
+	user: MeResponse["identity"];
+	slug: string;
+}) {
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { isMobile } = useSidebar();
@@ -103,6 +109,23 @@ export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
 									</div>
 								</div>
 							</DropdownMenuLabel>
+						</DropdownMenuGroup>
+
+						<DropdownMenuSeparator />
+
+						<DropdownMenuGroup>
+							<DropdownMenuItem
+								render={
+									<Link
+										to="/$account_slug/settings"
+										params={{ account_slug: slug }}
+									/>
+								}
+								onClick={() => setOpen(false)}
+							>
+								<Settings />
+								Settings
+							</DropdownMenuItem>
 						</DropdownMenuGroup>
 
 						<DropdownMenuSeparator />

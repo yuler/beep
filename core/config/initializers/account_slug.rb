@@ -15,7 +15,7 @@ module AccountSlug
   ].freeze
   RESERVED_EXTRA = %w[
     assets billing dev device help jobs landings login logout magic_link setup static
-    support test
+    support test web_push
   ].freeze
   RESERVED_SLUGS = (RESERVED_FROM_ROUTES + RESERVED_EXTRA).freeze
 

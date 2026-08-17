@@ -32,6 +32,10 @@ gem "mission_control-jobs"
 # API
 gem "jbuilder"
 
+# Web push
+gem "web-push"
+gem "net-http-persistent"
+
 # HTTP Clients
 gem "faraday"
 # gem "faraday-retry"

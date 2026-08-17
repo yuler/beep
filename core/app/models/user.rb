@@ -4,6 +4,8 @@ class User < ApplicationRecord
   belongs_to :account
   belongs_to :identity, optional: true
 
+  has_many :push_subscriptions, class_name: "Push::Subscription", dependent: :delete_all
+
   validates :name, presence: true
 
   # TODO: deactivate user

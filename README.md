@@ -38,12 +38,12 @@ mise dev
 
 `mise dev` prints local subdomain URLs on start, then runs [`Procfile.dev`](Procfile.dev) via overmind (`*.localhost` resolves to `127.0.0.1` — no `/etc/hosts` needed):
 
-| App  | Subdomain URL                       | Plain localhost       |
-| ---- | ----------------------------------- | --------------------- |
-| web  | http://web.beep.localhost:3000  | http://localhost:3000 |
-| core | http://core.beep.localhost:3001 | http://localhost:3001 |
+| App  | Canonical URL                      |
+| ---- | ---------------------------------- |
+| web  | http://web.${APP_HOST}:${WEB_PORT} |
+| core | http://core.${APP_HOST}:${CORE_PORT} |
 
-Ports come from root `.env` (`CORE_PORT`, `WEB_PORT`). Rails allows any `*.localhost` host in development; Vite allows `.localhost` via `allowedHosts`.
+Hosts come from root `.env` (`APP_HOST`, `CORE_PORT`, `WEB_PORT`). Development is locked to the canonical host only — Vite accepts `web.${APP_HOST}`, Rails accepts `core.${APP_HOST}`. A wrong host or plain `localhost` fails fast with a page telling you the canonical URL, instead of serving this app.
 
 Login: `john@example.com`
 

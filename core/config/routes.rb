@@ -61,6 +61,11 @@ Rails.application.routes.draw do
       get "me", to: "me#show"
       put "me/last_account", to: "me#update_last_account"
 
+      resource :web_push, only: :show, controller: "web_push"
+      resources :push_subscriptions, only: %i[ index create destroy ] do
+        post :test, on: :member
+      end
+
       resources :beeps, only: %i[ index create ]
 
       namespace :admin do

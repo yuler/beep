@@ -8,6 +8,7 @@ cd "$ROOT_DIR/core"
 OPTIONS=(
   "db:reset + db:seed"
   "log:clear + tmp:clear"
+  "create-vapid-key"
 )
 
 choices="$(gum choose --header="Select core maintenance · Space to toggle · Enter to run" --no-limit "${OPTIONS[@]}")"
@@ -35,6 +36,9 @@ while IFS= read -r line; do
     "log:clear + tmp:clear")
       ruby "$RAILS_BIN" log:clear
       ruby "$RAILS_BIN" tmp:clear
+      ;;
+    "create-vapid-key")
+      ruby script/create-vapid-key.rb
       ;;
     *)
       echo "Unknown selection: $line"
