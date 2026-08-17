@@ -138,7 +138,9 @@ export function useWebPush(slug: string) {
 	);
 
 	const enable = useCallback(() => {
-		return run(() => enableWebPush(slug), { pending: true });
+		return run(() => enableWebPush(slug).then(() => undefined), {
+			pending: true,
+		});
 	}, [run, slug]);
 
 	const disable = useCallback(() => {
