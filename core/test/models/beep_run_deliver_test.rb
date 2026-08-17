@@ -104,6 +104,15 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     assert_equal 0, sent
   end
 
+  test "deliver is a no-op for an expired run" do
+    expired_run = BeepRun.create!(beep: @beep, scheduled_for: 1.hour.ago, status: :expired)
+
+    expired_run.deliver_now
+
+    assert expired_run.reload.expired?
+    assert_nil expired_run.result
+  end
+
   private
     def due_once_beep
       beep = Beep.create!(

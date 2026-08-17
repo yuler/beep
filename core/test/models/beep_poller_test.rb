@@ -50,6 +50,38 @@ class BeepPollerTest < ActiveSupport::TestCase
     assert_equal 0, beep.runs.count
   end
 
+  test "poll flags an expired once beep as expired and does not enqueue delivery" do
+    beep = due_once_beep
+    beep.update_columns(next_run_at: (Beep::EXPIRED_AFTER + 1.minute).ago)
+
+    assert_no_enqueued_jobs only: DeliverBeepRunJob do
+      Beep.poll_due_now
+    end
+
+    run = beep.runs.sole
+    assert run.expired?
+    assert beep.reload.completed?
+    assert_nil beep.next_run_at
+    assert_equal run.scheduled_for.to_i, beep.last_run_at.to_i
+  end
+
+  test "poll expires a stale firing beep whose pending run is too old to deliver" do
+    beep = due_once_beep
+    Beep.poll_due_now
+    run = beep.runs.sole
+    run.update_columns(scheduled_for: (Beep::EXPIRED_AFTER + 1.minute).ago)
+    beep.update_columns(updated_at: 3.minutes.ago)
+    clear_enqueued_jobs
+
+    assert_no_enqueued_jobs only: DeliverBeepRunJob do
+      Beep.poll_due_now
+    end
+
+    assert run.reload.expired?
+    assert beep.reload.completed?
+    assert_nil beep.next_run_at
+  end
+
   test "poll is idempotent for the same due beep" do
     due_once_beep
 

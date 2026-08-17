@@ -1,14 +1,14 @@
 class BeepRun < ApplicationRecord
   belongs_to :beep
 
-  enum :status, %w[ pending running succeeded failed skipped ].index_by(&:itself)
+  enum :status, %w[ pending running succeeded failed skipped expired ].index_by(&:itself)
 
   def deliver_later
     DeliverBeepRunJob.perform_later(self)
   end
 
   def deliver_now
-    return if succeeded? || failed? || skipped?
+    return if succeeded? || failed? || skipped? || expired?
 
     update!(status: :running)
     payload_result = deliver_web_push

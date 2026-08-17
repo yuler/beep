@@ -3,6 +3,7 @@ class Beep < ApplicationRecord
 
   POLL_BATCH_SIZE = 100
   STALE_FIRING_AFTER = 2.minutes
+  EXPIRED_AFTER = 1.hour
 
   belongs_to :account
   has_many :runs, class_name: "BeepRun", dependent: :destroy
@@ -40,17 +41,22 @@ class Beep < ApplicationRecord
       updated_at: Time.current
     )
     if claimed == 1
-      enqueue_run(scheduled_for)
+      claim_run(scheduled_for)
     end
   end
 
   def reclaim_stale
     run = runs.order(:created_at).last
     if run.nil?
-      enqueue_run(next_run_at)
+      claim_run(next_run_at)
     elsif run.pending?
-      touch
-      run.deliver_later
+      if expired?(run.scheduled_for)
+        run.update!(status: :expired)
+        finish_firing(last_run_at: run.scheduled_for)
+      else
+        touch
+        run.deliver_later
+      end
     elsif !run.running?
       finish_firing(last_run_at: run.scheduled_for)
     end
@@ -75,12 +81,22 @@ class Beep < ApplicationRecord
   end
 
   private
-    def enqueue_run(scheduled_for)
-      run = runs.create!(scheduled_for: scheduled_for, status: :pending)
-      touch
-      run.deliver_later
+    def claim_run(scheduled_for)
+      if expired?(scheduled_for)
+        runs.create!(scheduled_for: scheduled_for, status: :expired)
+        finish_firing(last_run_at: scheduled_for)
+      else
+        run = runs.create!(scheduled_for: scheduled_for, status: :pending)
+        touch
+        run.deliver_later
+      end
     rescue ActiveRecord::RecordNotUnique
-      runs.find_by!(scheduled_for: scheduled_for).deliver_later
+      run = runs.find_by!(scheduled_for: scheduled_for)
+      run.expired? ? finish_firing(last_run_at: run.scheduled_for) : run.deliver_later
+    end
+
+    def expired?(scheduled_for)
+      scheduled_for < EXPIRED_AFTER.ago
     end
 
     def sync_next_run_at_for_once
