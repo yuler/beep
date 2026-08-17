@@ -27,9 +27,9 @@ Use only:
 
 `disable` / `remove` look up id by endpoint. Then delete `read/store/clearStoredSubscription` and `STORAGE_PREFIX`. `sendTestPush` need not `create` (upsert) before every test.
 
-- [ ] Subscribe state = PushManager endpoint ∈ server list
-- [ ] Remove localStorage helpers
-- [ ] Test push: call `POST .../test` with the existing row id
+- [x] Subscribe state = PushManager endpoint ∈ server list
+- [x] Remove localStorage helpers
+- [x] Test push: call `POST .../test` with the existing row id
 
 ---
 

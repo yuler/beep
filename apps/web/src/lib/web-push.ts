@@ -1,4 +1,3 @@
-import { ApiError } from "@/lib/api/client";
 import {
 	createPushSubscription,
 	destroyPushSubscription,
@@ -8,12 +7,6 @@ import {
 } from "@/lib/api/push";
 
 const SERVICE_WORKER_URL = "/service-worker.js";
-const STORAGE_PREFIX = "beep.pushSubscription.";
-
-type StoredSubscription = {
-	id: string;
-	endpoint: string;
-};
 
 export function isWebPushSupported() {
 	return (
@@ -104,9 +97,13 @@ export async function hasBrowserPushSubscription() {
 	return subscription !== null;
 }
 
-export async function isSubscribedForAccount(slug: string) {
-	if (!readStoredSubscription(slug)) return false;
-	return hasBrowserPushSubscription();
+export function isSubscribedForAccount(
+	endpoint: string | null,
+	records: { endpoint: string }[],
+) {
+	return (
+		endpoint !== null && records.some((record) => record.endpoint === endpoint)
+	);
 }
 
 export async function enableWebPush(slug: string) {
@@ -122,21 +119,15 @@ export async function enableWebPush(slug: string) {
 	const payload = pushSubscriptionPayload(subscription);
 
 	try {
-		const record = await createPushSubscription(slug, payload);
-		storeSubscription(slug, {
-			id: record.id,
-			endpoint: record.endpoint,
-		});
-		return record;
+		return await createPushSubscription(slug, payload);
 	} catch (error) {
 		await subscription.unsubscribe();
-		clearStoredSubscription(slug);
 		throw error;
 	}
 }
 
 export async function disableWebPush(slug: string) {
-	const stored = readStoredSubscription(slug);
+	const endpoint = await getBrowserPushEndpoint();
 	const registration = await navigator.serviceWorker.getRegistration("/");
 	const subscription = await registration?.pushManager.getSubscription();
 
@@ -144,13 +135,13 @@ export async function disableWebPush(slug: string) {
 		await subscription.unsubscribe();
 	}
 
-	if (stored) {
-		try {
-			await destroyPushSubscription(slug, stored.id);
-		} catch {
-			// Browser is already unsubscribed; ignore a missing server row.
-		}
-		clearStoredSubscription(slug);
+	const id = await subscriptionIdForEndpoint(slug, endpoint);
+	if (!id) return;
+
+	try {
+		await destroyPushSubscription(slug, id);
+	} catch {
+		// Browser is already unsubscribed; ignore a missing server row.
 	}
 }
 
@@ -171,9 +162,7 @@ export async function removePushSubscription(
 	record: { id: string; endpoint: string },
 ) {
 	const currentEndpoint = await getBrowserPushEndpoint();
-	const stored = readStoredSubscription(slug);
-	const isCurrent =
-		currentEndpoint === record.endpoint || stored?.id === record.id;
+	const isCurrent = currentEndpoint === record.endpoint;
 
 	await destroyPushSubscription(slug, record.id);
 
@@ -181,35 +170,17 @@ export async function removePushSubscription(
 		const registration = await navigator.serviceWorker.getRegistration("/");
 		const subscription = await registration?.pushManager.getSubscription();
 		if (subscription) await subscription.unsubscribe();
-		clearStoredSubscription(slug);
 	}
 }
 
 export async function sendTestPush(slug: string) {
-	const registration = await ensureServiceWorker();
-	const subscription = await registration.pushManager.getSubscription();
-	if (!subscription) {
-		clearStoredSubscription(slug);
+	const endpoint = await getBrowserPushEndpoint();
+	const id = await subscriptionIdForEndpoint(slug, endpoint);
+	if (!id) {
 		throw new Error("This device is not subscribed.");
 	}
 
-	const record = await createPushSubscription(
-		slug,
-		pushSubscriptionPayload(subscription),
-	);
-	storeSubscription(slug, {
-		id: record.id,
-		endpoint: record.endpoint,
-	});
-
-	try {
-		await testPushSubscription(slug, record.id);
-	} catch (error) {
-		if (error instanceof ApiError && error.status === 410) {
-			clearStoredSubscription(slug);
-		}
-		throw error;
-	}
+	await testPushSubscription(slug, id);
 }
 
 async function ensureServiceWorker() {
@@ -267,28 +238,10 @@ function pushSubscriptionPayload(subscription: PushSubscription) {
 	return { endpoint, p256dh_key: p256dh, auth_key: auth };
 }
 
-function storageKey(slug: string) {
-	return `${STORAGE_PREFIX}${slug}`;
-}
-
-function readStoredSubscription(slug: string): StoredSubscription | null {
-	try {
-		const raw = localStorage.getItem(storageKey(slug));
-		if (!raw) return null;
-		const parsed = JSON.parse(raw) as StoredSubscription;
-		if (!parsed.id || !parsed.endpoint) return null;
-		return parsed;
-	} catch {
-		return null;
-	}
-}
-
-function storeSubscription(slug: string, value: StoredSubscription) {
-	localStorage.setItem(storageKey(slug), JSON.stringify(value));
-}
-
-function clearStoredSubscription(slug: string) {
-	localStorage.removeItem(storageKey(slug));
+async function subscriptionIdForEndpoint(slug: string, endpoint: string | null) {
+	if (!endpoint) return null;
+	const records = await listPushSubscriptions(slug);
+	return records.find((record) => record.endpoint === endpoint)?.id ?? null;
 }
 
 function urlBase64ToUint8Array(base64String: string) {

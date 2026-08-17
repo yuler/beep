@@ -63,8 +63,10 @@ export function useWebPush(slug: string) {
 		const endpoint = await getBrowserPushEndpoint();
 		setCurrentEndpoint(endpoint);
 
+		let records: PushSubscriptionRecord[] = [];
 		try {
-			setSubscriptions(await listPushSubscriptions(slug));
+			records = await listPushSubscriptions(slug);
+			setSubscriptions(records);
 		} catch (err) {
 			setError(errorMessage(err));
 			setSubscriptions([]);
@@ -84,14 +86,11 @@ export function useWebPush(slug: string) {
 			return;
 		}
 
-		const [permission, subscribed] = await Promise.all([
-			getPushPermission(),
-			isSubscribedForAccount(slug),
-		]);
+		const permission = await getPushPermission();
 		setStatus({
 			supported: true,
 			permission,
-			subscribed,
+			subscribed: isSubscribedForAccount(endpoint, records),
 			ios: isIosDevice(),
 			macos: isMacOS(),
 			standalone: isStandaloneDisplay(),
