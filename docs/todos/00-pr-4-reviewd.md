@@ -2,28 +2,15 @@
 
 Source: [PR #4](https://github.com/yule/beep/pull/4) (`webpush`). Subscribe / settings / test-push path is fine. Fat is the unused send-security layer, plus two subscription sources and two UA parsers on the web client.
 
-Suggested order: SSRF/DNS/pool gem → drop localStorage → collapse UA/status. First two cut the most lines.
+Suggested order: drop localStorage → collapse UA/status. First cuts the most lines.
 
 ---
 
-## 1. Drop SSRF / DNS for this PR
+## 1. ~~Drop SSRF / DNS~~ — decided: keep as-is
 
-Docs already say: create is HTTPS + host allowlist only; **send does not pin IP yet**. The PR still ships:
+Original concern: create is HTTPS + host allowlist only and **send does not pin IP yet**, yet the PR ships `SsrfProtection`, `resolved_endpoint_ip`, a global `DnsTestHelper`, and unused `net-http-persistent` — ~300+ lines with no current-feature change.
 
-- `SsrfProtection` (~100 lines) + `ssrf_protection_test.rb` (~140 lines)
-- `Push::Subscription#resolved_endpoint_ip` and four model tests
-- Global `DnsTestHelper`; controller `setup` always calls `stub_web_push_dns_resolution` even though create/index/destroy never resolve DNS
-- `net-http-persistent` in the Gemfile (for unwritten `WebPush::Pool`)
-
-Test push uses `WebPush.payload_send` and never reads `resolved_endpoint_ip`. Host allowlist already blocks arbitrary URLs. IP pin is Next step 4; add it with the pool later.
-
-This cut is ~300+ lines with no current-feature change.
-
-If `SsrfProtection` is kept later, drop duplicate ranges: `IPAddr#private?` / `#loopback?` / `#link_local?` already cover RFC1918, loopback, and link-local. `DISALLOWED_IP_RANGES` repeats `10/8`, `127/8`, `169.254/16`, `172.16/12`, `192.168/16`. Keep only extras (CGNAT, TEST-NET, multicast, …).
-
-- [ ] Remove `SsrfProtection`, `resolved_endpoint_ip`, DNS test helper, and related tests
-- [ ] Remove unused `net-http-persistent` until the pool exists
-- [ ] Stop stubbing DNS in subscription controller tests
+Decision: keep everything verbatim. `SsrfProtection` is copied 1:1 from [fizzy](https://github.com/basecamp/fizzy/blob/main/app/models/ssrf_protection.rb) (same duplicate RFC1918/loopback/link-local ranges alongside the `IPAddr` predicates — that duplication is upstream). Staying in lockstep with upstream beats trimming it here. IP pinning ships with `WebPush::Pool` in Next step 4, where `resolved_endpoint_ip` becomes actually used.
 
 ---
 
