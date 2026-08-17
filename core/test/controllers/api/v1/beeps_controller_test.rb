@@ -84,4 +84,37 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unauthorized
   end
+
+  test "show returns the account beep" do
+    beep = @account.beeps.create!(kind: :once, message: "Call mom", run_at: @run_at)
+
+    get "/api/v1/#{@account.slug}/beeps/#{beep.id}",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    body = response.parsed_body
+    assert_equal beep.id, body["id"]
+    assert_equal "Call mom", body["message"]
+    assert_equal "once", body["kind"]
+    assert_equal "active", body["status"]
+  end
+
+  test "show requires authentication" do
+    beep = @account.beeps.create!(kind: :once, message: "Call mom", run_at: @run_at)
+
+    get "/api/v1/#{@account.slug}/beeps/#{beep.id}", as: :json
+
+    assert_response :unauthorized
+  end
+
+  test "show returns not found for another account's beep" do
+    beep = accounts(:yuler_account).beeps.create!(kind: :once, message: "Other", run_at: @run_at)
+
+    get "/api/v1/#{@account.slug}/beeps/#{beep.id}",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :not_found
+  end
 end

@@ -1,6 +1,7 @@
 import {
 	createFileRoute,
 	getRouteApi,
+	Link,
 	useRouter,
 } from "@tanstack/react-router";
 
@@ -34,6 +35,7 @@ const STATUS_VARIANT: Record<
 	paused: "secondary",
 	completed: "outline",
 	cancelled: "destructive",
+	firing: "default",
 };
 
 function BeepsPage() {
@@ -90,26 +92,40 @@ function BeepsPage() {
 							const nextRunAt = beep.next_run_at ?? beep.run_at;
 							return (
 								<li key={beep.id}>
-									<Card size="sm">
-										<CardHeader>
-											<CardTitle className="truncate">{beep.message}</CardTitle>
-											<CardAction>
-												<Badge
-													variant={STATUS_VARIANT[beep.status] ?? "secondary"}
-												>
-													{beep.status}
-												</Badge>
-											</CardAction>
-										</CardHeader>
-										<CardContent className="flex flex-wrap gap-x-4 gap-y-1 pt-0 text-xs text-muted-foreground">
-											{nextRunAt ? (
-												<span className="tabular-nums">
-													Next: {new Date(nextRunAt).toLocaleString()}
-												</span>
-											) : null}
-											<span>{beep.timezone}</span>
-										</CardContent>
-									</Card>
+									<Link
+										to="/$account_slug/beeps/$beepId"
+										params={{
+											account_slug: slug,
+											beepId: beep.id,
+										}}
+										className="block"
+									>
+										<Card
+											size="sm"
+											className="transition-colors hover:bg-muted/30"
+										>
+											<CardHeader>
+												<CardTitle className="truncate">
+													{beep.message}
+												</CardTitle>
+												<CardAction>
+													<Badge
+														variant={STATUS_VARIANT[beep.status] ?? "secondary"}
+													>
+														{beep.status}
+													</Badge>
+												</CardAction>
+											</CardHeader>
+											<CardContent className="flex flex-wrap gap-x-4 gap-y-1 pt-0 text-xs text-muted-foreground">
+												{nextRunAt ? (
+													<span className="tabular-nums">
+														Next: {new Date(nextRunAt).toLocaleString()}
+													</span>
+												) : null}
+												<span>{beep.timezone}</span>
+											</CardContent>
+										</Card>
+									</Link>
 								</li>
 							);
 						})}

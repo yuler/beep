@@ -108,7 +108,7 @@ export function requireStaff(me: {
 
 type LoaderContext = {
 	location: { pathname: string; searchStr: string };
-	params?: { account_slug: string };
+	params?: { account_slug?: string; [key: string]: string | undefined };
 };
 
 /**

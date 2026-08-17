@@ -4,6 +4,11 @@ class Api::V1::BeepsController < Api::V1::BaseController
     render :index
   end
 
+  def show
+    @beep = Current.account.beeps.find(params[:id])
+    render :show
+  end
+
   def create
     @beep = Current.account.beeps.new(beep_params.merge(kind: :once))
 

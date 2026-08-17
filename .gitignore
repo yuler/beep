@@ -8,6 +8,7 @@ pnpm-debug.log*
 # Environment files (repo-root only; do not keep core/.env)
 .env*
 !.env.example
+!.env.dokploy.example
 
 # OS files
 .DS_Store

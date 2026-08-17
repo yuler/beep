@@ -23,6 +23,7 @@ import { Route as AdminStatsRouteImport } from './routes/admin/stats'
 import { Route as DevLettersRouteImport } from './routes/dev/letters'
 import { Route as SignIndexRouteImport } from './routes/sign/index'
 import { Route as SignVerifyRouteImport } from './routes/sign/verify'
+import { Route as Account_slugBeepsBeepIdRouteImport } from './routes/$account_slug/beeps_.$beepId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -94,6 +95,11 @@ const SignVerifyRoute = SignVerifyRouteImport.update({
   path: '/verify',
   getParentRoute: () => SignRoute,
 } as any)
+const Account_slugBeepsBeepIdRoute = Account_slugBeepsBeepIdRouteImport.update({
+  id: '/beeps_/$beepId',
+  path: '/beeps/$beepId',
+  getParentRoute: () => Account_slugRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/sign/verify': typeof SignVerifyRoute
   '/$account_slug/': typeof Account_slugIndexRoute
   '/sign/': typeof SignIndexRoute
+  '/$account_slug/beeps/$beepId': typeof Account_slugBeepsBeepIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/sign/verify': typeof SignVerifyRoute
   '/$account_slug': typeof Account_slugIndexRoute
   '/sign': typeof SignIndexRoute
+  '/$account_slug/beeps/$beepId': typeof Account_slugBeepsBeepIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/sign/verify': typeof SignVerifyRoute
   '/$account_slug/': typeof Account_slugIndexRoute
   '/sign/': typeof SignIndexRoute
+  '/$account_slug/beeps_/$beepId': typeof Account_slugBeepsBeepIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/sign/verify'
     | '/$account_slug/'
     | '/sign/'
+    | '/$account_slug/beeps/$beepId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/sign/verify'
     | '/$account_slug'
     | '/sign'
+    | '/$account_slug/beeps/$beepId'
   id:
     | '__root__'
     | '/'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/sign/verify'
     | '/$account_slug/'
     | '/sign/'
+    | '/$account_slug/beeps_/$beepId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -300,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignVerifyRouteImport
       parentRoute: typeof SignRoute
     }
+    '/$account_slug/beeps_/$beepId': {
+      id: '/$account_slug/beeps_/$beepId'
+      path: '/beeps/$beepId'
+      fullPath: '/$account_slug/beeps/$beepId'
+      preLoaderRoute: typeof Account_slugBeepsBeepIdRouteImport
+      parentRoute: typeof Account_slugRoute
+    }
   }
 }
 
@@ -307,12 +326,14 @@ interface Account_slugRouteChildren {
   Account_slugBeepsRoute: typeof Account_slugBeepsRoute
   Account_slugSettingsRoute: typeof Account_slugSettingsRoute
   Account_slugIndexRoute: typeof Account_slugIndexRoute
+  Account_slugBeepsBeepIdRoute: typeof Account_slugBeepsBeepIdRoute
 }
 
 const Account_slugRouteChildren: Account_slugRouteChildren = {
   Account_slugBeepsRoute: Account_slugBeepsRoute,
   Account_slugSettingsRoute: Account_slugSettingsRoute,
   Account_slugIndexRoute: Account_slugIndexRoute,
+  Account_slugBeepsBeepIdRoute: Account_slugBeepsBeepIdRoute,
 }
 
 const Account_slugRouteWithChildren = Account_slugRoute._addFileChildren(
