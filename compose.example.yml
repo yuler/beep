@@ -12,8 +12,8 @@
 # Core (direct, optional):                http://localhost:${CORE_PORT:-3001}
 #
 # Images:
-#   ghcr.io/yuler/beep:main      (Rails core)
-#   ghcr.io/yuler/beep-web:main  (apps/web Node SSR)
+#   ghcr.io/yuler/beep:${BEEP_IMAGE_TAG:-main}      (Rails core)
+#   ghcr.io/yuler/beep-web:${BEEP_IMAGE_TAG:-main}  (apps/web Node SSR)
 #
 # To build web locally instead of pulling:
 #   docker compose build web
@@ -30,7 +30,7 @@ x-core-env:
 
 services:
   core:
-    image: ghcr.io/yuler/beep:main
+    image: ghcr.io/yuler/beep:${BEEP_IMAGE_TAG:-main}
     volumes:
       - core-storage:/rails/storage
     ports:
@@ -44,7 +44,7 @@ services:
       - beep
 
   worker:
-    image: ghcr.io/yuler/beep:main
+    image: ghcr.io/yuler/beep:${BEEP_IMAGE_TAG:-main}
     command: bin/jobs
     volumes:
       - core-storage:/rails/storage
@@ -60,7 +60,7 @@ services:
 
   # apps/web — TanStack Start (Node SSR); Nitro proxies /api → core (Mode B)
   web:
-    image: ghcr.io/yuler/beep-web:main
+    image: ghcr.io/yuler/beep-web:${BEEP_IMAGE_TAG:-main}
     build:
       context: .
       dockerfile: apps/web/Dockerfile
