@@ -2,8 +2,9 @@
 // Inlined from process.env.VITE_* (mise / Docker). Empty → Mode B same-origin /api.
 export const CORE_URL = import.meta.env.VITE_CORE_URL;
 
-/** Core HTML page URL — Mode A absolute origin, Mode B same-origin path. */
+/** Absolute URL to a Rails HTML page. Empty in Mode B — core is not public. */
 export function coreAppUrl(path: string): string {
+	if (!CORE_URL) return "";
 	const normalized = path.startsWith("/") ? path : `/${path}`;
-	return CORE_URL ? `${CORE_URL}${normalized}` : normalized;
+	return `${CORE_URL}${normalized}`;
 }

@@ -26,6 +26,7 @@ export const Route = createFileRoute("/admin/jobs")({
 function JobsPage() {
 	const { account } = adminRoute.useRouteContext();
 	const data = Route.useLoaderData();
+	const missionControlUrl = coreAppUrl("/admin/jobs");
 
 	return (
 		<>
@@ -51,15 +52,17 @@ function JobsPage() {
 							Background job queue status from core.
 						</p>
 					</div>
-					<a
-						href={coreAppUrl("/admin/jobs")}
-						target="_blank"
-						rel="noreferrer"
-						className={cn(buttonVariants({ variant: "outline" }))}
-					>
-						Open jobs
-						<ExternalLink data-icon="inline-end" />
-					</a>
+					{missionControlUrl ? (
+						<a
+							href={missionControlUrl}
+							target="_blank"
+							rel="noreferrer"
+							className={cn(buttonVariants({ variant: "outline" }))}
+						>
+							Open jobs
+							<ExternalLink data-icon="inline-end" />
+						</a>
+					) : null}
 				</div>
 
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

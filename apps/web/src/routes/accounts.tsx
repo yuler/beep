@@ -1,9 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Building2, Check, UserRound } from "lucide-react";
-
 import { AuthCard, AuthLayout, AuthPending } from "@/components/layout";
 import { buttonVariants } from "@/components/ui/button";
-import { coreAppUrl } from "@/config";
 import type { AccountSummary } from "@/lib/auth/account";
 import { requireSession } from "@/lib/auth/guards";
 import { cn } from "@/lib/utils";
@@ -46,16 +44,6 @@ function AccountsPage() {
 						/>
 					))}
 				</ul>
-				<p className="mt-4 text-center text-xs text-muted-foreground">
-					Need a new team?{" "}
-					<a
-						href={coreAppUrl("/my/accounts/new")}
-						className="underline underline-offset-4"
-						rel="noreferrer"
-					>
-						Create on Core
-					</a>
-				</p>
 			</AuthCard>
 		</AuthLayout>
 	);
