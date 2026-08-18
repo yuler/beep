@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 
+import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,14 @@ import { cn } from "@/lib/utils";
 
 const TITLE_MAX_LENGTH = 80;
 const BODY_MAX_LENGTH = 2000;
+const BODY_PLACEHOLDER = [
+	"**bold**",
+	"_italic_",
+	"[link](https://…)",
+	"- list",
+	"line breaks",
+	"# headings not supported",
+].join("\n");
 
 function defaultRunAt() {
 	return new Date(Date.now() + 60 * 60 * 1000);
@@ -24,6 +33,7 @@ export function CreateBeepForm({
 }) {
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
+	const [preview, setPreview] = useState(false);
 	const [runAt, setRunAt] = useState(defaultRunAt);
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
@@ -41,6 +51,7 @@ export function CreateBeepForm({
 			});
 			setTitle("");
 			setBody("");
+			setPreview(false);
 			setRunAt(defaultRunAt());
 			await onCreated();
 		} catch (err) {
@@ -66,24 +77,54 @@ export function CreateBeepForm({
 				/>
 			</div>
 			<div className="flex flex-col gap-2">
-				<Label htmlFor="beep-body">Body</Label>
-				<textarea
-					id="beep-body"
-					name="body"
-					maxLength={BODY_MAX_LENGTH}
-					value={body}
-					onChange={(event) => setBody(event.target.value)}
-					placeholder="Bring **milk** and [eggs](https://example.com)"
-					disabled={pending}
-					rows={4}
-					className={cn(
-						"w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30",
-					)}
-				/>
-				<p className="text-xs text-muted-foreground">
-					Optional. **bold**, _italic_, [links](https://…), lists, and line
-					breaks.
-				</p>
+				<div className="flex items-center justify-between gap-2">
+					<Label htmlFor="beep-body">Body</Label>
+					<div className="flex gap-1">
+						<Button
+							type="button"
+							size="xs"
+							variant={preview ? "ghost" : "secondary"}
+							aria-pressed={!preview}
+							onClick={() => setPreview(false)}
+							disabled={pending}
+						>
+							Write
+						</Button>
+						<Button
+							type="button"
+							size="xs"
+							variant={preview ? "secondary" : "ghost"}
+							aria-pressed={preview}
+							onClick={() => setPreview(true)}
+							disabled={pending}
+						>
+							Preview
+						</Button>
+					</div>
+				</div>
+				{preview ? (
+					<div className="min-h-24 rounded-lg border border-input px-2.5 py-1.5 dark:bg-input/30">
+						{body.trim() ? (
+							<BeepMarkdown source={body} />
+						) : (
+							<p className="text-sm text-muted-foreground">Nothing to preview</p>
+						)}
+					</div>
+				) : (
+					<textarea
+						id="beep-body"
+						name="body"
+						maxLength={BODY_MAX_LENGTH}
+						value={body}
+						onChange={(event) => setBody(event.target.value)}
+						placeholder={BODY_PLACEHOLDER}
+						disabled={pending}
+						rows={6}
+						className={cn(
+							"w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30",
+						)}
+					/>
+				)}
 			</div>
 			<DateTimePicker
 				id="beep-run-at"
