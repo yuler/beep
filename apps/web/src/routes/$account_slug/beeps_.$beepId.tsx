@@ -12,7 +12,7 @@ const accountRoute = getRouteApi("/$account_slug");
 export const Route = createFileRoute("/$account_slug/beeps_/$beepId")({
 	loader: withAuthRedirects(async ({ params }) => {
 		try {
-			return await fetchBeep(params.account_slug ?? "", params.beepId ?? "");
+			return await fetchBeep(params?.account_slug ?? "", params?.beepId ?? "");
 		} catch (err) {
 			if (err instanceof ApiError && err.status === 404) {
 				throw notFound();
