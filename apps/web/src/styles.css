@@ -1,4 +1,5 @@
-@import "tailwindcss";
+/* Pin scan root so client and SSR builds emit the same hashed CSS URL. */
+@import "tailwindcss" source("../");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
