@@ -23,6 +23,7 @@ x-core-env: &core_env
 services:
   core:
     image: ghcr.io/yuler/beep:${BEEP_IMAGE_TAG:-main}
+    pull_policy: always
     env_file:
       - .env
     environment:
@@ -35,6 +36,7 @@ services:
 
   worker:
     image: ghcr.io/yuler/beep:${BEEP_IMAGE_TAG:-main}
+    pull_policy: always
     command: bin/jobs
     env_file:
       - .env
@@ -50,6 +52,7 @@ services:
 
   web:
     image: ghcr.io/yuler/beep-web:${BEEP_IMAGE_TAG:-main}
+    pull_policy: always
     environment:
       PORT: "3000"
       CORE_INTERNAL_URL: http://core:80
