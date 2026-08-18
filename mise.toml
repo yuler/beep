@@ -7,10 +7,10 @@ overmind = "2.5.1"
 tmux = "3.7b"
 
 [env]
-# `.env.local` is loaded second so it can override `.env` for keys mise
-# has not already exported. `mise dev` always re-sources both in bash
-# (later file wins) before starting overmind.
+# `.env` then `.env.local` (later file wins).
 _.file = [".env", ".env.local"]
+# Overmind Overload()'s `.env` and would wipe `.env.local` (empty VITE_CORE_URL=).
+OVERMIND_SKIP_ENV = "1"
 
 [tasks.setup]
 description = "Set up the development environment (gems, deps, db)"
