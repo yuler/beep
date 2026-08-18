@@ -115,6 +115,20 @@ class BeepPollerTest < ActiveSupport::TestCase
     end
   end
 
+  test "poll fails a stale firing beep whose run has been running too long" do
+    beep = due_once_beep
+    Beep.poll_due_now
+    run = beep.runs.sole
+    run.update_columns(status: "running", updated_at: (Beep::RUNNING_STALE_AFTER + 1.minute).ago)
+    beep.update_columns(updated_at: 3.minutes.ago)
+
+    Beep.poll_due_now
+
+    assert run.reload.failed?
+    assert beep.reload.completed?
+    assert_nil beep.next_run_at
+  end
+
   test "poll completes a stale firing beep whose run already succeeded" do
     beep = due_once_beep
     Beep.poll_due_now

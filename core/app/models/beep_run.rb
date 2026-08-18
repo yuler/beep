@@ -8,9 +8,8 @@ class BeepRun < ApplicationRecord
   end
 
   def deliver_now
-    return if succeeded? || failed? || skipped? || expired?
+    return unless self.class.where(id: id, status: :pending).update_all(status: "running", updated_at: Time.current) == 1
 
-    update!(status: :running)
     payload_result = deliver_web_push
     update!(status: :succeeded, result: payload_result)
     beep.finish_firing(last_run_at: scheduled_for)

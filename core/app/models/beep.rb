@@ -3,6 +3,7 @@ class Beep < ApplicationRecord
 
   POLL_BATCH_SIZE = 100
   STALE_FIRING_AFTER = 2.minutes
+  RUNNING_STALE_AFTER = 5.minutes
   EXPIRED_AFTER = 1.hour
 
   belongs_to :account
@@ -57,7 +58,12 @@ class Beep < ApplicationRecord
         touch
         run.deliver_later
       end
-    elsif !run.running?
+    elsif run.running?
+      if run.updated_at < RUNNING_STALE_AFTER.ago
+        run.update!(status: :failed)
+        finish_firing(last_run_at: run.scheduled_for)
+      end
+    else
       finish_firing(last_run_at: run.scheduled_for)
     end
   end
@@ -91,8 +97,8 @@ class Beep < ApplicationRecord
         run.deliver_later
       end
     rescue ActiveRecord::RecordNotUnique
-      run = runs.find_by!(scheduled_for: scheduled_for)
-      run.expired? ? finish_firing(last_run_at: run.scheduled_for) : run.deliver_later
+      run = runs.find_by(scheduled_for: scheduled_for)
+      finish_firing(last_run_at: run.scheduled_for) if run&.expired?
     end
 
     def expired?(scheduled_for)

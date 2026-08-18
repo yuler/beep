@@ -104,6 +104,18 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     assert_equal 0, sent
   end
 
+  test "deliver is a no-op when the run is already running" do
+    @run.update_columns(status: "running")
+    sent = 0
+
+    stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
+      @run.deliver_now
+    end
+
+    assert_equal 0, sent
+    assert @run.reload.running?
+  end
+
   test "deliver is a no-op for an expired run" do
     expired_run = BeepRun.create!(beep: @beep, scheduled_for: 1.hour.ago, status: :expired)
 
