@@ -1,5 +1,6 @@
 import { createFileRoute, getRouteApi, notFound } from "@tanstack/react-router";
 
+import { BeepRuns } from "@/components/beeps/beep-runs";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,6 +88,10 @@ function BeepDetailPage() {
 						<DetailRow label="Created" value={formatWhen(beep.created_at)} />
 					</CardContent>
 				</Card>
+
+				<div className="max-w-lg">
+					<BeepRuns runs={beep.runs} />
+				</div>
 			</div>
 		</>
 	);

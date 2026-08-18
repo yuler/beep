@@ -5,6 +5,7 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 
+import { BeepRuns } from "@/components/beeps/beep-runs";
 import { CreateBeepForm } from "@/components/beeps/create-beep-form";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
@@ -92,17 +93,14 @@ function BeepsPage() {
 							const nextRunAt = beep.next_run_at ?? beep.run_at;
 							return (
 								<li key={beep.id}>
-									<Link
-										to="/$account_slug/beeps/$beepId"
-										params={{
-											account_slug: slug,
-											beepId: beep.id,
-										}}
-										className="block"
-									>
-										<Card
-											size="sm"
-											className="transition-colors hover:bg-muted/30"
+									<Card size="sm">
+										<Link
+											to="/$account_slug/beeps/$beepId"
+											params={{
+												account_slug: slug,
+												beepId: beep.id,
+											}}
+											className="block rounded-xl transition-colors hover:bg-muted/30"
 										>
 											<CardHeader>
 												<CardTitle className="truncate">
@@ -124,8 +122,11 @@ function BeepsPage() {
 												) : null}
 												<span>{beep.timezone}</span>
 											</CardContent>
-										</Card>
-									</Link>
+										</Link>
+										<CardContent>
+											<BeepRuns runs={beep.runs} />
+										</CardContent>
+									</Card>
 								</li>
 							);
 						})}

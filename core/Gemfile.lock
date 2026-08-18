@@ -457,7 +457,6 @@ DEPENDENCIES
   bundler-audit
   capybara
   debug
-  dotenv
   faraday
   hotwire-spark
   image_processing (~> 2.0)

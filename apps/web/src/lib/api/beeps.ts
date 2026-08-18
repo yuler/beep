@@ -1,5 +1,19 @@
 import { apiFetch } from "@/lib/api/client";
 
+export type BeepRun = {
+	id: string;
+	scheduled_for: string;
+	status:
+		| "pending"
+		| "running"
+		| "succeeded"
+		| "failed"
+		| "skipped"
+		| "expired";
+	result: Record<string, unknown> | null;
+	created_at: string;
+};
+
 export type Beep = {
 	id: string;
 	message: string;
@@ -10,6 +24,7 @@ export type Beep = {
 	last_run_at: string | null;
 	timezone: string;
 	created_at: string;
+	runs: BeepRun[];
 };
 
 export type BeepsResponse = {

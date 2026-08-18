@@ -3,8 +3,8 @@
 # core URL to use instead (a wrong *.localhost or plain loopback fails fast).
 if Rails.env.development?
   class DevelopmentHostAuthorization
-    CANONICAL_HOST = "core.#{ENV.fetch("APP_HOST", "beep.localhost")}"
-    CANONICAL_PORT = ENV.fetch("CORE_PORT", ENV.fetch("PORT", "3001"))
+    CANONICAL_HOST = "core.#{ENV.fetch("APP_HOST")}"
+    CANONICAL_PORT = ENV.fetch("CORE_PORT")
     CANONICAL_URL = "http://#{CANONICAL_HOST}:#{CANONICAL_PORT}"
 
     def self.call(env)

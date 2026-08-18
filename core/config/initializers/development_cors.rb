@@ -4,7 +4,7 @@ if Rails.env.development?
     API_PREFIX = "/api/v1"
     # Align with config.hosts: only the canonical web host (from APP_HOST) is an
     # allowed origin. A wrong *.localhost origin is refused.
-    WEB_HOST = ENV.fetch("APP_HOST", "beep.localhost")
+    WEB_HOST = ENV.fetch("APP_HOST")
     WEB_ORIGIN = %r{\Ahttps?://web\.#{Regexp.escape(WEB_HOST)}(:\d+)?\z}i
 
     def initialize(app)

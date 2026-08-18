@@ -24,7 +24,7 @@ run = "bash scripts/clean.sh"
 description = "Start the Rails development server"
 dir = "core"
 env = { RUBY_DEBUG_OPEN = "true", RUBY_DEBUG_LAZY = "true" }
-run = "bin/rails server -p ${CORE_PORT:-3001}"
+run = "bin/rails server -p ${CORE_PORT}"
 
 [tasks."core:console"]
 description = "Open the Rails console"
@@ -34,7 +34,7 @@ run = "bin/rails console"
 [tasks."web:dev"]
 description = "Start the Vite development server"
 dir = "apps/web"
-run = "pnpm run dev -- --port ${WEB_PORT:-3000}"
+run = "pnpm run dev -- --port ${WEB_PORT}"
 
 [tasks."web:build"]
 description = "Build the web app for production"

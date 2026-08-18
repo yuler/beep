@@ -1,2 +1,2 @@
-core: cd core && bin/rails server -p ${CORE_PORT:-3001}
-web: cd apps/web && pnpm run dev -- --port ${WEB_PORT:-3000}
+core: cd core && bin/rails server -p ${CORE_PORT}
+web: cd apps/web && pnpm run dev -- --port ${WEB_PORT}

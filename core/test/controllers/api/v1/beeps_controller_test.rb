@@ -23,6 +23,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Newer", "Older" ], messages
     assert_equal newer.id, response.parsed_body["beeps"].first["id"]
     assert_equal older.id, response.parsed_body["beeps"].second["id"]
+    assert_equal [], response.parsed_body["beeps"].first["runs"]
   end
 
   test "index requires authentication" do
@@ -98,6 +99,28 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Call mom", body["message"]
     assert_equal "once", body["kind"]
     assert_equal "active", body["status"]
+    assert_equal [], body["runs"]
+  end
+
+  test "show includes beep runs newest first" do
+    beep = @account.beeps.create!(kind: :once, message: "Call mom", run_at: @run_at)
+    older = beep.runs.create!(scheduled_for: 2.hours.ago.change(usec: 0), status: :expired)
+    newer = beep.runs.create!(
+      scheduled_for: 1.hour.ago.change(usec: 0),
+      status: :succeeded,
+      result: { "web_push" => { "reason" => "no_subscriptions" } }
+    )
+
+    get "/api/v1/#{@account.slug}/beeps/#{beep.id}",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    runs = response.parsed_body["runs"]
+    assert_equal [ newer.id, older.id ], runs.map { |run| run["id"] }
+    assert_equal "succeeded", runs.first["status"]
+    assert_equal({ "web_push" => { "reason" => "no_subscriptions" } }, runs.first["result"])
+    assert_equal newer.scheduled_for.iso8601, Time.iso8601(runs.first["scheduled_for"]).iso8601
   end
 
   test "show requires authentication" do

@@ -55,21 +55,20 @@ ensure_ports_free() {
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# Later files win (bash assignment). `.env.local` overrides `.env`.
-for env_file in .env .env.local; do
-  if [ -f "$env_file" ]; then
-    set -a
-    # shellcheck disable=SC1091
-    . "./$env_file"
-    set +a
-  fi
-done
+# Env comes from mise (`_.file` loads `.env` / `.env.local` in mise.toml).
+# Running dev.sh directly would skip env loading, so fail fast.
+if [ -z "${MISE_TASK_NAME:-}" ]; then
+  warn "dev.sh must be started via 'mise dev' (not directly)." >&2
+  exit 1
+fi
 
-export CORE_PORT="${CORE_PORT:-3001}"
-export WEB_PORT="${WEB_PORT:-3000}"
-export APP_HOST="${APP_HOST:-beep.localhost}"
-export CORE_URL="${CORE_URL:-http://core.${APP_HOST}:${CORE_PORT}}"
-export WEB_URL="${WEB_URL:-http://web.${APP_HOST}:${WEB_PORT}}"
+# Values come from `.env` / `.env.local` (copy `.env.example`). No hardcoded hosts/ports.
+: "${APP_HOST:?APP_HOST is required. Copy .env.example to .env.}"
+: "${CORE_PORT:?CORE_PORT is required. Copy .env.example to .env.}"
+: "${WEB_PORT:?WEB_PORT is required. Copy .env.example to .env.}"
+
+CORE_URL="${CORE_URL:-http://core.${APP_HOST}:${CORE_PORT}}"
+WEB_URL="${WEB_URL:-http://web.${APP_HOST}:${WEB_PORT}}"
 
 step "Local subdomain URLs (*.localhost → 127.0.0.1)"
 ok "core  ${CORE_URL}"
@@ -77,7 +76,7 @@ ok "web   ${WEB_URL}"
 echo
 
 step "Checking ports ${WEB_PORT} (web) and ${CORE_PORT} (core)…"
-ensure_ports_free "$WEB_PORT" "$CORE_PORT"
+ensure_ports_free "${WEB_PORT}" "${CORE_PORT}"
 
 export RUBY_DEBUG_OPEN="${RUBY_DEBUG_OPEN:-true}"
 export RUBY_DEBUG_LAZY="${RUBY_DEBUG_LAZY:-true}"

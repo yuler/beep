@@ -1,17 +1,10 @@
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
-import { parseEnv } from "node:util";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
-import { defineConfig, loadEnv, type Plugin } from "vite";
-
-const monorepoRoot = path.resolve(
-	fileURLToPath(new URL(".", import.meta.url)),
-	"../..",
-);
+import { defineConfig, type Plugin } from "vite";
 
 // Vite's own host check hard-codes *.localhost as allowed (they resolve to
 // loopback), so allowedHosts cannot reject a wrong *.localhost that hits our
@@ -31,7 +24,7 @@ function hostAllowlist(webHost: string): Plugin {
 					// fall through to the block below
 				}
 				if (hostname && allowed.has(hostname)) return next();
-				const port = server.config.server.port ?? 3000;
+				const port = server.config.server.port;
 				const canonical = `http://${webHost}:${port}`;
 				res.statusCode = 403;
 				res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -63,62 +56,35 @@ load it. Use the canonical URL:</p>
 	};
 }
 
-function parseEnvFile(filePath: string): Record<string, string> {
-	if (!fs.existsSync(filePath)) return {};
-	const parsed = parseEnv(fs.readFileSync(filePath, "utf8"));
-	const out: Record<string, string> = {};
-	for (const [key, value] of Object.entries(parsed)) {
-		if (value !== undefined) out[key] = value;
+export default defineConfig(({ command }) => {
+	// Dev server must run under mise (`_.file` loads `.env` / `.env.local`
+	// into process.env). Builds (Docker/CI) run without mise, so skip them.
+	if (command === "serve" && !process.env.MISE_TASK_NAME) {
+		throw new Error(
+			"web must be started via `mise dev` (or `mise run web:dev`). Direct `pnpm run dev` does not load .env/.env.local.",
+		);
 	}
-	return out;
-}
 
-// Expand `${VAR}` using the merged file map (local APP_HOST must win).
-function expandEnv(env: Record<string, string>): Record<string, string> {
-	const out = { ...env };
-	for (let i = 0; i < 3; i++) {
-		for (const key of Object.keys(out)) {
-			out[key] = out[key].replace(
-				/\$\{([^}]+)\}/g,
-				(_, name: string) => out[name] ?? process.env[name] ?? "",
-			);
+	const requireEnv = (name: string): string => {
+		const value = process.env[name];
+		if (!value) {
+			throw new Error(`${name} is required. Copy .env.example to .env.`);
 		}
-	}
-	return out;
-}
+		return value;
+	};
 
-// Vite ranks `.env.[mode]` above `.env.local`. Re-apply `*.local` last so they
-// overwrite `.env` / `.env.[mode]` — same overlay as Rails dotenv, mise, and
-// `scripts/dev.sh`.
-function loadMonorepoEnv(mode: string, envDir: string): Record<string, string> {
-	const env = loadEnv(mode, envDir, "");
-	Object.assign(
-		env,
-		parseEnvFile(path.join(envDir, ".env.local")),
-		parseEnvFile(path.join(envDir, `.env.${mode}.local`)),
-	);
-	return expandEnv(env);
-}
-
-export default defineConfig(({ mode }) => {
-	const env = loadMonorepoEnv(mode, monorepoRoot);
-	// Vite's `import.meta.env` prefers already-exported process.env (mise
-	// activate / `.env`). Overwrite so the browser sees `.env.local` too.
-	for (const [key, value] of Object.entries(env)) {
-		process.env[key] = value;
-	}
-	const appHost = env.APP_HOST || "beep.localhost";
-	const coreProxy = env.CORE_INTERNAL_URL || `http://core.${appHost}:3001`;
+	const coreProxy = requireEnv("CORE_INTERNAL_URL");
+	const isDevServer = command === "serve";
+	const appHost = isDevServer ? requireEnv("APP_HOST") : undefined;
+	const webPort = isDevServer ? Number(requireEnv("WEB_PORT")) : undefined;
 
 	return {
-		envDir: monorepoRoot,
-		envPrefix: ["VITE_", "APP_HOST"],
-		server: {
-			port: Number(env.WEB_PORT) || 3000,
-			// Only the canonical web host may reach Vite; a wrong *.localhost
-			// fails fast instead of serving this app.
-			allowedHosts: [`web.${appHost}`],
-		},
+		server: isDevServer
+			? {
+					port: webPort,
+					allowedHosts: [`web.${appHost}`],
+				}
+			: undefined,
 		resolve: {
 			tsconfigPaths: true,
 			alias: {
@@ -126,7 +92,7 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		plugins: [
-			hostAllowlist(`web.${appHost}`),
+			...(appHost ? [hostAllowlist(`web.${appHost}`)] : []),
 			tailwindcss(),
 			tanstackStart({
 				srcDirectory: "src",

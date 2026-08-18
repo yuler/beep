@@ -1,11 +1,11 @@
 // Base URL of the Rails core API / auth server.
-// Set VITE_CORE_URL in the root .env (e.g. http://core…:${CORE_PORT} or "" for Mode B).
-// Empty string is Mode B (same-origin /api via Nitro proxy). Undefined → local Mode A default.
-const appHost = import.meta.env.APP_HOST || "beep.localhost";
-export const CORE_URL =
-	import.meta.env.VITE_CORE_URL !== undefined
-		? import.meta.env.VITE_CORE_URL
-		: `http://core.${appHost}:3001`;
+// Only VITE_* is inlined into the browser bundle. Set VITE_CORE_URL in `.env`
+// (copy from `.env.example`). Empty string is Mode B (same-origin /api).
+const viteCoreUrl = import.meta.env.VITE_CORE_URL;
+if (viteCoreUrl === undefined) {
+	throw new Error("VITE_CORE_URL is required. Copy .env.example to .env.");
+}
+export const CORE_URL = viteCoreUrl;
 
 /** Core HTML page URL — Mode A absolute origin, Mode B same-origin path. */
 export function coreAppUrl(path: string): string {
