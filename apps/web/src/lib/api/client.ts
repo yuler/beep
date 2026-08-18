@@ -23,7 +23,9 @@ function resolveApiOrigin(): string {
 	if (import.meta.env.SSR) {
 		const internal = process.env.CORE_INTERNAL_URL;
 		if (!internal) {
-			throw new Error("CORE_INTERNAL_URL is required. Copy .env.example to .env.");
+			throw new Error(
+				"CORE_INTERNAL_URL is required. Copy .env.example to .env.",
+			);
 		}
 		return internal;
 	}
