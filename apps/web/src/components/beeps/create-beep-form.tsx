@@ -107,7 +107,9 @@ export function CreateBeepForm({
 						{body.trim() ? (
 							<BeepMarkdown source={body} />
 						) : (
-							<p className="text-sm text-muted-foreground">Nothing to preview</p>
+							<p className="text-sm text-muted-foreground">
+								Nothing to preview
+							</p>
 						)}
 					</div>
 				) : (
