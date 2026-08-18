@@ -1,13 +1,30 @@
 import { apiFetch } from "@/lib/api/client";
 
+export type BeepRun = {
+	id: string;
+	scheduled_for: string;
+	status:
+		| "pending"
+		| "running"
+		| "succeeded"
+		| "failed"
+		| "skipped"
+		| "expired";
+	result: Record<string, unknown> | null;
+	created_at: string;
+};
+
 export type Beep = {
 	id: string;
 	message: string;
 	kind: "once" | "recurring";
-	status: "active" | "paused" | "completed" | "cancelled";
+	status: "active" | "paused" | "completed" | "cancelled" | "firing";
 	run_at: string | null;
 	next_run_at: string | null;
+	last_run_at: string | null;
 	timezone: string;
+	created_at: string;
+	runs: BeepRun[];
 };
 
 export type BeepsResponse = {
@@ -16,6 +33,12 @@ export type BeepsResponse = {
 
 export function fetchBeeps(slug: string) {
 	return apiFetch<BeepsResponse>(`/api/v1/${slug}/beeps`, {
+		method: "GET",
+	});
+}
+
+export function fetchBeep(slug: string, beepId: string) {
+	return apiFetch<Beep>(`/api/v1/${slug}/beeps/${beepId}`, {
 		method: "GET",
 	});
 }

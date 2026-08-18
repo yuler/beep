@@ -13,7 +13,7 @@ bin/setup
 bin/dev
 ```
 
-Development URLs (login with `john@example.com`, `APP_HOST` from root `.env`, default `beep.localhost`):
+Development URLs (login with `john@example.com`, `APP_HOST` from repo-root `.env` / `.env.local`, default `beep.localhost`):
 
 | URL                                      | Notes                                              |
 | ---------------------------------------- | -------------------------------------------------- |
@@ -160,7 +160,8 @@ Database-backed job queue (no Redis):
 
 Key recurring tasks (via [`config/recurring.yml`](../../core/config/recurring.yml)):
 
-- Cleanup jobs for expired links, deliveries
+- `BeepPollerJob` every 10 seconds (due `once` beeps)
+- Production: cleanup of finished Solid Queue jobs
 
 ### Chrome MCP (Local Dev)
 

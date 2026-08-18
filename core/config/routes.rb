@@ -66,7 +66,7 @@ Rails.application.routes.draw do
         post :test, on: :member
       end
 
-      resources :beeps, only: %i[ index create ]
+      resources :beeps, only: %i[ index show create ]
 
       namespace :admin do
         resource :stats, only: :show

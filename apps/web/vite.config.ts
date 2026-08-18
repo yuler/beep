@@ -4,12 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
-import { defineConfig, loadEnv, type Plugin } from "vite";
-
-const monorepoRoot = path.resolve(
-	fileURLToPath(new URL(".", import.meta.url)),
-	"../..",
-);
+import { defineConfig, type Plugin } from "vite";
 
 // Vite's own host check hard-codes *.localhost as allowed (they resolve to
 // loopback), so allowedHosts cannot reject a wrong *.localhost that hits our
@@ -29,7 +24,7 @@ function hostAllowlist(webHost: string): Plugin {
 					// fall through to the block below
 				}
 				if (hostname && allowed.has(hostname)) return next();
-				const port = server.config.server.port ?? 3000;
+				const port = server.config.server.port;
 				const canonical = `http://${webHost}:${port}`;
 				res.statusCode = 403;
 				res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -61,20 +56,35 @@ load it. Use the canonical URL:</p>
 	};
 }
 
-export default defineConfig(({ mode }) => {
-	const env = loadEnv(mode, monorepoRoot, "");
-	const appHost = env.APP_HOST || "beep.localhost";
-	const coreProxy = env.CORE_INTERNAL_URL || `http://core.${appHost}:3001`;
+export default defineConfig(({ command }) => {
+	// Dev server must run under mise (`_.file` loads `.env` / `.env.local`
+	// into process.env). Builds (Docker/CI) run without mise, so skip them.
+	if (command === "serve" && !process.env.MISE_TASK_NAME) {
+		throw new Error(
+			"web must be started via `mise dev` (or `mise run web:dev`). Direct `pnpm run dev` does not load .env/.env.local.",
+		);
+	}
+
+	const requireEnv = (name: string): string => {
+		const value = process.env[name];
+		if (!value) {
+			throw new Error(`${name} is required. Copy .env.example to .env.`);
+		}
+		return value;
+	};
+
+	const coreProxy = requireEnv("CORE_INTERNAL_URL");
+	const isDevServer = command === "serve";
+	const appHost = isDevServer ? requireEnv("APP_HOST") : undefined;
+	const webPort = isDevServer ? Number(requireEnv("WEB_PORT")) : undefined;
 
 	return {
-		envDir: monorepoRoot,
-		envPrefix: ["VITE_", "APP_HOST"],
-		server: {
-			port: Number(env.WEB_PORT) || 3000,
-			// Only the canonical web host may reach Vite; a wrong *.localhost
-			// fails fast instead of serving this app.
-			allowedHosts: [`web.${appHost}`],
-		},
+		server: isDevServer
+			? {
+					port: webPort,
+					allowedHosts: [`web.${appHost}`],
+				}
+			: undefined,
 		resolve: {
 			tsconfigPaths: true,
 			alias: {
@@ -82,7 +92,7 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		plugins: [
-			hostAllowlist(`web.${appHost}`),
+			...(appHost ? [hostAllowlist(`web.${appHost}`)] : []),
 			tailwindcss(),
 			tanstackStart({
 				srcDirectory: "src",

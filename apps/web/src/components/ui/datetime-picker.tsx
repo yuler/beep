@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { addMinutes, format } from "date-fns";
 import { ChevronDownIcon } from "lucide-react";
 import * as React from "react";
 
@@ -14,6 +14,17 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+const QUICK_OFFSETS = [
+	{ label: "5m", minutes: 5 },
+	{ label: "10m", minutes: 10 },
+	{ label: "30m", minutes: 30 },
+	{ label: "1h", minutes: 60 },
+	{ label: "2h", minutes: 120 },
+	{ label: "3h", minutes: 180 },
+	{ label: "1d", minutes: 60 * 24 },
+	{ label: "1w", minutes: 60 * 24 * 7 },
+] as const;
 
 function toTimeValue(date: Date) {
 	const pad = (value: number) => String(value).padStart(2, "0");
@@ -56,52 +67,75 @@ function DateTimePicker({
 	const timeId = id ? `${id}-time` : undefined;
 
 	return (
-		<div className={cn("flex flex-row gap-4", className)}>
-			<div className="flex min-w-0 flex-1 flex-col gap-2">
-				<Label htmlFor={dateId}>Date</Label>
-				<Popover open={open} onOpenChange={setOpen}>
-					<PopoverTrigger
-						render={
-							<Button
-								variant="outline"
-								id={dateId}
-								disabled={disabled}
-								className="w-full justify-between font-normal"
-							/>
-						}
-					>
-						{format(value, "PPP")}
-						<ChevronDownIcon data-icon="inline-end" />
-					</PopoverTrigger>
-					<PopoverContent className="w-auto overflow-hidden p-0" align="start">
-						<Calendar
-							mode="single"
-							selected={value}
-							captionLayout="dropdown"
-							defaultMonth={value}
-							onSelect={(date) => {
-								if (!date) return;
-								onChange(applyDateKeepingTime(value, date));
-								setOpen(false);
-							}}
-						/>
-					</PopoverContent>
-				</Popover>
+		<div className={cn("flex flex-col gap-3", className)}>
+			<div className="flex flex-col gap-2">
+				<Label>Quick</Label>
+				<div className="flex flex-wrap gap-1.5">
+					{QUICK_OFFSETS.map((offset) => (
+						<Button
+							key={offset.label}
+							type="button"
+							size="xs"
+							variant="outline"
+							disabled={disabled}
+							aria-label={`In ${offset.label}`}
+							onClick={() => onChange(addMinutes(new Date(), offset.minutes))}
+						>
+							{offset.label}
+						</Button>
+					))}
+				</div>
 			</div>
-			<div className="flex w-32 shrink-0 flex-col gap-2">
-				<Label htmlFor={timeId}>Time</Label>
-				<Input
-					type="time"
-					id={timeId}
-					step="1"
-					required
-					disabled={disabled}
-					value={toTimeValue(value)}
-					onChange={(event) =>
-						onChange(applyTimeKeepingDate(value, event.target.value))
-					}
-					className="appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-				/>
+			<div className="flex flex-row gap-4">
+				<div className="flex min-w-0 flex-1 flex-col gap-2">
+					<Label htmlFor={dateId}>Date</Label>
+					<Popover open={open} onOpenChange={setOpen}>
+						<PopoverTrigger
+							render={
+								<Button
+									variant="outline"
+									id={dateId}
+									disabled={disabled}
+									className="w-full justify-between font-normal"
+								/>
+							}
+						>
+							{format(value, "PPP")}
+							<ChevronDownIcon data-icon="inline-end" />
+						</PopoverTrigger>
+						<PopoverContent
+							className="w-auto overflow-hidden p-0"
+							align="start"
+						>
+							<Calendar
+								mode="single"
+								selected={value}
+								captionLayout="dropdown"
+								defaultMonth={value}
+								onSelect={(date) => {
+									if (!date) return;
+									onChange(applyDateKeepingTime(value, date));
+									setOpen(false);
+								}}
+							/>
+						</PopoverContent>
+					</Popover>
+				</div>
+				<div className="flex w-32 shrink-0 flex-col gap-2">
+					<Label htmlFor={timeId}>Time</Label>
+					<Input
+						type="time"
+						id={timeId}
+						step="1"
+						required
+						disabled={disabled}
+						value={toTimeValue(value)}
+						onChange={(event) =>
+							onChange(applyTimeKeepingDate(value, event.target.value))
+						}
+						className="appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+					/>
+				</div>
 			</div>
 		</div>
 	);

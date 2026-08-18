@@ -1,0 +1,70 @@
+# ===========================================================================
+# beep — Dokploy Compose (production, Mode B)
+# ===========================================================================
+#
+# In Dokploy (same project / env_prod as the Application you opened):
+#   1. Add service → Compose (do not reuse the single Application)
+#   2. Provider: GitHub → this repo → compose path: compose.dokploy.yml
+#      or paste this file as Raw
+#   3. Environment tab: paste `.env.dokploy.example` (fill secrets)
+#   4. Registry: ghcr.io + a PAT with `read:packages` if images are private
+#   5. Domains: service `web`, container port 3000, HTTPS / Let's Encrypt
+#   6. Deploy. Volume Backups: named volume `core-storage` (SQLite)
+#
+# Public traffic → Traefik → web:3000 → Nitro /api → http://core:80
+# Core and worker stay off the public internet.
+# ===========================================================================
+
+x-core-env: &core_env
+  SESSION_COOKIE_DOMAIN: ""
+  SOLID_QUEUE_IN_PUMA: "false"
+  SITE_DOMAIN: ${SITE_DOMAIN}
+
+services:
+  core:
+    image: ghcr.io/yuler/beep:${BEEP_IMAGE_TAG:-main}
+    env_file:
+      - .env
+    environment:
+      <<: *core_env
+    volumes:
+      - core-storage:/rails/storage
+    restart: unless-stopped
+    networks:
+      - default
+
+  worker:
+    image: ghcr.io/yuler/beep:${BEEP_IMAGE_TAG:-main}
+    command: bin/jobs
+    env_file:
+      - .env
+    environment:
+      <<: *core_env
+    volumes:
+      - core-storage:/rails/storage
+    depends_on:
+      - core
+    restart: unless-stopped
+    networks:
+      - default
+
+  web:
+    image: ghcr.io/yuler/beep-web:${BEEP_IMAGE_TAG:-main}
+    environment:
+      PORT: "3000"
+      CORE_INTERNAL_URL: http://core:80
+    expose:
+      - "3000"
+    depends_on:
+      - core
+    restart: unless-stopped
+    networks:
+      - default
+      - dokploy-network
+
+volumes:
+  core-storage:
+
+networks:
+  dokploy-network:
+    external: true

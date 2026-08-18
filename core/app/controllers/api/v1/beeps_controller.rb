@@ -1,7 +1,12 @@
 class Api::V1::BeepsController < Api::V1::BaseController
   def index
-    @beeps = Current.account.beeps.order(created_at: :desc)
+    @beeps = Current.account.beeps.includes(:runs).order(created_at: :desc)
     render :index
+  end
+
+  def show
+    @beep = Current.account.beeps.includes(:runs).find(params[:id])
+    render :show
   end
 
   def create

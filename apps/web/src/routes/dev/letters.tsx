@@ -115,7 +115,7 @@ function LettersPage() {
 							rel="noreferrer"
 							className={cn(buttonVariants({ variant: "outline" }))}
 						>
-							Open letter opener
+							Open letter
 							<ExternalLink data-icon="inline-end" />
 						</a>
 					</div>

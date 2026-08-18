@@ -21,8 +21,13 @@ function resolveApiOrigin(): string {
 	if (CORE_URL) return CORE_URL;
 	// During SSR, relative `/api` must hit Rails (via Nitro proxy or direct).
 	if (import.meta.env.SSR) {
-		const appHost = process.env.APP_HOST || "beep.localhost";
-		return process.env.CORE_INTERNAL_URL ?? `http://core.${appHost}:3001`;
+		const internal = process.env.CORE_INTERNAL_URL;
+		if (!internal) {
+			throw new Error(
+				"CORE_INTERNAL_URL is required. Copy .env.example to .env.",
+			);
+		}
+		return internal;
 	}
 	return "";
 }

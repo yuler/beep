@@ -1,9 +1,11 @@
 import {
 	createFileRoute,
 	getRouteApi,
+	Link,
 	useRouter,
 } from "@tanstack/react-router";
 
+import { BeepRuns } from "@/components/beeps/beep-runs";
 import { CreateBeepForm } from "@/components/beeps/create-beep-form";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +36,7 @@ const STATUS_VARIANT: Record<
 	paused: "secondary",
 	completed: "outline",
 	cancelled: "destructive",
+	firing: "default",
 };
 
 function BeepsPage() {
@@ -91,23 +94,37 @@ function BeepsPage() {
 							return (
 								<li key={beep.id}>
 									<Card size="sm">
-										<CardHeader>
-											<CardTitle className="truncate">{beep.message}</CardTitle>
-											<CardAction>
-												<Badge
-													variant={STATUS_VARIANT[beep.status] ?? "secondary"}
-												>
-													{beep.status}
-												</Badge>
-											</CardAction>
-										</CardHeader>
-										<CardContent className="flex flex-wrap gap-x-4 gap-y-1 pt-0 text-xs text-muted-foreground">
-											{nextRunAt ? (
-												<span className="tabular-nums">
-													Next: {new Date(nextRunAt).toLocaleString()}
-												</span>
-											) : null}
-											<span>{beep.timezone}</span>
+										<Link
+											to="/$account_slug/beeps/$beepId"
+											params={{
+												account_slug: slug,
+												beepId: beep.id,
+											}}
+											className="block rounded-xl transition-colors hover:bg-muted/30"
+										>
+											<CardHeader>
+												<CardTitle className="truncate">
+													{beep.message}
+												</CardTitle>
+												<CardAction>
+													<Badge
+														variant={STATUS_VARIANT[beep.status] ?? "secondary"}
+													>
+														{beep.status}
+													</Badge>
+												</CardAction>
+											</CardHeader>
+											<CardContent className="flex flex-wrap gap-x-4 gap-y-1 pt-0 text-xs text-muted-foreground">
+												{nextRunAt ? (
+													<span className="tabular-nums">
+														Next: {new Date(nextRunAt).toLocaleString()}
+													</span>
+												) : null}
+												<span>{beep.timezone}</span>
+											</CardContent>
+										</Link>
+										<CardContent>
+											<BeepRuns runs={beep.runs} />
 										</CardContent>
 									</Card>
 								</li>

@@ -41,8 +41,8 @@ Rails.application.configure do
   # Canonical core host for links generated in mailer templates (localhost is
   # refused by the host lock).
   config.action_mailer.default_url_options = {
-    host: "core.#{ENV.fetch("APP_HOST", "beep.localhost")}",
-    port: ENV.fetch("CORE_PORT", ENV.fetch("PORT", "3001")).to_i
+    host: "core.#{ENV.fetch("APP_HOST")}",
+    port: ENV.fetch("CORE_PORT").to_i
   }
 
   # Print deprecation notices to the Rails logger.
@@ -91,7 +91,7 @@ Rails.application.configure do
   # Plain loopback is deliberately excluded: Mode A login is cookie/CSRF-unsafe
   # from there — that is what the web allowlist block tells the user to fix.
   # trycloudflare stays for payable webhook tunnels.
-  app_host = ENV.fetch("APP_HOST", "beep.localhost")
+  app_host = ENV.fetch("APP_HOST")
   config.hosts = [
     "core.#{app_host}",
     /.*\.trycloudflare\.com/

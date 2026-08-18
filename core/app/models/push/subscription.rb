@@ -36,18 +36,11 @@ class Push::Subscription < ApplicationRecord
   end
 
   def deliver_test!
-    WebPush.payload_send(
-      message: test_payload.to_json,
-      endpoint: endpoint,
-      p256dh: p256dh_key,
-      auth: auth_key,
-      vapid: {
-        subject: "mailto:support@example.com",
-        public_key: Rails.application.config.x.vapid.public_key,
-        private_key: Rails.application.config.x.vapid.private_key
-      },
-      urgency: "high"
-    )
+    send_push(test_payload)
+  end
+
+  def deliver_beep(beep)
+    send_push(beep.push_payload)
   end
 
   def resolved_endpoint_ip
@@ -57,6 +50,21 @@ class Push::Subscription < ApplicationRecord
   end
 
   private
+    def send_push(payload)
+      WebPush.payload_send(
+        message: payload.to_json,
+        endpoint: endpoint,
+        p256dh: p256dh_key,
+        auth: auth_key,
+        vapid: {
+          subject: Rails.application.config.x.vapid.subject,
+          public_key: Rails.application.config.x.vapid.public_key,
+          private_key: Rails.application.config.x.vapid.private_key
+        },
+        urgency: "high"
+      )
+    end
+
     def endpoint_uri
       @endpoint_uri ||= URI.parse(endpoint) if endpoint.present?
     rescue URI::InvalidURIError

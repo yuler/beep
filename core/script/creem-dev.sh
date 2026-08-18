@@ -1,4 +1,4 @@
-CORE_PORT="${CORE_PORT:-3001}"
+: "${CORE_PORT:?CORE_PORT is required. Copy .env.example to .env.}"
 
 echo "Using Cloudflare tunnel URL: http://localhost:${CORE_PORT}"
 echo ""

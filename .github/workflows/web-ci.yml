@@ -88,4 +88,6 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Production build
+        env:
+          CORE_INTERNAL_URL: http://core:80
         run: pnpm --filter web build
