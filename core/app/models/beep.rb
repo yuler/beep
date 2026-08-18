@@ -82,11 +82,15 @@ class Beep < ApplicationRecord
     "#{Rails.application.config.x.web_origin}/#{account.slug}/beeps/#{id}"
   end
 
+  def body_text
+    Beep::Plaintext.from_markdown(body)
+  end
+
   def push_payload
     options = { data: { url: web_url, badge: 1 } }
-    plaintext = Beep::Plaintext.from_markdown(body)
-    if plaintext.present?
-      options[:body] = plaintext
+    text = body_text
+    if text.present?
+      options[:body] = text
     end
 
     { title: title, options: options }

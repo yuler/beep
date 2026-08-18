@@ -66,7 +66,30 @@ class BeepTest < ActiveSupport::TestCase
     assert beep.errors[:body].any?
   end
 
-  test "push payload uses title and strips markdown from body" do
+  test "body_text strips markdown from body" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      body: "Bring **milk** and [eggs](https://example.com)",
+      run_at: 1.hour.from_now
+    )
+
+    assert_equal "Bring milk and eggs", beep.body_text
+  end
+
+  test "body_text is empty when the beep has no body" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      run_at: 1.hour.from_now
+    )
+
+    assert_equal "", beep.body_text
+  end
+
+  test "push payload uses title and body_text" do
     beep = Beep.create!(
       account: @account,
       kind: :once,
@@ -78,7 +101,7 @@ class BeepTest < ActiveSupport::TestCase
     payload = beep.push_payload
 
     assert_equal "Call mom", payload[:title]
-    assert_equal "Bring milk and eggs", payload.dig(:options, :body)
+    assert_equal beep.body_text, payload.dig(:options, :body)
     assert_equal beep.web_url, payload.dig(:options, :data, :url)
   end
 
