@@ -5,6 +5,8 @@ class Beep < ApplicationRecord
   STALE_FIRING_AFTER = 2.minutes
   RUNNING_STALE_AFTER = 5.minutes
   EXPIRED_AFTER = 1.hour
+  TITLE_MAX_LENGTH = 80
+  BODY_MAX_LENGTH = 2000
 
   belongs_to :account
   has_many :runs, class_name: "BeepRun", dependent: :destroy
@@ -12,7 +14,11 @@ class Beep < ApplicationRecord
   enum :kind, %w[ once recurring ].index_by(&:itself)
   enum :status, %w[ active paused completed cancelled firing ].index_by(&:itself)
 
-  validates :message, presence: true, length: { maximum: 500 }
+  normalizes :title, with: ->(value) { value.strip.presence }
+  normalizes :body, with: ->(value) { value&.strip.presence }
+
+  validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }
+  validates :body, length: { maximum: BODY_MAX_LENGTH }, allow_nil: true
   validates :timezone, presence: true
   validates :run_at, presence: true, if: :once?
   validates :run_at, absence: true, if: :recurring?
@@ -77,13 +83,13 @@ class Beep < ApplicationRecord
   end
 
   def push_payload
-    {
-      title: "Beep",
-      options: {
-        body: message,
-        data: { url: web_url, badge: 1 }
-      }
-    }
+    options = { data: { url: web_url, badge: 1 } }
+    plaintext = Beep::Plaintext.from_markdown(body)
+    if plaintext.present?
+      options[:body] = plaintext
+    end
+
+    { title: title, options: options }
   end
 
   private

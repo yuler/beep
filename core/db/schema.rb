@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_08_17_100000) do
+ActiveRecord::Schema[8.2].define(version: 2026_08_18_100000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.integer "amount", null: false
@@ -184,7 +184,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_17_100000) do
     t.string "status", default: "active", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.text "message", null: false
+    t.text "title", null: false
+    t.text "body"
     t.index ["account_id"], name: "index_beeps_on_account_id"
     t.index ["status", "next_run_at"], name: "index_beeps_on_status_and_next_run_at"
   end

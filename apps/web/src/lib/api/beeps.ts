@@ -16,7 +16,8 @@ export type BeepRun = {
 
 export type Beep = {
 	id: string;
-	message: string;
+	title: string;
+	body: string | null;
 	kind: "once" | "recurring";
 	status: "active" | "paused" | "completed" | "cancelled" | "firing";
 	run_at: string | null;
@@ -45,7 +46,7 @@ export function fetchBeep(slug: string, beepId: string) {
 
 export function createBeep(
 	slug: string,
-	body: { message: string; run_at: string },
+	body: { title: string; body: string | null; run_at: string },
 ) {
 	return apiFetch<Beep>(`/api/v1/${slug}/beeps`, {
 		method: "POST",

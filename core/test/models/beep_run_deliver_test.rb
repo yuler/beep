@@ -44,8 +44,8 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     end
 
     assert_equal [ first.endpoint, second.endpoint ].sort, sent_endpoints.sort
-    assert_equal "Beep", payload["title"]
-    assert_equal "Call mom", payload.dig("options", "body")
+    assert_equal "Call mom", payload["title"]
+    assert_nil payload.dig("options", "body")
     assert_equal "#{Rails.application.config.x.web_origin}/#{@account.slug}/beeps/#{@beep.id}", payload.dig("options", "data", "url")
     assert @run.reload.succeeded?
     statuses = @run.result.dig("web_push", "deliveries").map { |row| row["status"] }
@@ -130,7 +130,7 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
       beep = Beep.create!(
         account: @account,
         kind: :once,
-        message: "Call mom",
+        title: "Call mom",
         run_at: 1.hour.from_now.change(usec: 0)
       )
       beep.update_columns(next_run_at: 1.minute.ago.change(usec: 0))

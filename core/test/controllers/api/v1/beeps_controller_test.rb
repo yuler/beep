@@ -10,17 +10,17 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index returns account beeps newest first" do
-    older = @account.beeps.create!(kind: :once, message: "Older", run_at: @run_at)
-    newer = @account.beeps.create!(kind: :once, message: "Newer", run_at: @run_at + 1.hour)
-    accounts(:yuler_account).beeps.create!(kind: :once, message: "Other", run_at: @run_at)
+    older = @account.beeps.create!(kind: :once, title: "Older", run_at: @run_at)
+    newer = @account.beeps.create!(kind: :once, title: "Newer", run_at: @run_at + 1.hour)
+    accounts(:yuler_account).beeps.create!(kind: :once, title: "Other", run_at: @run_at)
 
     get "/api/v1/#{@account.slug}/beeps",
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 
     assert_response :success
-    messages = response.parsed_body["beeps"].map { |beep| beep["message"] }
-    assert_equal [ "Newer", "Older" ], messages
+    titles = response.parsed_body["beeps"].map { |beep| beep["title"] }
+    assert_equal [ "Newer", "Older" ], titles
     assert_equal newer.id, response.parsed_body["beeps"].first["id"]
     assert_equal older.id, response.parsed_body["beeps"].second["id"]
     assert_equal [], response.parsed_body["beeps"].first["runs"]
@@ -43,14 +43,15 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
   test "create makes a once beep and copies run_at to next_run_at" do
     assert_difference -> { @account.beeps.count }, 1 do
       post "/api/v1/#{@account.slug}/beeps",
-        params: { message: "Call mom", run_at: @run_at.iso8601 },
+        params: { title: "Call mom", body: "Bring **milk**", run_at: @run_at.iso8601 },
         headers: { "Authorization" => "Bearer #{@token}" },
         as: :json
     end
 
     assert_response :created
     body = response.parsed_body
-    assert_equal "Call mom", body["message"]
+    assert_equal "Call mom", body["title"]
+    assert_equal "Bring **milk**", body["body"]
     assert_equal "once", body["kind"]
     assert_equal "active", body["status"]
     assert_equal "UTC", body["timezone"]
@@ -58,9 +59,9 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @run_at.iso8601, Time.iso8601(body["next_run_at"]).iso8601
   end
 
-  test "create rejects a blank message" do
+  test "create rejects a blank title" do
     post "/api/v1/#{@account.slug}/beeps",
-      params: { message: "", run_at: @run_at.iso8601 },
+      params: { title: "", run_at: @run_at.iso8601 },
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 
@@ -70,7 +71,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
 
   test "create rejects a run_at in the past" do
     post "/api/v1/#{@account.slug}/beeps",
-      params: { message: "Call mom", run_at: 1.hour.ago.iso8601 },
+      params: { title: "Call mom", run_at: 1.hour.ago.iso8601 },
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 
@@ -80,14 +81,14 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
 
   test "create requires authentication" do
     post "/api/v1/#{@account.slug}/beeps",
-      params: { message: "Call mom", run_at: @run_at.iso8601 },
+      params: { title: "Call mom", run_at: @run_at.iso8601 },
       as: :json
 
     assert_response :unauthorized
   end
 
   test "show returns the account beep" do
-    beep = @account.beeps.create!(kind: :once, message: "Call mom", run_at: @run_at)
+    beep = @account.beeps.create!(kind: :once, title: "Call mom", run_at: @run_at)
 
     get "/api/v1/#{@account.slug}/beeps/#{beep.id}",
       headers: { "Authorization" => "Bearer #{@token}" },
@@ -96,14 +97,15 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     body = response.parsed_body
     assert_equal beep.id, body["id"]
-    assert_equal "Call mom", body["message"]
+    assert_equal "Call mom", body["title"]
+    assert_nil body["body"]
     assert_equal "once", body["kind"]
     assert_equal "active", body["status"]
     assert_equal [], body["runs"]
   end
 
   test "show includes beep runs newest first" do
-    beep = @account.beeps.create!(kind: :once, message: "Call mom", run_at: @run_at)
+    beep = @account.beeps.create!(kind: :once, title: "Call mom", run_at: @run_at)
     older = beep.runs.create!(scheduled_for: 2.hours.ago.change(usec: 0), status: :expired)
     newer = beep.runs.create!(
       scheduled_for: 1.hour.ago.change(usec: 0),
@@ -124,7 +126,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show requires authentication" do
-    beep = @account.beeps.create!(kind: :once, message: "Call mom", run_at: @run_at)
+    beep = @account.beeps.create!(kind: :once, title: "Call mom", run_at: @run_at)
 
     get "/api/v1/#{@account.slug}/beeps/#{beep.id}", as: :json
 
@@ -132,7 +134,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show returns not found for another account's beep" do
-    beep = accounts(:yuler_account).beeps.create!(kind: :once, message: "Other", run_at: @run_at)
+    beep = accounts(:yuler_account).beeps.create!(kind: :once, title: "Other", run_at: @run_at)
 
     get "/api/v1/#{@account.slug}/beeps/#{beep.id}",
       headers: { "Authorization" => "Bearer #{@token}" },

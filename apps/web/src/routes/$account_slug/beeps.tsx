@@ -103,9 +103,7 @@ function BeepsPage() {
 											className="block rounded-xl transition-colors hover:bg-muted/30"
 										>
 											<CardHeader>
-												<CardTitle className="truncate">
-													{beep.message}
-												</CardTitle>
+												<CardTitle className="truncate">{beep.title}</CardTitle>
 												<CardAction>
 													<Badge
 														variant={STATUS_VARIANT[beep.status] ?? "secondary"}

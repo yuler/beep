@@ -6,7 +6,7 @@ class DeliverBeepRunJobTest < ActiveSupport::TestCase
     beep = Beep.create!(
       account: account,
       kind: :once,
-      message: "Call mom",
+      title: "Call mom",
       run_at: 1.hour.from_now.change(usec: 0)
     )
     beep.update_columns(next_run_at: 1.minute.ago)
