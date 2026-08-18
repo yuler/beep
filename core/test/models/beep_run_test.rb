@@ -6,7 +6,7 @@ class BeepRunTest < ActiveSupport::TestCase
     beep = Beep.create!(
       account: account,
       kind: :once,
-      message: "Call mom",
+      title: "Call mom",
       run_at: 1.hour.from_now.change(usec: 0)
     )
     scheduled_for = beep.next_run_at

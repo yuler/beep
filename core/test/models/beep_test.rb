@@ -10,7 +10,7 @@ class BeepTest < ActiveSupport::TestCase
     beep = Beep.create!(
       account: @account,
       kind: :once,
-      message: "Call mom",
+      title: "Call mom",
       run_at: run_at
     )
 
@@ -19,19 +19,108 @@ class BeepTest < ActiveSupport::TestCase
     assert beep.active?
   end
 
-  test "once beep requires message and run_at" do
+  test "once beep requires title and run_at" do
     beep = Beep.new(account: @account, kind: :once)
 
     assert_not beep.valid?
-    assert beep.errors[:message].any?
+    assert beep.errors[:title].any?
     assert beep.errors[:run_at].any?
+  end
+
+  test "once beep allows a blank body" do
+    beep = Beep.new(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      body: "   ",
+      run_at: 1.hour.from_now
+    )
+
+    assert beep.valid?
+    beep.save!
+    assert_nil beep.body
+  end
+
+  test "once beep rejects a title longer than 80 characters" do
+    beep = Beep.new(
+      account: @account,
+      kind: :once,
+      title: "a" * 81,
+      run_at: 1.hour.from_now
+    )
+
+    assert_not beep.valid?
+    assert beep.errors[:title].any?
+  end
+
+  test "once beep rejects a body longer than 2000 characters" do
+    beep = Beep.new(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      body: "a" * 2001,
+      run_at: 1.hour.from_now
+    )
+
+    assert_not beep.valid?
+    assert beep.errors[:body].any?
+  end
+
+  test "body_text strips markdown from body" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      body: "Bring **milk** and [eggs](https://example.com)",
+      run_at: 1.hour.from_now
+    )
+
+    assert_equal "Bring milk and eggs", beep.body_text
+  end
+
+  test "body_text is empty when the beep has no body" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      run_at: 1.hour.from_now
+    )
+
+    assert_equal "", beep.body_text
+  end
+
+  test "push payload uses title and body_text" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      body: "Bring **milk** and [eggs](https://example.com)",
+      run_at: 1.hour.from_now
+    )
+
+    payload = beep.push_payload
+
+    assert_equal "Call mom", payload[:title]
+    assert_equal beep.body_text, payload.dig(:options, :body)
+    assert_equal beep.web_url, payload.dig(:options, :data, :url)
+  end
+
+  test "push payload omits body when the beep has none" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      run_at: 1.hour.from_now
+    )
+
+    assert_nil beep.push_payload.dig(:options, :body)
   end
 
   test "once beep rejects cron" do
     beep = Beep.new(
       account: @account,
       kind: :once,
-      message: "Call mom",
+      title: "Call mom",
       run_at: 1.hour.from_now,
       cron: "0 9 * * *"
     )
@@ -44,7 +133,7 @@ class BeepTest < ActiveSupport::TestCase
     beep = Beep.new(
       account: @account,
       kind: :once,
-      message: "Call mom",
+      title: "Call mom",
       run_at: 1.hour.ago
     )
 
@@ -56,7 +145,7 @@ class BeepTest < ActiveSupport::TestCase
     beep = Beep.new(
       account: @account,
       kind: :once,
-      message: "Call mom",
+      title: "Call mom",
       run_at: 1.hour.from_now
     )
 

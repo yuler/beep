@@ -1,5 +1,6 @@
 import { createFileRoute, getRouteApi, notFound } from "@tanstack/react-router";
 
+import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { BeepRuns } from "@/components/beeps/beep-runs";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
@@ -58,7 +59,7 @@ function BeepDetailPage() {
 						to: "/$account_slug/beeps",
 						params: { account_slug: slug },
 					},
-					{ label: beep.message, isCurrentPage: true },
+					{ label: beep.title, isCurrentPage: true },
 				]}
 			/>
 
@@ -66,7 +67,7 @@ function BeepDetailPage() {
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div className="min-w-0">
 						<h1 className="font-heading text-2xl font-semibold tracking-tight">
-							{beep.message}
+							{beep.title}
 						</h1>
 						<p className="mt-1 text-sm text-muted-foreground">
 							{beep.kind} · {beep.timezone}
@@ -76,6 +77,17 @@ function BeepDetailPage() {
 						{beep.status}
 					</Badge>
 				</div>
+
+				{beep.body ? (
+					<Card className="max-w-lg">
+						<CardHeader>
+							<CardTitle>Body</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<BeepMarkdown source={beep.body} />
+						</CardContent>
+					</Card>
+				) : null}
 
 				<Card className="max-w-lg">
 					<CardHeader>

@@ -26,7 +26,7 @@ class BeepPollerTest < ActiveSupport::TestCase
     beep = Beep.create!(
       account: @account,
       kind: :recurring,
-      message: "Standup",
+      title: "Standup",
       cron: "0 9 * * *"
     )
     beep.update_columns(next_run_at: 1.minute.ago)
@@ -146,7 +146,7 @@ class BeepPollerTest < ActiveSupport::TestCase
       beep = Beep.create!(
         account: @account,
         kind: :once,
-        message: "Call mom",
+        title: "Call mom",
         run_at: 1.hour.from_now.change(usec: 0)
       )
       beep.update_columns(next_run_at: 1.minute.ago.change(usec: 0))

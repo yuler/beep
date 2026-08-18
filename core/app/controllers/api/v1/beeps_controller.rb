@@ -25,6 +25,6 @@ class Api::V1::BeepsController < Api::V1::BaseController
 
   private
     def beep_params
-      params.permit(:message, :run_at)
+      params.permit(:title, :body, :run_at)
     end
 end

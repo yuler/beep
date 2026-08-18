@@ -5,6 +5,7 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 
+import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { BeepRuns } from "@/components/beeps/beep-runs";
 import { CreateBeepForm } from "@/components/beeps/create-beep-form";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -103,9 +104,7 @@ function BeepsPage() {
 											className="block rounded-xl transition-colors hover:bg-muted/30"
 										>
 											<CardHeader>
-												<CardTitle className="truncate">
-													{beep.message}
-												</CardTitle>
+												<CardTitle className="truncate">{beep.title}</CardTitle>
 												<CardAction>
 													<Badge
 														variant={STATUS_VARIANT[beep.status] ?? "secondary"}
@@ -123,6 +122,11 @@ function BeepsPage() {
 												<span>{beep.timezone}</span>
 											</CardContent>
 										</Link>
+										{beep.body ? (
+											<CardContent>
+												<BeepMarkdown source={beep.body} />
+											</CardContent>
+										) : null}
 										<CardContent>
 											<BeepRuns runs={beep.runs} />
 										</CardContent>

@@ -57,9 +57,9 @@ Subscribe is done. Due `once` beeps push via `BeepPollerJob` (every 10s) → `be
 
 ```json
 {
-  "title": "Beep",
+  "title": "<beep.title>",
   "options": {
-    "body": "<beep.message>",
+    "body": "<plaintext from beep.body, omitted when blank>",
     "data": { "url": "https://web…/<slug>/beeps/<id>", "badge": 1 }
   }
 }
