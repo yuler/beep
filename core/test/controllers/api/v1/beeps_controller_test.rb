@@ -57,6 +57,47 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "UTC", body["timezone"]
     assert_equal @run_at.iso8601, Time.iso8601(body["run_at"]).iso8601
     assert_equal @run_at.iso8601, Time.iso8601(body["next_run_at"]).iso8601
+    assert_equal %w[ email web_push ], body["channels"]
+  end
+
+  test "create copies team default channels without email" do
+    team = Account.create_with_owner(
+      account: { name: "John Team", personal: false, slug: "john_team_beeps" },
+      owner: { name: "John", identity: @identity }
+    )
+
+    post "/api/v1/#{team.slug}/beeps",
+      params: { title: "Standup", run_at: @run_at.iso8601 },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :created
+    assert_equal %w[ web_push ], response.parsed_body["channels"]
+  end
+
+  test "create persists selected channels" do
+    post "/api/v1/#{@account.slug}/beeps",
+      params: { title: "Call mom", run_at: @run_at.iso8601, channels: %w[ email ] },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :created
+    assert_equal %w[ email ], response.parsed_body["channels"]
+  end
+
+  test "create rejects email on a team account" do
+    team = Account.create_with_owner(
+      account: { name: "John Team", personal: false, slug: "john_team_email" },
+      owner: { name: "John", identity: @identity }
+    )
+
+    post "/api/v1/#{team.slug}/beeps",
+      params: { title: "Standup", run_at: @run_at.iso8601, channels: %w[ email ] },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
   end
 
   test "create rejects a blank title" do
@@ -102,6 +143,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "once", body["kind"]
     assert_equal "active", body["status"]
     assert_equal [], body["runs"]
+    assert_equal %w[ email web_push ], body["channels"]
   end
 
   test "show includes beep runs newest first" do
@@ -141,5 +183,30 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
       as: :json
 
     assert_response :not_found
+  end
+
+  test "update changes channels" do
+    beep = @account.beeps.create!(kind: :once, title: "Call mom", run_at: @run_at)
+
+    patch "/api/v1/#{@account.slug}/beeps/#{beep.id}",
+      params: { channels: %w[ email ] },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal %w[ email ], response.parsed_body["channels"]
+    assert_equal %w[ email ], beep.reload.channels
+  end
+
+  test "update rejects an empty channels list" do
+    beep = @account.beeps.create!(kind: :once, title: "Call mom", run_at: @run_at)
+
+    patch "/api/v1/#{@account.slug}/beeps/#{beep.id}",
+      params: { channels: [] },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal %w[ email web_push ], beep.reload.channels
   end
 end

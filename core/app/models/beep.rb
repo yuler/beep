@@ -7,6 +7,7 @@ class Beep < ApplicationRecord
   EXPIRED_AFTER = 1.hour
   TITLE_MAX_LENGTH = 80
   BODY_MAX_LENGTH = 2000
+  CHANNELS = %w[ email web_push ].freeze
 
   belongs_to :account
   has_many :runs, class_name: "BeepRun", dependent: :destroy
@@ -25,7 +26,10 @@ class Beep < ApplicationRecord
   validates :cron, presence: true, if: :recurring?
   validates :cron, absence: true, if: :once?
   validate :run_at_in_future, if: :once?
+  validate :channels_are_allowed
 
+  before_validation :assign_default_channels, on: :create
+  before_validation :normalize_channels
   before_validation :sync_next_run_at_for_once, on: :create
 
   scope :due, -> { once.active.where(next_run_at: ..Time.current) }
@@ -82,6 +86,10 @@ class Beep < ApplicationRecord
     "#{Rails.application.config.x.web_origin}/#{account.slug}/beeps/#{id}"
   end
 
+  def channel?(name)
+    Array(channels).include?(name.to_s)
+  end
+
   def body_text
     Beep::Plaintext.from_markdown(body)
   end
@@ -113,6 +121,34 @@ class Beep < ApplicationRecord
 
     def expired?(scheduled_for)
       scheduled_for < EXPIRED_AFTER.ago
+    end
+
+    def assign_default_channels
+      if channels.nil? && account
+        self.channels = account.default_beep_channels
+      end
+    end
+
+    def normalize_channels
+      if channels
+        self.channels = Array(channels).map { |value| value.to_s.strip }.reject(&:blank?).uniq
+      end
+    end
+
+    def channels_are_allowed
+      list = Array(channels)
+      if list.empty?
+        errors.add(:channels, "must have at least one channel")
+      end
+
+      unknown = list - CHANNELS
+      if unknown.any?
+        errors.add(:channels, "is invalid")
+      end
+
+      if list.include?("email") && account&.team?
+        errors.add(:channels, "email is only available on personal accounts")
+      end
     end
 
     def sync_next_run_at_for_once

@@ -1,0 +1,9 @@
+<%= @beep.title %>
+
+<% if @beep.body_text.present? -%>
+<%= @beep.body_text %>
+
+<% end -%>
+Open beep: <%= @beep.web_url %>
+
+Turn off email reminders: <%= @unsubscribe_url %>

@@ -11,6 +11,7 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     @previous_private_key = Rails.application.config.x.vapid.private_key
     Rails.application.config.x.vapid.public_key = "test-vapid-public"
     Rails.application.config.x.vapid.private_key = "test-vapid-private"
+    ActionMailer::Base.deliveries.clear
   end
 
   teardown do
@@ -28,6 +29,9 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     assert @beep.completed?
     assert_nil @beep.next_run_at
     assert_equal @run.scheduled_for.to_i, @beep.last_run_at.to_i
+    assert_equal "sent", @run.result.dig("email", "status")
+    assert_equal 1, ActionMailer::Base.deliveries.size
+    assert_equal [ "john@example.com" ], ActionMailer::Base.deliveries.last.to
   end
 
   test "deliver sends web push to every subscription on the account" do
@@ -96,24 +100,62 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
   test "deliver is a no-op when the run already succeeded" do
     @run.deliver_now
     sent = 0
+    ActionMailer::Base.deliveries.clear
 
     stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
       @run.deliver_now
     end
 
     assert_equal 0, sent
+    assert_equal 0, ActionMailer::Base.deliveries.size
   end
 
-  test "deliver is a no-op when the run is already running" do
-    @run.update_columns(status: "running")
+  test "deliver retries email without sending web push again" do
+    subscribe("https://fcm.googleapis.com/fcm/send/one")
     sent = 0
+    stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
+      fail_email_delivery do
+        assert_raises BeepRun::EmailDeliveryError do
+          @run.deliver_now
+        end
+      end
+    end
 
+    assert_equal 1, sent
+    assert @run.reload.running?
+    assert_equal "error", @run.result.dig("email", "status")
+
+    sent = 0
     stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
       @run.deliver_now
     end
 
     assert_equal 0, sent
-    assert @run.reload.running?
+    assert @run.reload.succeeded?
+    assert_equal "sent", @run.result.dig("email", "status")
+    assert_equal 1, ActionMailer::Base.deliveries.size
+  end
+
+  test "deliver skips email when the account switch is off" do
+    @account.update!(email_channel_enabled: false)
+
+    @run.deliver_now
+
+    assert @run.reload.succeeded?
+    assert_equal "skipped", @run.result.dig("email", "status")
+    assert_equal "disabled", @run.result.dig("email", "reason")
+    assert_equal 0, ActionMailer::Base.deliveries.size
+  end
+
+  test "deliver skips email when the beep did not select it" do
+    @beep.update!(channels: %w[ web_push ])
+
+    @run.deliver_now
+
+    assert @run.reload.succeeded?
+    assert_nil @run.result["email"]
+    assert_equal "no_subscriptions", @run.result.dig("web_push", "reason")
+    assert_equal 0, ActionMailer::Base.deliveries.size
   end
 
   test "deliver is a no-op for an expired run" do
@@ -155,4 +197,22 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
       singleton.alias_method :payload_send, :__orig_payload_send
       singleton.remove_method :__orig_payload_send
     end
+
+    def fail_email_delivery
+      previous = ActionMailer::Base.delivery_method
+      ActionMailer::Base.add_delivery_method :failing, FailingDelivery
+      ActionMailer::Base.delivery_method = :failing
+      yield
+    ensure
+      ActionMailer::Base.delivery_method = previous
+    end
+end
+
+class FailingDelivery
+  def initialize(*)
+  end
+
+  def deliver!(*)
+    raise Net::ReadTimeout
+  end
 end

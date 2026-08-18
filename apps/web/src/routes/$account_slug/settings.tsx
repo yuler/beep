@@ -1,20 +1,28 @@
-import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	getRouteApi,
+	useRouter,
+} from "@tanstack/react-router";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { EmailChannelSettings } from "@/components/settings/email-channel-settings";
 import { WebPushSettings } from "@/components/settings/web-push-settings";
+import { fetchSettings } from "@/lib/api/settings";
 import { withAuthRedirects } from "@/lib/auth/guards";
 
 const accountRoute = getRouteApi("/$account_slug");
 
 export const Route = createFileRoute("/$account_slug/settings")({
 	loader: withAuthRedirects(({ params }) =>
-		Promise.resolve({ slug: params?.account_slug ?? "" }),
+		fetchSettings(params?.account_slug ?? ""),
 	),
 	component: SettingsPage,
 });
 
 function SettingsPage() {
 	const { account_slug: slug } = accountRoute.useParams();
+	const settings = Route.useLoaderData();
+	const router = useRouter();
 
 	return (
 		<>
@@ -39,6 +47,13 @@ function SettingsPage() {
 					</p>
 				</div>
 
+				{settings.personal ? (
+					<EmailChannelSettings
+						slug={slug}
+						enabled={settings.email_channel_enabled}
+						onChanged={() => router.invalidate()}
+					/>
+				) : null}
 				<WebPushSettings slug={slug} />
 			</div>
 		</>

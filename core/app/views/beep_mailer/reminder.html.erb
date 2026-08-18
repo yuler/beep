@@ -1,0 +1,13 @@
+<h1><%= @beep.title %></h1>
+
+<% if @beep.body_text.present? %>
+  <%= simple_format(@beep.body_text) %>
+<% end %>
+
+<p>
+  <%= link_to "Open beep", @beep.web_url %>
+</p>
+
+<p class="footer">
+  <%= link_to "Turn off email reminders", @unsubscribe_url %>
+</p>
