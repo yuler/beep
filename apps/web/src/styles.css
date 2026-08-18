@@ -1,5 +1,8 @@
-/* Pin scan root so client and SSR builds emit the same hashed CSS URL. */
-@import "tailwindcss" source("../");
+/* Scan `src/` only. This file lives in `src/` (not `src/styles/`), so `../`
+ * would scan `apps/web/` — including `.output` after the client build.
+ * Locally `.gitignore` hides that; Docker never copies `.gitignore`, so SSR
+ * emits a different hash than Nitro serves → 404. */
+@import "tailwindcss" source("./");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
