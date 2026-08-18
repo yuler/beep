@@ -30,6 +30,10 @@ flowchart TD
 
 Constraints: HTTPS (`localhost` / `*.localhost` excepted); `userVisibleOnly`; iOS needs Home Screen; after the user revokes permission, the next send returns 410 and core should delete the row.
 
+### China reachability
+
+Chromium web push (Chrome / Edge / Opera) subscribes through Google's FCM (`fcm.googleapis.com` / `jmt17.google.com`), which the Great Firewall blocks. In mainland China, `pushManager.subscribe()` never settles and delivery never arrives, so the app probes the push service host before asking permission and times out the subscribe call, then shows a friendly error. Edge (WNS) and Firefox (Mozilla) use reachable services and still work there.
+
 ---
 
 ## Responsibilities

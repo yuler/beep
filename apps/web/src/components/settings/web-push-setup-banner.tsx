@@ -42,7 +42,7 @@ export function WebPushSetupBanner() {
 }
 
 function WebPushSetupBannerInner({ slug }: { slug: string }) {
-	const { status, ready, pending, enable } = useWebPush(slug);
+	const { status, ready, pending, enable, error } = useWebPush(slug);
 	const [dismissed, setDismissed] = useState(true);
 
 	useEffect(() => {
@@ -108,6 +108,11 @@ function WebPushSetupBannerInner({ slug }: { slug: string }) {
 						<X />
 					</Button>
 				</ItemActions>
+				{error ? (
+					<p className="text-sm text-destructive" role="alert">
+						{error}
+					</p>
+				) : null}
 			</Item>
 		</div>
 	);
