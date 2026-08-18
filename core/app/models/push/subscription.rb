@@ -57,7 +57,7 @@ class Push::Subscription < ApplicationRecord
         p256dh: p256dh_key,
         auth: auth_key,
         vapid: {
-          subject: "mailto:support@example.com",
+          subject: Rails.application.config.x.vapid.subject,
           public_key: Rails.application.config.x.vapid.public_key,
           private_key: Rails.application.config.x.vapid.private_key
         },
