@@ -23,6 +23,20 @@ class Api::V1::BeepsController < Api::V1::BaseController
     end
   end
 
+  def update
+    @beep = Current.account.beeps.find(params[:id])
+
+    if @beep.update(beep_params)
+      render :show
+    else
+      render_json_error(
+        status: :unprocessable_entity,
+        message: @beep.errors.full_messages.to_sentence,
+        code: "VALIDATION_ERROR"
+      )
+    end
+  end
+
   private
     def beep_params
       params.permit(:title, :body, :run_at)

@@ -57,6 +57,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "UTC", body["timezone"]
     assert_equal @run_at.iso8601, Time.iso8601(body["run_at"]).iso8601
     assert_equal @run_at.iso8601, Time.iso8601(body["next_run_at"]).iso8601
+    assert_nil body["channels"]
   end
 
   test "create rejects a blank title" do
@@ -102,6 +103,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "once", body["kind"]
     assert_equal "active", body["status"]
     assert_equal [], body["runs"]
+    assert_nil body["channels"]
   end
 
   test "show includes beep runs newest first" do
@@ -141,5 +143,18 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
       as: :json
 
     assert_response :not_found
+  end
+
+  test "update changes the title" do
+    beep = @account.beeps.create!(kind: :once, title: "Call mom", run_at: @run_at)
+
+    patch "/api/v1/#{@account.slug}/beeps/#{beep.id}",
+      params: { title: "Call dad" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal "Call dad", response.parsed_body["title"]
+    assert_equal "Call dad", beep.reload.title
   end
 end

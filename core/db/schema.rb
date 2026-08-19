@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_08_18_100000) do
+ActiveRecord::Schema[8.2].define(version: 2026_08_18_160000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.integer "amount", null: false
@@ -246,6 +246,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_18_100000) do
     t.datetime "created_at", null: false
     t.uuid "identity_id"
     t.string "name", null: false
+    t.json "notification_channels", default: ["email"], null: false
     t.string "role", default: "member", null: false
     t.datetime "updated_at", null: false
     t.datetime "verified_at"

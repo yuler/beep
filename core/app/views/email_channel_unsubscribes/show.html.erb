@@ -1,0 +1,29 @@
+<% @page_title = "Email reminders" %>
+
+<div class="stage">
+  <div class="page page--sm">
+    <div class="card card--raised">
+      <div class="card__body text-center">
+        <h2 class="card__title">Email reminders</h2>
+
+        <% if @unsubscribed || !@user.notification_channel?("email") %>
+          <p class="txt-muted">
+            Email reminders are off for <strong><%= @user.account.name %></strong>.
+            You can turn them back on in settings.
+          </p>
+        <% else %>
+          <p class="txt-muted">
+            Stop sending beep reminders to
+            <strong><%= @user.identity.email %></strong>
+            for <strong><%= @user.account.name %></strong>?
+          </p>
+
+          <%= button_to "Turn off email reminders",
+                email_channel_unsubscribe_path(params[:token]),
+                method: :post,
+                class: "btn btn--primary" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

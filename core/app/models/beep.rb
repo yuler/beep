@@ -82,6 +82,10 @@ class Beep < ApplicationRecord
     "#{Rails.application.config.x.web_origin}/#{account.slug}/beeps/#{id}"
   end
 
+  def recipient_users
+    [ account.owner_user ]
+  end
+
   def body_text
     Beep::Plaintext.from_markdown(body)
   end

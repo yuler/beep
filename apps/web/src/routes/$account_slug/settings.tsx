@@ -1,20 +1,28 @@
-import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	getRouteApi,
+	useRouter,
+} from "@tanstack/react-router";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { NotificationChannelSettings } from "@/components/settings/notification-channel-settings";
 import { WebPushSettings } from "@/components/settings/web-push-settings";
+import { fetchSettings } from "@/lib/api/settings";
 import { withAuthRedirects } from "@/lib/auth/guards";
 
 const accountRoute = getRouteApi("/$account_slug");
 
 export const Route = createFileRoute("/$account_slug/settings")({
 	loader: withAuthRedirects(({ params }) =>
-		Promise.resolve({ slug: params?.account_slug ?? "" }),
+		fetchSettings(params?.account_slug ?? ""),
 	),
 	component: SettingsPage,
 });
 
 function SettingsPage() {
 	const { account_slug: slug } = accountRoute.useParams();
+	const settings = Route.useLoaderData();
+	const router = useRouter();
 
 	return (
 		<>
@@ -39,6 +47,11 @@ function SettingsPage() {
 					</p>
 				</div>
 
+				<NotificationChannelSettings
+					slug={slug}
+					channels={settings.notification_channels}
+					onChanged={() => router.invalidate()}
+				/>
 				<WebPushSettings slug={slug} />
 			</div>
 		</>

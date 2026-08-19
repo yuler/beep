@@ -4,6 +4,9 @@ john:
   account: john_account
   role: owner
   active: true
+  notification_channels:
+    - email
+    - web_push
 
 yuler:
   name: Yuler
@@ -11,3 +14,6 @@ yuler:
   account: yuler_account
   role: owner
   active: true
+  notification_channels:
+    - email
+    - web_push

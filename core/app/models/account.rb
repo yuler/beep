@@ -83,6 +83,14 @@ class Account < ApplicationRecord
     !personal?
   end
 
+  def owner_user
+    users.find_by!(role: :owner)
+  end
+
+  def owner_identity
+    owner_user.identity
+  end
+
   def slug_path
     AccountSlug.encode(slug)
   end

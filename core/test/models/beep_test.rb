@@ -5,6 +5,17 @@ class BeepTest < ActiveSupport::TestCase
     @account = accounts(:john_account)
   end
 
+  test "recipient_users is the account owner" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      run_at: 1.hour.from_now
+    )
+
+    assert_equal [ users(:john) ], beep.recipient_users
+  end
+
   test "once beep copies run_at to next_run_at on create" do
     run_at = 1.hour.from_now.change(usec: 0)
     beep = Beep.create!(

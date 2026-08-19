@@ -46,7 +46,11 @@ export function fetchBeep(slug: string, beepId: string) {
 
 export function createBeep(
 	slug: string,
-	body: { title: string; body: string | null; run_at: string },
+	body: {
+		title: string;
+		body: string | null;
+		run_at: string;
+	},
 ) {
 	return apiFetch<Beep>(`/api/v1/${slug}/beeps`, {
 		method: "POST",

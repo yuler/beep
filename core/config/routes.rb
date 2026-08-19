@@ -3,6 +3,8 @@ Rails.application.routes.draw do
 
   resource :landing
   resources :home
+  get  "email_channel_unsubscribes/:token", to: "email_channel_unsubscribes#show", as: :email_channel_unsubscribe
+  post "email_channel_unsubscribes/:token", to: "email_channel_unsubscribes#create"
 
   resource :session do
     scope module: :sessions do
@@ -66,7 +68,8 @@ Rails.application.routes.draw do
         post :test, on: :member
       end
 
-      resources :beeps, only: %i[ index show create ]
+      resource :settings, only: %i[ show update ]
+      resources :beeps, only: %i[ index show create update ]
 
       namespace :admin do
         resource :stats, only: :show

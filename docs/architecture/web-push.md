@@ -74,7 +74,7 @@ Rotating VAPID keys invalidates every subscription. Serve the public key from th
 1. **`WebPush::Pool`**: do not POST to FCM inside the job thread. `net-http-persistent` is already in the Gemfile. Delivery pool sends; invalidation pool deletes expired rows (`Rails.application.executor.wrap`); `at_exit` shutdown.
 2. **Delete on send**: also 404 / `OpenSSL::OpenSSLError` (410 / `ExpiredSubscription` / `InvalidSubscription` already delete the row). No TTL; stale devices go away on failed send or from settings.
 3. **Pin IP on send**: pass `resolved_endpoint_ip` into `payload_send`. Skip if there is no public IP; never hit a private address.
-4. **Email channel** on `DeliverBeepRunJob`. Recurring beeps. Fan-out is currently every `push_subscriptions` row for the beep's account.
+4. **Fan-out** is the owner User's live `notification_channels` (email + that user's `push_subscriptions`). Recurring beeps. Recipients beyond owner come later.
 
 ---
 
