@@ -121,7 +121,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_18_160000) do
     t.boolean "personal", default: false, null: false
     t.string "slug", null: false
     t.datetime "updated_at", null: false
-    t.boolean "email_channel_enabled", default: true, null: false
     t.index ["personal"], name: "index_accounts_on_personal"
     t.index ["slug"], name: "index_accounts_on_slug", unique: true
   end
@@ -187,7 +186,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_18_160000) do
     t.datetime "updated_at", null: false
     t.text "title", null: false
     t.text "body"
-    t.json "channels", null: false
     t.index ["account_id"], name: "index_beeps_on_account_id"
     t.index ["status", "next_run_at"], name: "index_beeps_on_status_and_next_run_at"
   end
@@ -248,6 +246,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_18_160000) do
     t.datetime "created_at", null: false
     t.uuid "identity_id"
     t.string "name", null: false
+    t.json "notification_channels", default: ["email", "web_push"], null: false
     t.string "role", default: "member", null: false
     t.datetime "updated_at", null: false
     t.datetime "verified_at"

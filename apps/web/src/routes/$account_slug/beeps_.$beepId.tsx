@@ -1,22 +1,13 @@
-import {
-	createFileRoute,
-	getRouteApi,
-	notFound,
-	useRouter,
-} from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, getRouteApi, notFound } from "@tanstack/react-router";
 
-import { BeepChannelFields } from "@/components/beeps/beep-channel-fields";
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { BeepRuns } from "@/components/beeps/beep-runs";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchBeep, updateBeep } from "@/lib/api/beeps";
+import { fetchBeep } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import type { BeepChannel } from "@/lib/beep-channels";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -52,31 +43,7 @@ function formatWhen(value: string | null) {
 
 function BeepDetailPage() {
 	const { account_slug: slug } = accountRoute.useParams();
-	const { account } = accountRoute.useRouteContext();
 	const beep = Route.useLoaderData();
-	const router = useRouter();
-	const [channels, setChannels] = useState<BeepChannel[]>(
-		beep.channels as BeepChannel[],
-	);
-	const [pending, setPending] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	async function saveChannels() {
-		if (channels.length === 0) {
-			setError("Select at least one channel.");
-			return;
-		}
-		setError(null);
-		setPending(true);
-		try {
-			await updateBeep(slug, beep.id, { channels });
-			await router.invalidate();
-		} catch (err) {
-			setError(err instanceof ApiError ? err.message : "Something went wrong.");
-		} finally {
-			setPending(false);
-		}
-	}
 
 	return (
 		<>
@@ -121,45 +88,6 @@ function BeepDetailPage() {
 						</CardContent>
 					</Card>
 				) : null}
-
-				{account.personal ? (
-					<Card className="max-w-lg">
-						<CardHeader>
-							<CardTitle>Channels</CardTitle>
-						</CardHeader>
-						<CardContent className="flex flex-col gap-3">
-							<BeepChannelFields
-								channels={channels}
-								onChange={setChannels}
-								disabled={pending || beep.status !== "active"}
-							/>
-							{beep.status === "active" ? (
-								<Button
-									type="button"
-									className="w-fit"
-									disabled={pending}
-									onClick={() => void saveChannels()}
-								>
-									{pending ? "Saving…" : "Save channels"}
-								</Button>
-							) : null}
-							{error ? (
-								<p className="text-sm text-destructive" role="alert">
-									{error}
-								</p>
-							) : null}
-						</CardContent>
-					</Card>
-				) : (
-					<Card className="max-w-lg">
-						<CardHeader>
-							<CardTitle>Channels</CardTitle>
-						</CardHeader>
-						<CardContent className="text-sm text-muted-foreground">
-							Team beeps use browser notifications.
-						</CardContent>
-					</Card>
-				)}
 
 				<Card className="max-w-lg">
 					<CardHeader>

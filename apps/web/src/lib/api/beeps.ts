@@ -24,7 +24,6 @@ export type Beep = {
 	next_run_at: string | null;
 	last_run_at: string | null;
 	timezone: string;
-	channels: Array<"email" | "web_push">;
 	created_at: string;
 	runs: BeepRun[];
 };
@@ -51,22 +50,10 @@ export function createBeep(
 		title: string;
 		body: string | null;
 		run_at: string;
-		channels?: Array<"email" | "web_push">;
 	},
 ) {
 	return apiFetch<Beep>(`/api/v1/${slug}/beeps`, {
 		method: "POST",
-		body,
-	});
-}
-
-export function updateBeep(
-	slug: string,
-	beepId: string,
-	body: { channels: Array<"email" | "web_push"> },
-) {
-	return apiFetch<Beep>(`/api/v1/${slug}/beeps/${beepId}`, {
-		method: "PATCH",
 		body,
 	});
 }

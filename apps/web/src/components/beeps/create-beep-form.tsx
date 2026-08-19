@@ -1,6 +1,5 @@
 import { type FormEvent, useState } from "react";
 
-import { BeepChannelFields } from "@/components/beeps/beep-channel-fields";
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
@@ -8,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createBeep } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
-import type { BeepChannel } from "@/lib/beep-channels";
 import { cn } from "@/lib/utils";
 
 const TITLE_MAX_LENGTH = 80;
@@ -28,33 +26,21 @@ function defaultRunAt() {
 
 export function CreateBeepForm({
 	slug,
-	personal,
 	onCreated,
 }: {
 	slug: string;
-	personal: boolean;
 	onCreated: () => Promise<void> | void;
 }) {
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
 	const [preview, setPreview] = useState(false);
 	const [runAt, setRunAt] = useState(defaultRunAt);
-	const [channels, setChannels] = useState<BeepChannel[]>([
-		"email",
-		"web_push",
-	]);
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
 
 	async function onSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		setError(null);
-
-		if (personal && channels.length === 0) {
-			setError("Select at least one channel.");
-			return;
-		}
-
 		setPending(true);
 
 		try {
@@ -62,13 +48,11 @@ export function CreateBeepForm({
 				title: title.trim(),
 				body: body.trim() || null,
 				run_at: runAt.toISOString(),
-				channels: personal ? channels : undefined,
 			});
 			setTitle("");
 			setBody("");
 			setPreview(false);
 			setRunAt(defaultRunAt());
-			setChannels(["email", "web_push"]);
 			await onCreated();
 		} catch (err) {
 			setError(err instanceof ApiError ? err.message : "Something went wrong.");
@@ -150,13 +134,6 @@ export function CreateBeepForm({
 				onChange={setRunAt}
 				disabled={pending}
 			/>
-			{personal ? (
-				<BeepChannelFields
-					channels={channels}
-					onChange={setChannels}
-					disabled={pending}
-				/>
-			) : null}
 			{error ? (
 				<p className="text-sm text-destructive" role="alert">
 					{error}

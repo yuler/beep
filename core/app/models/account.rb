@@ -83,20 +83,12 @@ class Account < ApplicationRecord
     !personal?
   end
 
-  def default_beep_channels
-    if personal?
-      %w[ email web_push ]
-    else
-      %w[ web_push ]
-    end
+  def owner_user
+    users.find_by!(role: :owner)
   end
 
   def owner_identity
-    users.find_by!(role: :owner).identity
-  end
-
-  def email_channel_unsubscribe_token
-    signed_id(purpose: :email_channel_unsubscribe, expires_in: 1.year)
+    owner_user.identity
   end
 
   def slug_path

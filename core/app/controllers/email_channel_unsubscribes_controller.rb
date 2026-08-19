@@ -3,20 +3,22 @@ class EmailChannelUnsubscribesController < ApplicationController
   skip_before_action :require_account
   skip_forgery_protection only: :create
 
-  before_action :set_account
+  before_action :set_user
 
   def show
   end
 
   def create
-    @account.update!(email_channel_enabled: false) if @account.email_channel_enabled?
+    if @user.notification_channel?("email")
+      @user.update!(notification_channels: Array(@user.notification_channels) - %w[ email ])
+    end
     @unsubscribed = true
     render :show
   end
 
   private
-    def set_account
-      @account = Account.find_signed!(params[:token], purpose: :email_channel_unsubscribe)
+    def set_user
+      @user = User.find_signed!(params[:token], purpose: :email_channel_unsubscribe)
     rescue ActiveSupport::MessageVerifier::InvalidSignature
       raise ActiveRecord::RecordNotFound
     end

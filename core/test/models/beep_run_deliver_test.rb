@@ -34,7 +34,7 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     assert_equal [ "john@example.com" ], ActionMailer::Base.deliveries.last.to
   end
 
-  test "deliver sends web push to every subscription on the account" do
+  test "deliver sends web push to the recipient user's subscriptions" do
     first = subscribe("https://fcm.googleapis.com/fcm/send/one")
     second = subscribe("https://fcm.googleapis.com/fcm/send/two")
     sent_endpoints = []
@@ -136,19 +136,8 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     assert_equal 1, ActionMailer::Base.deliveries.size
   end
 
-  test "deliver skips email when the account switch is off" do
-    @account.update!(email_channel_enabled: false)
-
-    @run.deliver_now
-
-    assert @run.reload.succeeded?
-    assert_equal "skipped", @run.result.dig("email", "status")
-    assert_equal "disabled", @run.result.dig("email", "reason")
-    assert_equal 0, ActionMailer::Base.deliveries.size
-  end
-
-  test "deliver skips email when the beep did not select it" do
-    @beep.update!(channels: %w[ web_push ])
+  test "deliver skips email when the user has no email channel" do
+    users(:john).update!(notification_channels: %w[ web_push ])
 
     @run.deliver_now
 
@@ -156,6 +145,61 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     assert_nil @run.result["email"]
     assert_equal "no_subscriptions", @run.result.dig("web_push", "reason")
     assert_equal 0, ActionMailer::Base.deliveries.size
+  end
+
+  test "deliver skips web push when the user has no web push channel" do
+    subscribe("https://fcm.googleapis.com/fcm/send/one")
+    users(:john).update!(notification_channels: %w[ email ])
+    sent = 0
+
+    stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
+      @run.deliver_now
+    end
+
+    assert_equal 0, sent
+    assert @run.reload.succeeded?
+    assert_nil @run.result["web_push"]
+    assert_equal "sent", @run.result.dig("email", "status")
+  end
+
+  test "deliver succeeds with an empty result when the user has no channels" do
+    users(:john).update!(notification_channels: [])
+
+    @run.deliver_now
+
+    assert @run.reload.succeeded?
+    assert_equal({}, @run.result)
+    assert_equal 0, ActionMailer::Base.deliveries.size
+  end
+
+  test "deliver emails a team owner when email is in their channels" do
+    team = Account.create_with_owner(
+      account: { name: "John Team", personal: false, slug: "john_tdeliv" },
+      owner: { name: "John", identity: identities(:john) }
+    )
+    member = team.users.create!(
+      name: "Yuler",
+      identity: identities(:yuler),
+      role: :member,
+      verified_at: Time.current
+    )
+    beep = due_once_beep(account: team)
+    Beep.poll_due_now
+    run = beep.runs.sole
+    subscribe("https://fcm.googleapis.com/fcm/send/owner", user: team.users.find_by!(role: :owner))
+    subscribe("https://fcm.googleapis.com/fcm/send/member", user: member)
+    sent_endpoints = []
+
+    stub_web_push_payload_send(->(**kwargs) {
+      sent_endpoints << kwargs[:endpoint]
+    }) do
+      run.deliver_now
+    end
+
+    assert run.reload.succeeded?
+    assert_equal [ "https://fcm.googleapis.com/fcm/send/owner" ], sent_endpoints
+    assert_equal "sent", run.result.dig("email", "status")
+    assert_equal [ "john@example.com" ], ActionMailer::Base.deliveries.last.to
   end
 
   test "deliver is a no-op for an expired run" do
@@ -168,9 +212,9 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
   end
 
   private
-    def due_once_beep
+    def due_once_beep(account: @account)
       beep = Beep.create!(
-        account: @account,
+        account: account,
         kind: :once,
         title: "Call mom",
         run_at: 1.hour.from_now.change(usec: 0)
@@ -179,9 +223,9 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
       beep
     end
 
-    def subscribe(endpoint)
+    def subscribe(endpoint, user: users(:john))
       Push::Subscription.new(
-        user: users(:john),
+        user: user,
         endpoint: endpoint,
         p256dh_key: "key",
         auth_key: "auth"

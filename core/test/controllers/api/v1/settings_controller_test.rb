@@ -8,7 +8,7 @@ class Api::V1::SettingsControllerTest < ActionDispatch::IntegrationTest
     @token = @session.signed_id
   end
 
-  test "show returns personal email channel switch" do
+  test "show returns the current user's notification channels" do
     get "/api/v1/#{@account.slug}/settings",
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
@@ -17,33 +17,47 @@ class Api::V1::SettingsControllerTest < ActionDispatch::IntegrationTest
     body = response.parsed_body
     assert_equal @account.id, body["id"]
     assert_equal true, body["personal"]
-    assert_equal true, body["email_channel_enabled"]
+    assert_equal %w[ email web_push ], body["notification_channels"]
   end
 
-  test "update turns off email reminders" do
+  test "update writes the current user's notification channels" do
     patch "/api/v1/#{@account.slug}/settings",
-      params: { email_channel_enabled: false },
+      params: { notification_channels: %w[ web_push ] },
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 
     assert_response :success
-    assert_equal false, response.parsed_body["email_channel_enabled"]
-    assert_not @account.reload.email_channel_enabled?
+    assert_equal %w[ web_push ], response.parsed_body["notification_channels"]
+    assert_equal %w[ web_push ], users(:john).reload.notification_channels
   end
 
-  test "update rejects email switch on a team account" do
+  test "update allows an empty notification channel list" do
+    patch "/api/v1/#{@account.slug}/settings",
+      params: { notification_channels: [] },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal [], response.parsed_body["notification_channels"]
+    assert_equal [], users(:john).reload.notification_channels
+  end
+
+  test "update writes notification channels on a team account" do
     team = Account.create_with_owner(
       account: { name: "John Team", personal: false, slug: "john_set" },
       owner: { name: "John", identity: @identity }
     )
+    owner = team.users.find_by!(role: :owner)
 
     patch "/api/v1/#{team.slug}/settings",
-      params: { email_channel_enabled: false },
+      params: { notification_channels: %w[ email ] },
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 
-    assert_response :unprocessable_entity
-    assert team.reload.email_channel_enabled?
+    assert_response :success
+    assert_equal %w[ email ], response.parsed_body["notification_channels"]
+    assert_equal %w[ email ], owner.reload.notification_channels
+    assert_equal %w[ email web_push ], users(:john).reload.notification_channels
   end
 
   test "show requires authentication" do

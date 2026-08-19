@@ -1,12 +1,13 @@
 class BeepMailer < ApplicationMailer
-  def reminder(beep_run)
+  def reminder(beep_run, user:)
     @beep = beep_run.beep
     @account = @beep.account
-    @unsubscribe_url = email_channel_unsubscribe_url(@account.email_channel_unsubscribe_token)
+    @user = user
+    @unsubscribe_url = email_channel_unsubscribe_url(user.email_channel_unsubscribe_token)
 
     headers["List-Unsubscribe"] = "<#{@unsubscribe_url}>"
     headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
 
-    mail to: @account.owner_identity.email, subject: @beep.title
+    mail to: user.identity.email, subject: @beep.title
   end
 end

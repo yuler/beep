@@ -2,8 +2,8 @@ require "test_helper"
 
 class EmailChannelUnsubscribesControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @account = accounts(:john_account)
-    @token = @account.email_channel_unsubscribe_token
+    @user = users(:john)
+    @token = @user.email_channel_unsubscribe_token
   end
 
   test "show explains the email switch" do
@@ -11,14 +11,15 @@ class EmailChannelUnsubscribesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "Turn off email reminders"
-    assert @account.reload.email_channel_enabled?
+    assert_includes @user.reload.notification_channels, "email"
   end
 
-  test "create turns off email reminders without signing in" do
+  test "create removes email from that user without signing in" do
     post email_channel_unsubscribe_path(@token)
 
     assert_response :success
-    assert_not @account.reload.email_channel_enabled?
+    assert_not_includes @user.reload.notification_channels, "email"
+    assert_includes @user.notification_channels, "web_push"
     assert_includes response.body, "Email reminders are off"
   end
 

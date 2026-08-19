@@ -13,17 +13,8 @@ class BeepRun < ApplicationRecord
     return unless claim_delivery?
 
     payload_result = stringify_result
-    if beep.channel?("web_push")
-      payload_result = deliver_web_push(payload_result)
-      persist_result(payload_result)
-    end
-
-    if beep.channel?("email")
-      payload_result = deliver_email(payload_result)
-      persist_result(payload_result)
-      if payload_result.dig("email", "status") == "error"
-        raise EmailDeliveryError, payload_result.dig("email", "error")
-      end
+    beep.recipient_users.each do |user|
+      payload_result = deliver_for(user, payload_result)
     end
 
     update!(status: :succeeded, result: payload_result)
@@ -44,16 +35,33 @@ class BeepRun < ApplicationRecord
       update_columns(result: payload_result, updated_at: Time.current)
     end
 
-    def deliver_web_push(payload_result)
+    def deliver_for(user, payload_result)
+      if user.notification_channel?("web_push")
+        payload_result = deliver_web_push(user, payload_result)
+        persist_result(payload_result)
+      end
+
+      if user.notification_channel?("email")
+        payload_result = deliver_email(user, payload_result)
+        persist_result(payload_result)
+        if payload_result.dig("email", "status") == "error"
+          raise EmailDeliveryError, payload_result.dig("email", "error")
+        end
+      end
+
+      payload_result
+    end
+
+    def deliver_web_push(user, payload_result)
       if payload_result.key?("web_push")
         payload_result
       else
-        payload_result.merge(web_push_payload)
+        payload_result.merge(web_push_payload(user))
       end
     end
 
-    def web_push_payload
-      subscriptions = Push::Subscription.where(account_id: beep.account_id).to_a
+    def web_push_payload(user)
+      subscriptions = user.push_subscriptions.to_a
       if subscriptions.empty?
         { "web_push" => { "reason" => "no_subscriptions" } }
       else
@@ -75,15 +83,11 @@ class BeepRun < ApplicationRecord
       { "subscription_id" => subscription.id, "status" => "error", "error" => error.class.name }
     end
 
-    def deliver_email(payload_result)
+    def deliver_email(user, payload_result)
       if email_attempt_complete?(payload_result)
         payload_result
-      elsif !beep.account.personal?
-        payload_result.merge("email" => { "status" => "skipped", "reason" => "team_account" })
-      elsif !beep.account.email_channel_enabled?
-        payload_result.merge("email" => { "status" => "skipped", "reason" => "disabled" })
       else
-        send_reminder_email(payload_result)
+        send_reminder_email(user, payload_result)
       end
     end
 
@@ -91,8 +95,8 @@ class BeepRun < ApplicationRecord
       payload_result.dig("email", "status").in?(%w[ sent skipped ])
     end
 
-    def send_reminder_email(payload_result)
-      BeepMailer.reminder(self).deliver_now
+    def send_reminder_email(user, payload_result)
+      BeepMailer.reminder(self, user: user).deliver_now
       payload_result.merge("email" => { "status" => "sent" })
     rescue StandardError => error
       payload_result.merge("email" => { "status" => "error", "error" => error.class.name })

@@ -6,20 +6,13 @@ class Api::V1::SettingsController < Api::V1::BaseController
 
   def update
     @account = Current.account
-    unless @account.personal?
-      return render_json_error(
-        status: :unprocessable_entity,
-        message: "Email reminders are only available on personal accounts",
-        code: "VALIDATION_ERROR"
-      )
-    end
 
-    if @account.update(settings_params)
+    if Current.user.update(settings_params)
       render :show
     else
       render_json_error(
         status: :unprocessable_entity,
-        message: @account.errors.full_messages.to_sentence,
+        message: Current.user.errors.full_messages.to_sentence,
         code: "VALIDATION_ERROR"
       )
     end
@@ -27,6 +20,6 @@ class Api::V1::SettingsController < Api::V1::BaseController
 
   private
     def settings_params
-      params.permit(:email_channel_enabled)
+      params.permit(notification_channels: [])
     end
 end

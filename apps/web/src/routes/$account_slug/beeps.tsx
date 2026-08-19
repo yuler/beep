@@ -42,7 +42,6 @@ const STATUS_VARIANT: Record<
 
 function BeepsPage() {
 	const { account_slug: slug } = accountRoute.useParams();
-	const { account } = accountRoute.useRouteContext();
 	const router = useRouter();
 	const { beeps } = Route.useLoaderData();
 
@@ -85,11 +84,7 @@ function BeepsPage() {
 								No beeps yet — schedule a one-time reminder to get started.
 							</p>
 						) : null}
-						<CreateBeepForm
-							slug={slug}
-							personal={account.personal}
-							onCreated={handleCreated}
-						/>
+						<CreateBeepForm slug={slug} onCreated={handleCreated} />
 					</CardContent>
 				</Card>
 

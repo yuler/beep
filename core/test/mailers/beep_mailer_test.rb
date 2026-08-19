@@ -12,7 +12,7 @@ class BeepMailerTest < ActionMailer::TestCase
     )
     run = beep.runs.create!(scheduled_for: Time.current)
 
-    email = BeepMailer.reminder(run)
+    email = BeepMailer.reminder(run, user: users(:john))
 
     assert_equal [ "john@example.com" ], email.to
     assert_equal "Call mom", email.subject

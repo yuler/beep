@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-router";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { EmailChannelSettings } from "@/components/settings/email-channel-settings";
+import { NotificationChannelSettings } from "@/components/settings/notification-channel-settings";
 import { WebPushSettings } from "@/components/settings/web-push-settings";
 import { fetchSettings } from "@/lib/api/settings";
 import { withAuthRedirects } from "@/lib/auth/guards";
@@ -47,13 +47,11 @@ function SettingsPage() {
 					</p>
 				</div>
 
-				{settings.personal ? (
-					<EmailChannelSettings
-						slug={slug}
-						enabled={settings.email_channel_enabled}
-						onChanged={() => router.invalidate()}
-					/>
-				) : null}
+				<NotificationChannelSettings
+					slug={slug}
+					channels={settings.notification_channels}
+					onChanged={() => router.invalidate()}
+				/>
 				<WebPushSettings slug={slug} />
 			</div>
 		</>

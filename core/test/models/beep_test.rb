@@ -5,7 +5,7 @@ class BeepTest < ActiveSupport::TestCase
     @account = accounts(:john_account)
   end
 
-  test "omitted channels copy the personal account default" do
+  test "recipient_users is the account owner" do
     beep = Beep.create!(
       account: @account,
       kind: :once,
@@ -13,65 +13,7 @@ class BeepTest < ActiveSupport::TestCase
       run_at: 1.hour.from_now
     )
 
-    assert_equal %w[ email web_push ], beep.channels
-  end
-
-  test "omitted channels copy the team account default" do
-    team = Account.create_with_owner(
-      account: { name: "Acme Team", personal: false, slug: "acme_channels" },
-      owner: { name: "John", identity: identities(:john) }
-    )
-    beep = Beep.create!(
-      account: team,
-      kind: :once,
-      title: "Standup",
-      run_at: 1.hour.from_now
-    )
-
-    assert_equal %w[ web_push ], beep.channels
-  end
-
-  test "rejects an empty channels list" do
-    beep = Beep.new(
-      account: @account,
-      kind: :once,
-      title: "Call mom",
-      run_at: 1.hour.from_now,
-      channels: []
-    )
-
-    assert_not beep.valid?
-    assert beep.errors[:channels].any?
-  end
-
-  test "rejects email on a team account" do
-    team = Account.create_with_owner(
-      account: { name: "Acme Team", personal: false, slug: "acme_email" },
-      owner: { name: "John", identity: identities(:john) }
-    )
-    beep = Beep.new(
-      account: team,
-      kind: :once,
-      title: "Standup",
-      run_at: 1.hour.from_now,
-      channels: %w[ email ]
-    )
-
-    assert_not beep.valid?
-    assert beep.errors[:channels].any?
-  end
-
-  test "rejects unknown channels" do
-    beep = Beep.new(
-      account: @account,
-      kind: :once,
-      title: "Call mom",
-      run_at: 1.hour.from_now,
-      channels: %w[ sms ]
-    )
-
-    assert_not beep.valid?
-    assert beep.errors[:channels].any?
+    assert_equal [ users(:john) ], beep.recipient_users
   end
 
   test "once beep copies run_at to next_run_at on create" do
