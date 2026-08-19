@@ -1,0 +1,27 @@
+name: dokploy-deploy
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Core Publish Docker image
+      - Web Publish Docker image
+    types:
+      - completed
+    branches: [main]
+
+jobs:
+  trigger-dokploy-deployment:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Dokploy Compose Deployment
+        uses: benbristow/dokploy-deploy-action@0.2.2
+        with:
+          api_token: ${{ secrets.DOKPLOY_API_KEY }}
+          dokploy_url: ${{ secrets.DOKPLOY_URL }}
+          application_id: ${{ secrets.DOKPLOY_COMPOSE_APPLICATION_ID }}
+          service_type: compose
