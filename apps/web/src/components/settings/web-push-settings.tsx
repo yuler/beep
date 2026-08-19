@@ -24,7 +24,9 @@ export function WebPushSettings({ slug }: { slug: string }) {
 		removingId,
 		subscriptions,
 		currentEndpoint,
+		reachability,
 		error,
+		probe,
 		enable,
 		disable,
 		sendTest,
@@ -33,7 +35,14 @@ export function WebPushSettings({ slug }: { slug: string }) {
 
 	const needsIosInstall = status.platform === "ios" && !status.standalone;
 	const denied = status.supported && status.permission === "denied";
-	const busy = pending || testing || removingId !== null;
+	const probing = reachability.kind === "probing";
+	const blocked = reachability.kind === "unreachable";
+	const busy = pending || testing || probing || removingId !== null;
+
+	async function handleEnable() {
+		const result = await probe();
+		if (result.kind !== "unreachable") await enable();
+	}
 
 	return (
 		<Card className="max-w-lg">
@@ -74,6 +83,17 @@ export function WebPushSettings({ slug }: { slug: string }) {
 								? "This browser is subscribed for this workspace."
 								: "Enable on each device you want to notify."}
 						</p>
+						{probing ? (
+							<p className="text-sm text-muted-foreground">
+								Checking if this network can reach the push service…
+							</p>
+						) : blocked ? (
+							<p className="text-sm text-destructive" role="alert">
+								Beep couldn't reach the push service for {status.browserName}{" "}
+								from this network — it may be blocked. Try a different network,
+								then try again, or open Tips.
+							</p>
+						) : null}
 						<div className="flex flex-wrap gap-2">
 							<Button
 								type="button"
@@ -81,7 +101,11 @@ export function WebPushSettings({ slug }: { slug: string }) {
 								disabled={busy}
 								variant={status.subscribed ? "outline" : "default"}
 								onClick={() => {
-									void (status.subscribed ? disable() : enable());
+									void (status.subscribed
+										? disable()
+										: handleEnable()
+												.then(() => undefined)
+												.catch(() => undefined));
 								}}
 							>
 								{status.subscribed ? (
@@ -93,9 +117,11 @@ export function WebPushSettings({ slug }: { slug: string }) {
 									? status.subscribed
 										? "Turning off…"
 										: "Enabling…"
-									: status.subscribed
-										? "Turn off this browser"
-										: "Enable this browser"}
+									: probing
+										? "Checking…"
+										: status.subscribed
+											? "Turn off this browser"
+											: "Enable this browser"}
 							</Button>
 							{status.subscribed ? (
 								<Button

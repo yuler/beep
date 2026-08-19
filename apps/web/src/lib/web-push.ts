@@ -51,6 +51,20 @@ export function isWebPushSupported() {
 	);
 }
 
+export type PushReachability =
+	| { kind: "unsupported" }
+	| { kind: "unknown" }
+	| { kind: "reachable" }
+	| { kind: "unreachable"; host: string };
+
+export async function probePushServiceReachability(): Promise<PushReachability> {
+	if (!isWebPushSupported()) return { kind: "unsupported" };
+	const host = pushServiceHostForBrowser(notificationBrowserName());
+	if (!host) return { kind: "unknown" };
+	const reachable = await probePushServiceReachable(host);
+	return reachable ? { kind: "reachable" } : { kind: "unreachable", host };
+}
+
 export type NotificationPlatform =
 	| "ios"
 	| "macos"
@@ -142,10 +156,10 @@ export async function enableWebPush(slug: string) {
 		throw new Error("This browser does not support web push.");
 	}
 
-	const host = pushServiceHostForBrowser(notificationBrowserName());
-	if (host && !(await probePushServiceReachable(host))) {
+	const reachability = await probePushServiceReachability();
+	if (reachability.kind === "unreachable") {
 		throw new Error(
-			`Beep couldn't reach the push service (${host}) from this network — it may be blocked. Try a different network or another browser, then try again.`,
+			`Beep couldn't reach the push service (${reachability.host}) from this network — it may be blocked. Try a different network or another browser, then try again.`,
 		);
 	}
 
