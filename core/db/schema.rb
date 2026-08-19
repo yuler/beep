@@ -246,7 +246,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_18_160000) do
     t.datetime "created_at", null: false
     t.uuid "identity_id"
     t.string "name", null: false
-    t.json "notification_channels", default: ["email", "web_push"], null: false
+    t.json "notification_channels", default: ["email"], null: false
     t.string "role", default: "member", null: false
     t.datetime "updated_at", null: false
     t.datetime "verified_at"

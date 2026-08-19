@@ -1,10 +1,10 @@
 require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
-  test "defaults notification channels to email and web push" do
-    user = users(:john)
+  test "defaults notification channels to email" do
+    user = User.new(name: "Newcomer")
 
-    assert_equal %w[ email web_push ], user.notification_channels
+    assert_equal %w[ email ], user.notification_channels
   end
 
   test "allows an empty notification channel list" do

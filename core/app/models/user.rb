@@ -1,6 +1,6 @@
 class User < ApplicationRecord
   NOTIFICATION_CHANNELS = %w[ email web_push ].freeze
-  DEFAULT_NOTIFICATION_CHANNELS = %w[ email web_push ].freeze
+  DEFAULT_NOTIFICATION_CHANNELS = %w[ email ].freeze
 
   include Role
 
