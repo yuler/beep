@@ -177,6 +177,7 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
       account: { name: "John Team", personal: false, slug: "john_tdeliv" },
       owner: { name: "John", identity: identities(:john) }
     )
+    team.users.find_by!(role: :owner).update!(notification_channels: %w[ email web_push ])
     member = team.users.create!(
       name: "Yuler",
       identity: identities(:yuler),
