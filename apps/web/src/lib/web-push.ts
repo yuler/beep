@@ -254,7 +254,7 @@ async function subscribePushManager(
 
 async function timedSubscribe(
 	registration: ServiceWorkerRegistration,
-	applicationServerKey: Uint8Array,
+	applicationServerKey: Uint8Array<ArrayBuffer>,
 ) {
 	const message =
 		"Connecting to the push service timed out. Try a different network or another browser, then try again.";
