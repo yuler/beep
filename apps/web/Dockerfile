@@ -22,6 +22,7 @@ RUN pnpm install --filter web... --frozen-lockfile
 # Tailwind v4 uses .gitignore to decide what not to scan. Without it, the SSR
 # Vite environment picks up extra candidates and the hashed CSS URL 404s.
 COPY .gitignore ./
+COPY VERSION ./
 COPY apps/web ./apps/web
 
 # Empty string → same-origin `/api/v1` (Mode B). Do not omit the ARG or Vite
@@ -32,6 +33,12 @@ ENV VITE_CORE_URL=$VITE_CORE_URL
 # Rails origin for Nitro /api proxy + SSR fetches (Compose service name).
 ARG CORE_INTERNAL_URL=http://core:80
 ENV CORE_INTERNAL_URL=$CORE_INTERNAL_URL
+
+# Inlined into the bundle as build info for `logBuildInfo()`.
+ARG APP_VERSION
+ARG GIT_REVISION
+ENV APP_VERSION=$APP_VERSION
+ENV GIT_REVISION=$GIT_REVISION
 
 RUN pnpm --filter web build
 
