@@ -7,6 +7,40 @@ import {
 } from "@/lib/api/push";
 
 const SERVICE_WORKER_URL = "/service-worker.js";
+const PROBE_TIMEOUT_MS = 8_000;
+const SUBSCRIBE_TIMEOUT_MS = 15_000;
+
+function pushServiceHostForBrowser(browserName: string) {
+	if (browserName === "Firefox") return "updates.push.services.mozilla.com";
+	if (browserName === "Safari") return "web.push.apple.com";
+	if (/Chrome|Edge|Opera/.test(browserName)) return "fcm.googleapis.com";
+	return null;
+}
+
+async function probePushServiceReachable(host: string) {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+	try {
+		await fetch(`https://${host}/`, {
+			method: "GET",
+			mode: "no-cors",
+			signal: controller.signal,
+		});
+		return true;
+	} catch {
+		return false;
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const timeout = new Promise<never>((_resolve, reject) => {
+		timer = setTimeout(() => reject(new Error(message)), ms);
+	});
+	return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 export function isWebPushSupported() {
 	return (
@@ -15,6 +49,20 @@ export function isWebPushSupported() {
 		"PushManager" in window &&
 		"Notification" in window
 	);
+}
+
+export type PushReachability =
+	| { kind: "unsupported" }
+	| { kind: "unknown" }
+	| { kind: "reachable" }
+	| { kind: "unreachable"; host: string };
+
+export async function probePushServiceReachability(): Promise<PushReachability> {
+	if (!isWebPushSupported()) return { kind: "unsupported" };
+	const host = pushServiceHostForBrowser(notificationBrowserName());
+	if (!host) return { kind: "unknown" };
+	const reachable = await probePushServiceReachable(host);
+	return reachable ? { kind: "reachable" } : { kind: "unreachable", host };
 }
 
 export type NotificationPlatform =
@@ -106,6 +154,13 @@ export function isSubscribedForAccount(
 export async function enableWebPush(slug: string) {
 	if (!isWebPushSupported()) {
 		throw new Error("This browser does not support web push.");
+	}
+
+	const reachability = await probePushServiceReachability();
+	if (reachability.kind === "unreachable") {
+		throw new Error(
+			`Beep couldn't reach the push service (${reachability.host}) from this network — it may be blocked. Try a different network or another browser, then try again.`,
+		);
 	}
 
 	const { vapid_public_key: vapidPublicKey } = await fetchWebPushConfig();
@@ -203,17 +258,39 @@ async function subscribePushManager(
 
 	const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
 	try {
-		return await registration.pushManager.subscribe({
-			userVisibleOnly: true,
-			applicationServerKey,
-		});
+		return await timedSubscribe(registration, applicationServerKey);
 	} catch {
 		const leftover = await registration.pushManager.getSubscription();
 		await leftover?.unsubscribe();
-		return registration.pushManager.subscribe({
-			userVisibleOnly: true,
-			applicationServerKey,
-		});
+		return timedSubscribe(registration, applicationServerKey);
+	}
+}
+
+async function timedSubscribe(
+	registration: ServiceWorkerRegistration,
+	applicationServerKey: Uint8Array<ArrayBuffer>,
+) {
+	const message =
+		"Connecting to the push service timed out. Try a different network or another browser, then try again.";
+	try {
+		return await withTimeout(
+			registration.pushManager.subscribe({
+				userVisibleOnly: true,
+				applicationServerKey,
+			}),
+			SUBSCRIBE_TIMEOUT_MS,
+			message,
+		);
+	} catch (error) {
+		if (error instanceof Error && error.message === message) {
+			// The browser may still finish subscribing after we gave up; undo it
+			// so the browser and server stay in sync.
+			void registration.pushManager
+				.getSubscription()
+				.then((sub) => sub?.unsubscribe())
+				.catch(() => undefined);
+		}
+		throw error;
 	}
 }
 

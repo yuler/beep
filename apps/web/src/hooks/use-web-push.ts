@@ -15,6 +15,8 @@ import {
 	type NotificationPlatform,
 	notificationBrowserName,
 	notificationPlatform,
+	type PushReachability,
+	probePushServiceReachability,
 	removePushSubscription,
 	sendTestPush,
 } from "@/lib/web-push";
@@ -52,6 +54,11 @@ function pushPermission() {
 	return Notification.permission;
 }
 
+export type WebPushReachability =
+	| { kind: "idle" }
+	| { kind: "probing" }
+	| PushReachability;
+
 export function useWebPush(slug: string) {
 	const [status, setStatus] = useState<WebPushStatus>(INITIAL_STATUS);
 	const [ready, setReady] = useState(false);
@@ -64,6 +71,9 @@ export function useWebPush(slug: string) {
 	);
 	const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [reachability, setReachability] = useState<WebPushReachability>({
+		kind: "idle",
+	});
 	const identityRef = useRef<DeviceIdentity | null>(null);
 
 	const deviceIdentity = useCallback((): DeviceIdentity => {
@@ -137,6 +147,13 @@ export function useWebPush(slug: string) {
 		[refresh],
 	);
 
+	const probe = useCallback(async (): Promise<PushReachability> => {
+		setReachability({ kind: "probing" });
+		const result = await probePushServiceReachability();
+		setReachability(result);
+		return result;
+	}, []);
+
 	const enable = useCallback(() => {
 		return run(() => enableWebPush(slug).then(() => undefined), {
 			pending: true,
@@ -172,7 +189,9 @@ export function useWebPush(slug: string) {
 		removingId,
 		subscriptions,
 		currentEndpoint,
+		reachability,
 		error,
+		probe,
 		enable,
 		disable,
 		sendTest,
