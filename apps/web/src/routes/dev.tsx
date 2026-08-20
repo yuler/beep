@@ -11,7 +11,6 @@ import { resolveShellAccount } from "@/lib/auth/account";
 import { requireSession } from "@/lib/auth/guards";
 
 export const Route = createFileRoute("/dev")({
-	ssr: false,
 	pendingComponent: AuthPending,
 	beforeLoad: async ({ context, location }) => {
 		if (!import.meta.env.DEV) {

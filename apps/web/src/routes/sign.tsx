@@ -5,7 +5,6 @@ import { requireGuest } from "@/lib/auth/guards";
 import { parseSignSearch } from "@/lib/auth/return-to";
 
 export const Route = createFileRoute("/sign")({
-	ssr: false,
 	pendingComponent: AuthPending,
 	validateSearch: parseSignSearch,
 	beforeLoad: requireGuest,

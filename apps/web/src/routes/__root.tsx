@@ -28,13 +28,9 @@ const themeBootScript = `(() => {
 export const Route = createRootRoute({
 	// Re-run on each navigation; fetchMe dedupes within ME_STALE_MS.
 	staleTime: 0,
+	// Mode B: the session_id cookie lives on the web origin, so SSR resolves the
+	// identity from the incoming cookie (forwarded to core by the server fn).
 	beforeLoad: async () => {
-		// Mode A: the document request to web.* may not include session_id
-		// (cookie lives on Core). Do not dehydrate a guest `me` that auth
-		// guards would treat as logged-out.
-		if (import.meta.env.SSR) {
-			return { me: null };
-		}
 		const me = await fetchMeOrNull();
 		return { me };
 	},

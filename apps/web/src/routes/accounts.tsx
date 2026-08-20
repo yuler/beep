@@ -7,7 +7,6 @@ import { requireSession } from "@/lib/auth/guards";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/accounts")({
-	ssr: false,
 	pendingComponent: AuthPending,
 	beforeLoad: async ({ context, location }) => {
 		const me = await requireSession({ context, location });

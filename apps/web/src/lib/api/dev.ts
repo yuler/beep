@@ -1,31 +1,19 @@
-import { apiFetch } from "@/lib/api/client";
+import {
+	clearDevLetters as serverClearDevLetters,
+	deleteDevLetter as serverDeleteDevLetter,
+	fetchDevLetters as serverFetchDevLetters,
+} from "@/server/dev";
 
-export type DevLetter = {
-	id: string;
-	sent_at: string | null;
-	subject: string | null;
-	to: string | null;
-	from: string | null;
-};
-
-export type DevLettersResponse = {
-	letters: DevLetter[];
-};
+export type { DevLetter, DevLettersResponse } from "@/server/dev";
 
 export function fetchDevLetters() {
-	return apiFetch<DevLettersResponse>("/api/v1/dev/letters", {
-		method: "GET",
-	});
+	return serverFetchDevLetters({});
 }
 
 export function deleteDevLetter(id: string) {
-	return apiFetch<void>(`/api/v1/dev/letters/${encodeURIComponent(id)}`, {
-		method: "DELETE",
-	});
+	return serverDeleteDevLetter({ data: { id } });
 }
 
 export function clearDevLetters() {
-	return apiFetch<void>("/api/v1/dev/letters/clear", {
-		method: "DELETE",
-	});
+	return serverClearDevLetters({});
 }

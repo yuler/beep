@@ -8,7 +8,6 @@ import { requireSession } from "@/lib/auth/guards";
 import { isAccountSlug } from "@/lib/auth/slugs";
 
 export const Route = createFileRoute("/$account_slug")({
-	ssr: false,
 	pendingComponent: AuthPending,
 	beforeLoad: async ({ context, location, params }) => {
 		if (!isAccountSlug(params.account_slug)) {

@@ -6,7 +6,6 @@ import { resolveShellAccount } from "@/lib/auth/account";
 import { requireSession, requireStaff } from "@/lib/auth/guards";
 
 export const Route = createFileRoute("/admin")({
-	ssr: false,
 	pendingComponent: AuthPending,
 	beforeLoad: async ({ context, location }) => {
 		const me = await requireSession({ context, location });

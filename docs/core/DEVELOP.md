@@ -114,14 +114,17 @@ Passwordless magic-link authentication:
 - Sessions managed via signed `session_id` cookies (browser) and optional Bearer tokens (mobile/CLI)
 - Board-level access control via `Access` records
 
-**Browser apps (`apps/web`)** call `/api/v1` with `credentials: "include"` and rely on the HttpOnly `session_id` cookie (no bearer token in localStorage). After magic-link verify, Core sets the session cookie; the JSON body still includes `session_token` for non-browser clients (mobile/CLI).
+**Mode B (the only supported deployment):** the browser talks only to `apps/web` (TanStack Start / Node + Nitro). Rails-core is not exposed to the browser. Every `/api/v1` call originates on the Node server:
 
-| Deployment | `VITE_CORE_URL`                  | `SESSION_COOKIE_DOMAIN`  | API access                                         |
-| ---------- | -------------------------------- | ------------------------ | -------------------------------------------------- |
-| Local A    | `http://core…:${CORE_PORT}`      | `.${APP_HOST}`       | `development_cors.rb` only                         |
-| Production | `""` (relative `/api/v1`)        | unset (host-only cookie) | Nitro `/api` proxy → core (Mode B, TanStack Start) |
+- **Server functions** (`src/server/*` → `createServerFn`) handle mutations and reads called from the browser; `src/server/core.ts` forwards the request `Cookie` header so core sees the same `session_id` as the user, and relays `Set-Cookie` back onto the browser response for session start/end.
+- **SSR** (`beforeLoad` / `loader`) resolves data on Node during the document request; the session cookie lives on the web origin, so auth guards work server-side.
+- Sessions use the HttpOnly `session_id` cookie (no bearer token in localStorage).
 
-`SESSION_COOKIE_DOMAIN` is shared by Rails `_beep_session`, `session_id`, and pending-auth cookies. `VITE_CORE_URL` can interpolate `${CORE_PORT}`. Session cookies use `SameSite=Lax`. CSRF uses Rails 8.2 `protect_from_forgery using: :header_only` (`Sec-Fetch-Site` from the browser); JSON API clients without that header (curl, native apps) are allowed via [`RequestForgeryProtection`](../../core/app/controllers/concerns/request_forgery_protection.rb). Local CORS for the web ↔ core split is documented under [Local CORS](#local-cors-development-only).
+| Deployment | `VITE_CORE_URL`           | `SESSION_COOKIE_DOMAIN`  | API access                               |
+| ---------- | ------------------------- | ------------------------ | ---------------------------------------- |
+| Production | `""` (empty; unused)      | web-origin host cookie    | Node server fns → core (server-to-server) |
+
+`VITE_CORE_URL` is retained only for `coreAppUrl()` external links (Mission Control, letter opener); it is not the browser's API target. Session cookies use `SameSite=Lax`; CSRF on core's JSON API uses header-only protection, which treats the server-to-server calls (no `Sec-Fetch-Site`) as allowed (`RequestForgeryProtection`).
 
 ### Core Domain Models
 

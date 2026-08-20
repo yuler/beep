@@ -1,52 +1,36 @@
-import { apiFetch } from "@/lib/api/client";
+import {
+	createPushSubscription as serverCreatePushSubscription,
+	destroyPushSubscription as serverDestroyPushSubscription,
+	fetchPushSubscriptions as serverFetchPushSubscriptions,
+	fetchWebPushConfig as serverFetchWebPushConfig,
+	testPushSubscription as serverTestPushSubscription,
+} from "@/server/push";
 
-export type WebPushConfig = {
-	vapid_public_key: string;
-};
-
-export type PushSubscriptionRecord = {
-	id: string;
-	endpoint: string;
-	user_agent: string | null;
-	created_at: string;
-};
-
-export type PushSubscriptionsResponse = {
-	push_subscriptions: PushSubscriptionRecord[];
-};
+export type {
+	PushSubscriptionRecord,
+	PushSubscriptionsResponse,
+	WebPushConfig,
+} from "@/server/push";
 
 export function fetchWebPushConfig() {
-	return apiFetch<WebPushConfig>("/api/v1/web_push", { method: "GET" });
+	return serverFetchWebPushConfig({});
 }
 
 export function fetchPushSubscriptions(slug: string) {
-	return apiFetch<PushSubscriptionsResponse>(
-		`/api/v1/${slug}/push_subscriptions`,
-		{ method: "GET" },
-	);
+	return serverFetchPushSubscriptions({ data: { slug } });
 }
 
 export function createPushSubscription(
 	slug: string,
 	body: { endpoint: string; p256dh_key: string; auth_key: string },
 ) {
-	return apiFetch<PushSubscriptionRecord>(
-		`/api/v1/${slug}/push_subscriptions`,
-		{
-			method: "POST",
-			body,
-		},
-	);
+	return serverCreatePushSubscription({ data: { slug, ...body } });
 }
 
 export function destroyPushSubscription(slug: string, id: string) {
-	return apiFetch<void>(`/api/v1/${slug}/push_subscriptions/${id}`, {
-		method: "DELETE",
-	});
+	return serverDestroyPushSubscription({ data: { slug, id } });
 }
 
 export function testPushSubscription(slug: string, id: string) {
-	return apiFetch<void>(`/api/v1/${slug}/push_subscriptions/${id}/test`, {
-		method: "POST",
-	});
+	return serverTestPushSubscription({ data: { slug, id } });
 }

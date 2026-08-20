@@ -1,26 +1,20 @@
-import { apiFetch } from "@/lib/api/client";
 import type { NotificationChannel } from "@/lib/notification-channels";
+import {
+	fetchSettings as serverFetchSettings,
+	updateSettings as serverUpdateSettings,
+} from "@/server/settings";
 
-export type AccountSettings = {
-	id: string;
-	name: string;
-	slug: string;
-	personal: boolean;
-	notification_channels: NotificationChannel[];
-};
+export type { AccountSettings } from "@/server/settings";
 
 export function fetchSettings(slug: string) {
-	return apiFetch<AccountSettings>(`/api/v1/${slug}/settings`, {
-		method: "GET",
-	});
+	return serverFetchSettings({ data: { slug } });
 }
 
 export function updateSettings(
 	slug: string,
 	body: { notification_channels: NotificationChannel[] },
 ) {
-	return apiFetch<AccountSettings>(`/api/v1/${slug}/settings`, {
-		method: "PATCH",
-		body,
+	return serverUpdateSettings({
+		data: { slug, notification_channels: body.notification_channels },
 	});
 }

@@ -38,23 +38,21 @@ export type RootRouteContext = {
 };
 
 /**
- * Mode A: `session_id` is sent to Core, not always to the web document request.
- * SSR `me: null` is not logged-out — only the browser probe is authoritative.
+ * Mode B: the `session_id` cookie lives on the web origin, so every SSR request
+ * carries it (forwarded to core by the server fn). The root `beforeLoad` has
+ * already resolved `me` from the incoming cookie; a null `me` is genuinely
+ * signed-out, on server and client alike.
  */
 async function probeSession(
 	context: RootRouteContext,
 ): Promise<MeResponse | null> {
-	if (import.meta.env.SSR) {
-		return context.me ?? (await fetchMeOrNull());
-	}
-	return fetchMeOrNull();
+	return context.me ?? (await fetchMeOrNull());
 }
 
 /**
  * Like core `Authentication#require_authentication` after `resume_session`.
- * Must not 302 on SSR when the cookie is missing from the web request — the
- * browser would follow /sign before the client can call Core with credentials.
- * Auth-gated routes set `ssr: false` so this runs in the browser.
+ * Runs first on the server during SSR (cookie on the web origin), then on the
+ * client for subsequent navigations. Redirects to /sign when signed-out.
  */
 export async function requireSession({
 	context,
@@ -65,15 +63,6 @@ export async function requireSession({
 }): Promise<MeResponse> {
 	const me = await probeSession(context);
 	if (!me) {
-		if (import.meta.env.SSR) {
-			// Do not 302 to /sign — the document request may lack session_id
-			// (Mode A). Auth routes set `ssr: false` so the client probe runs.
-			// Reaching this branch means an auth-gated route is missing
-			// `ssr: false`; fail loudly instead of returning undefined.
-			throw new Error(
-				"requireSession: no session on SSR. Auth-gated routes must set ssr: false.",
-			);
-		}
 		redirectToSign(`${location.pathname}${location.searchStr}`);
 	}
 	return me;
