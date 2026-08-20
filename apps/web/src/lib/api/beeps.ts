@@ -57,3 +57,25 @@ export function createBeep(
 		body,
 	});
 }
+
+export type BeepProposal = {
+	intent: "create" | "other";
+	title: string | null;
+	body: string | null;
+	run_at: string | null;
+	timezone: string;
+	errors: {
+		title?: string;
+		body?: string;
+		run_at?: string;
+	};
+	confirmable: boolean;
+	message: string | null;
+};
+
+export function createBeepProposal(slug: string, prompt: string) {
+	return apiFetch<BeepProposal>(`/api/v1/${slug}/beep_proposals`, {
+		method: "POST",
+		body: { prompt },
+	});
+}

@@ -69,6 +69,7 @@ Rails.application.routes.draw do
       end
 
       resource :settings, only: %i[ show update ]
+      resources :beep_proposals, only: :create
       resources :beeps, only: %i[ index show create update ]
 
       namespace :admin do

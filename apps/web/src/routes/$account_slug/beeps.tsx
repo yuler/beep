@@ -1,22 +1,13 @@
 import {
 	createFileRoute,
 	getRouteApi,
-	Link,
 	useRouter,
 } from "@tanstack/react-router";
 
-import { BeepMarkdown } from "@/components/beeps/beep-markdown";
-import { BeepRuns } from "@/components/beeps/beep-runs";
-import { CreateBeepForm } from "@/components/beeps/create-beep-form";
+import { BeepList } from "@/components/beeps/beep-list";
+import { BeepQuickCreate } from "@/components/beeps/beep-quick-create";
+import { BeepStats } from "@/components/beeps/beep-stats";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { Badge } from "@/components/ui/badge";
-import {
-	Card,
-	CardAction,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
 import { fetchBeeps } from "@/lib/api/beeps";
 import { withAuthRedirects } from "@/lib/auth/guards";
 
@@ -28,17 +19,6 @@ export const Route = createFileRoute("/$account_slug/beeps")({
 	),
 	component: BeepsPage,
 });
-
-const STATUS_VARIANT: Record<
-	string,
-	"default" | "secondary" | "outline" | "destructive"
-> = {
-	active: "default",
-	paused: "secondary",
-	completed: "outline",
-	cancelled: "destructive",
-	firing: "default",
-};
 
 function BeepsPage() {
 	const { account_slug: slug } = accountRoute.useParams();
@@ -72,70 +52,9 @@ function BeepsPage() {
 					</p>
 				</div>
 
-				<Card className="max-w-105">
-					<CardHeader>
-						<CardTitle>
-							{beeps.length === 0 ? "Create your first beep" : "New beep"}
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						{beeps.length === 0 ? (
-							<p className="mb-4 text-sm text-muted-foreground">
-								No beeps yet — schedule a one-time reminder to get started.
-							</p>
-						) : null}
-						<CreateBeepForm slug={slug} onCreated={handleCreated} />
-					</CardContent>
-				</Card>
-
-				{beeps.length > 0 ? (
-					<ul className="flex flex-col gap-3">
-						{beeps.map((beep) => {
-							const nextRunAt = beep.next_run_at ?? beep.run_at;
-							return (
-								<li key={beep.id}>
-									<Card size="sm">
-										<Link
-											to="/$account_slug/beeps/$beepId"
-											params={{
-												account_slug: slug,
-												beepId: beep.id,
-											}}
-											className="block rounded-xl transition-colors hover:bg-muted/30"
-										>
-											<CardHeader>
-												<CardTitle className="truncate">{beep.title}</CardTitle>
-												<CardAction>
-													<Badge
-														variant={STATUS_VARIANT[beep.status] ?? "secondary"}
-													>
-														{beep.status}
-													</Badge>
-												</CardAction>
-											</CardHeader>
-											<CardContent className="flex flex-wrap gap-x-4 gap-y-1 pt-0 text-xs text-muted-foreground">
-												{nextRunAt ? (
-													<span className="tabular-nums">
-														Next: {new Date(nextRunAt).toLocaleString()}
-													</span>
-												) : null}
-												<span>{beep.timezone}</span>
-											</CardContent>
-										</Link>
-										{beep.body ? (
-											<CardContent>
-												<BeepMarkdown source={beep.body} />
-											</CardContent>
-										) : null}
-										<CardContent>
-											<BeepRuns runs={beep.runs} />
-										</CardContent>
-									</Card>
-								</li>
-							);
-						})}
-					</ul>
-				) : null}
+				<BeepQuickCreate slug={slug} onCreated={handleCreated} />
+				<BeepStats beeps={beeps} />
+				<BeepList beeps={beeps} slug={slug} variant="full" />
 			</div>
 		</>
 	);

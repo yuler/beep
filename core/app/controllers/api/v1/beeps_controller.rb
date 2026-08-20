@@ -10,7 +10,7 @@ class Api::V1::BeepsController < Api::V1::BaseController
   end
 
   def create
-    @beep = Current.account.beeps.new(beep_params.merge(kind: :once))
+    @beep = Current.account.beeps.new(beep_params.merge(kind: :once, timezone: Beep::TIMEZONE))
 
     if @beep.save
       render :create, status: :created

@@ -54,7 +54,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Bring **milk**", body["body"]
     assert_equal "once", body["kind"]
     assert_equal "active", body["status"]
-    assert_equal "UTC", body["timezone"]
+    assert_equal Beep::TIMEZONE, body["timezone"]
     assert_equal @run_at.iso8601, Time.iso8601(body["run_at"]).iso8601
     assert_equal @run_at.iso8601, Time.iso8601(body["next_run_at"]).iso8601
     assert_nil body["channels"]

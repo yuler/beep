@@ -7,6 +7,7 @@ class Beep < ApplicationRecord
   EXPIRED_AFTER = 1.hour
   TITLE_MAX_LENGTH = 80
   BODY_MAX_LENGTH = 2000
+  TIMEZONE = "Asia/Shanghai"
 
   belongs_to :account
   has_many :runs, class_name: "BeepRun", dependent: :destroy
