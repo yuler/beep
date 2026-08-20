@@ -1,6 +1,9 @@
 # Editors
 .vscode
 
+# Local git worktrees
+.worktrees/
+
 # Node.js
 node_modules/
 pnpm-debug.log*

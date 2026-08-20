@@ -109,7 +109,19 @@ Use Dokploy **Volume Backups** on `core-storage` (named volumes only; bind mount
 
 `core` runs `db:prepare` on boot via [`core/bin/docker-entrypoint`](../core/bin/docker-entrypoint).
 
-## 6. After deploy
+## 6. GitHub Actions redeploy
+
+After a successful image publish on `main` (`Core Publish Docker image` or `Web Publish Docker image`), [`.github/workflows/dokploy-deploy.yml`](../.github/workflows/dokploy-deploy.yml) calls Dokploy to redeploy the Compose service. You can also run that workflow manually (`workflow_dispatch`).
+
+Required repository secrets (same names as typo for URL and API key):
+
+| Secret                           | Value                                                                 |
+| -------------------------------- | --------------------------------------------------------------------- |
+| `DOKPLOY_URL`                    | Dokploy base URL, e.g. `https://hz.yuler.dev`                         |
+| `DOKPLOY_API_KEY`                | Dokploy API token (copy from the typo repo secrets)                   |
+| `DOKPLOY_COMPOSE_APPLICATION_ID` | Compose service id from the dashboard URL (`…/services/compose/<id>`) |
+
+## 7. After deploy
 
 - Open `https://$SITE_DOMAIN`. Browser calls same-origin `/api/v1`.
 - Magic-link mail uses `SITE_DOMAIN` in `action_mailer.default_url_options`.
