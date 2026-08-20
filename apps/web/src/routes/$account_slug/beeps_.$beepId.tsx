@@ -65,10 +65,8 @@ function BeepDetailPage() {
 		setError(null);
 		try {
 			await deleteBeep(slug, beep.id);
-			await router.navigate({
-				to: "/$account_slug/beeps",
-				params: { account_slug: slug },
-			});
+			await router.navigate({ to: "/$account_slug/beeps", params: { account_slug: slug } });
+			await router.invalidate();
 		} catch (err) {
 			setDeleting(false);
 			setError(
