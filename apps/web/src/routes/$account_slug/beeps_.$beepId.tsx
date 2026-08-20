@@ -4,8 +4,8 @@ import {
 	notFound,
 	useRouter,
 } from "@tanstack/react-router";
-import { useState } from "react";
 import { Trash2 } from "lucide-react";
+import { useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { BeepRuns } from "@/components/beeps/beep-runs";
@@ -65,10 +65,15 @@ function BeepDetailPage() {
 		setError(null);
 		try {
 			await deleteBeep(slug, beep.id);
-			await router.navigate({ to: "/$account_slug/beeps", params: { account_slug: slug } });
+			await router.navigate({
+				to: "/$account_slug/beeps",
+				params: { account_slug: slug },
+			});
 		} catch (err) {
 			setDeleting(false);
-			setError(err instanceof ApiError ? err.message : "Failed to delete beep.");
+			setError(
+				err instanceof ApiError ? err.message : "Failed to delete beep.",
+			);
 		}
 	}
 
