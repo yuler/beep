@@ -37,6 +37,11 @@ class Api::V1::BeepsController < Api::V1::BaseController
     end
   end
 
+  def destroy
+    Current.account.beeps.find(params[:id]).destroy!
+    head :no_content
+  end
+
   private
     def beep_params
       params.permit(:title, :body, :run_at)

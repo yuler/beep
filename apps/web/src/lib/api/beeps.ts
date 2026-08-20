@@ -58,6 +58,12 @@ export function createBeep(
 	});
 }
 
+export function deleteBeep(slug: string, beepId: string) {
+	return apiFetch<void>(`/api/v1/${slug}/beeps/${beepId}`, {
+		method: "DELETE",
+	});
+}
+
 export type BeepProposal = {
 	intent: "create" | "other";
 	title: string | null;
