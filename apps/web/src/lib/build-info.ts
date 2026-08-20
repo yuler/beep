@@ -26,7 +26,8 @@ export function logBuildInfo(): void {
 	console.log(
 		"%cbeep %cv%s%c  %s%c  built %s",
 		"color:#0ea5e9;font-weight:700;font-size:13px",
-		"background:#0ea5e9;color:#fff;font-weight:600;font-size:11px;padding:1px 6px;border-radius:9999px;margin-left:6px",
+		"background:#0ea5e9;color:#fff;font-weight:600;font-size:11px;padding:1px 6px;border-radius:9999px",
+		buildInfo.version,
 		"color:inherit;font-size:12px",
 		shortHash(buildInfo.gitHash),
 		"color:#94a3b8;font-size:12px",
