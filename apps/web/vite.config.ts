@@ -1,3 +1,5 @@
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
@@ -56,6 +58,36 @@ load it. Use the canonical URL:</p>
 	};
 }
 
+// Build metadata inlined into the client/SSR bundles (see build-info.ts).
+// Docker/CI builds pass APP_VERSION + GIT_REVISION build args; local dev falls
+// back to the repo-root VERSION file and the live git HEAD.
+const buildInfo = Object.freeze({
+	version: (() => {
+		if (process.env.APP_VERSION) return process.env.APP_VERSION;
+		try {
+			return readFileSync(
+				fileURLToPath(new URL("../../VERSION", import.meta.url)),
+				"utf8",
+			).trim();
+		} catch {
+			return "dev";
+		}
+	})(),
+	gitHash: (() => {
+		if (process.env.GIT_REVISION) return process.env.GIT_REVISION;
+		try {
+			return execSync("git rev-parse HEAD", {
+				stdio: ["ignore", "pipe", "ignore"],
+			})
+				.toString()
+				.trim();
+		} catch {
+			return "unknown";
+		}
+	})(),
+	buildTime: new Date().toISOString(),
+});
+
 export default defineConfig(({ command }) => {
 	// Dev server must run under mise (`_.file` loads `.env` / `.env.local`
 	// into process.env). Builds (Docker/CI) run without mise, so skip them.
@@ -79,6 +111,9 @@ export default defineConfig(({ command }) => {
 	const webPort = isDevServer ? Number(requireEnv("WEB_PORT")) : undefined;
 
 	return {
+		define: {
+			__BUILD_INFO__: JSON.stringify(buildInfo),
+		},
 		server: isDevServer
 			? {
 					port: webPort,
