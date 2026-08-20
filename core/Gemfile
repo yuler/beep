@@ -36,6 +36,9 @@ gem "jbuilder"
 gem "web-push"
 gem "net-http-persistent"
 
+# LLM
+gem "ruby_llm"
+
 # HTTP Clients
 gem "faraday"
 # gem "faraday-retry"

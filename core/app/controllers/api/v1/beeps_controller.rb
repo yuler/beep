@@ -10,7 +10,7 @@ class Api::V1::BeepsController < Api::V1::BaseController
   end
 
   def create
-    @beep = Current.account.beeps.new(beep_params.merge(kind: :once))
+    @beep = Current.account.beeps.new(beep_params.merge(kind: :once, timezone: Beep::TIMEZONE))
 
     if @beep.save
       render :create, status: :created
@@ -35,6 +35,11 @@ class Api::V1::BeepsController < Api::V1::BaseController
         code: "VALIDATION_ERROR"
       )
     end
+  end
+
+  def destroy
+    Current.account.beeps.find(params[:id]).destroy!
+    head :no_content
   end
 
   private

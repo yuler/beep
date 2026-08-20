@@ -1,11 +1,19 @@
-import { createFileRoute, getRouteApi, notFound } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	getRouteApi,
+	notFound,
+	useRouter,
+} from "@tanstack/react-router";
+import { Trash2 } from "lucide-react";
+import { useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { BeepRuns } from "@/components/beeps/beep-runs";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchBeep } from "@/lib/api/beeps";
+import { deleteBeep, fetchBeep } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
 
@@ -43,7 +51,32 @@ function formatWhen(value: string | null) {
 
 function BeepDetailPage() {
 	const { account_slug: slug } = accountRoute.useParams();
+	const router = useRouter();
 	const beep = Route.useLoaderData();
+	const [deleting, setDeleting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	async function handleDelete() {
+		if (!window.confirm(`Delete "${beep.title}"? This cannot be undone.`)) {
+			return;
+		}
+
+		setDeleting(true);
+		setError(null);
+		try {
+			await deleteBeep(slug, beep.id);
+			await router.navigate({
+				to: "/$account_slug/beeps",
+				params: { account_slug: slug },
+			});
+			await router.invalidate();
+		} catch (err) {
+			setDeleting(false);
+			setError(
+				err instanceof ApiError ? err.message : "Failed to delete beep.",
+			);
+		}
+	}
 
 	return (
 		<>
@@ -73,10 +106,28 @@ function BeepDetailPage() {
 							{beep.kind} · {beep.timezone}
 						</p>
 					</div>
-					<Badge variant={STATUS_VARIANT[beep.status] ?? "secondary"}>
-						{beep.status}
-					</Badge>
+					<div className="flex flex-wrap items-center gap-2">
+						<Badge variant={STATUS_VARIANT[beep.status] ?? "secondary"}>
+							{beep.status}
+						</Badge>
+						<Button
+							variant="destructive"
+							size="sm"
+							disabled={deleting}
+							aria-label={`Delete beep ${beep.title}`}
+							onClick={() => void handleDelete()}
+						>
+							<Trash2 data-icon="inline-start" />
+							{deleting ? "Deleting…" : "Delete"}
+						</Button>
+					</div>
 				</div>
+
+				{error ? (
+					<p className="text-sm text-destructive" role="alert">
+						{error}
+					</p>
+				) : null}
 
 				{beep.body ? (
 					<Card className="max-w-lg">

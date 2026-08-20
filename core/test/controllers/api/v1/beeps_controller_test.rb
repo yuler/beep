@@ -54,7 +54,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Bring **milk**", body["body"]
     assert_equal "once", body["kind"]
     assert_equal "active", body["status"]
-    assert_equal "UTC", body["timezone"]
+    assert_equal Beep::TIMEZONE, body["timezone"]
     assert_equal @run_at.iso8601, Time.iso8601(body["run_at"]).iso8601
     assert_equal @run_at.iso8601, Time.iso8601(body["next_run_at"]).iso8601
     assert_nil body["channels"]
@@ -156,5 +156,40 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "Call dad", response.parsed_body["title"]
     assert_equal "Call dad", beep.reload.title
+  end
+
+  test "destroy deletes the beep and its runs" do
+    beep = @account.beeps.create!(kind: :once, title: "Call mom", run_at: @run_at)
+    beep.runs.create!(scheduled_for: @run_at, status: :succeeded)
+
+    assert_difference -> { Beep.count }, -1 do
+      assert_difference -> { BeepRun.count }, -1 do
+        delete "/api/v1/#{@account.slug}/beeps/#{beep.id}",
+          headers: { "Authorization" => "Bearer #{@token}" },
+          as: :json
+      end
+    end
+
+    assert_response :no_content
+    assert_nil Beep.find_by(id: beep.id)
+  end
+
+  test "destroy requires authentication" do
+    beep = @account.beeps.create!(kind: :once, title: "Call mom", run_at: @run_at)
+
+    delete "/api/v1/#{@account.slug}/beeps/#{beep.id}", as: :json
+
+    assert_response :unauthorized
+  end
+
+  test "destroy returns not found for another account's beep" do
+    beep = accounts(:yuler_account).beeps.create!(kind: :once, title: "Other", run_at: @run_at)
+
+    delete "/api/v1/#{@account.slug}/beeps/#{beep.id}",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :not_found
+    assert beep.reload.present?
   end
 end
