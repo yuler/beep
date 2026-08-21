@@ -29,12 +29,10 @@ export const Route = createRootRoute({
 	// Re-run on each navigation; fetchMe dedupes within ME_STALE_MS.
 	staleTime: 0,
 	beforeLoad: async () => {
-		// Mode A: the document request to web.* may not include session_id
-		// (cookie lives on Core). Do not dehydrate a guest `me` that auth
-		// guards would treat as logged-out.
-		if (import.meta.env.SSR) {
-			return { me: null };
-		}
+		// SSR forwards the document request's cookie header server-side (see
+		// serverCookieHeader in lib/api/client). Mode A cookies are
+		// parent-domain (SESSION_COOKIE_DOMAIN=.${APP_HOST}), so a logged-in
+		// browser's `session_id` reaches web.* and hydrates with `me` resolved.
 		const me = await fetchMeOrNull();
 		return { me };
 	},
