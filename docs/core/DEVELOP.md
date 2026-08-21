@@ -123,6 +123,8 @@ Passwordless magic-link authentication:
 
 `SESSION_COOKIE_DOMAIN` is shared by Rails `_beep_session`, `session_id`, and pending-auth cookies. `VITE_CORE_URL` can interpolate `${CORE_PORT}`. Session cookies use `SameSite=Lax`. CSRF uses Rails 8.2 `protect_from_forgery using: :header_only` (`Sec-Fetch-Site` from the browser); JSON API clients without that header (curl, native apps) are allowed via [`RequestForgeryProtection`](../../core/app/controllers/concerns/request_forgery_protection.rb). Local CORS for the web ↔ core split is documented under [Local CORS](#local-cors-development-only).
 
+During SSR, apps/web forwards the document request's cookie header server-side (`serverCookieHeader` in `apps/web/src/lib/api/client.ts`), so root `beforeLoad` resolves `me` from `/api/v1/me` with the same session the browser holds — in Mode A the parent-domain cookie also matches `web.*`, in Mode B the host-only cookie is sent to the web host itself. No client-side resume is needed; the header auth button reflects the session from the first paint.
+
 ### Core Domain Models
 
 **Account** → The tenant/organization
