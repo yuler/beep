@@ -74,7 +74,9 @@ Rails.application.routes.draw do
 
       resource :settings, only: %i[ show update ]
       resources :beep_proposals, only: :create
-      resources :beeps, only: %i[ index show create update destroy ]
+      resources :beeps, only: %i[ index show create update destroy ] do
+        resources :runs, only: :create, module: :beeps
+      end
 
       namespace :admin do
         resource :stats, only: :show

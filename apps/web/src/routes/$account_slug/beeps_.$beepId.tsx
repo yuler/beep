@@ -4,7 +4,7 @@ import {
 	notFound,
 	useRouter,
 } from "@tanstack/react-router";
-import { Trash2 } from "lucide-react";
+import { Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
@@ -13,7 +13,7 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { deleteBeep, fetchBeep } from "@/lib/api/beeps";
+import { deleteBeep, fetchBeep, triggerBeepRun } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
 
@@ -54,7 +54,23 @@ function BeepDetailPage() {
 	const router = useRouter();
 	const beep = Route.useLoaderData();
 	const [deleting, setDeleting] = useState(false);
+	const [triggering, setTriggering] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	async function handleTrigger() {
+		setTriggering(true);
+		setError(null);
+		try {
+			await triggerBeepRun(slug, beep.id);
+			await router.invalidate();
+		} catch (err) {
+			setError(
+				err instanceof ApiError ? err.message : "Failed to trigger beep run.",
+			);
+		} finally {
+			setTriggering(false);
+		}
+	}
 
 	async function handleDelete() {
 		if (!window.confirm(`Delete "${beep.title}"? This cannot be undone.`)) {
@@ -111,9 +127,19 @@ function BeepDetailPage() {
 							{beep.status}
 						</Badge>
 						<Button
+							variant="outline"
+							size="sm"
+							disabled={triggering || deleting}
+							aria-label={`Trigger run for beep ${beep.title}`}
+							onClick={() => void handleTrigger()}
+						>
+							<Play data-icon="inline-start" />
+							{triggering ? "Triggering…" : "Trigger run"}
+						</Button>
+						<Button
 							variant="destructive"
 							size="sm"
-							disabled={deleting}
+							disabled={deleting || triggering}
 							aria-label={`Delete beep ${beep.title}`}
 							onClick={() => void handleDelete()}
 						>

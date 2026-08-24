@@ -12,7 +12,7 @@ class Beep < ApplicationRecord
   belongs_to :account
   has_many :runs, class_name: "BeepRun", dependent: :destroy
 
-  enum :kind, %w[ once recurring ].index_by(&:itself)
+  enum :kind, %w[ once imminent recurring ].index_by(&:itself)
   enum :status, %w[ active paused completed cancelled firing ].index_by(&:itself)
 
   normalizes :title, with: ->(value) { value.strip.presence }
@@ -21,13 +21,13 @@ class Beep < ApplicationRecord
   validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }
   validates :body, length: { maximum: BODY_MAX_LENGTH }, allow_nil: true
   validates :timezone, presence: true
-  validates :run_at, presence: true, if: :once?, unless: :imminent?
+  validates :run_at, presence: true, if: :once?
   validates :run_at, absence: true, if: :recurring?
   validates :cron, presence: true, if: :recurring?
-  validates :cron, absence: true, if: :once?
-  validate :run_at_in_future, if: -> { once? && !imminent? }
+  validates :cron, absence: true, unless: :recurring?
+  validate :run_at_in_future, if: :once?
 
-  before_validation :sync_next_run_at_for_once, on: :create
+  before_validation :sync_run_attributes_on_create, on: :create
 
   scope :due, -> { once.active.where(next_run_at: ..Time.current) }
 
@@ -42,10 +42,7 @@ class Beep < ApplicationRecord
     end
   end
 
-  attr_accessor :imminent
-  alias_method :imminent?, :imminent
-
-  def trigger_imminent!
+  def trigger_run!
     scheduled_for = Time.current
     update!(status: :firing, next_run_at: nil, run_at: run_at || scheduled_for)
     run = runs.create!(scheduled_for: scheduled_for, status: :pending)
@@ -131,13 +128,11 @@ class Beep < ApplicationRecord
       scheduled_for < EXPIRED_AFTER.ago
     end
 
-    def sync_next_run_at_for_once
-      if once?
-        if imminent?
-          self.run_at ||= Time.current
-        elsif run_at.present?
-          self.next_run_at = run_at
-        end
+    def sync_run_attributes_on_create
+      if once? && run_at.present?
+        self.next_run_at = run_at
+      elsif imminent?
+        self.run_at ||= Time.current
       end
     end
 

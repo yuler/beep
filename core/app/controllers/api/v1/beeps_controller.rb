@@ -10,12 +10,11 @@ class Api::V1::BeepsController < Api::V1::BaseController
   end
 
   def create
-    imminent = ActiveRecord::Type::Boolean.new.cast(params[:imminent])
-    @beep = Current.account.beeps.new(beep_params.merge(kind: :once, timezone: Beep::TIMEZONE))
-    @beep.imminent = true if imminent
+    kind = params[:kind].presence || (ActiveRecord::Type::Boolean.new.cast(params[:imminent]) ? "imminent" : "once")
+    @beep = Current.account.beeps.new(beep_params.merge(kind: kind, timezone: Beep::TIMEZONE))
 
     if @beep.save
-      @beep.trigger_imminent! if imminent
+      @beep.trigger_run! if @beep.imminent?
       render :create, status: :created
     else
       render_json_error(
@@ -47,6 +46,6 @@ class Api::V1::BeepsController < Api::V1::BaseController
 
   private
     def beep_params
-      params.permit(:title, :body, :run_at)
+      params.permit(:title, :body, :run_at, :cron, :kind)
     end
 end

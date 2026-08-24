@@ -34,7 +34,8 @@ export function CreateBeepForm({
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
 	const [preview, setPreview] = useState(false);
-	const [imminent, setImminent] = useState(false);
+	const [kind, setKind] = useState<"once" | "imminent" | "recurring">("once");
+	const [cron, setCron] = useState("0 9 * * *");
 	const [runAt, setRunAt] = useState(defaultRunAt);
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
@@ -48,14 +49,16 @@ export function CreateBeepForm({
 			await createBeep(slug, {
 				title: title.trim(),
 				body: body.trim() || null,
-				run_at: imminent ? null : runAt.toISOString(),
-				imminent: imminent ? true : undefined,
+				kind,
+				run_at: kind === "once" ? runAt.toISOString() : null,
+				cron: kind === "recurring" ? cron.trim() : null,
 			});
 			setTitle("");
 			setBody("");
 			setPreview(false);
-			setImminent(false);
+			setKind("once");
 			setRunAt(defaultRunAt());
+			setCron("0 9 * * *");
 			await onCreated();
 		} catch (err) {
 			setError(err instanceof ApiError ? err.message : "Something went wrong.");
@@ -66,6 +69,42 @@ export function CreateBeepForm({
 
 	return (
 		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
+			<div className="flex flex-col gap-2">
+				<Label>Mode</Label>
+				<div className="flex rounded-lg border border-input p-1">
+					<Button
+						type="button"
+						size="sm"
+						variant={kind === "once" ? "secondary" : "ghost"}
+						className="flex-1"
+						disabled={pending}
+						onClick={() => setKind("once")}
+					>
+						Once
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						variant={kind === "imminent" ? "secondary" : "ghost"}
+						className="flex-1"
+						disabled={pending}
+						onClick={() => setKind("imminent")}
+					>
+						Imminent (Now)
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						variant={kind === "recurring" ? "secondary" : "ghost"}
+						className="flex-1"
+						disabled={pending}
+						onClick={() => setKind("recurring")}
+					>
+						Recurring
+					</Button>
+				</div>
+			</div>
+
 			<div className="flex flex-col gap-2">
 				<Label htmlFor="beep-title">Title</Label>
 				<Input
@@ -131,28 +170,39 @@ export function CreateBeepForm({
 					/>
 				)}
 			</div>
-			<div className="flex items-center gap-2">
-				<input
-					type="checkbox"
-					id="beep-imminent"
-					name="imminent"
-					checked={imminent}
-					onChange={(event) => setImminent(event.target.checked)}
-					disabled={pending}
-					className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-				/>
-				<Label htmlFor="beep-imminent" className="cursor-pointer font-normal">
-					Send immediately (imminent)
-				</Label>
-			</div>
 
-			{!imminent ? (
+			{kind === "once" ? (
 				<DateTimePicker
 					id="beep-run-at"
 					value={runAt}
 					onChange={setRunAt}
 					disabled={pending}
 				/>
+			) : null}
+
+			{kind === "recurring" ? (
+				<div className="flex flex-col gap-2">
+					<Label htmlFor="beep-cron">Cron expression</Label>
+					<Input
+						id="beep-cron"
+						name="cron"
+						required
+						value={cron}
+						onChange={(event) => setCron(event.target.value)}
+						placeholder="0 9 * * *"
+						disabled={pending}
+					/>
+					<p className="text-xs text-muted-foreground">
+						Standard cron format: minute hour day month day-of-week
+					</p>
+				</div>
+			) : null}
+
+			{kind === "imminent" ? (
+				<p className="text-xs text-muted-foreground">
+					This beep will be dispatched immediately to all enabled channels upon
+					creation.
+				</p>
 			) : null}
 
 			{error ? (
@@ -162,10 +212,10 @@ export function CreateBeepForm({
 			) : null}
 			<Button type="submit" disabled={pending} className="w-fit">
 				{pending
-					? imminent
+					? kind === "imminent"
 						? "Sending…"
 						: "Creating…"
-					: imminent
+					: kind === "imminent"
 						? "Send now"
 						: "Create beep"}
 			</Button>
