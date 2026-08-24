@@ -14,16 +14,20 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { fetchMe } from "@/lib/api/session";
+import { withAuthRedirects } from "@/lib/auth/guards";
 import { getGravatarUrl } from "@/lib/gravatar";
 
 const myRoute = getRouteApi("/my");
 
 export const Route = createFileRoute("/my/settings")({
+	loader: withAuthRedirects(() => fetchMe({ force: true })),
 	component: MySettingsPage,
 });
 
 function MySettingsPage() {
-	const { me, account } = myRoute.useRouteContext();
+	const { account } = myRoute.useRouteContext();
+	const me = Route.useLoaderData();
 	const identity = me.identity;
 
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
