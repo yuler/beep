@@ -287,7 +287,7 @@ export function DashboardSidebar({
 			</SidebarContent>
 
 			<SidebarFooter>
-				{user ? <SidebarUserMenu user={user} slug={slug} /> : null}
+				{user ? <SidebarUserMenu user={user} /> : null}
 			</SidebarFooter>
 		</Sidebar>
 	);

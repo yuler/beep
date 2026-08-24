@@ -157,11 +157,9 @@ function AccessTokensPage() {
 							}
 						}}
 					>
-						<DialogTrigger asChild>
-							<Button className="gap-2">
-								<Plus className="size-4" />
-								Generate Token
-							</Button>
+						<DialogTrigger render={<Button className="gap-2" />}>
+							<Plus className="size-4" />
+							Generate Token
 						</DialogTrigger>
 
 						<DialogContent className="sm:max-w-md">

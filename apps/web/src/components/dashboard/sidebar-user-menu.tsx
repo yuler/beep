@@ -22,13 +22,7 @@ import { ApiError } from "@/lib/api/client";
 import type { MeResponse } from "@/lib/api/session";
 import { destroySession } from "@/lib/api/session";
 
-export function SidebarUserMenu({
-	user,
-	slug,
-}: {
-	user: MeResponse["identity"];
-	slug: string;
-}) {
+export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { isMobile } = useSidebar();
