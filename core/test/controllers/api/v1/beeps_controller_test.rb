@@ -60,27 +60,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_nil body["channels"]
   end
 
-  test "create supports kind imminent to trigger immediately" do
-    assert_enqueued_with(job: DeliverBeepRunJob) do
-      assert_difference -> { @account.beeps.count }, 1 do
-        post "/api/v1/#{@account.slug}/beeps",
-          params: { title: "Alert right now", kind: "imminent" },
-          headers: { "Authorization" => "Bearer #{@token}" },
-          as: :json
-      end
-    end
-
-    assert_response :created
-    body = response.parsed_body
-    assert_equal "Alert right now", body["title"]
-    assert_equal "imminent", body["kind"]
-    assert_equal "firing", body["status"]
-    assert_nil body["next_run_at"]
-    assert_equal 1, body["runs"].size
-    assert_equal "pending", body["runs"].first["status"]
-  end
-
-  test "create supports imminent boolean parameter as well" do
+  test "create supports imminent mode to trigger immediately" do
     assert_enqueued_with(job: DeliverBeepRunJob) do
       assert_difference -> { @account.beeps.count }, 1 do
         post "/api/v1/#{@account.slug}/beeps",
@@ -92,8 +72,12 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :created
     body = response.parsed_body
-    assert_equal "imminent", body["kind"]
+    assert_equal "Alert right now", body["title"]
+    assert_equal "once", body["kind"]
     assert_equal "firing", body["status"]
+    assert_nil body["next_run_at"]
+    assert_equal 1, body["runs"].size
+    assert_equal "pending", body["runs"].first["status"]
   end
 
   test "runs create triggers a new run for an existing beep" do

@@ -163,11 +163,12 @@ class BeepTest < ActiveSupport::TestCase
     assert beep.valid?
   end
 
-  test "imminent beep does not require run_at and defaults run_at on create" do
+  test "imminent once beep does not require run_at and defaults run_at on create" do
     beep = Beep.new(
       account: @account,
-      kind: :imminent,
-      title: "Imminent beep"
+      kind: :once,
+      title: "Imminent beep",
+      imminent: true
     )
 
     assert beep.valid?
@@ -179,8 +180,9 @@ class BeepTest < ActiveSupport::TestCase
   test "trigger_run! sets status to firing and creates a pending run" do
     beep = Beep.create!(
       account: @account,
-      kind: :imminent,
-      title: "Immediate Beep"
+      kind: :once,
+      title: "Immediate Beep",
+      imminent: true
     )
 
     run = beep.trigger_run!

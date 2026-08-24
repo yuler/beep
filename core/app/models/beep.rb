@@ -12,7 +12,7 @@ class Beep < ApplicationRecord
   belongs_to :account
   has_many :runs, class_name: "BeepRun", dependent: :destroy
 
-  enum :kind, %w[ once imminent recurring ].index_by(&:itself)
+  enum :kind, %w[ once recurring ].index_by(&:itself)
   enum :status, %w[ active paused completed cancelled firing ].index_by(&:itself)
 
   normalizes :title, with: ->(value) { value.strip.presence }
@@ -21,11 +21,11 @@ class Beep < ApplicationRecord
   validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }
   validates :body, length: { maximum: BODY_MAX_LENGTH }, allow_nil: true
   validates :timezone, presence: true
-  validates :run_at, presence: true, if: :once?
+  validates :run_at, presence: true, if: :once?, unless: :imminent?
   validates :run_at, absence: true, if: :recurring?
   validates :cron, presence: true, if: :recurring?
-  validates :cron, absence: true, unless: :recurring?
-  validate :run_at_in_future, if: :once?
+  validates :cron, absence: true, if: :once?
+  validate :run_at_in_future, if: -> { once? && !imminent? }
 
   before_validation :sync_run_attributes_on_create, on: :create
 
@@ -41,6 +41,9 @@ class Beep < ApplicationRecord
       firing.where(updated_at: ..STALE_FIRING_AFTER.ago).find_each(&:reclaim_stale)
     end
   end
+
+  attr_accessor :imminent
+  alias_method :imminent?, :imminent
 
   def trigger_run!
     scheduled_for = Time.current
@@ -129,10 +132,12 @@ class Beep < ApplicationRecord
     end
 
     def sync_run_attributes_on_create
-      if once? && run_at.present?
-        self.next_run_at = run_at
-      elsif imminent?
-        self.run_at ||= Time.current
+      if once?
+        if imminent?
+          self.run_at ||= Time.current
+        elsif run_at.present?
+          self.next_run_at = run_at
+        end
       end
     end
 

@@ -18,7 +18,7 @@ export type Beep = {
 	id: string;
 	title: string;
 	body: string | null;
-	kind: "once" | "imminent" | "recurring";
+	kind: "once" | "recurring";
 	status: "active" | "paused" | "completed" | "cancelled" | "firing";
 	run_at: string | null;
 	next_run_at: string | null;
@@ -49,7 +49,7 @@ export function createBeep(
 	body: {
 		title: string;
 		body?: string | null;
-		kind?: "once" | "imminent" | "recurring";
+		kind?: "once" | "recurring";
 		run_at?: string | null;
 		cron?: string | null;
 		imminent?: boolean;
