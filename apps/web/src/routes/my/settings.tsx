@@ -1,5 +1,5 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
-import { ExternalLink, Globe, Mail, User } from "lucide-react";
+import { ExternalLink, Globe, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -24,17 +24,17 @@ export const Route = createFileRoute("/my/settings")({
 
 function MySettingsPage() {
 	const { me, account } = myRoute.useRouteContext();
-	const user = me.identity;
+	const identity = me.identity;
 
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
 	useEffect(() => {
-		if (user?.email) {
-			void getGravatarUrl(user.email, 200).then(setAvatarUrl);
+		if (identity.email) {
+			void getGravatarUrl(identity.email, 200).then(setAvatarUrl);
 		}
-	}, [user?.email]);
+	}, [identity.email]);
 
-	const initials = user?.name?.trim()?.charAt(0)?.toUpperCase() || "U";
+	const initials = identity.email.charAt(0).toUpperCase() || "U";
 
 	return (
 		<>
@@ -79,10 +79,7 @@ function MySettingsPage() {
 								>
 									<Avatar size="lg" className="size-16 border border-border">
 										{avatarUrl ? (
-											<AvatarImage
-												src={avatarUrl}
-												alt={user?.name || "Avatar"}
-											/>
+											<AvatarImage src={avatarUrl} alt={identity.email} />
 										) : null}
 										<AvatarFallback className="text-lg">
 											{initials}
@@ -108,29 +105,19 @@ function MySettingsPage() {
 							</div>
 
 							<div className="space-y-2">
-								<Label htmlFor="name" className="flex items-center gap-2">
-									<User className="size-4 text-muted-foreground" />
-									Name
-								</Label>
-								<Input
-									id="name"
-									value={user?.name || ""}
-									disabled
-									className="bg-muted/40"
-								/>
-							</div>
-
-							<div className="space-y-2">
 								<Label htmlFor="email" className="flex items-center gap-2">
 									<Mail className="size-4 text-muted-foreground" />
 									Email Address
 								</Label>
 								<Input
 									id="email"
-									value={user?.email || ""}
+									value={identity.email}
 									disabled
 									className="bg-muted/40 font-mono text-sm"
 								/>
+								<p className="text-xs text-muted-foreground">
+									This email is associated with your global Beep identity.
+								</p>
 							</div>
 						</CardContent>
 					</Card>
