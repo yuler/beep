@@ -89,7 +89,7 @@ export function BeepList({
 			{variant === "full" ? (
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					{/* Status filter tabs */}
-					<div className="flex flex-wrap gap-1 rounded-lg border border-input bg-muted/30 p-1">
+					<div className="flex flex-nowrap items-center gap-1 overflow-x-auto rounded-lg border border-input bg-muted/30 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 						{(
 							[
 								{ id: "all", label: "All", count: counts.all },
@@ -113,7 +113,7 @@ export function BeepList({
 								size="xs"
 								variant={statusFilter === tab.id ? "default" : "ghost"}
 								className={cn(
-									"h-7 text-xs font-medium transition-colors",
+									"h-7 shrink-0 text-xs font-medium whitespace-nowrap transition-colors",
 									statusFilter === tab.id
 										? "bg-background text-foreground shadow-sm dark:bg-card dark:text-foreground"
 										: "text-muted-foreground hover:text-foreground",
@@ -136,7 +136,7 @@ export function BeepList({
 					</div>
 
 					{/* Search input */}
-					<div className="relative w-full sm:w-60">
+					<div className="relative w-full sm:w-64">
 						<Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
 							value={search}

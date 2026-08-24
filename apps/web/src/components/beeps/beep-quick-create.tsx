@@ -173,15 +173,26 @@ export function BeepQuickCreate({
 								<Sparkles className="size-3.5" />
 								AI Prompt Assistant
 							</Label>
-							<span className="text-[11px] text-muted-foreground">
-								⌘+Enter to fill
+							<span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+								<kbd className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded border border-border bg-muted/80 px-1 font-mono text-[10px] font-medium text-foreground shadow-2xs">
+									⌘
+								</kbd>
+								<span>+</span>
+								<kbd className="inline-flex h-4.5 items-center justify-center rounded border border-border bg-muted/80 px-1 font-mono text-[10px] font-medium text-foreground shadow-2xs">
+									Enter
+								</kbd>
+								<span>to fill</span>
 							</span>
 						</div>
 						<textarea
 							id={`beep-prompt-${slug}`}
 							name="prompt"
 							value={prompt}
-							onChange={(event) => setPrompt(event.target.value)}
+							onChange={(event) => {
+								setPrompt(event.target.value);
+								event.currentTarget.style.height = "auto";
+								event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
+							}}
 							onKeyDown={(event) => {
 								if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
 									event.preventDefault();
@@ -194,7 +205,7 @@ export function BeepQuickCreate({
 							disabled={isPending}
 							rows={2}
 							className={cn(
-								"w-full min-w-0 rounded-lg border border-input bg-background/80 px-2.5 py-1.5 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/20",
+								"w-full min-w-0 resize-none overflow-hidden rounded-lg border border-input bg-background/80 px-2.5 py-1.5 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/20",
 							)}
 						/>
 
@@ -339,12 +350,16 @@ export function BeepQuickCreate({
 								name="body"
 								maxLength={BODY_MAX_LENGTH}
 								value={body}
-								onChange={(event) => setBody(event.target.value)}
+								onChange={(event) => {
+									setBody(event.target.value);
+									event.currentTarget.style.height = "auto";
+									event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
+								}}
 								placeholder={BODY_PLACEHOLDER}
 								disabled={isPending}
-								rows={4}
+								rows={3}
 								className={cn(
-									"w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30",
+									"w-full min-w-0 resize-none overflow-hidden rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30",
 								)}
 							/>
 						)}
