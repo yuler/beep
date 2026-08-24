@@ -301,26 +301,9 @@ export function BeepQuickCreate({
 					</div>
 
 					{kind === "once" ? (
-						<div className="flex flex-col gap-3">
+						<div className="flex flex-col gap-2">
 							<div className="flex items-center justify-between gap-2">
-								<div className="flex items-center gap-2">
-									<input
-										type="checkbox"
-										id={`beep-send-now-${slug}`}
-										name="sendNow"
-										checked={sendNow}
-										onChange={(event) => setSendNow(event.target.checked)}
-										disabled={isPending}
-										className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-									/>
-									<Label
-										htmlFor={`beep-send-now-${slug}`}
-										className="cursor-pointer font-normal"
-									>
-										Send immediately (now)
-									</Label>
-								</div>
-
+								<Label htmlFor={`beep-run-at-${slug}`}>Run at</Label>
 								<Tooltip>
 									<TooltipTrigger
 										type="button"
@@ -330,11 +313,29 @@ export function BeepQuickCreate({
 										<HelpCircle className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent side="top" className="max-w-xs text-xs">
-										Optional scheduled time for one-off beeps. If provided, it
-										must be at least 1 minute in the future. If left blank, it
-										will be sent immediately upon creation.
+										Execution time for one-off beeps. Uncheck &quot;Send
+										immediately&quot; to schedule for a specific time in the
+										future.
 									</TooltipContent>
 								</Tooltip>
+							</div>
+
+							<div className="flex items-center gap-2">
+								<input
+									type="checkbox"
+									id={`beep-send-now-${slug}`}
+									name="sendNow"
+									checked={sendNow}
+									onChange={(event) => setSendNow(event.target.checked)}
+									disabled={isPending}
+									className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+								/>
+								<Label
+									htmlFor={`beep-send-now-${slug}`}
+									className="cursor-pointer text-sm font-normal"
+								>
+									Send immediately (now)
+								</Label>
 							</div>
 
 							{!sendNow ? (
