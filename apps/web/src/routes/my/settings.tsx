@@ -113,12 +113,11 @@ function MySettingsPage() {
 									<Mail className="size-4 text-muted-foreground" />
 									Email Address
 								</Label>
-								<Input
-									id="email"
-									value={identity.email}
-									disabled
-									className="bg-muted/40 font-mono text-sm"
-								/>
+								<div className="flex items-center gap-2">
+									<div className="flex h-9 flex-1 items-center rounded-md border border-input bg-muted/40 px-3 font-mono text-sm text-foreground select-all">
+										{identity.email}
+									</div>
+								</div>
 								<p className="text-xs text-muted-foreground">
 									This email is associated with your global Beep identity.
 								</p>
