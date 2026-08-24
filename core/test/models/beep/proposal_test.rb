@@ -37,6 +37,23 @@ class Beep::ProposalTest < ActiveSupport::TestCase
     assert_not result.confirmable?
   end
 
+  test "create handles prompt without run_at as confirmable immediate proposal" do
+    chat = fake_chat({
+      "intent" => "create",
+      "title" => "Buy groceries",
+      "body" => nil,
+      "run_at" => nil
+    }.to_json)
+
+    result = Beep::Proposal.create("提醒我买菜", chat: chat)
+
+    assert_equal "create", result.intent
+    assert_equal "Buy groceries", result.title
+    assert_nil result.run_at
+    assert_equal({}, result.errors)
+    assert result.confirmable?
+  end
+
   test "create asks the user to rewrite when intent is other" do
     chat = fake_chat({
       "intent" => "other",
@@ -48,7 +65,7 @@ class Beep::ProposalTest < ActiveSupport::TestCase
     result = Beep::Proposal.create("hello", chat: chat)
 
     assert_equal "other", result.intent
-    assert_equal "Describe the reminder time and what to be reminded of.", result.message
+    assert_equal "Describe what to be reminded of.", result.message
     assert_not result.confirmable?
   end
 

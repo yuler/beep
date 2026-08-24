@@ -75,8 +75,7 @@ export function BeepQuickCreate({
 			if (proposal.intent === "other") {
 				setFieldErrors({});
 				setProposeMessage(
-					proposal.message ??
-						"Describe the reminder time and what to be reminded of.",
+					proposal.message ?? "Describe what to be reminded of.",
 				);
 				return;
 			}
@@ -89,14 +88,18 @@ export function BeepQuickCreate({
 				setRunAt(nextRunAt);
 				setKind("once");
 				setSendNow(false);
+			} else {
+				setRunAt(defaultRunAt());
+				setKind("once");
+				setSendNow(true);
 			}
 
 			setFieldErrors({
 				title: proposal.errors.title,
 				run_at:
 					proposal.errors.run_at ??
-					(nextRunAt && nextRunAt.getTime() <= Date.now()
-						? "must be in the future"
+					(nextRunAt && nextRunAt.getTime() <= Date.now() + 60 * 1000
+						? "must be at least 1 minute in the future"
 						: undefined),
 			});
 			setProposeMessage("Filled in form from your prompt.");
