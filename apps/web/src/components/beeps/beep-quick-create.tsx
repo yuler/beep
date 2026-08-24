@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
@@ -145,14 +146,14 @@ export function BeepQuickCreate({
 				{/* AI prompt fill section */}
 				<form className="flex flex-col gap-3" onSubmit={onPropose}>
 					<div className="flex flex-col gap-2">
-						<Label htmlFor={`beep-prompt-${slug}`}>Prompt helper</Label>
+						<Label htmlFor={`beep-prompt-${slug}`}>AI Prompt Assistant</Label>
 						<div className="flex gap-2">
 							<Input
 								id={`beep-prompt-${slug}`}
 								name="prompt"
 								value={prompt}
 								onChange={(event) => setPrompt(event.target.value)}
-								placeholder="e.g. Tomorrow 9am call mom"
+								placeholder="e.g. Remind me tomorrow at 9am to check metrics"
 								disabled={isPending}
 								className="flex-1"
 							/>
@@ -160,12 +161,14 @@ export function BeepQuickCreate({
 								type="submit"
 								variant="secondary"
 								disabled={isPending || prompt.trim().length === 0}
+								aria-label="Auto-fill form with AI"
 							>
-								{proposing ? "Filling…" : "Auto-fill"}
+								<Sparkles data-icon="inline-start" />
+								{proposing ? "Parsing…" : "Auto-fill"}
 							</Button>
 						</div>
 						<p className="text-xs text-muted-foreground">
-							Type in natural language to parse title and time into the form
+							Describe what and when in plain language to populate the form
 							below.
 						</p>
 					</div>
@@ -182,12 +185,17 @@ export function BeepQuickCreate({
 				>
 					<div className="flex flex-col gap-2">
 						<Label>Type</Label>
-						<div className="flex rounded-lg border border-input p-1">
+						<div className="flex rounded-lg border border-input bg-muted/30 p-1">
 							<Button
 								type="button"
 								size="sm"
-								variant={kind === "once" ? "secondary" : "ghost"}
-								className="flex-1"
+								variant={kind === "once" ? "default" : "ghost"}
+								className={cn(
+									"flex-1 font-medium transition-colors",
+									kind === "once"
+										? "bg-background text-foreground shadow-sm dark:bg-card dark:text-foreground dark:ring-1 dark:ring-border/60"
+										: "text-muted-foreground hover:text-foreground",
+								)}
 								disabled={isPending}
 								onClick={() => setKind("once")}
 							>
@@ -196,8 +204,13 @@ export function BeepQuickCreate({
 							<Button
 								type="button"
 								size="sm"
-								variant={kind === "recurring" ? "secondary" : "ghost"}
-								className="flex-1"
+								variant={kind === "recurring" ? "default" : "ghost"}
+								className={cn(
+									"flex-1 font-medium transition-colors",
+									kind === "recurring"
+										? "bg-background text-foreground shadow-sm dark:bg-card dark:text-foreground dark:ring-1 dark:ring-border/60"
+										: "text-muted-foreground hover:text-foreground",
+								)}
 								disabled={isPending}
 								onClick={() => setKind("recurring")}
 							>

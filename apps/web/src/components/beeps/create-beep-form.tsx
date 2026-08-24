@@ -73,12 +73,17 @@ export function CreateBeepForm({
 		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
 			<div className="flex flex-col gap-2">
 				<Label>Type</Label>
-				<div className="flex rounded-lg border border-input p-1">
+				<div className="flex rounded-lg border border-input bg-muted/30 p-1">
 					<Button
 						type="button"
 						size="sm"
-						variant={kind === "once" ? "secondary" : "ghost"}
-						className="flex-1"
+						variant={kind === "once" ? "default" : "ghost"}
+						className={cn(
+							"flex-1 font-medium transition-colors",
+							kind === "once"
+								? "bg-background text-foreground shadow-sm dark:bg-card dark:text-foreground dark:ring-1 dark:ring-border/60"
+								: "text-muted-foreground hover:text-foreground",
+						)}
 						disabled={pending}
 						onClick={() => setKind("once")}
 					>
@@ -87,8 +92,13 @@ export function CreateBeepForm({
 					<Button
 						type="button"
 						size="sm"
-						variant={kind === "recurring" ? "secondary" : "ghost"}
-						className="flex-1"
+						variant={kind === "recurring" ? "default" : "ghost"}
+						className={cn(
+							"flex-1 font-medium transition-colors",
+							kind === "recurring"
+								? "bg-background text-foreground shadow-sm dark:bg-card dark:text-foreground dark:ring-1 dark:ring-border/60"
+								: "text-muted-foreground hover:text-foreground",
+						)}
 						disabled={pending}
 						onClick={() => setKind("recurring")}
 					>
