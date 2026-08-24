@@ -178,4 +178,24 @@ class BeepTest < ActiveSupport::TestCase
     assert run.pending?
     assert_equal beep.id, run.beep_id
   end
+
+  test "trigger_run! supports recurring beeps without validation errors" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :recurring,
+      title: "Standup",
+      cron: "0 9 * * *"
+    )
+
+    run = beep.trigger_run!
+    beep.reload
+
+    assert beep.firing?
+    assert_nil beep.next_run_at
+    assert_nil beep.run_at
+    assert run.pending?
+
+    beep.finish_firing(last_run_at: run.scheduled_for)
+    assert beep.reload.active?
+  end
 end

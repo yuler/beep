@@ -43,8 +43,15 @@ class Beep < ApplicationRecord
 
   def trigger_run!
     scheduled_for = Time.current
-    update!(status: :firing, next_run_at: nil, run_at: run_at || scheduled_for)
-    run = runs.create!(scheduled_for: scheduled_for, status: :pending)
+    attributes = { status: :firing, next_run_at: nil }
+    attributes[:run_at] = run_at || scheduled_for if once?
+    update!(attributes)
+
+    run = begin
+      runs.create!(scheduled_for: scheduled_for, status: :pending)
+    rescue ActiveRecord::RecordNotUnique
+      runs.find_by!(scheduled_for: scheduled_for)
+    end
     run.deliver_later
     run
   end
@@ -84,7 +91,11 @@ class Beep < ApplicationRecord
   end
 
   def finish_firing(last_run_at:)
-    update!(status: :completed, next_run_at: nil, last_run_at: last_run_at)
+    if once?
+      update!(status: :completed, next_run_at: nil, last_run_at: last_run_at)
+    else
+      update!(status: :active, last_run_at: last_run_at)
+    end
   end
 
   def web_url

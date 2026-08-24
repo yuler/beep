@@ -129,12 +129,16 @@ function BeepDetailPage() {
 						<Button
 							variant="outline"
 							size="sm"
-							disabled={triggering || deleting}
+							disabled={triggering || deleting || beep.status === "firing"}
 							aria-label={`Trigger run for beep ${beep.title}`}
 							onClick={() => void handleTrigger()}
 						>
 							<Play data-icon="inline-start" />
-							{triggering ? "Triggering…" : "Trigger run"}
+							{triggering
+								? "Triggering…"
+								: beep.status === "firing"
+									? "Firing…"
+									: "Trigger run"}
 						</Button>
 						<Button
 							variant="destructive"

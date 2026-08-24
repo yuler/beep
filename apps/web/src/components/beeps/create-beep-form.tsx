@@ -44,6 +44,9 @@ export function CreateBeepForm({
 	const [sendNow, setSendNow] = useState(true);
 	const [cron, setCron] = useState("0 9 * * *");
 	const [runAt, setRunAt] = useState(defaultRunAt);
+	const [fieldErrors, setFieldErrors] = useState<{
+		run_at?: string;
+	}>({});
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
 
@@ -67,6 +70,7 @@ export function CreateBeepForm({
 			setSendNow(true);
 			setRunAt(defaultRunAt());
 			setCron("0 9 * * *");
+			setFieldErrors({});
 			await onCreated();
 		} catch (err) {
 			setError(err instanceof ApiError ? err.message : "Something went wrong.");
@@ -221,12 +225,27 @@ export function CreateBeepForm({
 							<DateTimePicker
 								id="beep-run-at"
 								value={runAt}
-								onChange={setRunAt}
+								onChange={(val) => {
+									setRunAt(val);
+									setFieldErrors((curr) => ({
+										...curr,
+										run_at:
+											val.getTime() <= Date.now() + 60 * 1000
+												? "must be at least 1 minute in the future"
+												: undefined,
+									}));
+								}}
 								disabled={pending}
 							/>
-							<p className="text-xs text-muted-foreground">
-								Must be at least 1 minute in the future.
-							</p>
+							{fieldErrors.run_at ? (
+								<p className="text-xs text-destructive" role="alert">
+									{fieldErrors.run_at}
+								</p>
+							) : (
+								<p className="text-xs text-muted-foreground">
+									Must be at least 1 minute in the future.
+								</p>
+							)}
 						</div>
 					) : (
 						<p className="text-xs text-muted-foreground">
@@ -263,7 +282,10 @@ export function CreateBeepForm({
 				type="submit"
 				disabled={
 					pending ||
-					(kind === "once" && !sendNow && runAt.getTime() <= Date.now())
+					(kind === "once" &&
+						!sendNow &&
+						(runAt.getTime() <= Date.now() + 60 * 1000 ||
+							Boolean(fieldErrors.run_at)))
 				}
 				className="w-fit"
 			>

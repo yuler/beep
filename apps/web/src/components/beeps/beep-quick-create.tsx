@@ -401,7 +401,10 @@ export function BeepQuickCreate({
 						disabled={
 							isPending ||
 							title.trim().length === 0 ||
-							(kind === "once" && !sendNow && runAt.getTime() <= Date.now())
+							(kind === "once" &&
+								!sendNow &&
+								(runAt.getTime() <= Date.now() + 60 * 1000 ||
+									Boolean(fieldErrors.run_at)))
 						}
 						className="w-fit"
 					>
