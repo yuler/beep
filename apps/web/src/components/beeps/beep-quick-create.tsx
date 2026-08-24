@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { HelpCircle, Sparkles } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
@@ -7,6 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { createBeep, createBeepProposal } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
@@ -297,22 +302,39 @@ export function BeepQuickCreate({
 
 					{kind === "once" ? (
 						<div className="flex flex-col gap-3">
-							<div className="flex items-center gap-2">
-								<input
-									type="checkbox"
-									id={`beep-send-now-${slug}`}
-									name="sendNow"
-									checked={sendNow}
-									onChange={(event) => setSendNow(event.target.checked)}
-									disabled={isPending}
-									className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-								/>
-								<Label
-									htmlFor={`beep-send-now-${slug}`}
-									className="cursor-pointer font-normal"
-								>
-									Send immediately (now)
-								</Label>
+							<div className="flex items-center justify-between gap-2">
+								<div className="flex items-center gap-2">
+									<input
+										type="checkbox"
+										id={`beep-send-now-${slug}`}
+										name="sendNow"
+										checked={sendNow}
+										onChange={(event) => setSendNow(event.target.checked)}
+										disabled={isPending}
+										className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+									/>
+									<Label
+										htmlFor={`beep-send-now-${slug}`}
+										className="cursor-pointer font-normal"
+									>
+										Send immediately (now)
+									</Label>
+								</div>
+
+								<Tooltip>
+									<TooltipTrigger
+										type="button"
+										className="text-muted-foreground hover:text-foreground"
+										aria-label="Execution time information"
+									>
+										<HelpCircle className="size-4" />
+									</TooltipTrigger>
+									<TooltipContent side="top" className="max-w-xs text-xs">
+										Optional scheduled time for one-off beeps. If provided, it
+										must be at least 1 minute in the future. If left blank, it
+										will be sent immediately upon creation.
+									</TooltipContent>
+								</Tooltip>
 							</div>
 
 							{!sendNow ? (
@@ -325,8 +347,8 @@ export function BeepQuickCreate({
 											setFieldErrors((curr) => ({
 												...curr,
 												run_at:
-													val.getTime() <= Date.now()
-														? "must be in the future"
+													val.getTime() <= Date.now() + 60 * 1000
+														? "must be at least 1 minute in the future"
 														: undefined,
 											}));
 										}}
@@ -336,7 +358,11 @@ export function BeepQuickCreate({
 										<p className="text-xs text-destructive" role="alert">
 											{fieldErrors.run_at}
 										</p>
-									) : null}
+									) : (
+										<p className="text-xs text-muted-foreground">
+											Must be at least 1 minute in the future.
+										</p>
+									)}
 								</div>
 							) : (
 								<p className="text-xs text-muted-foreground">

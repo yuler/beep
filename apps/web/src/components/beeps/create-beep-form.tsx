@@ -1,3 +1,4 @@
+import { HelpCircle } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
@@ -5,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { createBeep } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
@@ -175,31 +181,53 @@ export function CreateBeepForm({
 
 			{kind === "once" ? (
 				<div className="flex flex-col gap-3">
-					<div className="flex items-center gap-2">
-						<input
-							type="checkbox"
-							id="beep-send-now"
-							name="sendNow"
-							checked={sendNow}
-							onChange={(event) => setSendNow(event.target.checked)}
-							disabled={pending}
-							className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-						/>
-						<Label
-							htmlFor="beep-send-now"
-							className="cursor-pointer font-normal"
-						>
-							Send immediately (now)
-						</Label>
+					<div className="flex items-center justify-between gap-2">
+						<div className="flex items-center gap-2">
+							<input
+								type="checkbox"
+								id="beep-send-now"
+								name="sendNow"
+								checked={sendNow}
+								onChange={(event) => setSendNow(event.target.checked)}
+								disabled={pending}
+								className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+							/>
+							<Label
+								htmlFor="beep-send-now"
+								className="cursor-pointer font-normal"
+							>
+								Send immediately (now)
+							</Label>
+						</div>
+
+						<Tooltip>
+							<TooltipTrigger
+								type="button"
+								className="text-muted-foreground hover:text-foreground"
+								aria-label="Execution time information"
+							>
+								<HelpCircle className="size-4" />
+							</TooltipTrigger>
+							<TooltipContent side="top" className="max-w-xs text-xs">
+								Optional scheduled time for one-off beeps. If provided, it must
+								be at least 1 minute in the future. If left blank, it will be
+								sent immediately upon creation.
+							</TooltipContent>
+						</Tooltip>
 					</div>
 
 					{!sendNow ? (
-						<DateTimePicker
-							id="beep-run-at"
-							value={runAt}
-							onChange={setRunAt}
-							disabled={pending}
-						/>
+						<div className="flex flex-col gap-2">
+							<DateTimePicker
+								id="beep-run-at"
+								value={runAt}
+								onChange={setRunAt}
+								disabled={pending}
+							/>
+							<p className="text-xs text-muted-foreground">
+								Must be at least 1 minute in the future.
+							</p>
+						</div>
 					) : (
 						<p className="text-xs text-muted-foreground">
 							Will be delivered right after creation.
