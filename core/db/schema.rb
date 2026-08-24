@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_08_18_160000) do
+ActiveRecord::Schema[8.2].define(version: 2026_08_24_054526) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.integer "amount", null: false
@@ -199,6 +199,18 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_18_160000) do
     t.index ["email"], name: "index_identities_on_email", unique: true
   end
 
+  create_table "identity_access_tokens", id: :uuid, force: :cascade do |t|
+    t.uuid "identity_id", null: false
+    t.string "token", null: false
+    t.string "description"
+    t.string "permission", default: "write", null: false
+    t.datetime "last_used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["identity_id"], name: "index_identity_access_tokens_on_identity_id"
+    t.index ["token"], name: "index_identity_access_tokens_on_token", unique: true
+  end
+
   create_table "invite_codes", id: :uuid, force: :cascade do |t|
     t.string "code", null: false
     t.datetime "created_at", null: false
@@ -246,10 +258,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_18_160000) do
     t.datetime "created_at", null: false
     t.uuid "identity_id"
     t.string "name", null: false
-    t.json "notification_channels", default: ["email"], null: false
     t.string "role", default: "member", null: false
     t.datetime "updated_at", null: false
     t.datetime "verified_at"
+    t.json "notification_channels", default: ["email"], null: false
     t.index ["account_id", "identity_id"], name: "index_users_on_account_id_and_identity_id", unique: true
     t.index ["account_id", "role"], name: "index_users_on_account_id_and_role"
     t.index ["identity_id"], name: "index_users_on_identity_id"
@@ -263,6 +275,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_18_160000) do
   add_foreign_key "account_slug_holds", "accounts"
   add_foreign_key "beep_runs", "beeps"
   add_foreign_key "beeps", "accounts"
+  add_foreign_key "identity_access_tokens", "identities"
   add_foreign_key "push_subscriptions", "accounts"
   add_foreign_key "push_subscriptions", "users"
 end
