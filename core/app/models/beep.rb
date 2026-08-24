@@ -24,7 +24,6 @@ class Beep < ApplicationRecord
   validates :run_at, absence: true, if: :recurring?
   validates :cron, presence: true, if: :recurring?
   validates :cron, absence: true, if: :once?
-  validate :run_at_must_be_in_future_when_scheduled, if: -> { once? && run_at_changed? && run_at.present? }
 
   before_validation :sync_run_attributes_on_create, on: :create
   after_create_commit :deliver_if_due_on_create
@@ -131,23 +130,10 @@ class Beep < ApplicationRecord
 
     def sync_run_attributes_on_create
       if once?
-        if run_at.blank?
-          self.immediate_ingest = true
-          self.run_at = Time.current
-        end
+        self.run_at ||= Time.current
         self.next_run_at = run_at
       end
     end
-
-    def run_at_must_be_in_future_when_scheduled
-      return if @immediate_ingest
-      return if run_at.blank?
-      return if run_at > 1.minute.from_now
-
-      errors.add(:run_at, "must be at least 1 minute in the future")
-    end
-
-    attr_accessor :immediate_ingest
 
     def deliver_if_due_on_create
       return unless once? && active? && next_run_at.present? && next_run_at <= Time.current

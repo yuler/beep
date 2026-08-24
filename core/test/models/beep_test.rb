@@ -148,29 +148,6 @@ class BeepTest < ActiveSupport::TestCase
     assert beep.errors[:cron].any?
   end
 
-  test "once beep rejects a scheduled run_at less than 1 minute in future" do
-    beep = Beep.new(
-      account: @account,
-      kind: :once,
-      title: "Call mom",
-      run_at: 30.seconds.from_now
-    )
-
-    assert_not beep.valid?
-    assert beep.errors[:run_at].any?
-  end
-
-  test "once beep accepts a scheduled run_at more than 1 minute in future" do
-    beep = Beep.new(
-      account: @account,
-      kind: :once,
-      title: "Call mom",
-      run_at: 10.minutes.from_now
-    )
-
-    assert beep.valid?
-  end
-
   test "once beep created with immediate/past run_at triggers delivery automatically" do
     assert_enqueued_with(job: DeliverBeepRunJob) do
       beep = Beep.create!(
