@@ -43,18 +43,27 @@ function BeepsPage() {
 			/>
 
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-				<div>
-					<h1 className="font-heading text-2xl font-semibold tracking-tight">
+				<div className="flex flex-col gap-1">
+					<h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
 						Beeps
 					</h1>
-					<p className="mt-1 text-sm text-muted-foreground">
-						Reminders scheduled for this workspace.
+					<p className="text-sm text-muted-foreground">
+						Manage and schedule reminders across your workspace.
 					</p>
 				</div>
 
-				<BeepQuickCreate slug={slug} onCreated={handleCreated} />
-				<BeepStats beeps={beeps} />
-				<BeepList beeps={beeps} slug={slug} variant="full" />
+				<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+					{/* Left: Quick Create Form */}
+					<div className="lg:col-span-5">
+						<BeepQuickCreate slug={slug} onCreated={handleCreated} />
+					</div>
+
+					{/* Right: Overview Stats & Filterable List */}
+					<div className="flex flex-col gap-5 lg:col-span-7">
+						<BeepStats beeps={beeps} />
+						<BeepList beeps={beeps} slug={slug} variant="full" />
+					</div>
+				</div>
 			</div>
 		</>
 	);

@@ -49,23 +49,32 @@ function AccountHomePage() {
 					</p>
 				</div>
 
-				<BeepQuickCreate slug={slug} onCreated={handleCreated} />
-				<BeepStats beeps={beeps} />
-
-				<div className="flex flex-col gap-3">
-					<div className="flex items-center justify-between gap-3">
-						<h2 className="font-heading text-lg font-semibold tracking-tight">
-							Upcoming
-						</h2>
-						<Link
-							to="/$account_slug/beeps"
-							params={{ account_slug: slug }}
-							className="text-sm text-muted-foreground hover:text-foreground"
-						>
-							View all
-						</Link>
+				<div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+					{/* Left: Quick Create Form */}
+					<div className="lg:col-span-5">
+						<BeepQuickCreate slug={slug} onCreated={handleCreated} />
 					</div>
-					<BeepList beeps={upcoming} slug={slug} variant="compact" />
+
+					{/* Right: Overview Stats & Upcoming Beeps */}
+					<div className="flex flex-col gap-6 lg:col-span-7">
+						<BeepStats beeps={beeps} />
+
+						<div className="flex flex-col gap-3">
+							<div className="flex items-center justify-between gap-3">
+								<h2 className="font-heading text-lg font-semibold tracking-tight">
+									Upcoming
+								</h2>
+								<Link
+									to="/$account_slug/beeps"
+									params={{ account_slug: slug }}
+									className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+								>
+									View all beeps →
+								</Link>
+							</div>
+							<BeepList beeps={upcoming} slug={slug} variant="compact" />
+						</div>
+					</div>
 				</div>
 			</div>
 		</>

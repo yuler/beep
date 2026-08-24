@@ -38,6 +38,12 @@ function parseRunAt(value: string | null) {
 	return date;
 }
 
+const PROMPT_SUGGESTIONS = [
+	"Remind me in 30 minutes to review PR",
+	"Tomorrow 9am check metrics",
+	"Daily standup at 10am",
+];
+
 export function BeepQuickCreate({
 	slug,
 	onCreated,
@@ -146,15 +152,31 @@ export function BeepQuickCreate({
 	const isPending = proposing || submitting;
 
 	return (
-		<Card className="max-w-105">
-			<CardHeader>
-				<CardTitle>Create beep</CardTitle>
+		<Card className="w-full shadow-xs">
+			<CardHeader className="pb-4">
+				<CardTitle className="flex items-center gap-2 text-base font-semibold">
+					<span>Create new beep</span>
+				</CardTitle>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-5">
 				{/* AI prompt fill section */}
-				<form className="flex flex-col gap-3" onSubmit={onPropose}>
+				<form
+					className="flex flex-col gap-3 rounded-xl border border-primary/20 bg-primary/[0.03] p-3.5 dark:border-primary/30 dark:bg-primary/[0.06]"
+					onSubmit={onPropose}
+				>
 					<div className="flex flex-col gap-2">
-						<Label htmlFor={`beep-prompt-${slug}`}>AI Prompt Assistant</Label>
+						<div className="flex items-center justify-between">
+							<Label
+								htmlFor={`beep-prompt-${slug}`}
+								className="flex items-center gap-1.5 text-xs font-semibold text-primary"
+							>
+								<Sparkles className="size-3.5" />
+								AI Prompt Assistant
+							</Label>
+							<span className="text-[11px] text-muted-foreground">
+								⌘+Enter to fill
+							</span>
+						</div>
 						<textarea
 							id={`beep-prompt-${slug}`}
 							name="prompt"
@@ -170,22 +192,35 @@ export function BeepQuickCreate({
 							}}
 							placeholder="e.g. Remind me tomorrow at 9am to check metrics"
 							disabled={isPending}
-							rows={3}
+							rows={2}
 							className={cn(
-								"w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30",
+								"w-full min-w-0 rounded-lg border border-input bg-background/80 px-2.5 py-1.5 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/20",
 							)}
 						/>
-						<div className="flex items-center justify-between gap-2">
-							<p className="text-xs text-muted-foreground">
-								Describe what and when in plain language (⌘+Enter / Ctrl+Enter
-								to fill).
-							</p>
+
+						{/* Prompt suggestion chips */}
+						<div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+							{PROMPT_SUGGESTIONS.map((suggestion) => (
+								<button
+									key={suggestion}
+									type="button"
+									disabled={isPending}
+									onClick={() => setPrompt(suggestion)}
+									className="rounded-md border border-input/60 bg-background/60 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:bg-background hover:text-foreground dark:bg-input/10"
+								>
+									{suggestion}
+								</button>
+							))}
+						</div>
+
+						<div className="flex items-center justify-end pt-1">
 							<Button
 								type="submit"
 								variant="secondary"
-								size="sm"
+								size="xs"
 								disabled={isPending || prompt.trim().length === 0}
 								aria-label="Auto-fill form with AI"
+								className="font-medium"
 							>
 								<Sparkles data-icon="inline-start" />
 								{proposing ? "Parsing…" : "Auto-fill"}
@@ -200,7 +235,7 @@ export function BeepQuickCreate({
 
 				{/* Main Beep Creation Form (Always Visible) */}
 				<form
-					className="flex flex-col gap-4 border-t border-border pt-4"
+					className="flex flex-col gap-4 border-t border-border/80 pt-4"
 					onSubmit={onSubmit}
 				>
 					<div className="flex flex-col gap-2">
