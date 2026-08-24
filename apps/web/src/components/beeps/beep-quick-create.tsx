@@ -152,19 +152,35 @@ export function BeepQuickCreate({
 				<form className="flex flex-col gap-3" onSubmit={onPropose}>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor={`beep-prompt-${slug}`}>AI Prompt Assistant</Label>
-						<div className="flex gap-2">
-							<Input
-								id={`beep-prompt-${slug}`}
-								name="prompt"
-								value={prompt}
-								onChange={(event) => setPrompt(event.target.value)}
-								placeholder="e.g. Remind me tomorrow at 9am to check metrics"
-								disabled={isPending}
-								className="flex-1"
-							/>
+						<textarea
+							id={`beep-prompt-${slug}`}
+							name="prompt"
+							value={prompt}
+							onChange={(event) => setPrompt(event.target.value)}
+							onKeyDown={(event) => {
+								if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+									event.preventDefault();
+									if (!isPending && prompt.trim().length > 0) {
+										event.currentTarget.form?.requestSubmit();
+									}
+								}
+							}}
+							placeholder="e.g. Remind me tomorrow at 9am to check metrics"
+							disabled={isPending}
+							rows={3}
+							className={cn(
+								"w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30",
+							)}
+						/>
+						<div className="flex items-center justify-between gap-2">
+							<p className="text-xs text-muted-foreground">
+								Describe what and when in plain language (⌘+Enter / Ctrl+Enter
+								to fill).
+							</p>
 							<Button
 								type="submit"
 								variant="secondary"
+								size="sm"
 								disabled={isPending || prompt.trim().length === 0}
 								aria-label="Auto-fill form with AI"
 							>
@@ -172,10 +188,6 @@ export function BeepQuickCreate({
 								{proposing ? "Parsing…" : "Auto-fill"}
 							</Button>
 						</div>
-						<p className="text-xs text-muted-foreground">
-							Describe what and when in plain language to populate the form
-							below.
-						</p>
 					</div>
 				</form>
 
