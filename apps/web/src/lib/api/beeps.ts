@@ -52,7 +52,6 @@ export function createBeep(
 		kind?: "once" | "recurring";
 		run_at?: string | null;
 		cron?: string | null;
-		imminent?: boolean;
 	},
 ) {
 	return apiFetch<Beep>(`/api/v1/${slug}/beeps`, {

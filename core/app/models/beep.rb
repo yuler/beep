@@ -21,13 +21,12 @@ class Beep < ApplicationRecord
   validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }
   validates :body, length: { maximum: BODY_MAX_LENGTH }, allow_nil: true
   validates :timezone, presence: true
-  validates :run_at, presence: true, if: :once?, unless: :imminent?
   validates :run_at, absence: true, if: :recurring?
   validates :cron, presence: true, if: :recurring?
   validates :cron, absence: true, if: :once?
-  validate :run_at_in_future, if: -> { once? && !imminent? }
 
   before_validation :sync_run_attributes_on_create, on: :create
+  after_create_commit :deliver_if_due_on_create
 
   scope :due, -> { once.active.where(next_run_at: ..Time.current) }
 
@@ -41,9 +40,6 @@ class Beep < ApplicationRecord
       firing.where(updated_at: ..STALE_FIRING_AFTER.ago).find_each(&:reclaim_stale)
     end
   end
-
-  attr_accessor :imminent
-  alias_method :imminent?, :imminent
 
   def trigger_run!
     scheduled_for = Time.current
@@ -60,6 +56,7 @@ class Beep < ApplicationRecord
       updated_at: Time.current
     )
     if claimed == 1
+      self.status = "firing"
       claim_run(scheduled_for)
     end
   end
@@ -133,18 +130,14 @@ class Beep < ApplicationRecord
 
     def sync_run_attributes_on_create
       if once?
-        if imminent?
-          self.run_at ||= Time.current
-        elsif run_at.present?
-          self.next_run_at = run_at
-        end
+        self.run_at ||= Time.current
+        self.next_run_at = run_at
       end
     end
 
-    def run_at_in_future
-      return if run_at.blank?
-      return if run_at > Time.current
+    def deliver_if_due_on_create
+      return unless once? && active? && next_run_at.present? && next_run_at <= Time.current
 
-      errors.add(:run_at, "must be in the future")
+      claim_due
     end
 end

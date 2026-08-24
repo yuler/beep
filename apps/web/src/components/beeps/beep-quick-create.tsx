@@ -40,7 +40,8 @@ export function BeepQuickCreate({
 	onCreated: () => Promise<void> | void;
 }) {
 	const [prompt, setPrompt] = useState("");
-	const [mode, setMode] = useState<"once" | "imminent" | "recurring">("once");
+	const [kind, setKind] = useState<"once" | "recurring">("once");
+	const [sendNow, setSendNow] = useState(true);
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
 	const [preview, setPreview] = useState(false);
@@ -80,7 +81,8 @@ export function BeepQuickCreate({
 				setBody(proposal.body);
 			if (nextRunAt) {
 				setRunAt(nextRunAt);
-				setMode("once");
+				setKind("once");
+				setSendNow(false);
 			}
 
 			setFieldErrors({
@@ -111,16 +113,16 @@ export function BeepQuickCreate({
 			await createBeep(slug, {
 				title: title.trim(),
 				body: body.trim() || null,
-				kind: mode === "recurring" ? "recurring" : "once",
-				run_at: mode === "once" ? runAt.toISOString() : null,
-				imminent: mode === "imminent",
-				cron: mode === "recurring" ? cron.trim() : null,
+				kind,
+				run_at: kind === "once" && !sendNow ? runAt.toISOString() : null,
+				cron: kind === "recurring" ? cron.trim() : null,
 			});
 			setPrompt("");
 			setTitle("");
 			setBody("");
 			setPreview(false);
-			setMode("once");
+			setKind("once");
+			setSendNow(true);
 			setRunAt(defaultRunAt());
 			setCron("0 9 * * *");
 			setFieldErrors({});
@@ -179,35 +181,25 @@ export function BeepQuickCreate({
 					onSubmit={onSubmit}
 				>
 					<div className="flex flex-col gap-2">
-						<Label>Mode</Label>
+						<Label>Type</Label>
 						<div className="flex rounded-lg border border-input p-1">
 							<Button
 								type="button"
 								size="sm"
-								variant={mode === "once" ? "secondary" : "ghost"}
+								variant={kind === "once" ? "secondary" : "ghost"}
 								className="flex-1"
 								disabled={isPending}
-								onClick={() => setMode("once")}
+								onClick={() => setKind("once")}
 							>
 								Once
 							</Button>
 							<Button
 								type="button"
 								size="sm"
-								variant={mode === "imminent" ? "secondary" : "ghost"}
+								variant={kind === "recurring" ? "secondary" : "ghost"}
 								className="flex-1"
 								disabled={isPending}
-								onClick={() => setMode("imminent")}
-							>
-								Imminent (Now)
-							</Button>
-							<Button
-								type="button"
-								size="sm"
-								variant={mode === "recurring" ? "secondary" : "ghost"}
-								className="flex-1"
-								disabled={isPending}
-								onClick={() => setMode("recurring")}
+								onClick={() => setKind("recurring")}
 							>
 								Recurring
 							</Button>
@@ -290,32 +282,58 @@ export function BeepQuickCreate({
 						)}
 					</div>
 
-					{mode === "once" ? (
-						<div className="flex flex-col gap-2">
-							<DateTimePicker
-								id={`beep-run-at-${slug}`}
-								value={runAt}
-								onChange={(val) => {
-									setRunAt(val);
-									setFieldErrors((curr) => ({
-										...curr,
-										run_at:
-											val.getTime() <= Date.now()
-												? "must be in the future"
-												: undefined,
-									}));
-								}}
-								disabled={isPending}
-							/>
-							{fieldErrors.run_at ? (
-								<p className="text-xs text-destructive" role="alert">
-									{fieldErrors.run_at}
+					{kind === "once" ? (
+						<div className="flex flex-col gap-3">
+							<div className="flex items-center gap-2">
+								<input
+									type="checkbox"
+									id={`beep-send-now-${slug}`}
+									name="sendNow"
+									checked={sendNow}
+									onChange={(event) => setSendNow(event.target.checked)}
+									disabled={isPending}
+									className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+								/>
+								<Label
+									htmlFor={`beep-send-now-${slug}`}
+									className="cursor-pointer font-normal"
+								>
+									Send immediately (now)
+								</Label>
+							</div>
+
+							{!sendNow ? (
+								<div className="flex flex-col gap-2">
+									<DateTimePicker
+										id={`beep-run-at-${slug}`}
+										value={runAt}
+										onChange={(val) => {
+											setRunAt(val);
+											setFieldErrors((curr) => ({
+												...curr,
+												run_at:
+													val.getTime() <= Date.now()
+														? "must be in the future"
+														: undefined,
+											}));
+										}}
+										disabled={isPending}
+									/>
+									{fieldErrors.run_at ? (
+										<p className="text-xs text-destructive" role="alert">
+											{fieldErrors.run_at}
+										</p>
+									) : null}
+								</div>
+							) : (
+								<p className="text-xs text-muted-foreground">
+									Will be delivered right after creation.
 								</p>
-							) : null}
+							)}
 						</div>
 					) : null}
 
-					{mode === "recurring" ? (
+					{kind === "recurring" ? (
 						<div className="flex flex-col gap-2">
 							<Label htmlFor={`beep-cron-${slug}`}>Cron expression</Label>
 							<Input
@@ -333,13 +351,6 @@ export function BeepQuickCreate({
 						</div>
 					) : null}
 
-					{mode === "imminent" ? (
-						<p className="text-xs text-muted-foreground">
-							This beep will be dispatched immediately to all enabled channels
-							upon creation.
-						</p>
-					) : null}
-
 					{error ? (
 						<p className="text-sm text-destructive" role="alert">
 							{error}
@@ -351,16 +362,16 @@ export function BeepQuickCreate({
 						disabled={
 							isPending ||
 							title.trim().length === 0 ||
-							(mode === "once" && runAt.getTime() <= Date.now())
+							(kind === "once" && !sendNow && runAt.getTime() <= Date.now())
 						}
 						className="w-fit"
 					>
 						{submitting
-							? mode === "imminent"
+							? kind === "once" && sendNow
 								? "Sending…"
 								: "Creating…"
-							: mode === "imminent"
-								? "Send now"
+							: kind === "once" && sendNow
+								? "Send beep now"
 								: "Create beep"}
 					</Button>
 				</form>

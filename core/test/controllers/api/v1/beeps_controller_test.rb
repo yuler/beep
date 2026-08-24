@@ -60,11 +60,11 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_nil body["channels"]
   end
 
-  test "create supports imminent mode to trigger immediately" do
+  test "create without run_at triggers immediately as an ingest" do
     assert_enqueued_with(job: DeliverBeepRunJob) do
       assert_difference -> { @account.beeps.count }, 1 do
         post "/api/v1/#{@account.slug}/beeps",
-          params: { title: "Alert right now", imminent: true },
+          params: { title: "Alert right now" },
           headers: { "Authorization" => "Bearer #{@token}" },
           as: :json
       end
@@ -75,7 +75,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Alert right now", body["title"]
     assert_equal "once", body["kind"]
     assert_equal "firing", body["status"]
-    assert_nil body["next_run_at"]
+    assert_not_nil body["run_at"]
     assert_equal 1, body["runs"].size
     assert_equal "pending", body["runs"].first["status"]
   end
@@ -100,16 +100,6 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
   test "create rejects a blank title" do
     post "/api/v1/#{@account.slug}/beeps",
       params: { title: "", run_at: @run_at.iso8601 },
-      headers: { "Authorization" => "Bearer #{@token}" },
-      as: :json
-
-    assert_response :unprocessable_entity
-    assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
-  end
-
-  test "create rejects a run_at in the past" do
-    post "/api/v1/#{@account.slug}/beeps",
-      params: { title: "Call mom", run_at: 1.hour.ago.iso8601 },
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 
