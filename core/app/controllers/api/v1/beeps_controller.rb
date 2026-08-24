@@ -10,9 +10,12 @@ class Api::V1::BeepsController < Api::V1::BaseController
   end
 
   def create
+    imminent = ActiveRecord::Type::Boolean.new.cast(params[:imminent])
     @beep = Current.account.beeps.new(beep_params.merge(kind: :once, timezone: Beep::TIMEZONE))
+    @beep.imminent = true if imminent
 
     if @beep.save
+      @beep.trigger_imminent! if imminent
       render :create, status: :created
     else
       render_json_error(

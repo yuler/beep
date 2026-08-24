@@ -48,8 +48,9 @@ export function createBeep(
 	slug: string,
 	body: {
 		title: string;
-		body: string | null;
-		run_at: string;
+		body?: string | null;
+		run_at?: string | null;
+		imminent?: boolean;
 	},
 ) {
 	return apiFetch<Beep>(`/api/v1/${slug}/beeps`, {

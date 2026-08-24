@@ -34,6 +34,7 @@ export function CreateBeepForm({
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
 	const [preview, setPreview] = useState(false);
+	const [imminent, setImminent] = useState(false);
 	const [runAt, setRunAt] = useState(defaultRunAt);
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
@@ -47,11 +48,13 @@ export function CreateBeepForm({
 			await createBeep(slug, {
 				title: title.trim(),
 				body: body.trim() || null,
-				run_at: runAt.toISOString(),
+				run_at: imminent ? null : runAt.toISOString(),
+				imminent: imminent ? true : undefined,
 			});
 			setTitle("");
 			setBody("");
 			setPreview(false);
+			setImminent(false);
 			setRunAt(defaultRunAt());
 			await onCreated();
 		} catch (err) {
@@ -128,19 +131,43 @@ export function CreateBeepForm({
 					/>
 				)}
 			</div>
-			<DateTimePicker
-				id="beep-run-at"
-				value={runAt}
-				onChange={setRunAt}
-				disabled={pending}
-			/>
+			<div className="flex items-center gap-2">
+				<input
+					type="checkbox"
+					id="beep-imminent"
+					name="imminent"
+					checked={imminent}
+					onChange={(event) => setImminent(event.target.checked)}
+					disabled={pending}
+					className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+				/>
+				<Label htmlFor="beep-imminent" className="cursor-pointer font-normal">
+					Send immediately (imminent)
+				</Label>
+			</div>
+
+			{!imminent ? (
+				<DateTimePicker
+					id="beep-run-at"
+					value={runAt}
+					onChange={setRunAt}
+					disabled={pending}
+				/>
+			) : null}
+
 			{error ? (
 				<p className="text-sm text-destructive" role="alert">
 					{error}
 				</p>
 			) : null}
 			<Button type="submit" disabled={pending} className="w-fit">
-				{pending ? "Creating…" : "Create beep"}
+				{pending
+					? imminent
+						? "Sending…"
+						: "Creating…"
+					: imminent
+						? "Send now"
+						: "Create beep"}
 			</Button>
 		</form>
 	);
