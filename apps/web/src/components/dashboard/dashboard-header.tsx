@@ -21,7 +21,9 @@ export type DashboardBreadcrumbItem = {
 		| "/$account_slug/settings"
 		| "/$account_slug/beeps"
 		| "/admin/jobs"
-		| "/admin/stats";
+		| "/admin/stats"
+		| "/my/access_tokens"
+		| "/my/settings";
 	params?: { account_slug: string };
 	isCurrentPage?: boolean;
 };

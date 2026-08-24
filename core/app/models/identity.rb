@@ -3,6 +3,7 @@ class Identity < ApplicationRecord
 
   has_many :magic_links, dependent: :destroy
   has_many :sessions, dependent: :destroy
+  has_many :access_tokens, class_name: "Identity::AccessToken", dependent: :destroy
   has_many :users, dependent: :nullify
   has_many :accounts, through: :users
 
@@ -16,16 +17,11 @@ class Identity < ApplicationRecord
   after_create :create_personal_account
   before_destroy :deactivate_users, prepend: true
 
-  # TODO:
   def self.find_by_permissable_access_token(token, method:)
-    # Using signed_id as a temporary secure token to avoid IDOR vulnerability.
-    # In production, this should be replaced by a proper AccessToken model
-    # with per-method scopes (read/write) and revocation.
-    Identity.find_signed(token, purpose: :api_token)
-
-    # if (access_token = AccessToken.find_by(token: token)) && access_token.allows?(method)
-    #   access_token.identity
-    # end
+    if (access_token = Identity::AccessToken.find_by(token: token)) && access_token.allows?(method)
+      access_token.touch_last_used_at
+      access_token.identity
+    end
   end
 
   def full_name
