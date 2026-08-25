@@ -15,7 +15,7 @@ import { useMemo, useState } from "react";
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { Beep } from "@/lib/api/beeps";
 import { beepRunAt } from "@/lib/beep-stats";

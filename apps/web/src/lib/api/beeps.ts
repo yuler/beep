@@ -20,6 +20,7 @@ export type Beep = {
 	body: string | null;
 	kind: "once" | "recurring";
 	status: "active" | "paused" | "completed" | "cancelled" | "firing";
+	cron: string | null;
 	run_at: string | null;
 	next_run_at: string | null;
 	last_run_at: string | null;

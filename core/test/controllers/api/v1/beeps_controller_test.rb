@@ -53,6 +53,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Call mom", body["title"]
     assert_equal "Bring **milk**", body["body"]
     assert_equal "once", body["kind"]
+    assert_nil body["cron"]
     assert_equal "active", body["status"]
     assert_equal Beep::TIMEZONE, body["timezone"]
     assert_equal @run_at.iso8601, Time.iso8601(body["run_at"]).iso8601
@@ -128,6 +129,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Call mom", body["title"]
     assert_nil body["body"]
     assert_equal "once", body["kind"]
+    assert_nil body["cron"]
     assert_equal "active", body["status"]
     assert_equal [], body["runs"]
     assert_nil body["channels"]
