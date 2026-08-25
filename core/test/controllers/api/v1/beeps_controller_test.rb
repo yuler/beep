@@ -221,4 +221,50 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     assert beep.reload.present?
   end
+
+  test "create recurring beep validates cron and calculates next_run_at" do
+    post "/api/v1/#{@account.slug}/beeps",
+      params: { kind: "recurring", title: "Daily meeting", cron: "0 9 * * *" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :created
+    body = response.parsed_body
+    assert_equal "recurring", body["kind"]
+    assert_equal "0 9 * * *", body["cron"]
+    assert_not_nil body["next_run_at"]
+  end
+
+  test "pause and resume updates beep status via pauses resource" do
+    beep = @account.beeps.create!(kind: :recurring, title: "Standup", cron: "0 9 * * *")
+
+    post "/api/v1/#{@account.slug}/beeps/#{beep.id}/pause",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal "paused", response.parsed_body["status"]
+    assert beep.reload.paused?
+
+    delete "/api/v1/#{@account.slug}/beeps/#{beep.id}/pause",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal "active", response.parsed_body["status"]
+    assert beep.reload.active?
+  end
+
+  test "pause rejects a completed beep" do
+    beep = @account.beeps.create!(kind: :once, title: "Done", run_at: @run_at)
+    beep.update_columns(status: "completed", next_run_at: nil)
+
+    post "/api/v1/#{@account.slug}/beeps/#{beep.id}/pause",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
+    assert beep.reload.completed?
+  end
 end

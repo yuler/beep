@@ -4,7 +4,7 @@ import {
 	notFound,
 	useRouter,
 } from "@tanstack/react-router";
-import { Play, Trash2 } from "lucide-react";
+import { Pause, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
@@ -13,7 +13,13 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { deleteBeep, fetchBeep, triggerBeepRun } from "@/lib/api/beeps";
+import {
+	deleteBeep,
+	fetchBeep,
+	pauseBeep,
+	resumeBeep,
+	triggerBeepRun,
+} from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
 
@@ -55,6 +61,7 @@ function BeepDetailPage() {
 	const beep = Route.useLoaderData();
 	const [deleting, setDeleting] = useState(false);
 	const [triggering, setTriggering] = useState(false);
+	const [togglingStatus, setTogglingStatus] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	async function handleTrigger() {
@@ -69,6 +76,25 @@ function BeepDetailPage() {
 			);
 		} finally {
 			setTriggering(false);
+		}
+	}
+
+	async function handleToggleStatus() {
+		setTogglingStatus(true);
+		setError(null);
+		try {
+			if (beep.status === "paused") {
+				await resumeBeep(slug, beep.id);
+			} else {
+				await pauseBeep(slug, beep.id);
+			}
+			await router.invalidate();
+		} catch (err) {
+			setError(
+				err instanceof ApiError ? err.message : "Failed to update beep status.",
+			);
+		} finally {
+			setTogglingStatus(false);
 		}
 	}
 
@@ -126,10 +152,36 @@ function BeepDetailPage() {
 						<Badge variant={STATUS_VARIANT[beep.status] ?? "secondary"}>
 							{beep.status}
 						</Badge>
+						{beep.status === "active" || beep.status === "paused" ? (
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={togglingStatus || deleting || triggering}
+								aria-label={`${beep.status === "paused" ? "Resume" : "Pause"} beep ${beep.title}`}
+								onClick={() => void handleToggleStatus()}
+							>
+								{beep.status === "paused" ? (
+									<>
+										<Play data-icon="inline-start" />
+										{togglingStatus ? "Resuming…" : "Resume"}
+									</>
+								) : (
+									<>
+										<Pause data-icon="inline-start" />
+										{togglingStatus ? "Pausing…" : "Pause"}
+									</>
+								)}
+							</Button>
+						) : null}
 						<Button
 							variant="outline"
 							size="sm"
-							disabled={triggering || deleting || beep.status === "firing"}
+							disabled={
+								triggering ||
+								deleting ||
+								togglingStatus ||
+								beep.status === "firing"
+							}
 							aria-label={`Trigger run for beep ${beep.title}`}
 							onClick={() => void handleTrigger()}
 						>
@@ -143,7 +195,7 @@ function BeepDetailPage() {
 						<Button
 							variant="destructive"
 							size="sm"
-							disabled={deleting || triggering}
+							disabled={deleting || triggering || togglingStatus}
 							aria-label={`Delete beep ${beep.title}`}
 							onClick={() => void handleDelete()}
 						>
@@ -175,7 +227,11 @@ function BeepDetailPage() {
 						<CardTitle>Schedule</CardTitle>
 					</CardHeader>
 					<CardContent className="flex flex-col gap-3 text-sm">
-						<DetailRow label="Run at" value={formatWhen(beep.run_at)} />
+						{beep.kind === "once" ? (
+							<DetailRow label="Run at" value={formatWhen(beep.run_at)} />
+						) : (
+							<DetailRow label="Cron" value={beep.cron ?? "—"} />
+						)}
 						<DetailRow label="Next" value={formatWhen(beep.next_run_at)} />
 						<DetailRow label="Last" value={formatWhen(beep.last_run_at)} />
 						<DetailRow label="Created" value={formatWhen(beep.created_at)} />

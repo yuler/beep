@@ -260,8 +260,46 @@ export function CreateBeepForm({
 			) : null}
 
 			{kind === "recurring" ? (
-				<div className="flex flex-col gap-2">
-					<Label htmlFor="beep-cron">Cron expression</Label>
+				<div className="flex flex-col gap-2.5">
+					<div className="flex items-center justify-between gap-2">
+						<Label htmlFor="beep-cron">Schedule & Cron</Label>
+						<Tooltip>
+							<TooltipTrigger
+								type="button"
+								className="text-muted-foreground hover:text-foreground"
+								aria-label="Cron schedule explanation"
+							>
+								<HelpCircle className="size-4" />
+							</TooltipTrigger>
+							<TooltipContent side="top" className="max-w-xs text-xs">
+								5-part standard Cron expression: minute hour day month
+								day-of-week. Evaluated in Asia/Shanghai.
+							</TooltipContent>
+						</Tooltip>
+					</div>
+
+					{/* Common Presets */}
+					<div className="flex flex-wrap gap-1.5">
+						{[
+							{ label: "Every day at 9:00", value: "0 9 * * *" },
+							{ label: "Weekdays at 9:00", value: "0 9 * * 1-5" },
+							{ label: "Every Monday at 9:00", value: "0 9 * * 1" },
+							{ label: "Every hour", value: "0 * * * *" },
+						].map((preset) => (
+							<Button
+								key={preset.value}
+								type="button"
+								size="sm"
+								variant={cron === preset.value ? "secondary" : "outline"}
+								className="h-7 text-xs font-normal"
+								disabled={pending}
+								onClick={() => setCron(preset.value)}
+							>
+								{preset.label}
+							</Button>
+						))}
+					</div>
+
 					<Input
 						id="beep-cron"
 						name="cron"
@@ -270,9 +308,13 @@ export function CreateBeepForm({
 						onChange={(event) => setCron(event.target.value)}
 						placeholder="0 9 * * *"
 						disabled={pending}
+						className="font-mono text-sm"
 					/>
 					<p className="text-xs text-muted-foreground">
-						Standard cron format: minute hour day month day-of-week
+						Format:{" "}
+						<code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+							min hour day month weekday
+						</code>
 					</p>
 				</div>
 			) : null}

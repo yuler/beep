@@ -475,6 +475,7 @@ DEPENDENCIES
   capybara
   debug
   faraday
+  fugit (~> 1.11)
   hotwire-spark
   image_processing (~> 2.0)
   importmap-rails

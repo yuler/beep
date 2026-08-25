@@ -22,7 +22,28 @@ class BeepPollerTest < ActiveSupport::TestCase
     assert_equal scheduled_for.to_i, run.scheduled_for.to_i
   end
 
-  test "poll ignores recurring beeps even when next_run_at is due" do
+  test "poll claims a due recurring beep, inserts a run, and enqueues deliver" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :recurring,
+      title: "Standup",
+      cron: "0 9 * * *"
+    )
+    scheduled_for = 1.minute.ago.change(usec: 0)
+    beep.update_columns(next_run_at: scheduled_for)
+
+    assert_enqueued_with(job: DeliverBeepRunJob) do
+      Beep.poll_due_now
+    end
+
+    beep.reload
+    assert beep.firing?
+    run = beep.runs.sole
+    assert run.pending?
+    assert_equal scheduled_for.to_i, run.scheduled_for.to_i
+  end
+
+  test "recurring beep execution finishes firing and calculates next_run_at while remaining active" do
     beep = Beep.create!(
       account: @account,
       kind: :recurring,
@@ -31,12 +52,15 @@ class BeepPollerTest < ActiveSupport::TestCase
     )
     beep.update_columns(next_run_at: 1.minute.ago)
 
-    assert_no_enqueued_jobs only: DeliverBeepRunJob do
+    perform_enqueued_jobs do
       Beep.poll_due_now
     end
 
-    assert_equal 0, beep.runs.count
-    assert beep.reload.active?
+    beep.reload
+    assert beep.active?
+    assert_not_nil beep.next_run_at
+    assert beep.next_run_at > Time.current
+    assert_not_nil beep.last_run_at
   end
 
   test "poll ignores paused once beeps" do

@@ -197,5 +197,115 @@ class BeepTest < ActiveSupport::TestCase
 
     beep.finish_firing(last_run_at: run.scheduled_for)
     assert beep.reload.active?
+    assert_not_nil beep.next_run_at
+  end
+
+  test "recurring beep validates cron expression format" do
+    beep = Beep.new(
+      account: @account,
+      kind: :recurring,
+      title: "Invalid Cron",
+      cron: "invalid cron syntax"
+    )
+
+    assert_not beep.valid?
+    assert beep.errors[:cron].any?
+  end
+
+  test "recurring beep automatically sets next_run_at on creation" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :recurring,
+      title: "Daily morning",
+      cron: "0 9 * * *"
+    )
+
+    assert_not_nil beep.next_run_at
+    assert beep.next_run_at > Time.current
+  end
+
+  test "pause! and resume! updates recurring beep status and next_run_at" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :recurring,
+      title: "Daily morning",
+      cron: "0 9 * * *"
+    )
+
+    beep.pause!
+    assert beep.paused?
+
+    beep.resume!
+    assert beep.active?
+    assert_not_nil beep.next_run_at
+    assert beep.next_run_at > Time.current
+  end
+
+  test "finish_firing keeps a paused recurring beep paused" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :recurring,
+      title: "Standup",
+      cron: "0 9 * * *"
+    )
+    run = beep.trigger_run!
+    beep.pause!
+
+    Beep.find(beep.id).finish_firing(last_run_at: run.scheduled_for)
+
+    beep.reload
+    assert beep.paused?
+    assert_equal run.scheduled_for.to_i, beep.last_run_at.to_i
+  end
+
+  test "finish_firing skips missed recurring slots after a delayed run" do
+    travel_to Time.utc(2026, 8, 25, 10, 5, 0) do
+      beep = Beep.create!(
+        account: @account,
+        kind: :recurring,
+        title: "Every minute",
+        timezone: "UTC",
+        cron: "* * * * *"
+      )
+      beep.update_columns(status: "firing")
+      beep.finish_firing(last_run_at: 1.hour.ago)
+
+      assert beep.reload.active?
+      assert beep.next_run_at > Time.current
+    end
+  end
+
+  test "recurring beep next_run_at is the next 09:00 in Asia/Shanghai" do
+    travel_to Time.utc(2026, 8, 25, 2, 0, 0) do
+      beep = Beep.create!(
+        account: @account,
+        kind: :recurring,
+        title: "Daily morning",
+        timezone: "Asia/Shanghai",
+        cron: "0 9 * * *"
+      )
+
+      assert_equal Time.utc(2026, 8, 26, 1, 0, 0), beep.next_run_at
+    end
+  end
+
+  test "pause! and resume! reject illegal status transitions" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      run_at: 1.hour.from_now
+    )
+    beep.update_columns(status: "completed", next_run_at: nil)
+
+    assert_raises ActiveRecord::RecordInvalid do
+      beep.pause!
+    end
+    assert beep.reload.completed?
+
+    assert_raises ActiveRecord::RecordInvalid do
+      beep.resume!
+    end
+    assert beep.reload.completed?
   end
 end

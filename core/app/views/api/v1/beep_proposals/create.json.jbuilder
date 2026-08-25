@@ -1,7 +1,9 @@
 json.intent @proposal.intent
+json.kind @proposal.kind
 json.title @proposal.title
 json.body @proposal.body
 json.run_at @proposal.run_at&.iso8601
+json.cron @proposal.cron
 json.timezone @proposal.timezone
 json.errors @proposal.errors
 json.confirmable @proposal.confirmable?

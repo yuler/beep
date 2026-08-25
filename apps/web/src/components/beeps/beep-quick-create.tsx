@@ -62,6 +62,7 @@ export function BeepQuickCreate({
 	const [fieldErrors, setFieldErrors] = useState<{
 		title?: string;
 		run_at?: string;
+		cron?: string;
 	}>({});
 	const [proposeMessage, setProposeMessage] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -90,7 +91,11 @@ export function BeepQuickCreate({
 			if (proposal.title) setTitle(proposal.title);
 			if (proposal.body !== null && proposal.body !== undefined)
 				setBody(proposal.body);
-			if (nextRunAt) {
+
+			if (proposal.kind === "recurring" || proposal.cron) {
+				setKind("recurring");
+				setCron(proposal.cron ?? "");
+			} else if (nextRunAt) {
 				setRunAt(nextRunAt);
 				setKind("once");
 				setSendNow(false);
@@ -102,9 +107,12 @@ export function BeepQuickCreate({
 
 			setFieldErrors({
 				title: proposal.errors.title,
+				cron: proposal.errors.cron,
 				run_at:
 					proposal.errors.run_at ??
-					(nextRunAt && nextRunAt.getTime() <= Date.now() + 60 * 1000
+					(proposal.kind !== "recurring" &&
+					nextRunAt &&
+					nextRunAt.getTime() <= Date.now() + 60 * 1000
 						? "must be at least 1 minute in the future"
 						: undefined),
 			});
@@ -439,20 +447,72 @@ export function BeepQuickCreate({
 					) : null}
 
 					{kind === "recurring" ? (
-						<div className="flex flex-col gap-2">
-							<Label htmlFor={`beep-cron-${slug}`}>Cron expression</Label>
+						<div className="flex flex-col gap-2.5">
+							<div className="flex items-center justify-between gap-2">
+								<Label htmlFor={`beep-cron-${slug}`}>Schedule & Cron</Label>
+								<Tooltip>
+									<TooltipTrigger
+										type="button"
+										className="text-muted-foreground hover:text-foreground"
+										aria-label="Cron schedule explanation"
+									>
+										<HelpCircle className="size-4" />
+									</TooltipTrigger>
+									<TooltipContent side="top" className="max-w-xs text-xs">
+										5-part standard Cron expression: minute hour day month
+										day-of-week. Evaluated in Asia/Shanghai.
+									</TooltipContent>
+								</Tooltip>
+							</div>
+
+							{/* Common Presets */}
+							<div className="flex flex-wrap gap-1.5">
+								{[
+									{ label: "Every day at 9:00", value: "0 9 * * *" },
+									{ label: "Weekdays at 9:00", value: "0 9 * * 1-5" },
+									{ label: "Every Monday at 9:00", value: "0 9 * * 1" },
+									{ label: "Every hour", value: "0 * * * *" },
+								].map((preset) => (
+									<Button
+										key={preset.value}
+										type="button"
+										size="sm"
+										variant={cron === preset.value ? "secondary" : "outline"}
+										className="h-7 text-xs font-normal"
+										disabled={isPending}
+										onClick={() => setCron(preset.value)}
+									>
+										{preset.label}
+									</Button>
+								))}
+							</div>
+
 							<Input
 								id={`beep-cron-${slug}`}
 								name="cron"
 								required
 								value={cron}
-								onChange={(event) => setCron(event.target.value)}
+								onChange={(event) => {
+									setCron(event.target.value);
+									setFieldErrors((curr) => ({ ...curr, cron: undefined }));
+								}}
 								placeholder="0 9 * * *"
 								disabled={isPending}
+								className="font-mono text-sm"
+								aria-invalid={Boolean(fieldErrors.cron)}
 							/>
-							<p className="text-xs text-muted-foreground">
-								Standard cron format: minute hour day month day-of-week
-							</p>
+							{fieldErrors.cron ? (
+								<p className="text-xs text-destructive" role="alert">
+									{fieldErrors.cron}
+								</p>
+							) : (
+								<p className="text-xs text-muted-foreground">
+									Format:{" "}
+									<code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+										min hour day month weekday
+									</code>
+								</p>
+							)}
 						</div>
 					) : null}
 
@@ -470,7 +530,8 @@ export function BeepQuickCreate({
 							(kind === "once" &&
 								!sendNow &&
 								(runAt.getTime() <= Date.now() + 60 * 1000 ||
-									Boolean(fieldErrors.run_at)))
+									Boolean(fieldErrors.run_at))) ||
+							(kind === "recurring" && Boolean(fieldErrors.cron))
 						}
 						className="w-fit"
 					>

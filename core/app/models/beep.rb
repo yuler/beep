@@ -25,10 +25,12 @@ class Beep < ApplicationRecord
   validates :cron, presence: true, if: :recurring?
   validates :cron, absence: true, if: :once?
 
-  before_validation :sync_run_attributes_on_create, on: :create
+  validate :validate_cron_expression, if: :recurring?
+
+  before_validation :sync_run_attributes
   after_create_commit :deliver_if_due_on_create
 
-  scope :due, -> { once.active.where(next_run_at: ..Time.current) }
+  scope :due, -> { active.where(next_run_at: ..Time.current) }
 
   class << self
     def poll_due_now
@@ -54,6 +56,28 @@ class Beep < ApplicationRecord
     end
     run.deliver_later
     run
+  end
+
+  def pause!
+    if active? || firing?
+      update!(status: :paused)
+    else
+      errors.add(:status, "cannot be paused")
+      raise ActiveRecord::RecordInvalid, self
+    end
+  end
+
+  def resume!
+    if paused?
+      if recurring?
+        update!(status: :active, next_run_at: calculate_next_run_at)
+      else
+        update!(status: :active)
+      end
+    else
+      errors.add(:status, "cannot be resumed")
+      raise ActiveRecord::RecordInvalid, self
+    end
   end
 
   def claim_due
@@ -91,10 +115,32 @@ class Beep < ApplicationRecord
   end
 
   def finish_firing(last_run_at:)
-    if once?
-      update!(status: :completed, next_run_at: nil, last_run_at: last_run_at)
+    reload
+
+    next_run_at = once? ? nil : calculate_next_run_at(from: Time.current)
+    if paused?
+      attributes = { last_run_at: last_run_at }
+      attributes[:next_run_at] = next_run_at if recurring?
+      update!(attributes)
+    elsif firing?
+      if once?
+        update!(status: :completed, next_run_at: nil, last_run_at: last_run_at)
+      else
+        update!(status: :active, next_run_at: next_run_at, last_run_at: last_run_at)
+      end
     else
-      update!(status: :active, last_run_at: last_run_at)
+      update!(last_run_at: last_run_at)
+    end
+  end
+
+  def calculate_next_run_at(from: Time.current)
+    if recurring? && cron.present?
+      tz = timezone.presence || TIMEZONE
+      parsed = Fugit.parse("#{cron} #{tz}")
+      if parsed
+        next_time = parsed.next_time(from)
+        next_time ? Time.at(next_time.to_i).utc : nil
+      end
     end
   end
 
@@ -139,10 +185,27 @@ class Beep < ApplicationRecord
       scheduled_for < EXPIRED_AFTER.ago
     end
 
-    def sync_run_attributes_on_create
+    def sync_run_attributes
       if once?
-        self.run_at ||= Time.current
-        self.next_run_at = run_at
+        if new_record?
+          self.run_at ||= Time.current
+          self.next_run_at = run_at
+        elsif will_save_change_to_run_at?
+          self.next_run_at = run_at
+        end
+      elsif recurring?
+        if new_record? || will_save_change_to_cron? || will_save_change_to_timezone?
+          self.next_run_at = calculate_next_run_at
+        end
+      end
+    end
+
+    def validate_cron_expression
+      return if cron.blank?
+
+      parsed = Fugit.parse(cron)
+      if parsed.nil? || !parsed.is_a?(Fugit::Cron)
+        errors.add(:cron, "is not a valid cron expression")
       end
     end
 

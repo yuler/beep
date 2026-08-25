@@ -67,6 +67,18 @@ export function triggerBeepRun(slug: string, beepId: string) {
 	});
 }
 
+export function pauseBeep(slug: string, beepId: string) {
+	return apiFetch<Beep>(`/api/v1/${slug}/beeps/${beepId}/pause`, {
+		method: "POST",
+	});
+}
+
+export function resumeBeep(slug: string, beepId: string) {
+	return apiFetch<Beep>(`/api/v1/${slug}/beeps/${beepId}/pause`, {
+		method: "DELETE",
+	});
+}
+
 export function deleteBeep(slug: string, beepId: string) {
 	return apiFetch<void>(`/api/v1/${slug}/beeps/${beepId}`, {
 		method: "DELETE",
@@ -75,14 +87,17 @@ export function deleteBeep(slug: string, beepId: string) {
 
 export type BeepProposal = {
 	intent: "create" | "other";
+	kind?: "once" | "recurring";
 	title: string | null;
 	body: string | null;
 	run_at: string | null;
+	cron: string | null;
 	timezone: string;
 	errors: {
 		title?: string;
 		body?: string;
 		run_at?: string;
+		cron?: string;
 	};
 	confirmable: boolean;
 	message: string | null;
