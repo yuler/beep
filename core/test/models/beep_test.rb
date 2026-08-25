@@ -197,5 +197,47 @@ class BeepTest < ActiveSupport::TestCase
 
     beep.finish_firing(last_run_at: run.scheduled_for)
     assert beep.reload.active?
+    assert_not_nil beep.next_run_at
+  end
+
+  test "recurring beep validates cron expression format" do
+    beep = Beep.new(
+      account: @account,
+      kind: :recurring,
+      title: "Invalid Cron",
+      cron: "invalid cron syntax"
+    )
+
+    assert_not beep.valid?
+    assert beep.errors[:cron].any?
+  end
+
+  test "recurring beep automatically sets next_run_at on creation" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :recurring,
+      title: "Daily morning",
+      cron: "0 9 * * *"
+    )
+
+    assert_not_nil beep.next_run_at
+    assert beep.next_run_at > Time.current
+  end
+
+  test "pause! and resume! updates recurring beep status and next_run_at" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :recurring,
+      title: "Daily morning",
+      cron: "0 9 * * *"
+    )
+
+    beep.pause!
+    assert beep.paused?
+
+    beep.resume!
+    assert beep.active?
+    assert_not_nil beep.next_run_at
+    assert beep.next_run_at > Time.current
   end
 end

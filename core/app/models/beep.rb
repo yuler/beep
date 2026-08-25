@@ -25,10 +25,12 @@ class Beep < ApplicationRecord
   validates :cron, presence: true, if: :recurring?
   validates :cron, absence: true, if: :once?
 
+  validate :validate_cron_expression, if: :recurring?
+
   before_validation :sync_run_attributes_on_create, on: :create
   after_create_commit :deliver_if_due_on_create
 
-  scope :due, -> { once.active.where(next_run_at: ..Time.current) }
+  scope :due, -> { active.where(next_run_at: ..Time.current) }
 
   class << self
     def poll_due_now
@@ -54,6 +56,18 @@ class Beep < ApplicationRecord
     end
     run.deliver_later
     run
+  end
+
+  def pause!
+    update!(status: :paused)
+  end
+
+  def resume!
+    if recurring?
+      update!(status: :active, next_run_at: calculate_next_run_at)
+    else
+      update!(status: :active)
+    end
   end
 
   def claim_due
@@ -94,8 +108,20 @@ class Beep < ApplicationRecord
     if once?
       update!(status: :completed, next_run_at: nil, last_run_at: last_run_at)
     else
-      update!(status: :active, last_run_at: last_run_at)
+      update!(status: :active, next_run_at: calculate_next_run_at(from: last_run_at || Time.current), last_run_at: last_run_at)
     end
+  end
+
+  def calculate_next_run_at(from: Time.current)
+    return nil unless recurring? && cron.present?
+
+    parsed = Fugit.parse(cron)
+    return nil unless parsed
+
+    tz = timezone.presence || TIMEZONE
+    parsed.next_time(from.in_time_zone(tz)).to_utc_time
+  rescue StandardError
+    nil
   end
 
   def web_url
@@ -143,6 +169,17 @@ class Beep < ApplicationRecord
       if once?
         self.run_at ||= Time.current
         self.next_run_at = run_at
+      elsif recurring?
+        self.next_run_at = calculate_next_run_at
+      end
+    end
+
+    def validate_cron_expression
+      return if cron.blank?
+
+      parsed = Fugit.parse(cron)
+      if parsed.nil? || !parsed.is_a?(Fugit::Cron)
+        errors.add(:cron, "is not a valid cron expression")
       end
     end
 

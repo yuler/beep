@@ -75,6 +75,8 @@ Rails.application.routes.draw do
       resource :settings, only: %i[ show update ]
       resources :beep_proposals, only: :create
       resources :beeps, only: %i[ index show create update destroy ] do
+        post :pause, on: :member
+        post :resume, on: :member
         resources :runs, only: :create, module: :beeps
       end
 
