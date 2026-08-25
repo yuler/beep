@@ -27,7 +27,7 @@ class Beep < ApplicationRecord
 
   validate :validate_cron_expression, if: :recurring?
 
-  before_validation :sync_run_attributes_on_create, on: :create
+  before_validation :sync_run_attributes
   after_create_commit :deliver_if_due_on_create
 
   scope :due, -> { active.where(next_run_at: ..Time.current) }
@@ -115,11 +115,12 @@ class Beep < ApplicationRecord
   def calculate_next_run_at(from: Time.current)
     return nil unless recurring? && cron.present?
 
-    parsed = Fugit.parse(cron)
+    tz = timezone.presence || TIMEZONE
+    parsed = Fugit.parse("#{cron} #{tz}") || Fugit.parse(cron)
     return nil unless parsed
 
-    tz = timezone.presence || TIMEZONE
-    parsed.next_time(from.in_time_zone(tz)).to_utc_time
+    next_time = parsed.next_time(from)
+    next_time ? Time.at(next_time.to_i).utc : nil
   rescue StandardError
     nil
   end
@@ -165,12 +166,18 @@ class Beep < ApplicationRecord
       scheduled_for < EXPIRED_AFTER.ago
     end
 
-    def sync_run_attributes_on_create
+    def sync_run_attributes
       if once?
-        self.run_at ||= Time.current
-        self.next_run_at = run_at
+        if new_record?
+          self.run_at ||= Time.current
+          self.next_run_at = run_at
+        elsif will_save_change_to_run_at?
+          self.next_run_at = run_at
+        end
       elsif recurring?
-        self.next_run_at = calculate_next_run_at
+        if new_record? || will_save_change_to_cron? || will_save_change_to_timezone?
+          self.next_run_at = calculate_next_run_at
+        end
       end
     end
 
