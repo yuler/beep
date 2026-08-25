@@ -18,7 +18,7 @@ class Beep::Proposal
     end
 
     def confirmable?
-      intent == "create" && title.present? && run_at.present? && errors.blank?
+      intent == "create" && title.present? && errors.blank?
     end
   end
 
@@ -79,13 +79,11 @@ class Beep::Proposal
         end
         if run_at_error.present?
           errors["run_at"] = run_at_error
-        elsif run_at.blank?
-          errors["run_at"] = "can't be blank"
         end
       end
 
       message = if intent == "other"
-        "Describe the reminder time and what to be reminded of."
+        "Describe what to be reminded of."
       end
 
       Result.new(
@@ -135,16 +133,16 @@ class Beep::Proposal
       now = Time.current.in_time_zone(Beep::TIMEZONE)
 
       <<~PROMPT
-        You extract one one-time reminder from the user message.
+        You extract a reminder from the user message.
         Timezone is #{Beep::TIMEZONE}. Current datetime is #{now.iso8601}.
         Reply with JSON only:
         {"intent":"create"|"other","title":string|null,"body":string|null,"run_at":string|null}
-        intent is "create" when the user wants a reminder, otherwise "other".
+        intent is "create" when the user wants a reminder or alert, otherwise "other".
         title: short title, max #{Beep::TITLE_MAX_LENGTH} characters.
         body: optional extra detail as markdown, max #{Beep::BODY_MAX_LENGTH} characters.
-        run_at: future datetime as UTC ISO8601. Convert relative times using the timezone.
+        run_at: future datetime as UTC ISO8601 if a specific one-time reminder time is mentioned, otherwise null. Convert relative times using the timezone.
         Do not invent a reminder when the message is not a create request.
-        Only one reminder. Ignore recurring schedules.
+        Only one reminder. If the user mentions recurring schedules or no specific time, set run_at to null.
       PROMPT
     end
 end

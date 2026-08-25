@@ -10,7 +10,8 @@ class Api::V1::BeepsController < Api::V1::BaseController
   end
 
   def create
-    @beep = Current.account.beeps.new(beep_params.merge(kind: :once, timezone: Beep::TIMEZONE))
+    kind = params[:kind].presence || (params[:cron].present? ? "recurring" : "once")
+    @beep = Current.account.beeps.new(beep_params.merge(kind: kind, timezone: Beep::TIMEZONE))
 
     if @beep.save
       render :create, status: :created
@@ -44,6 +45,6 @@ class Api::V1::BeepsController < Api::V1::BaseController
 
   private
     def beep_params
-      params.permit(:title, :body, :run_at)
+      params.permit(:title, :body, :run_at, :cron, :kind)
     end
 end

@@ -60,9 +60,9 @@ function AccountHomePage() {
 						<Link
 							to="/$account_slug/beeps"
 							params={{ account_slug: slug }}
-							className="text-sm text-muted-foreground hover:text-foreground"
+							className="text-xs font-medium text-muted-foreground hover:text-foreground"
 						>
-							View all
+							View all beeps →
 						</Link>
 					</div>
 					<BeepList beeps={upcoming} slug={slug} variant="compact" />

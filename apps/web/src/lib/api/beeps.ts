@@ -20,6 +20,7 @@ export type Beep = {
 	body: string | null;
 	kind: "once" | "recurring";
 	status: "active" | "paused" | "completed" | "cancelled" | "firing";
+	cron: string | null;
 	run_at: string | null;
 	next_run_at: string | null;
 	last_run_at: string | null;
@@ -48,13 +49,21 @@ export function createBeep(
 	slug: string,
 	body: {
 		title: string;
-		body: string | null;
-		run_at: string;
+		body?: string | null;
+		kind?: "once" | "recurring";
+		run_at?: string | null;
+		cron?: string | null;
 	},
 ) {
 	return apiFetch<Beep>(`/api/v1/${slug}/beeps`, {
 		method: "POST",
 		body,
+	});
+}
+
+export function triggerBeepRun(slug: string, beepId: string) {
+	return apiFetch<BeepRun>(`/api/v1/${slug}/beeps/${beepId}/runs`, {
+		method: "POST",
 	});
 }
 

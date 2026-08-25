@@ -43,12 +43,12 @@ function BeepsPage() {
 			/>
 
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-				<div>
-					<h1 className="font-heading text-2xl font-semibold tracking-tight">
+				<div className="flex flex-col gap-1">
+					<h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
 						Beeps
 					</h1>
-					<p className="mt-1 text-sm text-muted-foreground">
-						Reminders scheduled for this workspace.
+					<p className="text-sm text-muted-foreground">
+						Manage and schedule reminders across your workspace.
 					</p>
 				</div>
 

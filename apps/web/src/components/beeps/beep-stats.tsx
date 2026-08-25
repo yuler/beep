@@ -1,4 +1,6 @@
-import { StatCard } from "@/components/dashboard/stat-card";
+import { Activity, Calendar, Zap } from "lucide-react";
+
+import { Card, CardContent } from "@/components/ui/card";
 import type { Beep } from "@/lib/api/beeps";
 import { beepStats } from "@/lib/beep-stats";
 
@@ -7,9 +9,62 @@ export function BeepStats({ beeps }: { beeps: Beep[] }) {
 
 	return (
 		<div className="grid grid-cols-3 gap-3">
-			<StatCard label="Active" value={stats.active} />
-			<StatCard label="Due today" value={stats.dueToday} />
-			<StatCard label="Firing" value={stats.firing} />
+			<Card
+				size="sm"
+				className="relative overflow-hidden bg-card/60 transition-colors hover:bg-card"
+			>
+				<CardContent className="flex items-center justify-between p-3.5 sm:p-4">
+					<div className="flex flex-col gap-0.5">
+						<span className="text-xs font-medium text-muted-foreground">
+							Active
+						</span>
+						<span className="font-heading text-xl font-bold tabular-nums tracking-tight sm:text-2xl">
+							{stats.active}
+						</span>
+					</div>
+					<div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary sm:size-9">
+						<Activity className="size-4" />
+					</div>
+				</CardContent>
+			</Card>
+
+			<Card
+				size="sm"
+				className="relative overflow-hidden bg-card/60 transition-colors hover:bg-card"
+			>
+				<CardContent className="flex items-center justify-between p-3.5 sm:p-4">
+					<div className="flex flex-col gap-0.5">
+						<span className="text-xs font-medium text-muted-foreground">
+							Due today
+						</span>
+						<span className="font-heading text-xl font-bold tabular-nums tracking-tight sm:text-2xl">
+							{stats.dueToday}
+						</span>
+					</div>
+					<div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 sm:size-9">
+						<Calendar className="size-4" />
+					</div>
+				</CardContent>
+			</Card>
+
+			<Card
+				size="sm"
+				className="relative overflow-hidden bg-card/60 transition-colors hover:bg-card"
+			>
+				<CardContent className="flex items-center justify-between p-3.5 sm:p-4">
+					<div className="flex flex-col gap-0.5">
+						<span className="text-xs font-medium text-muted-foreground">
+							Firing
+						</span>
+						<span className="font-heading text-xl font-bold tabular-nums tracking-tight sm:text-2xl">
+							{stats.firing}
+						</span>
+					</div>
+					<div className="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 sm:size-9">
+						<Zap className="size-4" />
+					</div>
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

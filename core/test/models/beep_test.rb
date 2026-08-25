@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BeepTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @account = accounts(:john_account)
   end
@@ -30,12 +32,18 @@ class BeepTest < ActiveSupport::TestCase
     assert beep.active?
   end
 
-  test "once beep requires title and run_at" do
+  test "once beep requires title" do
     beep = Beep.new(account: @account, kind: :once)
 
     assert_not beep.valid?
     assert beep.errors[:title].any?
-    assert beep.errors[:run_at].any?
+  end
+
+  test "once beep defaults run_at and next_run_at to current time on create when omitted" do
+    beep = Beep.create!(account: @account, kind: :once, title: "Call mom")
+
+    assert_not_nil beep.run_at
+    assert_equal beep.run_at, beep.next_run_at
   end
 
   test "once beep allows a blank body" do
@@ -140,26 +148,54 @@ class BeepTest < ActiveSupport::TestCase
     assert beep.errors[:cron].any?
   end
 
-  test "once beep rejects a run_at in the past" do
-    beep = Beep.new(
-      account: @account,
-      kind: :once,
-      title: "Call mom",
-      run_at: 1.hour.ago
-    )
+  test "once beep created with immediate/past run_at triggers delivery automatically" do
+    assert_enqueued_with(job: DeliverBeepRunJob) do
+      beep = Beep.create!(
+        account: @account,
+        kind: :once,
+        title: "Immediate Beep"
+      )
 
-    assert_not beep.valid?
-    assert beep.errors[:run_at].any?
+      assert beep.firing?
+      run = beep.runs.sole
+      assert run.pending?
+    end
   end
 
-  test "once beep accepts a run_at in the future" do
-    beep = Beep.new(
+  test "trigger_run! sets status to firing and creates a pending run" do
+    beep = Beep.create!(
       account: @account,
       kind: :once,
-      title: "Call mom",
+      title: "Immediate Beep",
       run_at: 1.hour.from_now
     )
 
-    assert beep.valid?
+    run = beep.trigger_run!
+    beep.reload
+
+    assert beep.firing?
+    assert_nil beep.next_run_at
+    assert run.pending?
+    assert_equal beep.id, run.beep_id
+  end
+
+  test "trigger_run! supports recurring beeps without validation errors" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :recurring,
+      title: "Standup",
+      cron: "0 9 * * *"
+    )
+
+    run = beep.trigger_run!
+    beep.reload
+
+    assert beep.firing?
+    assert_nil beep.next_run_at
+    assert_nil beep.run_at
+    assert run.pending?
+
+    beep.finish_firing(last_run_at: run.scheduled_for)
+    assert beep.reload.active?
   end
 end

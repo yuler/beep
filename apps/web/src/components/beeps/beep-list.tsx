@@ -1,28 +1,27 @@
 import { Link } from "@tanstack/react-router";
+import {
+	AlertCircle,
+	ArrowUpRight,
+	CheckCircle2,
+	Clock,
+	Flame,
+	PauseCircle,
+	Repeat,
+	Search,
+	Sparkles,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
-import { BeepRuns } from "@/components/beeps/beep-runs";
 import { Badge } from "@/components/ui/badge";
-import {
-	Card,
-	CardAction,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import type { Beep } from "@/lib/api/beeps";
 import { beepRunAt } from "@/lib/beep-stats";
+import { cn } from "@/lib/utils";
 
-const STATUS_VARIANT: Record<
-	string,
-	"default" | "secondary" | "outline" | "destructive"
-> = {
-	active: "default",
-	paused: "secondary",
-	completed: "outline",
-	cancelled: "destructive",
-	firing: "default",
-};
+type FilterStatus = "all" | "active" | "firing" | "recurring" | "completed";
 
 export function BeepList({
 	beeps,
@@ -33,19 +32,231 @@ export function BeepList({
 	slug: string;
 	variant?: "compact" | "full";
 }) {
+	const [search, setSearch] = useState("");
+	const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
+
+	const filteredBeeps = useMemo(() => {
+		return beeps.filter((beep) => {
+			// Status / Kind filter
+			if (statusFilter === "active" && beep.status !== "active") return false;
+			if (statusFilter === "firing" && beep.status !== "firing") return false;
+			if (statusFilter === "completed" && beep.status !== "completed")
+				return false;
+			if (statusFilter === "recurring" && beep.kind !== "recurring")
+				return false;
+
+			// Text search
+			if (search.trim()) {
+				const query = search.toLowerCase();
+				const matchTitle = beep.title.toLowerCase().includes(query);
+				const matchBody = beep.body?.toLowerCase().includes(query);
+				if (!matchTitle && !matchBody) return false;
+			}
+
+			return true;
+		});
+	}, [beeps, statusFilter, search]);
+
+	const counts = useMemo(() => {
+		return {
+			all: beeps.length,
+			active: beeps.filter((b) => b.status === "active").length,
+			firing: beeps.filter((b) => b.status === "firing").length,
+			recurring: beeps.filter((b) => b.kind === "recurring").length,
+			completed: beeps.filter((b) => b.status === "completed").length,
+		};
+	}, [beeps]);
+
 	if (beeps.length === 0) {
-		return <p className="text-sm text-muted-foreground">No beeps to show.</p>;
+		return (
+			<Card className="flex flex-col items-center justify-center p-8 text-center">
+				<div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+					<Sparkles className="size-6" />
+				</div>
+				<h3 className="mt-3 font-heading text-base font-semibold">
+					No beeps yet
+				</h3>
+				<p className="mt-1 max-w-sm text-sm text-muted-foreground">
+					Create your first reminder above using the prompt assistant or manual
+					form.
+				</p>
+			</Card>
+		);
 	}
 
 	return (
-		<ul className="flex flex-col gap-3">
-			{beeps.map((beep) => (
-				<li key={beep.id}>
-					<BeepListCard beep={beep} slug={slug} variant={variant} />
-				</li>
-			))}
-		</ul>
+		<div className="flex flex-col gap-4">
+			{variant === "full" ? (
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					{/* Status filter tabs */}
+					<div className="flex flex-nowrap items-center gap-1 overflow-x-auto rounded-lg border border-input bg-muted/30 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+						{(
+							[
+								{ id: "all", label: "All", count: counts.all },
+								{ id: "active", label: "Active", count: counts.active },
+								{ id: "firing", label: "Firing", count: counts.firing },
+								{
+									id: "recurring",
+									label: "Recurring",
+									count: counts.recurring,
+								},
+								{
+									id: "completed",
+									label: "Completed",
+									count: counts.completed,
+								},
+							] as const
+						).map((tab) => (
+							<Button
+								key={tab.id}
+								type="button"
+								size="xs"
+								variant={statusFilter === tab.id ? "default" : "ghost"}
+								className={cn(
+									"h-7 shrink-0 text-xs font-medium whitespace-nowrap transition-colors",
+									statusFilter === tab.id
+										? "bg-background text-foreground shadow-sm dark:bg-card dark:text-foreground"
+										: "text-muted-foreground hover:text-foreground",
+								)}
+								onClick={() => setStatusFilter(tab.id)}
+							>
+								{tab.label}
+								<span
+									className={cn(
+										"ml-1 rounded-full px-1.5 py-0.2 text-[10px] tabular-nums",
+										statusFilter === tab.id
+											? "bg-primary/10 text-primary dark:bg-primary/20"
+											: "bg-muted text-muted-foreground",
+									)}
+								>
+									{tab.count}
+								</span>
+							</Button>
+						))}
+					</div>
+
+					{/* Search input */}
+					<div className="relative w-full sm:w-64">
+						<Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+						<Input
+							value={search}
+							onChange={(event) => setSearch(event.target.value)}
+							placeholder="Search beeps…"
+							className="h-8.5 pl-8 text-xs"
+						/>
+					</div>
+				</div>
+			) : null}
+
+			{filteredBeeps.length === 0 ? (
+				<Card className="flex flex-col items-center justify-center p-8 text-center">
+					<p className="text-sm font-medium text-muted-foreground">
+						No beeps match your filter.
+					</p>
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						className="mt-2"
+						onClick={() => {
+							setSearch("");
+							setStatusFilter("all");
+						}}
+					>
+						Clear filters
+					</Button>
+				</Card>
+			) : (
+				<ul className="flex flex-col gap-3">
+					{filteredBeeps.map((beep) => (
+						<li key={beep.id}>
+							<BeepListCard beep={beep} slug={slug} variant={variant} />
+						</li>
+					))}
+				</ul>
+			)}
+		</div>
 	);
+}
+
+function StatusIndicator({ status }: { status: string }) {
+	switch (status) {
+		case "active":
+			return (
+				<Badge
+					variant="outline"
+					className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+				>
+					<span className="size-1.5 rounded-full bg-emerald-500" />
+					Active
+				</Badge>
+			);
+		case "firing":
+			return (
+				<Badge
+					variant="outline"
+					className="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
+				>
+					<Flame className="size-3 animate-pulse text-violet-500" />
+					Firing
+				</Badge>
+			);
+		case "completed":
+			return (
+				<Badge
+					variant="outline"
+					className="border-border bg-muted/40 text-muted-foreground"
+				>
+					<CheckCircle2 className="size-3 text-muted-foreground" />
+					Completed
+				</Badge>
+			);
+		case "paused":
+			return (
+				<Badge
+					variant="outline"
+					className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+				>
+					<PauseCircle className="size-3 text-amber-500" />
+					Paused
+				</Badge>
+			);
+		case "cancelled":
+			return (
+				<Badge
+					variant="outline"
+					className="border-destructive/30 bg-destructive/10 text-destructive"
+				>
+					<AlertCircle className="size-3 text-destructive" />
+					Cancelled
+				</Badge>
+			);
+		default:
+			return <Badge variant="secondary">{status}</Badge>;
+	}
+}
+
+function formatSchedule(beep: Beep) {
+	if (beep.kind === "recurring") {
+		return {
+			label: `Cron: ${beep.cron ?? "Scheduled"}`,
+			isRecurring: true,
+		};
+	}
+
+	const nextRun = beepRunAt(beep);
+	if (!nextRun) return null;
+
+	const date = new Date(nextRun);
+	return {
+		label: date.toLocaleString(undefined, {
+			month: "short",
+			day: "numeric",
+			hour: "numeric",
+			minute: "2-digit",
+		}),
+		isRecurring: false,
+	};
 }
 
 function BeepListCard({
@@ -57,45 +268,100 @@ function BeepListCard({
 	slug: string;
 	variant: "compact" | "full";
 }) {
-	const nextRunAt = beepRunAt(beep);
+	const schedule = formatSchedule(beep);
+	const lastRun = beep.runs[beep.runs.length - 1];
 
 	return (
-		<Card size="sm">
+		<Card
+			size="sm"
+			className="group relative overflow-hidden transition-all duration-150 hover:border-primary/40 hover:shadow-xs"
+		>
 			<Link
 				to="/$account_slug/beeps/$beepId"
 				params={{
 					account_slug: slug,
 					beepId: beep.id,
 				}}
-				className="block rounded-xl transition-colors hover:bg-muted/30"
+				className="block p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				<CardHeader>
-					<CardTitle className="truncate">{beep.title}</CardTitle>
-					<CardAction>
-						<Badge variant={STATUS_VARIANT[beep.status] ?? "secondary"}>
-							{beep.status}
+				{/* Top metadata row */}
+				<div className="flex flex-wrap items-center justify-between gap-2">
+					<div className="flex flex-wrap items-center gap-1.5">
+						<StatusIndicator status={beep.status} />
+						<Badge
+							variant="secondary"
+							className="gap-1 text-[11px] font-normal"
+						>
+							{beep.kind === "recurring" ? (
+								<>
+									<Repeat className="size-2.5" />
+									Recurring
+								</>
+							) : (
+								<>
+									<Clock className="size-2.5" />
+									Once
+								</>
+							)}
 						</Badge>
-					</CardAction>
-				</CardHeader>
-				<CardContent className="flex flex-wrap gap-x-4 gap-y-1 pt-0 text-xs text-muted-foreground">
-					{nextRunAt ? (
-						<span className="tabular-nums">
-							Next: {new Date(nextRunAt).toLocaleString()}
-						</span>
+					</div>
+
+					{schedule ? (
+						<div className="flex items-center gap-1 text-xs text-muted-foreground">
+							<span className="tabular-nums font-medium text-foreground">
+								{schedule.label}
+							</span>
+							<span className="text-[11px]">({beep.timezone})</span>
+						</div>
 					) : null}
-					<span>{beep.timezone}</span>
-				</CardContent>
+				</div>
+
+				{/* Title and details */}
+				<div className="mt-2.5 flex items-start justify-between gap-3">
+					<h3 className="font-heading text-base font-semibold text-foreground transition-colors group-hover:text-primary">
+						{beep.title}
+					</h3>
+					<ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-primary" />
+				</div>
+
+				{/* Markdown Preview if body present */}
+				{variant === "full" && beep.body ? (
+					<div className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+						<BeepMarkdown source={beep.body} />
+					</div>
+				) : null}
+
+				{/* Bottom runs summary */}
+				{variant === "full" ? (
+					<div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2.5 text-xs text-muted-foreground">
+						<div className="flex items-center gap-2">
+							<span className="tabular-nums">
+								{beep.runs.length} {beep.runs.length === 1 ? "run" : "runs"}
+							</span>
+							{lastRun ? (
+								<span className="inline-flex items-center gap-1 text-[11px]">
+									· Last:{" "}
+									<span
+										className={cn(
+											"font-medium",
+											lastRun.status === "succeeded" &&
+												"text-emerald-600 dark:text-emerald-400",
+											lastRun.status === "failed" && "text-destructive",
+											lastRun.status === "running" && "text-primary",
+										)}
+									>
+										{lastRun.status}
+									</span>
+								</span>
+							) : null}
+						</div>
+
+						<span className="text-[11px] font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+							View details →
+						</span>
+					</div>
+				) : null}
 			</Link>
-			{variant === "full" && beep.body ? (
-				<CardContent>
-					<BeepMarkdown source={beep.body} />
-				</CardContent>
-			) : null}
-			{variant === "full" ? (
-				<CardContent>
-					<BeepRuns runs={beep.runs} />
-				</CardContent>
-			) : null}
 		</Card>
 	);
 }
