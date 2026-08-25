@@ -3,12 +3,12 @@ class Api::V1::Beeps::PausesController < Api::V1::BaseController
 
   def create
     @beep.pause!
-    render "api/v1/beeps/show"
+    render partial: "api/v1/beeps/beep", locals: { beep: @beep }
   end
 
   def destroy
     @beep.resume!
-    render "api/v1/beeps/show"
+    render partial: "api/v1/beeps/beep", locals: { beep: @beep }
   end
 
   private
