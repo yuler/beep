@@ -87,14 +87,17 @@ export function deleteBeep(slug: string, beepId: string) {
 
 export type BeepProposal = {
 	intent: "create" | "other";
+	kind?: "once" | "recurring";
 	title: string | null;
 	body: string | null;
 	run_at: string | null;
+	cron: string | null;
 	timezone: string;
 	errors: {
 		title?: string;
 		body?: string;
 		run_at?: string;
+		cron?: string;
 	};
 	confirmable: boolean;
 	message: string | null;

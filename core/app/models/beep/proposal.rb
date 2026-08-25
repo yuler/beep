@@ -5,13 +5,15 @@ class Beep::Proposal
   class Error < StandardError; end
 
   class Result
-    attr_reader :intent, :title, :body, :run_at, :timezone, :errors, :message
+    attr_reader :intent, :kind, :title, :body, :run_at, :cron, :timezone, :errors, :message
 
-    def initialize(intent:, title:, body:, run_at:, timezone:, errors:, message:)
+    def initialize(intent:, kind: "once", title:, body:, run_at:, cron: nil, timezone:, errors:, message:)
       @intent = intent
+      @kind = kind
       @title = title
       @body = body
       @run_at = run_at
+      @cron = cron
       @timezone = timezone
       @errors = errors
       @message = message
@@ -68,18 +70,36 @@ class Beep::Proposal
 
     def build_result(payload)
       intent = INTENTS.include?(payload["intent"].to_s) ? payload["intent"].to_s : inferred_intent(payload)
+      raw_kind = payload["kind"].to_s.downcase
+      raw_cron = payload["cron"].to_s.strip.presence
+      kind = (raw_kind == "recurring" || raw_cron.present?) ? "recurring" : "once"
+
       title = truncate(payload["title"], Beep::TITLE_MAX_LENGTH)
       body = truncate(payload["body"], Beep::BODY_MAX_LENGTH)
-      run_at, run_at_error = parse_run_at(payload["run_at"])
       errors = {}
 
-      if intent == "create"
-        if title.blank?
-          errors["title"] = "can't be blank"
+      run_at = nil
+      cron = nil
+
+      if kind == "recurring"
+        cron = raw_cron
+        if cron.blank?
+          errors["cron"] = "can't be blank"
+        else
+          parsed_cron = Fugit.parse(cron) rescue nil
+          unless parsed_cron.is_a?(Fugit::Cron)
+            errors["cron"] = "is not a valid cron expression"
+          end
         end
+      else
+        run_at, run_at_error = parse_run_at(payload["run_at"])
         if run_at_error.present?
           errors["run_at"] = run_at_error
         end
+      end
+
+      if intent == "create" && title.blank?
+        errors["title"] = "can't be blank"
       end
 
       message = if intent == "other"
@@ -88,9 +108,11 @@ class Beep::Proposal
 
       Result.new(
         intent: intent,
+        kind: kind,
         title: title,
         body: body,
         run_at: run_at,
+        cron: cron,
         timezone: Beep::TIMEZONE,
         errors: errors,
         message: message
@@ -98,7 +120,7 @@ class Beep::Proposal
     end
 
     def inferred_intent(payload)
-      if payload["title"].present? || payload["run_at"].present?
+      if payload["title"].present? || payload["run_at"].present? || payload["cron"].present?
         "create"
       else
         "other"
@@ -136,13 +158,15 @@ class Beep::Proposal
         You extract a reminder from the user message.
         Timezone is #{Beep::TIMEZONE}. Current datetime is #{now.iso8601}.
         Reply with JSON only:
-        {"intent":"create"|"other","title":string|null,"body":string|null,"run_at":string|null}
+        {"intent":"create"|"other","kind":"once"|"recurring","title":string|null,"body":string|null,"run_at":string|null,"cron":string|null}
         intent is "create" when the user wants a reminder or alert, otherwise "other".
+        kind: "recurring" when the reminder repeats on a schedule or interval, otherwise "once".
         title: short title, max #{Beep::TITLE_MAX_LENGTH} characters.
         body: optional extra detail as markdown, max #{Beep::BODY_MAX_LENGTH} characters.
-        run_at: future datetime as UTC ISO8601 if a specific one-time reminder time is mentioned, otherwise null. Convert relative times using the timezone.
+        run_at: future datetime as UTC ISO8601 if kind is "once" and a specific time is mentioned, otherwise null. Convert relative times using the timezone.
+        cron: 5-part standard cron string ("min hour day month weekday") if kind is "recurring" (e.g., "*/5 14-20 * * *" for every 5 min from 14:00 to 20:59, "0 9 * * *" for daily 9am, "0 9 * * 1-5" for weekdays 9am), otherwise null.
         Do not invent a reminder when the message is not a create request.
-        Only one reminder. If the user mentions recurring schedules or no specific time, set run_at to null.
+        Only one reminder.
       PROMPT
     end
 end

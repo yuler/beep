@@ -40,6 +40,7 @@ class Beep::ProposalTest < ActiveSupport::TestCase
   test "create handles prompt without run_at as confirmable immediate proposal" do
     chat = fake_chat({
       "intent" => "create",
+      "kind" => "once",
       "title" => "Buy groceries",
       "body" => nil,
       "run_at" => nil
@@ -48,8 +49,30 @@ class Beep::ProposalTest < ActiveSupport::TestCase
     result = Beep::Proposal.create("提醒我买菜", chat: chat)
 
     assert_equal "create", result.intent
+    assert_equal "once", result.kind
     assert_equal "Buy groceries", result.title
     assert_nil result.run_at
+    assert_nil result.cron
+    assert_equal({}, result.errors)
+    assert result.confirmable?
+  end
+
+  test "create handles recurring cron schedule proposals" do
+    chat = fake_chat({
+      "intent" => "create",
+      "kind" => "recurring",
+      "title" => "看一下手机是否有电",
+      "body" => nil,
+      "cron" => "*/5 14-20 * * *"
+    }.to_json)
+
+    result = Beep::Proposal.create("每天下午两点到八点，每 5 分钟提醒我一下，看一下手机是否有电", chat: chat)
+
+    assert_equal "create", result.intent
+    assert_equal "recurring", result.kind
+    assert_equal "看一下手机是否有电", result.title
+    assert_nil result.run_at
+    assert_equal "*/5 14-20 * * *", result.cron
     assert_equal({}, result.errors)
     assert result.confirmable?
   end
