@@ -74,8 +74,8 @@ export function pauseBeep(slug: string, beepId: string) {
 }
 
 export function resumeBeep(slug: string, beepId: string) {
-	return apiFetch<Beep>(`/api/v1/${slug}/beeps/${beepId}/resume`, {
-		method: "POST",
+	return apiFetch<Beep>(`/api/v1/${slug}/beeps/${beepId}/pause`, {
+		method: "DELETE",
 	});
 }
 

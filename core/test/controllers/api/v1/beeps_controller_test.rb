@@ -235,7 +235,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil body["next_run_at"]
   end
 
-  test "pause and resume updates beep status" do
+  test "pause and resume updates beep status via pauses resource" do
     beep = @account.beeps.create!(kind: :recurring, title: "Standup", cron: "0 9 * * *")
 
     post "/api/v1/#{@account.slug}/beeps/#{beep.id}/pause",
@@ -246,7 +246,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "paused", response.parsed_body["status"]
     assert beep.reload.paused?
 
-    post "/api/v1/#{@account.slug}/beeps/#{beep.id}/resume",
+    delete "/api/v1/#{@account.slug}/beeps/#{beep.id}/pause",
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 

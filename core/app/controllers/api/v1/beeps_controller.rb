@@ -38,18 +38,6 @@ class Api::V1::BeepsController < Api::V1::BaseController
     end
   end
 
-  def pause
-    @beep = Current.account.beeps.find(params[:id])
-    @beep.pause!
-    render :show
-  end
-
-  def resume
-    @beep = Current.account.beeps.find(params[:id])
-    @beep.resume!
-    render :show
-  end
-
   def destroy
     Current.account.beeps.find(params[:id]).destroy!
     head :no_content
