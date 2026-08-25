@@ -459,8 +459,8 @@ export function BeepQuickCreate({
 										<HelpCircle className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent side="top" className="max-w-xs text-xs">
-								5-part standard Cron expression: minute hour day month
-								day-of-week. Evaluated in Asia/Shanghai.
+										5-part standard Cron expression: minute hour day month
+										day-of-week. Evaluated in Asia/Shanghai.
 									</TooltipContent>
 								</Tooltip>
 							</div>
@@ -527,11 +527,11 @@ export function BeepQuickCreate({
 						disabled={
 							isPending ||
 							title.trim().length === 0 ||
-					(kind === "once" &&
-						!sendNow &&
-						(runAt.getTime() <= Date.now() + 60 * 1000 ||
-							Boolean(fieldErrors.run_at))) ||
-					(kind === "recurring" && Boolean(fieldErrors.cron))
+							(kind === "once" &&
+								!sendNow &&
+								(runAt.getTime() <= Date.now() + 60 * 1000 ||
+									Boolean(fieldErrors.run_at))) ||
+							(kind === "recurring" && Boolean(fieldErrors.cron))
 						}
 						className="w-fit"
 					>
