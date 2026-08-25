@@ -59,14 +59,24 @@ class Beep < ApplicationRecord
   end
 
   def pause!
-    update!(status: :paused)
+    if active? || firing?
+      update!(status: :paused)
+    else
+      errors.add(:status, "cannot be paused")
+      raise ActiveRecord::RecordInvalid, self
+    end
   end
 
   def resume!
-    if recurring?
-      update!(status: :active, next_run_at: calculate_next_run_at)
+    if paused?
+      if recurring?
+        update!(status: :active, next_run_at: calculate_next_run_at)
+      else
+        update!(status: :active)
+      end
     else
-      update!(status: :active)
+      errors.add(:status, "cannot be resumed")
+      raise ActiveRecord::RecordInvalid, self
     end
   end
 
@@ -105,24 +115,33 @@ class Beep < ApplicationRecord
   end
 
   def finish_firing(last_run_at:)
-    if once?
-      update!(status: :completed, next_run_at: nil, last_run_at: last_run_at)
+    reload
+
+    next_run_at = once? ? nil : calculate_next_run_at(from: Time.current)
+    if paused?
+      attributes = { last_run_at: last_run_at }
+      attributes[:next_run_at] = next_run_at if recurring?
+      update!(attributes)
+    elsif firing?
+      if once?
+        update!(status: :completed, next_run_at: nil, last_run_at: last_run_at)
+      else
+        update!(status: :active, next_run_at: next_run_at, last_run_at: last_run_at)
+      end
     else
-      update!(status: :active, next_run_at: calculate_next_run_at(from: last_run_at || Time.current), last_run_at: last_run_at)
+      update!(last_run_at: last_run_at)
     end
   end
 
   def calculate_next_run_at(from: Time.current)
-    return nil unless recurring? && cron.present?
-
-    tz = timezone.presence || TIMEZONE
-    parsed = Fugit.parse("#{cron} #{tz}") || Fugit.parse(cron)
-    return nil unless parsed
-
-    next_time = parsed.next_time(from)
-    next_time ? Time.at(next_time.to_i).utc : nil
-  rescue StandardError
-    nil
+    if recurring? && cron.present?
+      tz = timezone.presence || TIMEZONE
+      parsed = Fugit.parse("#{cron} #{tz}")
+      if parsed
+        next_time = parsed.next_time(from)
+        next_time ? Time.at(next_time.to_i).utc : nil
+      end
+    end
   end
 
   def web_url

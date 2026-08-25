@@ -273,7 +273,7 @@ export function CreateBeepForm({
 							</TooltipTrigger>
 							<TooltipContent side="top" className="max-w-xs text-xs">
 								5-part standard Cron expression: minute hour day month
-								day-of-week. Evaluated in your account timezone.
+								day-of-week. Evaluated in Asia/Shanghai.
 							</TooltipContent>
 						</Tooltip>
 					</div>

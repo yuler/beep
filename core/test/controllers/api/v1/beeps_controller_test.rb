@@ -254,4 +254,17 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "active", response.parsed_body["status"]
     assert beep.reload.active?
   end
+
+  test "pause rejects a completed beep" do
+    beep = @account.beeps.create!(kind: :once, title: "Done", run_at: @run_at)
+    beep.update_columns(status: "completed", next_run_at: nil)
+
+    post "/api/v1/#{@account.slug}/beeps/#{beep.id}/pause",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
+    assert beep.reload.completed?
+  end
 end

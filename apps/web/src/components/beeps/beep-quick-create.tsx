@@ -62,6 +62,7 @@ export function BeepQuickCreate({
 	const [fieldErrors, setFieldErrors] = useState<{
 		title?: string;
 		run_at?: string;
+		cron?: string;
 	}>({});
 	const [proposeMessage, setProposeMessage] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -93,9 +94,7 @@ export function BeepQuickCreate({
 
 			if (proposal.kind === "recurring" || proposal.cron) {
 				setKind("recurring");
-				if (proposal.cron) {
-					setCron(proposal.cron);
-				}
+				setCron(proposal.cron ?? "");
 			} else if (nextRunAt) {
 				setRunAt(nextRunAt);
 				setKind("once");
@@ -108,6 +107,7 @@ export function BeepQuickCreate({
 
 			setFieldErrors({
 				title: proposal.errors.title,
+				cron: proposal.errors.cron,
 				run_at:
 					proposal.errors.run_at ??
 					(proposal.kind !== "recurring" &&
@@ -459,8 +459,8 @@ export function BeepQuickCreate({
 										<HelpCircle className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent side="top" className="max-w-xs text-xs">
-										5-part standard Cron expression: minute hour day month
-										day-of-week. Evaluated in your account timezone.
+								5-part standard Cron expression: minute hour day month
+								day-of-week. Evaluated in Asia/Shanghai.
 									</TooltipContent>
 								</Tooltip>
 							</div>
@@ -492,17 +492,27 @@ export function BeepQuickCreate({
 								name="cron"
 								required
 								value={cron}
-								onChange={(event) => setCron(event.target.value)}
+								onChange={(event) => {
+									setCron(event.target.value);
+									setFieldErrors((curr) => ({ ...curr, cron: undefined }));
+								}}
 								placeholder="0 9 * * *"
 								disabled={isPending}
 								className="font-mono text-sm"
+								aria-invalid={Boolean(fieldErrors.cron)}
 							/>
-							<p className="text-xs text-muted-foreground">
-								Format:{" "}
-								<code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
-									min hour day month weekday
-								</code>
-							</p>
+							{fieldErrors.cron ? (
+								<p className="text-xs text-destructive" role="alert">
+									{fieldErrors.cron}
+								</p>
+							) : (
+								<p className="text-xs text-muted-foreground">
+									Format:{" "}
+									<code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+										min hour day month weekday
+									</code>
+								</p>
+							)}
 						</div>
 					) : null}
 
@@ -517,10 +527,11 @@ export function BeepQuickCreate({
 						disabled={
 							isPending ||
 							title.trim().length === 0 ||
-							(kind === "once" &&
-								!sendNow &&
-								(runAt.getTime() <= Date.now() + 60 * 1000 ||
-									Boolean(fieldErrors.run_at)))
+					(kind === "once" &&
+						!sendNow &&
+						(runAt.getTime() <= Date.now() + 60 * 1000 ||
+							Boolean(fieldErrors.run_at))) ||
+					(kind === "recurring" && Boolean(fieldErrors.cron))
 						}
 						className="w-fit"
 					>
