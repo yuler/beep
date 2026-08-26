@@ -115,9 +115,9 @@ class PluginTest < ActiveSupport::TestCase
     assert plugin.errors[:manifest].present?
   end
 
-  test "seed_official_plugins! is idempotent" do
+  test "seed_official_plugins is idempotent" do
     assert_difference -> { Plugin.official.count }, 3 do
-      Plugin.seed_official_plugins!
+      Plugin.seed_official_plugins
     end
 
     site_uptime = Plugin.official.find_by(slug: "site-uptime")
@@ -132,7 +132,7 @@ class PluginTest < ActiveSupport::TestCase
 
     # Running again should not create duplicate rows
     assert_no_difference -> { Plugin.official.count } do
-      Plugin.seed_official_plugins!
+      Plugin.seed_official_plugins
     end
   end
 end

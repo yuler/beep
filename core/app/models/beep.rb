@@ -181,6 +181,10 @@ class Beep < ApplicationRecord
     cfg
   end
 
+  def record_ping
+    update_columns(last_ping_at: Time.current, updated_at: Time.current)
+  end
+
   def expired_plugin_run?(scheduled_for)
     return false unless plugin?
 

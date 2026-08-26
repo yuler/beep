@@ -1,12 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import {
 	Activity,
-	AlertCircle,
 	ArrowUpRight,
-	CheckCircle2,
 	Clock,
-	Flame,
-	PauseCircle,
 	Repeat,
 	Search,
 	ShieldAlert,
@@ -16,6 +12,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
+import { BEEP_STATUS_META } from "@/components/beeps/beep-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -196,43 +193,19 @@ export function BeepList({
 }
 
 function StatusIndicator({ status }: { status: Beep["status"] }) {
-	switch (status) {
-		case "active":
-			return (
-				<span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-					<CheckCircle2 className="size-3" />
-					Active
-				</span>
-			);
-		case "firing":
-			return (
-				<span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-					<Flame className="size-3 animate-pulse" />
-					Firing
-				</span>
-			);
-		case "paused":
-			return (
-				<span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-					<PauseCircle className="size-3" />
-					Paused
-				</span>
-			);
-		case "completed":
-			return (
-				<span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-					<CheckCircle2 className="size-3" />
-					Completed
-				</span>
-			);
-		case "cancelled":
-			return (
-				<span className="inline-flex items-center gap-1 text-[11px] font-medium text-destructive">
-					<AlertCircle className="size-3" />
-					Cancelled
-				</span>
-			);
-	}
+	const meta = BEEP_STATUS_META[status];
+	const Icon = meta.icon;
+	return (
+		<span
+			className={cn(
+				"inline-flex items-center gap-1 text-[11px] font-medium",
+				meta.colorClass,
+			)}
+		>
+			<Icon className={cn("size-3", status === "firing" && "animate-pulse")} />
+			{meta.label}
+		</span>
+	);
 }
 
 function formatSchedule(beep: Beep) {

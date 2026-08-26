@@ -2,7 +2,7 @@ require "test_helper"
 
 class Api::V1::PluginsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    Plugin.seed_official_plugins!
+    Plugin.seed_official_plugins
   end
 
   test "index returns list of official plugins" do

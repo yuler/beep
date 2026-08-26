@@ -27,7 +27,7 @@ else
     owner_name: "Yuler Doe"
   )
 
-  Plugin.seed_official_plugins!
+  Plugin.seed_official_plugins
 
   puts "OK: Seeded yuler identity, Yuler Company account, and official plugins (development only)."
 end

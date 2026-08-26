@@ -3,13 +3,35 @@ class Plugin < ApplicationRecord
 
   belongs_to :account, optional: true
 
-  scope :official, -> { where(account_id: nil) }
-  scope :custom, -> { where.not(account_id: nil) }
-
   validates :slug, presence: true, format: { with: /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/, message: "must be lowercase kebab-case" }
   validates :version, presence: true
   validates :slug, uniqueness: { scope: :account_id, message: "has already been taken for this account" }
   validate :validate_manifest_contract
+
+  scope :official, -> { where(account_id: nil) }
+
+  class << self
+    def official_plugins_dir
+      Rails.root.join("../apps/plugins").cleanpath
+    end
+
+    def seed_official_plugins
+      return unless Dir.exist?(official_plugins_dir)
+
+      manifest_files = Dir.glob(official_plugins_dir.join("*/manifest.json"))
+      manifest_files.each do |file_path|
+        raw_json = File.read(file_path)
+        manifest_data = JSON.parse(raw_json)
+        slug = manifest_data["slug"]
+        version = manifest_data["version"]
+
+        plugin = official.find_or_initialize_by(slug: slug)
+        plugin.version = version
+        plugin.manifest = manifest_data
+        plugin.save!
+      end
+    end
+  end
 
   def official?
     account_id.nil?
@@ -73,29 +95,6 @@ class Plugin < ApplicationRecord
       title: "Check execution failed",
       message: e.message
     )
-  end
-
-  class << self
-    def official_plugins_dir
-      Rails.root.join("../apps/plugins").cleanpath
-    end
-
-    def seed_official_plugins!
-      return unless Dir.exist?(official_plugins_dir)
-
-      manifest_files = Dir.glob(official_plugins_dir.join("*/manifest.json"))
-      manifest_files.each do |file_path|
-        raw_json = File.read(file_path)
-        manifest_data = JSON.parse(raw_json)
-        slug = manifest_data["slug"]
-        version = manifest_data["version"]
-
-        plugin = official.find_or_initialize_by(slug: slug)
-        plugin.version = version
-        plugin.manifest = manifest_data
-        plugin.save!
-      end
-    end
   end
 
   private
