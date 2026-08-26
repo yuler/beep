@@ -78,4 +78,3 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "manual", user.timezone_source
   end
 end
-
