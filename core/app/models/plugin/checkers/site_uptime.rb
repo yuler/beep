@@ -83,14 +83,14 @@ class Plugin::Checkers::SiteUptime < Plugin::Checkers::Base
       raise SsrfProtection::BlockedAddressError, "Host #{uri.host} resolved to a private/disallowed IP address or cannot be resolved"
     end
 
-    http = Net::HTTP.new(resolved_ip, uri.port)
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.ipaddr = resolved_ip
     http.open_timeout = timeout
     http.read_timeout = timeout
 
     if uri.scheme == "https"
       http.use_ssl = true
       http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-      http.hostname = uri.host # Pin SNI and cert verification to original hostname
     end
 
     request = Net::HTTP::Get.new(uri.request_uri)
