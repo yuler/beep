@@ -19,7 +19,7 @@ class Api::V1::BeepProposalsController < Api::V1::BaseController
 
   private
     def propose(prompt)
-      @proposal = Beep::Proposal.create(prompt)
+      @proposal = Beep::Proposal.create(prompt, timezone: proposal_timezone)
       render :create, status: :created
     rescue Beep::Proposal::Error, JSON::ParserError
       render_json_error(
@@ -49,5 +49,9 @@ class Api::V1::BeepProposalsController < Api::V1::BaseController
 
     def rate_limit_exceeded
       render_json_too_many_requests
+    end
+
+    def proposal_timezone
+      IanaTimezone.resolve(Current.user.timezone, params[:timezone])
     end
 end

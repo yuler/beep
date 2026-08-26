@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { AuthPending } from "@/components/layout";
 import { rememberLastAccount } from "@/lib/api/session";
+import { detectAccountTimezone } from "@/lib/api/settings";
 import { requireSession } from "@/lib/auth/guards";
 import { isAccountSlug } from "@/lib/auth/slugs";
 
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/$account_slug")({
 		if (!account) {
 			throw notFound();
 		}
+
 		return { me, account };
 	},
 	component: AccountLayout,
@@ -34,6 +36,9 @@ function AccountLayout() {
 	useEffect(() => {
 		void rememberLastAccount(account.slug).catch(() => {
 			// Picker hint is best-effort; ignore network failures.
+		});
+		void detectAccountTimezone(account.slug).catch(() => {
+			// Detection is best-effort; create still sends the browser zone.
 		});
 	}, [account.slug]);
 

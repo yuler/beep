@@ -53,6 +53,7 @@ export function createBeep(
 		kind?: "once" | "recurring";
 		run_at?: string | null;
 		cron?: string | null;
+		timezone?: string;
 	},
 ) {
 	return apiFetch<Beep>(`/api/v1/${slug}/beeps`, {
@@ -103,9 +104,13 @@ export type BeepProposal = {
 	message: string | null;
 };
 
-export function createBeepProposal(slug: string, prompt: string) {
+export function createBeepProposal(
+	slug: string,
+	prompt: string,
+	timezone?: string,
+) {
 	return apiFetch<BeepProposal>(`/api/v1/${slug}/beep_proposals`, {
 		method: "POST",
-		body: { prompt },
+		body: { prompt, timezone },
 	});
 }

@@ -39,6 +39,29 @@ class BeepTest < ActiveSupport::TestCase
     assert beep.errors[:title].any?
   end
 
+  test "rejects an invalid timezone" do
+    beep = Beep.new(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      timezone: "Not/A_Zone"
+    )
+
+    assert_not beep.valid?
+    assert beep.errors[:timezone].any?
+  end
+
+  test "accepts a valid IANA timezone" do
+    beep = Beep.new(
+      account: @account,
+      kind: :once,
+      title: "Call mom",
+      timezone: "Asia/Shanghai"
+    )
+
+    assert beep.valid?
+  end
+
   test "once beep defaults run_at and next_run_at to current time on create when omitted" do
     beep = Beep.create!(account: @account, kind: :once, title: "Call mom")
 

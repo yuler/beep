@@ -25,6 +25,9 @@ importers:
       '@tanstack/react-start':
         specifier: ^1.168.42
         version: 1.168.42(crossws@0.4.10(srvx@0.11.22))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(rolldown@1.2.2)(vite@8.2.0(@types/node@22.20.1)(jiti@2.7.0))
+      '@vvo/tzdb':
+        specifier: ^6.198.0
+        version: 6.198.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -795,6 +798,9 @@ packages:
         optional: true
       babel-plugin-react-compiler:
         optional: true
+
+  '@vvo/tzdb@6.198.0':
+    resolution: {integrity: sha512-bNRWBhWYl0edVgyX6AYbhoCM2tk2lXJjGCyO2VDc2xn6Dw8dLd7WGj2DDXkVOkmOIQTNjEAcxrEpIzz5pWVwFg==}
 
   accepts@2.0.0:
     resolution: {integrity: sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==}
@@ -3415,6 +3421,8 @@ snapshots:
     dependencies:
       '@rolldown/pluginutils': 1.0.1
       vite: 8.2.0(@types/node@22.20.1)(jiti@2.7.0)
+
+  '@vvo/tzdb@6.198.0': {}
 
   accepts@2.0.0:
     dependencies:

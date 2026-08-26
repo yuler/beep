@@ -17,7 +17,7 @@ class Beep::ProposalTest < ActiveSupport::TestCase
     assert_equal "Call mom", result.title
     assert_equal "Bring milk", result.body
     assert_equal run_at, result.run_at
-    assert_equal Beep::TIMEZONE, result.timezone
+    assert_equal "UTC", result.timezone
     assert_equal({}, result.errors)
     assert_nil result.message
     assert result.confirmable?
@@ -96,6 +96,20 @@ class Beep::ProposalTest < ActiveSupport::TestCase
     assert_raises Beep::Proposal::Error do
       Beep::Proposal.create("明天九点", chat: fake_chat("not json"))
     end
+  end
+
+  test "create uses the given timezone in the result" do
+    run_at = 1.hour.from_now.change(usec: 0)
+    chat = fake_chat({
+      "intent" => "create",
+      "title" => "Call mom",
+      "body" => nil,
+      "run_at" => run_at.iso8601
+    }.to_json)
+
+    result = Beep::Proposal.create("明天打电话给妈", timezone: "America/New_York", chat: chat)
+
+    assert_equal "America/New_York", result.timezone
   end
 
   private

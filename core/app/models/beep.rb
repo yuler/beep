@@ -7,7 +7,6 @@ class Beep < ApplicationRecord
   EXPIRED_AFTER = 1.hour
   TITLE_MAX_LENGTH = 80
   BODY_MAX_LENGTH = 2000
-  TIMEZONE = "Asia/Shanghai"
 
   belongs_to :account
   has_many :runs, class_name: "BeepRun", dependent: :destroy
@@ -25,6 +24,7 @@ class Beep < ApplicationRecord
   validates :cron, presence: true, if: :recurring?
   validates :cron, absence: true, if: :once?
 
+  validate :timezone_is_iana
   validate :validate_cron_expression, if: :recurring?
 
   before_validation :sync_run_attributes
@@ -135,7 +135,7 @@ class Beep < ApplicationRecord
 
   def calculate_next_run_at(from: Time.current)
     if recurring? && cron.present?
-      tz = timezone.presence || TIMEZONE
+      tz = timezone.presence || IanaTimezone::DEFAULT
       parsed = Fugit.parse("#{cron} #{tz}")
       if parsed
         next_time = parsed.next_time(from)
@@ -206,6 +206,12 @@ class Beep < ApplicationRecord
       parsed = Fugit.parse(cron)
       if parsed.nil? || !parsed.is_a?(Fugit::Cron)
         errors.add(:cron, "is not a valid cron expression")
+      end
+    end
+
+    def timezone_is_iana
+      if timezone.present? && !IanaTimezone.valid?(timezone)
+        errors.add(:timezone, "is invalid")
       end
     end
 

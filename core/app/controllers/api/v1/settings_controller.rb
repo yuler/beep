@@ -6,13 +6,18 @@ class Api::V1::SettingsController < Api::V1::BaseController
 
   def update
     @account = Current.account
+    user = Current.user
 
-    if Current.user.update(settings_params)
+    if params.key?(:timezone)
+      user.assign_timezone(name: params[:timezone], source: params[:timezone_source])
+    end
+
+    if user.update(settings_params)
       render :show
     else
       render_json_error(
         status: :unprocessable_entity,
-        message: Current.user.errors.full_messages.to_sentence,
+        message: user.errors.full_messages.to_sentence,
         code: "VALIDATION_ERROR"
       )
     end

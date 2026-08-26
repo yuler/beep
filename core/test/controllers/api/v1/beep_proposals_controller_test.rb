@@ -25,7 +25,7 @@ class Api::V1::BeepProposalsControllerTest < ActionDispatch::IntegrationTest
       title: "Call mom",
       body: nil,
       run_at: @run_at,
-      timezone: Beep::TIMEZONE,
+      timezone: "UTC",
       errors: {},
       message: nil
     )
@@ -50,10 +50,44 @@ class Api::V1::BeepProposalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Call mom", body["title"]
     assert_nil body["body"]
     assert_equal @run_at.iso8601, Time.iso8601(body["run_at"]).iso8601
-    assert_equal Beep::TIMEZONE, body["timezone"]
+    assert_equal "UTC", body["timezone"]
     assert_equal({}, body["errors"])
     assert body["confirmable"]
     assert_nil body["message"]
+  end
+
+  test "create passes the resolved timezone into the proposal" do
+    users(:john).update!(timezone: "Europe/London", timezone_source: "manual")
+    captured = {}
+    run_at = @run_at
+
+    original_create = Beep::Proposal.method(:create)
+    Beep::Proposal.define_singleton_method(:create) do |prompt, **kwargs|
+      captured[:prompt] = prompt
+      captured[:timezone] = kwargs[:timezone]
+      Beep::Proposal::Result.new(
+        intent: "create",
+        title: "Call mom",
+        body: nil,
+        run_at: run_at,
+        timezone: kwargs[:timezone],
+        errors: {},
+        message: nil
+      )
+    end
+
+    begin
+      post "/api/v1/#{@account.slug}/beep_proposals",
+        params: { prompt: "Tomorrow 9am call mom", timezone: "Asia/Tokyo" },
+        headers: { "Authorization" => "Bearer #{@token}" },
+        as: :json
+    ensure
+      Beep::Proposal.define_singleton_method(:create, original_create)
+    end
+
+    assert_response :created
+    assert_equal "Europe/London", captured[:timezone]
+    assert_equal "Europe/London", response.parsed_body["timezone"]
   end
 
   test "create rejects a blank prompt" do

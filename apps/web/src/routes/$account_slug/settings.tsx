@@ -6,6 +6,7 @@ import {
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { NotificationChannelSettings } from "@/components/settings/notification-channel-settings";
+import { TimezoneSettings } from "@/components/settings/timezone-settings";
 import { WebPushSettings } from "@/components/settings/web-push-settings";
 import { fetchSettings } from "@/lib/api/settings";
 import { withAuthRedirects } from "@/lib/auth/guards";
@@ -43,10 +44,16 @@ function SettingsPage() {
 						Settings
 					</h1>
 					<p className="mt-1 text-sm text-muted-foreground">
-						Notifications and device preferences for this workspace.
+						Notifications, timezone, and device preferences for this workspace.
 					</p>
 				</div>
 
+				<TimezoneSettings
+					slug={slug}
+					timezone={settings.timezone}
+					timezoneSource={settings.timezone_source}
+					onChanged={() => router.invalidate()}
+				/>
 				<NotificationChannelSettings
 					slug={slug}
 					channels={settings.notification_channels}
