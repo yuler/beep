@@ -24,12 +24,6 @@ export const Route = createFileRoute("/$account_slug")({
 			throw notFound();
 		}
 
-		try {
-			await detectAccountTimezone(account.slug);
-		} catch {
-			// Detection is best-effort; create still sends the browser zone.
-		}
-
 		return { me, account };
 	},
 	component: AccountLayout,
@@ -42,6 +36,9 @@ function AccountLayout() {
 	useEffect(() => {
 		void rememberLastAccount(account.slug).catch(() => {
 			// Picker hint is best-effort; ignore network failures.
+		});
+		void detectAccountTimezone(account.slug).catch(() => {
+			// Detection is best-effort; create still sends the browser zone.
 		});
 	}, [account.slug]);
 

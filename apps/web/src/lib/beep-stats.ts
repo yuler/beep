@@ -1,12 +1,21 @@
 import type { Beep } from "@/lib/api/beeps";
 
-function dateKey(value: Date | string, timeZone: string) {
-	return new Intl.DateTimeFormat("en-CA", {
-		timeZone,
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-	}).format(new Date(value));
+function dateKey(value: Date | string, timeZone = "UTC") {
+	try {
+		return new Intl.DateTimeFormat("en-CA", {
+			timeZone: timeZone || "UTC",
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+		}).format(new Date(value));
+	} catch {
+		return new Intl.DateTimeFormat("en-CA", {
+			timeZone: "UTC",
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+		}).format(new Date(value));
+	}
 }
 
 export function beepRunAt(beep: Beep) {
