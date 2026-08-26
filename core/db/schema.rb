@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_08_26_023000) do
+ActiveRecord::Schema[8.2].define(version: 2026_08_26_120000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.integer "amount", null: false
@@ -230,6 +230,18 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_26_023000) do
     t.index ["identity_id"], name: "index_magic_links_on_identity_id"
   end
 
+  create_table "plugins", id: :uuid, force: :cascade do |t|
+    t.string "slug", null: false
+    t.uuid "account_id"
+    t.string "version", null: false
+    t.json "manifest", default: {}, null: false
+    t.text "source"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_plugins_on_account_id"
+    t.index ["slug", "account_id"], name: "index_plugins_on_slug_and_account_id", unique: true
+  end
+
   create_table "push_subscriptions", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "user_id", null: false
@@ -278,6 +290,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_26_023000) do
   add_foreign_key "beep_runs", "beeps"
   add_foreign_key "beeps", "accounts"
   add_foreign_key "identity_access_tokens", "identities"
+  add_foreign_key "plugins", "accounts"
   add_foreign_key "push_subscriptions", "accounts"
   add_foreign_key "push_subscriptions", "users"
 end

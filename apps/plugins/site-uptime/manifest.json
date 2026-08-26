@@ -1,0 +1,52 @@
+{
+  "manifest_version": 1,
+  "slug": "site-uptime",
+  "name": "Site Uptime & Health Check",
+  "version": "1.0.0",
+  "description": "HTTP status and latency probe",
+  "author": "Beep Official",
+  "schedule": {
+    "default_cron": "*/5 * * * *",
+    "min_interval_seconds": 60,
+    "failure_threshold": 2
+  },
+  "ingest": {
+    "webhook": false
+  },
+  "inputs": [
+    {
+      "name": "target_url",
+      "label": "Target URL",
+      "type": "url",
+      "required": true
+    },
+    {
+      "name": "expected_status",
+      "label": "Expected status",
+      "type": "number",
+      "default": 200,
+      "min": 100,
+      "max": 599
+    },
+    {
+      "name": "timeout_ms",
+      "label": "Timeout (ms)",
+      "type": "number",
+      "default": 3000,
+      "max": 10000
+    }
+  ],
+  "metrics": [
+    {
+      "name": "latency_ms",
+      "label": "Latency",
+      "type": "number",
+      "unit": "ms"
+    },
+    {
+      "name": "status",
+      "label": "HTTP status",
+      "type": "number"
+    }
+  ]
+}
