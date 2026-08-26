@@ -6,7 +6,7 @@ class Plugin::Checkers::SiteUptime < Plugin::Checkers::Base
   def call
     target_url = config["target_url"].to_s.strip
     expected_status = (config["expected_status"] || 200).to_i
-    timeout_ms = [(config["timeout_ms"] || DEFAULT_TIMEOUT_MS).to_i, 10_000].min
+    timeout_ms = [ (config["timeout_ms"] || DEFAULT_TIMEOUT_MS).to_i, 10_000 ].min
     timeout_seconds = timeout_ms / 1000.0
 
     if target_url.blank?

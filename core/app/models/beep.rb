@@ -189,7 +189,7 @@ class Beep < ApplicationRecord
 
   def push_payload(run: nil)
     options = { data: { url: web_url, badge: 1 } }
-    
+
     if run&.check_result.present?
       result_title = run.check_result["title"]
       result_message = run.check_result["message"]

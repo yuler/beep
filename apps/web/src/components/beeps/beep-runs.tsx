@@ -53,11 +53,17 @@ export function BeepRuns({ runs }: { runs: BeepRun[] }) {
 								</span>
 								<div className="flex items-center gap-1.5">
 									{run.check_status ? (
-										<Badge variant={CHECK_STATUS_VARIANT[run.check_status] ?? "secondary"}>
+										<Badge
+											variant={
+												CHECK_STATUS_VARIANT[run.check_status] ?? "secondary"
+											}
+										>
 											Check: {run.check_status.toUpperCase()}
 										</Badge>
 									) : null}
-									<Badge variant={RUN_STATUS_VARIANT[run.status] ?? "secondary"}>
+									<Badge
+										variant={RUN_STATUS_VARIANT[run.status] ?? "secondary"}
+									>
 										Delivery: {run.status}
 									</Badge>
 								</div>
@@ -77,11 +83,16 @@ export function BeepRuns({ runs }: { runs: BeepRun[] }) {
 									) : null}
 									{run.check_result.metrics ? (
 										<div className="mt-1 flex flex-wrap gap-2 text-[11px] font-mono text-muted-foreground">
-											{Object.entries(run.check_result.metrics).map(([k, v]) => (
-												<span key={k} className="rounded bg-background px-1.5 py-0.5 border">
-													{k}: {String(v)}
-												</span>
-											))}
+											{Object.entries(run.check_result.metrics).map(
+												([k, v]) => (
+													<span
+														key={k}
+														className="rounded bg-background px-1.5 py-0.5 border"
+													>
+														{k}: {String(v)}
+													</span>
+												),
+											)}
 										</div>
 									) : null}
 								</div>

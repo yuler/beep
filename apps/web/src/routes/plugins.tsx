@@ -10,11 +10,8 @@ import {
 	Clock,
 	Globe,
 	Radio,
-	ShieldAlert,
 	ShieldCheck,
 	Sparkles,
-	Timer,
-	Zap,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -99,7 +96,8 @@ function PluginsPage() {
 		setFormCron(plugin.default_cron || "*/5 * * * *");
 		const initialInputs: Record<string, unknown> = {};
 		for (const input of plugin.inputs) {
-			initialInputs[input.name] = input.default !== undefined ? input.default : "";
+			initialInputs[input.name] =
+				input.default !== undefined ? input.default : "";
 		}
 		setFormInputs(initialInputs);
 		setError(null);
@@ -127,7 +125,9 @@ function PluginsPage() {
 				params: { account_slug: slug, beepId: newBeep.id },
 			});
 		} catch (err) {
-			setError(err instanceof ApiError ? err.message : "Failed to install plugin.");
+			setError(
+				err instanceof ApiError ? err.message : "Failed to install plugin.",
+			);
 			setSubmitting(false);
 		}
 	}
@@ -156,7 +156,9 @@ function PluginsPage() {
 						Plugin Gallery
 					</h1>
 					<p className="text-sm sm:text-base text-muted-foreground max-w-2xl">
-						Install reliable health checks and background probes. Beep runs checks automatically and only notifies you when service disruption occurs.
+						Install reliable health checks and background probes. Beep runs
+						checks automatically and only notifies you when service disruption
+						occurs.
 					</p>
 				</div>
 
@@ -168,27 +170,39 @@ function PluginsPage() {
 						const isSelected = selectedPlugin?.id === plugin.id;
 
 						return (
-							<div
+							<button
 								key={plugin.id}
+								type="button"
 								onClick={() => handleSelectPlugin(plugin)}
 								className={cn(
-									"group relative flex flex-col justify-between rounded-2xl border bg-card p-6 text-card-foreground shadow-xs transition-all duration-200 cursor-pointer hover:shadow-md",
+									"group relative flex w-full flex-col justify-between rounded-2xl border bg-card p-6 text-left text-card-foreground shadow-xs transition-all duration-200 hover:shadow-md",
 									isSelected
 										? "border-primary ring-2 ring-primary/20 bg-primary/[0.02]"
-										: "border-border/80 hover:border-foreground/20 hover:-translate-y-0.5"
+										: "border-border/80 hover:border-foreground/20 hover:-translate-y-0.5",
 								)}
 							>
 								<div>
 									{/* Card Top: Icon & Badges */}
 									<div className="flex items-start justify-between gap-3 mb-4">
-										<div className={cn("flex size-11 items-center justify-center rounded-xl transition-transform group-hover:scale-105", meta.bgColor)}>
+										<div
+											className={cn(
+												"flex size-11 items-center justify-center rounded-xl transition-transform group-hover:scale-105",
+												meta.bgColor,
+											)}
+										>
 											<IconComponent className={cn("size-5.5", meta.color)} />
 										</div>
 										<div className="flex items-center gap-1.5">
-											<Badge variant="secondary" className="font-normal text-[11px] px-2 py-0.5 bg-muted/60 text-muted-foreground">
+											<Badge
+												variant="secondary"
+												className="font-normal text-[11px] px-2 py-0.5 bg-muted/60 text-muted-foreground"
+											>
 												{meta.tag}
 											</Badge>
-											<Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 text-muted-foreground border-border/80">
+											<Badge
+												variant="outline"
+												className="font-mono text-[10px] px-1.5 py-0 text-muted-foreground border-border/80"
+											>
 												v{plugin.version}
 											</Badge>
 										</div>
@@ -212,10 +226,13 @@ function PluginsPage() {
 										</span>
 									</div>
 
-									<Button
-										size="sm"
-										variant={isSelected ? "default" : "secondary"}
-										className="h-8 text-xs font-medium rounded-lg"
+									<span
+										className={cn(
+											"inline-flex h-8 items-center rounded-lg px-3 text-xs font-medium",
+											isSelected
+												? "bg-primary text-primary-foreground"
+												: "bg-secondary text-secondary-foreground",
+										)}
 									>
 										{isSelected ? (
 											<>
@@ -228,9 +245,9 @@ function PluginsPage() {
 												<ArrowRight className="size-3.5 ml-1 transition-transform group-hover:translate-x-0.5" />
 											</>
 										)}
-									</Button>
+									</span>
 								</div>
-							</div>
+							</button>
 						);
 					})}
 				</div>
@@ -245,13 +262,20 @@ function PluginsPage() {
 										const meta = getPluginMeta(selectedPlugin.slug);
 										const Icon = meta.icon;
 										return (
-											<div className={cn("flex size-9 items-center justify-center rounded-lg", meta.bgColor)}>
+											<div
+												className={cn(
+													"flex size-9 items-center justify-center rounded-lg",
+													meta.bgColor,
+												)}
+											>
 												<Icon className={cn("size-5", meta.color)} />
 											</div>
 										);
 									})()}
 									<div>
-										<CardTitle className="text-lg font-semibold">{selectedPlugin.name}</CardTitle>
+										<CardTitle className="text-lg font-semibold">
+											{selectedPlugin.name}
+										</CardTitle>
 										<CardDescription className="text-xs">
 											Configure your target parameters to launch this monitor.
 										</CardDescription>
@@ -266,7 +290,12 @@ function PluginsPage() {
 						<form onSubmit={handleInstall}>
 							<CardContent className="flex flex-col gap-4.5 pt-6">
 								<div className="flex flex-col gap-1.5">
-									<Label htmlFor="plugin-title" className="text-xs font-semibold">Monitor Title</Label>
+									<Label
+										htmlFor="plugin-title"
+										className="text-xs font-semibold"
+									>
+										Monitor Title
+									</Label>
 									<Input
 										id="plugin-title"
 										required
@@ -279,7 +308,12 @@ function PluginsPage() {
 								</div>
 
 								<div className="flex flex-col gap-1.5">
-									<Label htmlFor="plugin-cron" className="text-xs font-semibold">Check Interval (Cron)</Label>
+									<Label
+										htmlFor="plugin-cron"
+										className="text-xs font-semibold"
+									>
+										Check Interval (Cron)
+									</Label>
 									<Input
 										id="plugin-cron"
 										required
@@ -304,9 +338,14 @@ function PluginsPage() {
 									{selectedPlugin.inputs.map((input) => (
 										<div key={input.name} className="flex flex-col gap-1.5">
 											<div className="flex items-center justify-between">
-												<Label htmlFor={`input-${input.name}`} className="text-xs font-medium">
+												<Label
+													htmlFor={`input-${input.name}`}
+													className="text-xs font-medium"
+												>
 													{input.label}
-													{input.required ? <span className="text-destructive ml-1">*</span> : null}
+													{input.required ? (
+														<span className="text-destructive ml-1">*</span>
+													) : null}
 												</Label>
 											</div>
 											<Input
@@ -318,8 +357,14 @@ function PluginsPage() {
 												placeholder={input.placeholder}
 												value={String(formInputs[input.name] ?? "")}
 												onChange={(e) => {
-													const val = input.type === "number" ? Number(e.target.value) : e.target.value;
-													setFormInputs((curr) => ({ ...curr, [input.name]: val }));
+													const val =
+														input.type === "number"
+															? Number(e.target.value)
+															: e.target.value;
+													setFormInputs((curr) => ({
+														...curr,
+														[input.name]: val,
+													}));
 												}}
 												disabled={submitting}
 												className="rounded-lg text-sm"
@@ -329,7 +374,10 @@ function PluginsPage() {
 								</div>
 
 								{error ? (
-									<p className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-lg border border-destructive/20" role="alert">
+									<p
+										className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-lg border border-destructive/20"
+										role="alert"
+									>
 										{error}
 									</p>
 								) : null}

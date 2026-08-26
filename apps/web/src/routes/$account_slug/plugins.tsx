@@ -120,7 +120,10 @@ function PluginCard({
 					<Badge variant="secondary" className="font-normal">
 						{meta.tag}
 					</Badge>
-					<Badge variant="outline" className="font-mono text-[10px] text-muted-foreground">
+					<Badge
+						variant="outline"
+						className="font-mono text-[10px] text-muted-foreground"
+					>
 						v{plugin.version}
 					</Badge>
 				</div>
@@ -194,7 +197,8 @@ function PluginsPage() {
 		setFormCron(plugin.default_cron || "*/5 * * * *");
 		const initialInputs: Record<string, unknown> = {};
 		for (const input of plugin.inputs) {
-			initialInputs[input.name] = input.default !== undefined ? input.default : "";
+			initialInputs[input.name] =
+				input.default !== undefined ? input.default : "";
 		}
 		setFormInputs(initialInputs);
 		setError(null);
@@ -222,7 +226,9 @@ function PluginsPage() {
 				params: { account_slug: slug, beepId: newBeep.id },
 			});
 		} catch (err) {
-			setError(err instanceof ApiError ? err.message : "Failed to install plugin.");
+			setError(
+				err instanceof ApiError ? err.message : "Failed to install plugin.",
+			);
 			setSubmitting(false);
 		}
 	}
@@ -246,7 +252,8 @@ function PluginsPage() {
 						Plugin Gallery
 					</h1>
 					<p className="text-sm text-muted-foreground">
-						Install monitoring probes and automated checks to watch your services and notify you on failure.
+						Install monitoring probes and automated checks to watch your
+						services and notify you on failure.
 					</p>
 				</div>
 
@@ -280,9 +287,12 @@ function PluginsPage() {
 									);
 								})()}
 								<div>
-									<CardTitle className="text-lg">Configure {selectedPlugin.name}</CardTitle>
+									<CardTitle className="text-lg">
+										Configure {selectedPlugin.name}
+									</CardTitle>
 									<CardDescription>
-										Fill in the parameters below to instantiate this monitor into your Beep schedule.
+										Fill in the parameters below to instantiate this monitor
+										into your Beep schedule.
 									</CardDescription>
 								</div>
 							</div>
@@ -319,7 +329,9 @@ function PluginsPage() {
 									<div key={input.name} className="flex flex-col gap-2">
 										<Label htmlFor={`input-${input.name}`}>
 											{input.label}
-											{input.required ? <span className="text-destructive ml-1">*</span> : null}
+											{input.required ? (
+												<span className="text-destructive ml-1">*</span>
+											) : null}
 										</Label>
 										<Input
 											id={`input-${input.name}`}
@@ -330,8 +342,14 @@ function PluginsPage() {
 											placeholder={input.placeholder}
 											value={String(formInputs[input.name] ?? "")}
 											onChange={(e) => {
-												const val = input.type === "number" ? Number(e.target.value) : e.target.value;
-												setFormInputs((curr) => ({ ...curr, [input.name]: val }));
+												const val =
+													input.type === "number"
+														? Number(e.target.value)
+														: e.target.value;
+												setFormInputs((curr) => ({
+													...curr,
+													[input.name]: val,
+												}));
 											}}
 											disabled={submitting}
 										/>
@@ -354,7 +372,11 @@ function PluginsPage() {
 								>
 									Cancel
 								</Button>
-								<Button type="submit" size="sm" disabled={submitting || !formTitle.trim()}>
+								<Button
+									type="submit"
+									size="sm"
+									disabled={submitting || !formTitle.trim()}
+								>
 									{submitting ? "Installing…" : "Create & Start Monitoring"}
 								</Button>
 							</CardFooter>

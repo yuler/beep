@@ -4,7 +4,7 @@ import {
 	notFound,
 	useRouter,
 } from "@tanstack/react-router";
-import { Activity, Copy, Check, Pause, Play, Trash2 } from "lucide-react";
+import { Activity, Check, Copy, Pause, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
@@ -170,7 +170,9 @@ function BeepDetailPage() {
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
 						{beep.alert_state ? (
-							<Badge variant={ALERT_STATE_VARIANT[beep.alert_state] ?? "outline"}>
+							<Badge
+								variant={ALERT_STATE_VARIANT[beep.alert_state] ?? "outline"}
+							>
 								Alert: {beep.alert_state.toUpperCase()}
 							</Badge>
 						) : null}
@@ -215,7 +217,9 @@ function BeepDetailPage() {
 								? "Checking…"
 								: beep.status === "firing"
 									? "Firing…"
-									: beep.plugin ? "Test Run" : "Trigger run"}
+									: beep.plugin
+										? "Test Run"
+										: "Trigger run"}
 						</Button>
 						<Button
 							variant="destructive"
@@ -252,7 +256,9 @@ function BeepDetailPage() {
 							) : null}
 							{pingWebhookUrl ? (
 								<div className="flex flex-col gap-1.5 pt-1">
-									<span className="text-xs text-muted-foreground font-medium">Ping URL (POST)</span>
+									<span className="text-xs text-muted-foreground font-medium">
+										Ping URL (POST)
+									</span>
 									<div className="flex items-center gap-1.5 rounded-md border bg-muted/30 p-1.5 font-mono text-xs">
 										<span className="truncate flex-1">{pingWebhookUrl}</span>
 										<Button
@@ -264,14 +270,21 @@ function BeepDetailPage() {
 												setTimeout(() => setCopiedToken(false), 2000);
 											}}
 										>
-											{copiedToken ? <Check className="size-3" /> : <Copy className="size-3" />}
+											{copiedToken ? (
+												<Check className="size-3" />
+											) : (
+												<Copy className="size-3" />
+											)}
 										</Button>
 									</div>
 								</div>
 							) : null}
-							{beep.plugin_config && Object.keys(beep.plugin_config).length > 0 ? (
+							{beep.plugin_config &&
+							Object.keys(beep.plugin_config).length > 0 ? (
 								<div className="mt-2 flex flex-col gap-1">
-									<span className="text-xs text-muted-foreground font-medium">Inputs</span>
+									<span className="text-xs text-muted-foreground font-medium">
+										Inputs
+									</span>
 									<pre className="overflow-auto rounded bg-muted/40 p-2 text-xs font-mono">
 										{JSON.stringify(beep.plugin_config, null, 2)}
 									</pre>
@@ -305,7 +318,10 @@ function BeepDetailPage() {
 						<DetailRow label="Next" value={formatWhen(beep.next_run_at)} />
 						<DetailRow label="Last" value={formatWhen(beep.last_run_at)} />
 						{beep.last_ping_at ? (
-							<DetailRow label="Last Ping" value={formatWhen(beep.last_ping_at)} />
+							<DetailRow
+								label="Last Ping"
+								value={formatWhen(beep.last_ping_at)}
+							/>
 						) : null}
 						<DetailRow label="Created" value={formatWhen(beep.created_at)} />
 					</CardContent>

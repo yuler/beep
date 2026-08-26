@@ -12,7 +12,6 @@ import {
 	ShieldAlert,
 	ShieldCheck,
 	Sparkles,
-	Timer,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -25,7 +24,13 @@ import type { Beep } from "@/lib/api/beeps";
 import { beepRunAt } from "@/lib/beep-stats";
 import { cn } from "@/lib/utils";
 
-type FilterStatus = "all" | "active" | "plugins" | "firing" | "recurring" | "completed";
+type FilterStatus =
+	| "all"
+	| "active"
+	| "plugins"
+	| "firing"
+	| "recurring"
+	| "completed";
 
 export function BeepList({
 	beeps,
@@ -84,7 +89,8 @@ export function BeepList({
 					No beeps yet
 				</h3>
 				<p className="mt-1 max-w-sm text-sm text-muted-foreground">
-					Create your first reminder above or install a monitoring plugin from the gallery.
+					Create your first reminder above or install a monitoring plugin from
+					the gallery.
 				</p>
 			</Card>
 		);
@@ -273,7 +279,8 @@ function BeepListCard({
 			size="sm"
 			className={cn(
 				"group relative overflow-hidden transition-all duration-150 hover:border-primary/40 hover:shadow-xs",
-				beep.alert_state === "alerting" && "border-destructive/60 bg-destructive/[0.02]"
+				beep.alert_state === "alerting" &&
+					"border-destructive/60 bg-destructive/[0.02]",
 			)}
 		>
 			<Link
@@ -316,7 +323,9 @@ function BeepListCard({
 						)}
 						{beep.alert_state ? (
 							<Badge
-								variant={beep.alert_state === "alerting" ? "destructive" : "outline"}
+								variant={
+									beep.alert_state === "alerting" ? "destructive" : "outline"
+								}
 								className="text-[10px] font-medium"
 							>
 								{beep.alert_state === "alerting" ? (
@@ -368,9 +377,11 @@ function BeepListCard({
 										<span
 											className={cn(
 												"font-medium",
-												lastRun.check_status === "ok" && "text-emerald-600 dark:text-emerald-400",
-												lastRun.check_status === "alerting" && "text-destructive",
-												lastRun.check_status === "error" && "text-destructive"
+												lastRun.check_status === "ok" &&
+													"text-emerald-600 dark:text-emerald-400",
+												lastRun.check_status === "alerting" &&
+													"text-destructive",
+												lastRun.check_status === "error" && "text-destructive",
 											)}
 										>
 											Check {lastRun.check_status.toUpperCase()}

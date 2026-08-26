@@ -31,7 +31,7 @@ class Plugin::Checkers::SslExpiry < Plugin::Checkers::Base
     days_remaining = (seconds_remaining / 86400.0).floor
 
     metrics = {
-      "days_remaining" => [days_remaining, 0].max,
+      "days_remaining" => [ days_remaining, 0 ].max,
       "expires_at" => not_after.utc.iso8601
     }
 

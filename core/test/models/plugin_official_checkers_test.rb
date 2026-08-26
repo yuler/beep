@@ -8,14 +8,14 @@ class PluginOfficialCheckersTest < ActiveSupport::TestCase
 
   test "SiteUptime checker reports ok when status matches expected" do
     fake_response = Net::HTTPSuccess.new("1.1", "200", "OK")
-    
+
     checker = Plugin::Checkers::SiteUptime.new(config: {
       "target_url" => "https://example.com/health",
       "expected_status" => 200
     })
 
     checker.define_singleton_method(:fetch_with_redirects) do |*, **|
-      [fake_response, URI("https://example.com/health")]
+      [ fake_response, URI("https://example.com/health") ]
     end
 
     result = checker.call
@@ -26,14 +26,14 @@ class PluginOfficialCheckersTest < ActiveSupport::TestCase
 
   test "SiteUptime checker reports alerting when status does not match" do
     fake_response = Net::HTTPNotFound.new("1.1", "404", "Not Found")
-    
+
     checker = Plugin::Checkers::SiteUptime.new(config: {
       "target_url" => "https://example.com/health",
       "expected_status" => 200
     })
 
     checker.define_singleton_method(:fetch_with_redirects) do |*, **|
-      [fake_response, URI("https://example.com/health")]
+      [ fake_response, URI("https://example.com/health") ]
     end
 
     result = checker.call
