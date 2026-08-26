@@ -93,8 +93,9 @@ module SsrfProtection
     end
 
     def disallowed_ipv4?(ipaddr)
-      # Allow Fake-IP range (RFC 2544 benchmark 198.18.0.0/15) in development/test bypass mode
-      # so developers with local TUN proxies (Clash/Mihomo/Surge) can test target domains seamlessly.
+      # Allow Fake-IP range (RFC 2544 benchmark 198.18.0.0/15) in development
+      # (or when ALLOW_PRIVATE_SSRF_TARGETS is set) so developers with local
+      # TUN proxies (Clash/Mihomo/Surge) can test target domains seamlessly.
       if allow_development_fake_ip? && (ipaddr.to_s.start_with?("198.18.") || ipaddr.to_s.start_with?("198.19."))
         return false
       end

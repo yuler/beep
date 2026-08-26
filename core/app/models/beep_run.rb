@@ -50,6 +50,10 @@ class BeepRun < ApplicationRecord
       update!(status: :succeeded)
       beep.finish_firing(last_run_at: scheduled_for)
     end
+  rescue EmailDeliveryError
+    # Check outcome is already persisted above; delegate to the delivery job,
+    # which retries transient email failures without re-running the check.
+    DeliverBeepRunJob.perform_later(self)
   rescue StandardError => e
     update!(
       check_status: "error",

@@ -262,6 +262,10 @@ class Beep < ApplicationRecord
       unless recurring?
         errors.add(:kind, "must be recurring for plugin beeps")
       end
+
+      if plugin.custom? && plugin.account_id != Current.account&.id
+        errors.add(:plugin_id, "is not available for this account")
+      end
     end
 
     def ensure_ping_token_if_needed

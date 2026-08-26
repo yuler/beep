@@ -1,6 +1,6 @@
 class Api::V1::BeepsController < Api::V1::BaseController
   def index
-    @beeps = Current.account.beeps.includes(:runs).order(created_at: :desc)
+    @beeps = Current.account.beeps.includes(:runs, :plugin).order(created_at: :desc)
     render :index
   end
 
