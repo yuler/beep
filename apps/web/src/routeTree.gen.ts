@@ -22,6 +22,7 @@ import { Route as Account_slugPluginsRouteImport } from './routes/$account_slug/
 import { Route as Account_slugSettingsRouteImport } from './routes/$account_slug/settings'
 import { Route as AdminJobsRouteImport } from './routes/admin/jobs'
 import { Route as AdminStatsRouteImport } from './routes/admin/stats'
+import { Route as BeepsRouteImport } from './routes/beeps_.'
 import { Route as DevLettersRouteImport } from './routes/dev/letters'
 import { Route as MyAccess_tokensRouteImport } from './routes/my/access_tokens'
 import { Route as MySettingsRouteImport } from './routes/my/settings'
@@ -94,6 +95,11 @@ const AdminStatsRoute = AdminStatsRouteImport.update({
   path: '/stats',
   getParentRoute: () => AdminRoute,
 } as any)
+const BeepsRoute = BeepsRouteImport.update({
+  id: '/beeps_/',
+  path: '/beeps/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevLettersRoute = DevLettersRouteImport.update({
   id: '/letters',
   path: '/letters',
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/dev': typeof DevRouteWithChildren
   '/my': typeof MyRouteWithChildren
   '/sign': typeof SignRouteWithChildren
+  '/beeps/': typeof BeepsRoute
   '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/$account_slug/plugins': typeof Account_slugPluginsRoute
   '/$account_slug/settings': typeof Account_slugSettingsRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteWithChildren
   '/dev': typeof DevRouteWithChildren
   '/my': typeof MyRouteWithChildren
+  '/beeps': typeof BeepsRoute
   '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/$account_slug/plugins': typeof Account_slugPluginsRoute
   '/$account_slug/settings': typeof Account_slugSettingsRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/dev': typeof DevRouteWithChildren
   '/my': typeof MyRouteWithChildren
   '/sign': typeof SignRouteWithChildren
+  '/beeps_/': typeof BeepsRoute
   '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/$account_slug/plugins': typeof Account_slugPluginsRoute
   '/$account_slug/settings': typeof Account_slugSettingsRoute
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/dev'
     | '/my'
     | '/sign'
+    | '/beeps/'
     | '/$account_slug/beeps'
     | '/$account_slug/plugins'
     | '/$account_slug/settings'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dev'
     | '/my'
+    | '/beeps'
     | '/$account_slug/beeps'
     | '/$account_slug/plugins'
     | '/$account_slug/settings'
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/dev'
     | '/my'
     | '/sign'
+    | '/beeps_/'
     | '/$account_slug/beeps'
     | '/$account_slug/plugins'
     | '/$account_slug/settings'
@@ -259,6 +271,7 @@ export interface RootRouteChildren {
   DevRoute: typeof DevRouteWithChildren
   MyRoute: typeof MyRouteWithChildren
   SignRoute: typeof SignRouteWithChildren
+  BeepsRoute: typeof BeepsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -353,6 +366,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/stats'
       preLoaderRoute: typeof AdminStatsRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/beeps_/': {
+      id: '/beeps_/'
+      path: '/beeps'
+      fullPath: '/beeps/'
+      preLoaderRoute: typeof BeepsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/dev/letters': {
       id: '/dev/letters'
@@ -473,6 +493,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevRoute: DevRouteWithChildren,
   MyRoute: MyRouteWithChildren,
   SignRoute: SignRouteWithChildren,
+  BeepsRoute: BeepsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
