@@ -11,13 +11,16 @@ class User < ApplicationRecord
 
   has_many :push_subscriptions, class_name: "Push::Subscription", dependent: :delete_all
 
+  normalizes :timezone, with: ->(value) { value&.strip.presence }
+
   before_validation :assign_default_notification_channels, on: :create
   before_validation :normalize_notification_channels
-  before_validation :normalize_timezone
+  before_validation :clear_timezone_source, unless: :timezone?
+
   validates :name, presence: true
+  validates :timezone_source, presence: true, if: :timezone?
   validate :notification_channels_are_allowed
-  validate :timezone_is_iana
-  validate :timezone_source_is_allowed
+  validate :timezone_is_iana, if: :timezone?
 
   # TODO: deactivate user
   def deactivate
@@ -44,18 +47,17 @@ class User < ApplicationRecord
     signed_id(purpose: :email_channel_unsubscribe, expires_in: 1.year)
   end
 
-  def assign_timezone(name:, source:)
-    timezone_name = name.to_s.strip.presence
-    timezone_source_name = source.to_s.strip.presence
+  def assign_timezone(name:, source: :manual)
+    return if name.blank?
 
-    if timezone_source_name == "detected"
-      if timezone.blank? && timezone_name
-        self.timezone = timezone_name
-        self.timezone_source = "detected"
-      end
-    elsif timezone_name
-      self.timezone = timezone_name
-      self.timezone_source = "manual"
+    if source.to_s == "detected"
+      return if timezone?
+
+      self.timezone = name
+      self.timezone_source = :detected
+    else
+      self.timezone = name
+      self.timezone_source = :manual
     end
   end
 
@@ -79,23 +81,11 @@ class User < ApplicationRecord
       end
     end
 
-    def normalize_timezone
-      self.timezone = timezone.to_s.strip.presence
-      self.timezone_source = timezone_source.to_s.strip.presence
-      if timezone.blank?
-        self.timezone_source = nil
-      end
+    def clear_timezone_source
+      self.timezone_source = nil
     end
 
     def timezone_is_iana
-      if timezone.present? && !IanaTimezone.valid?(timezone)
-        errors.add(:timezone, "is invalid")
-      end
-    end
-
-    def timezone_source_is_allowed
-      if timezone.present? && self.class.timezone_sources.exclude?(timezone_source)
-        errors.add(:timezone_source, "is invalid")
-      end
+      errors.add(:timezone, "is invalid") unless IanaTimezone.valid?(timezone)
     end
 end
