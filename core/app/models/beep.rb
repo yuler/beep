@@ -7,7 +7,6 @@ class Beep < ApplicationRecord
   EXPIRED_AFTER = 1.hour
   TITLE_MAX_LENGTH = 80
   BODY_MAX_LENGTH = 2000
-  TIMEZONE = "Asia/Shanghai"
 
   belongs_to :account
   has_many :runs, class_name: "BeepRun", dependent: :destroy
@@ -135,7 +134,7 @@ class Beep < ApplicationRecord
 
   def calculate_next_run_at(from: Time.current)
     if recurring? && cron.present?
-      tz = timezone.presence || TIMEZONE
+      tz = timezone.presence || IanaTimezone::DEFAULT
       parsed = Fugit.parse("#{cron} #{tz}")
       if parsed
         next_time = parsed.next_time(from)

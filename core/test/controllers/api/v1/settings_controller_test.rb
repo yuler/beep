@@ -8,7 +8,7 @@ class Api::V1::SettingsControllerTest < ActionDispatch::IntegrationTest
     @token = @session.signed_id
   end
 
-  test "show returns the current user's notification channels" do
+  test "show returns the current user's notification channels and timezone" do
     get "/api/v1/#{@account.slug}/settings",
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
@@ -18,7 +18,53 @@ class Api::V1::SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @account.id, body["id"]
     assert_equal true, body["personal"]
     assert_equal %w[ email web_push ], body["notification_channels"]
+    assert_nil body["timezone"]
+    assert_nil body["timezone_source"]
   end
+
+  test "update detects timezone only when empty" do
+    patch "/api/v1/#{@account.slug}/settings",
+      params: { timezone: "Asia/Shanghai", timezone_source: "detected" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal "Asia/Shanghai", response.parsed_body["timezone"]
+    assert_equal "detected", response.parsed_body["timezone_source"]
+
+    patch "/api/v1/#{@account.slug}/settings",
+      params: { timezone: "America/New_York", timezone_source: "detected" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal "Asia/Shanghai", response.parsed_body["timezone"]
+    assert_equal "detected", users(:john).reload.timezone_source
+  end
+
+  test "update manual timezone overwrites detected" do
+    users(:john).update!(timezone: "Asia/Shanghai", timezone_source: "detected")
+
+    patch "/api/v1/#{@account.slug}/settings",
+      params: { timezone: "Europe/London" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal "Europe/London", response.parsed_body["timezone"]
+    assert_equal "manual", response.parsed_body["timezone_source"]
+  end
+
+  test "update rejects an invalid timezone" do
+    patch "/api/v1/#{@account.slug}/settings",
+      params: { timezone: "Not/A_Zone" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
+  end
+
 
   test "update writes the current user's notification channels" do
     patch "/api/v1/#{@account.slug}/settings",

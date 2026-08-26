@@ -24,12 +24,13 @@ class Beep::Proposal
     end
   end
 
-  def self.create(prompt, chat: nil)
-    new(prompt, chat: chat).create
+  def self.create(prompt, timezone: IanaTimezone::DEFAULT, chat: nil)
+    new(prompt, timezone: timezone, chat: chat).create
   end
 
-  def initialize(prompt, chat: nil)
+  def initialize(prompt, timezone: IanaTimezone::DEFAULT, chat: nil)
     @prompt = prompt.to_s
+    @timezone = IanaTimezone.resolve(timezone)
     @chat = chat
   end
 
@@ -113,7 +114,7 @@ class Beep::Proposal
         body: body,
         run_at: run_at,
         cron: cron,
-        timezone: Beep::TIMEZONE,
+        timezone: @timezone,
         errors: errors,
         message: message
       )
@@ -131,7 +132,7 @@ class Beep::Proposal
       if value.blank?
         [ nil, nil ]
       else
-        time = Time.zone.parse(value.to_s) || Time.iso8601(value.to_s)
+        time = Time.use_zone(@timezone) { Time.zone.parse(value.to_s) } || Time.iso8601(value.to_s)
         if time.future?
           [ time, nil ]
         else
@@ -152,11 +153,11 @@ class Beep::Proposal
     end
 
     def instructions
-      now = Time.current.in_time_zone(Beep::TIMEZONE)
+      now = Time.current.in_time_zone(@timezone)
 
       <<~PROMPT
         You extract a reminder from the user message.
-        Timezone is #{Beep::TIMEZONE}. Current datetime is #{now.iso8601}.
+        Timezone is #{@timezone}. Current datetime is #{now.iso8601}.
         Reply with JSON only:
         {"intent":"create"|"other","kind":"once"|"recurring","title":string|null,"body":string|null,"run_at":string|null,"cron":string|null}
         intent is "create" when the user wants a reminder or alert, otherwise "other".

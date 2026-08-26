@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_08_24_054526) do
+ActiveRecord::Schema[8.2].define(version: 2026_08_26_023000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.integer "amount", null: false
@@ -262,6 +262,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_24_054526) do
     t.datetime "updated_at", null: false
     t.datetime "verified_at"
     t.json "notification_channels", default: ["email"], null: false
+    t.string "timezone"
+    t.string "timezone_source"
     t.index ["account_id", "identity_id"], name: "index_users_on_account_id_and_identity_id", unique: true
     t.index ["account_id", "role"], name: "index_users_on_account_id_and_role"
     t.index ["identity_id"], name: "index_users_on_identity_id"

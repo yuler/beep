@@ -1,6 +1,7 @@
 class User < ApplicationRecord
   NOTIFICATION_CHANNELS = %w[ email web_push ].freeze
   DEFAULT_NOTIFICATION_CHANNELS = %w[ email ].freeze
+  TIMEZONE_SOURCES = %w[ detected manual ].freeze
 
   include Role
 
@@ -11,8 +12,11 @@ class User < ApplicationRecord
 
   before_validation :assign_default_notification_channels, on: :create
   before_validation :normalize_notification_channels
+  before_validation :normalize_timezone
   validates :name, presence: true
   validate :notification_channels_are_allowed
+  validate :timezone_is_iana
+  validate :timezone_source_is_allowed
 
   # TODO: deactivate user
   def deactivate
@@ -39,6 +43,21 @@ class User < ApplicationRecord
     signed_id(purpose: :email_channel_unsubscribe, expires_in: 1.year)
   end
 
+  def assign_timezone(name:, source:)
+    timezone_name = name.to_s.strip.presence
+    timezone_source_name = source.to_s.strip.presence
+
+    if timezone_source_name == "detected"
+      if timezone.blank? && timezone_name
+        self.timezone = timezone_name
+        self.timezone_source = "detected"
+      end
+    elsif timezone_name
+      self.timezone = timezone_name
+      self.timezone_source = "manual"
+    end
+  end
+
   private
     def assign_default_notification_channels
       if notification_channels.nil?
@@ -56,6 +75,26 @@ class User < ApplicationRecord
       unknown = Array(notification_channels) - NOTIFICATION_CHANNELS
       if unknown.any?
         errors.add(:notification_channels, "is invalid")
+      end
+    end
+
+    def normalize_timezone
+      self.timezone = timezone.to_s.strip.presence
+      self.timezone_source = timezone_source.to_s.strip.presence
+      if timezone.blank?
+        self.timezone_source = nil
+      end
+    end
+
+    def timezone_is_iana
+      if timezone.present? && !IanaTimezone.valid?(timezone)
+        errors.add(:timezone, "is invalid")
+      end
+    end
+
+    def timezone_source_is_allowed
+      if timezone.present? && TIMEZONE_SOURCES.exclude?(timezone_source)
+        errors.add(:timezone_source, "is invalid")
       end
     end
 end

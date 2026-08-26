@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import { createBeep, createBeepProposal } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
+import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 const TITLE_MAX_LENGTH = 80;
@@ -78,7 +79,11 @@ export function BeepQuickCreate({
 		setProposing(true);
 
 		try {
-			const proposal = await createBeepProposal(slug, prompt.trim());
+			const proposal = await createBeepProposal(
+				slug,
+				prompt.trim(),
+				browserTimezone(),
+			);
 			if (proposal.intent === "other") {
 				setFieldErrors({});
 				setProposeMessage(
@@ -139,6 +144,7 @@ export function BeepQuickCreate({
 				kind,
 				run_at: kind === "once" && !sendNow ? runAt.toISOString() : null,
 				cron: kind === "recurring" ? cron.trim() : null,
+				timezone: browserTimezone(),
 			});
 			setPrompt("");
 			setTitle("");
@@ -460,7 +466,7 @@ export function BeepQuickCreate({
 									</TooltipTrigger>
 									<TooltipContent side="top" className="max-w-xs text-xs">
 										5-part standard Cron expression: minute hour day month
-										day-of-week. Evaluated in Asia/Shanghai.
+										day-of-week. Evaluated in this workspace's timezone.
 									</TooltipContent>
 								</Tooltip>
 							</div>

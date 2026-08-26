@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/tooltip";
 import { createBeep } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
+import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 const TITLE_MAX_LENGTH = 80;
@@ -62,6 +63,7 @@ export function CreateBeepForm({
 				kind,
 				run_at: kind === "once" && !sendNow ? runAt.toISOString() : null,
 				cron: kind === "recurring" ? cron.trim() : null,
+				timezone: browserTimezone(),
 			});
 			setTitle("");
 			setBody("");
@@ -273,7 +275,7 @@ export function CreateBeepForm({
 							</TooltipTrigger>
 							<TooltipContent side="top" className="max-w-xs text-xs">
 								5-part standard Cron expression: minute hour day month
-								day-of-week. Evaluated in Asia/Shanghai.
+								day-of-week. Evaluated in this workspace's timezone.
 							</TooltipContent>
 						</Tooltip>
 					</div>

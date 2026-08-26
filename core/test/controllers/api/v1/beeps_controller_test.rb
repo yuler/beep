@@ -55,7 +55,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "once", body["kind"]
     assert_nil body["cron"]
     assert_equal "active", body["status"]
-    assert_equal Beep::TIMEZONE, body["timezone"]
+    assert_equal "UTC", body["timezone"]
     assert_equal @run_at.iso8601, Time.iso8601(body["run_at"]).iso8601
     assert_equal @run_at.iso8601, Time.iso8601(body["next_run_at"]).iso8601
     assert_nil body["channels"]
@@ -266,5 +266,49 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
     assert beep.reload.completed?
+  end
+
+  test "create uses the current user's timezone" do
+    users(:john).update!(timezone: "Europe/London", timezone_source: "manual")
+
+    post "/api/v1/#{@account.slug}/beeps",
+      params: { title: "Call mom", run_at: @run_at.iso8601, timezone: "Asia/Tokyo" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :created
+    assert_equal "Europe/London", response.parsed_body["timezone"]
+  end
+
+  test "create falls back to request timezone then UTC" do
+    post "/api/v1/#{@account.slug}/beeps",
+      params: { title: "Call mom", run_at: @run_at.iso8601, timezone: "Asia/Tokyo" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :created
+    assert_equal "Asia/Tokyo", response.parsed_body["timezone"]
+
+    post "/api/v1/#{@account.slug}/beeps",
+      params: { title: "Call dad", run_at: @run_at.iso8601 },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :created
+    assert_equal "UTC", response.parsed_body["timezone"]
+  end
+
+  test "update ignores a timezone in the payload" do
+    beep = @account.beeps.create!(kind: :once, title: "Call mom", run_at: @run_at, timezone: "UTC")
+
+    patch "/api/v1/#{@account.slug}/beeps/#{beep.id}",
+      params: { title: "Call dad", timezone: "Asia/Tokyo" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal "Call dad", response.parsed_body["title"]
+    assert_equal "UTC", response.parsed_body["timezone"]
+    assert_equal "UTC", beep.reload.timezone
   end
 end

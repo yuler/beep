@@ -1,8 +1,6 @@
 import type { Beep } from "@/lib/api/beeps";
 
-export const BEEP_TIMEZONE = "Asia/Shanghai";
-
-function dateKey(value: Date | string, timeZone = BEEP_TIMEZONE) {
+function dateKey(value: Date | string, timeZone: string) {
 	return new Intl.DateTimeFormat("en-CA", {
 		timeZone,
 		year: "numeric",
@@ -16,7 +14,6 @@ export function beepRunAt(beep: Beep) {
 }
 
 export function beepStats(beeps: Beep[], now = new Date()) {
-	const today = dateKey(now);
 	let active = 0;
 	let dueToday = 0;
 	let firing = 0;
@@ -26,7 +23,12 @@ export function beepStats(beeps: Beep[], now = new Date()) {
 		if (beep.status === "active") active += 1;
 		if (beep.status !== "active" && beep.status !== "firing") continue;
 		const runAt = beepRunAt(beep);
-		if (runAt && dateKey(runAt) === today) dueToday += 1;
+		if (
+			runAt &&
+			dateKey(runAt, beep.timezone) === dateKey(now, beep.timezone)
+		) {
+			dueToday += 1;
+		}
 	}
 
 	return { active, dueToday, firing };
