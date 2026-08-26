@@ -51,6 +51,30 @@ class Plugin < ApplicationRecord
     manifest["metrics"] || []
   end
 
+  def checker_class
+    checker_name = slug.tr("-", "_").camelize
+    "Plugin::Checkers::#{checker_name}".safe_constantize
+  end
+
+  def run_check(config:)
+    klass = checker_class
+    if klass
+      klass.call(config: config)
+    else
+      Plugin::CheckResult.new(
+        status: :error,
+        title: "Plugin implementation not found",
+        message: "No checker class implemented for plugin '#{slug}'"
+      )
+    end
+  rescue StandardError => e
+    Plugin::CheckResult.new(
+      status: :error,
+      title: "Check execution failed",
+      message: e.message
+    )
+  end
+
   class << self
     def official_plugins_dir
       Rails.root.join("../apps/plugins").cleanpath

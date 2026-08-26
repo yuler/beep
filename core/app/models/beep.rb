@@ -9,10 +9,12 @@ class Beep < ApplicationRecord
   BODY_MAX_LENGTH = 2000
 
   belongs_to :account
+  belongs_to :plugin, optional: true
   has_many :runs, class_name: "BeepRun", dependent: :destroy
 
   enum :kind, %w[ once recurring ].index_by(&:itself)
   enum :status, %w[ active paused completed cancelled firing ].index_by(&:itself)
+  enum :alert_state, %w[ ok alerting ].index_by(&:itself)
 
   normalizes :title, with: ->(value) { value.strip.presence }
   normalizes :body, with: ->(value) { value&.strip.presence }
@@ -23,14 +25,20 @@ class Beep < ApplicationRecord
   validates :run_at, absence: true, if: :recurring?
   validates :cron, presence: true, if: :recurring?
   validates :cron, absence: true, if: :once?
+  validates :alert_state, presence: true
+  validates :consecutive_failures, numericality: { greater_than_or_equal_to: 0 }
 
   validate :timezone_is_iana
   validate :validate_cron_expression, if: :recurring?
+  validate :validate_plugin_configuration, if: :plugin_id?
 
   before_validation :sync_run_attributes
+  before_validation :ensure_ping_token_if_needed
   after_create_commit :deliver_if_due_on_create
 
   scope :due, -> { active.where(next_run_at: ..Time.current) }
+  scope :plugins, -> { where.not(plugin_id: nil) }
+  scope :reminders, -> { where(plugin_id: nil) }
 
   class << self
     def poll_due_now
@@ -156,14 +164,34 @@ class Beep < ApplicationRecord
     Beep::Plaintext.from_markdown(body)
   end
 
-  def push_payload
-    options = { data: { url: web_url, badge: 1 } }
-    text = body_text
-    if text.present?
-      options[:body] = text
-    end
+  def plugin?
+    plugin_id.present?
+  end
 
-    { title: title, options: options }
+  def failure_threshold
+    plugin&.failure_threshold || 2
+  end
+
+  def expired_plugin_run?(scheduled_for)
+    return false unless plugin?
+
+    scheduled_for < EXPIRED_AFTER.ago
+  end
+
+  def push_payload(run: nil)
+    options = { data: { url: web_url, badge: 1 } }
+    
+    if run&.check_result.present?
+      result_title = run.check_result["title"]
+      result_message = run.check_result["message"]
+      display_title = result_title.presence || title
+      options[:body] = result_message if result_message.present?
+      { title: display_title, options: options }
+    else
+      text = body_text
+      options[:body] = text if text.present?
+      { title: title, options: options }
+    end
   end
 
   private
@@ -212,6 +240,20 @@ class Beep < ApplicationRecord
     def timezone_is_iana
       if timezone.present? && !IanaTimezone.valid?(timezone)
         errors.add(:timezone, "is invalid")
+      end
+    end
+
+    def validate_plugin_configuration
+      return unless plugin?
+
+      unless recurring?
+        errors.add(:kind, "must be recurring for plugin beeps")
+      end
+    end
+
+    def ensure_ping_token_if_needed
+      if plugin&.webhook_ingest? && ping_token.blank?
+        self.ping_token = SecureRandom.hex(16)
       end
     end
 

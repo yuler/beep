@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_08_26_120000) do
+ActiveRecord::Schema[8.2].define(version: 2026_08_26_130000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.integer "amount", null: false
@@ -170,6 +170,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_26_120000) do
     t.json "result"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "check_status"
+    t.json "check_result"
     t.index ["beep_id", "scheduled_for"], name: "index_beep_runs_on_beep_id_and_scheduled_for", unique: true
   end
 
@@ -186,7 +188,16 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_26_120000) do
     t.datetime "updated_at", null: false
     t.text "title", null: false
     t.text "body"
+    t.uuid "plugin_id"
+    t.json "plugin_config"
+    t.string "alert_state", default: "ok", null: false
+    t.integer "consecutive_failures", default: 0, null: false
+    t.integer "schedule_offset", default: 0, null: false
+    t.string "ping_token"
+    t.datetime "last_ping_at"
     t.index ["account_id"], name: "index_beeps_on_account_id"
+    t.index ["ping_token"], name: "index_beeps_on_ping_token", unique: true
+    t.index ["plugin_id"], name: "index_beeps_on_plugin_id"
     t.index ["status", "next_run_at"], name: "index_beeps_on_status_and_next_run_at"
   end
 
@@ -289,6 +300,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_26_120000) do
   add_foreign_key "account_slug_holds", "accounts"
   add_foreign_key "beep_runs", "beeps"
   add_foreign_key "beeps", "accounts"
+  add_foreign_key "beeps", "plugins"
   add_foreign_key "identity_access_tokens", "identities"
   add_foreign_key "plugins", "accounts"
   add_foreign_key "push_subscriptions", "accounts"

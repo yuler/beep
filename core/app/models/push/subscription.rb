@@ -39,8 +39,8 @@ class Push::Subscription < ApplicationRecord
     send_push(test_payload)
   end
 
-  def deliver_beep(beep)
-    send_push(beep.push_payload)
+  def deliver_beep(beep, run: nil)
+    send_push(beep.push_payload(run: run))
   end
 
   def resolved_endpoint_ip
