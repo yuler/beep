@@ -4,12 +4,12 @@ class User < ApplicationRecord
 
   include Role
 
-  enum :timezone_source, %w[ detected manual ].index_by(&:itself)
-
   belongs_to :account
   belongs_to :identity, optional: true
 
   has_many :push_subscriptions, class_name: "Push::Subscription", dependent: :delete_all
+
+  enum :timezone_source, %w[ detected manual ].index_by(&:itself)
 
   normalizes :timezone, with: ->(value) { value&.strip.presence }
 
@@ -49,16 +49,10 @@ class User < ApplicationRecord
 
   def assign_timezone(name:, source: :manual)
     return if name.blank?
+    return if source.to_s == "detected" && timezone?
 
-    if source.to_s == "detected"
-      return if timezone?
-
-      self.timezone = name
-      self.timezone_source = :detected
-    else
-      self.timezone = name
-      self.timezone_source = :manual
-    end
+    self.timezone = name
+    self.timezone_source = source.to_s == "detected" ? :detected : :manual
   end
 
   private
