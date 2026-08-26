@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -19,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { type TimezoneSource, updateSettings } from "@/lib/api/settings";
 import {
+	browserTimezone,
 	type TimezoneOption,
 	timezoneOption,
 	timezoneOptions,
@@ -87,6 +89,25 @@ export function TimezoneSettings({
 		}
 	}
 
+	async function onReset() {
+		const detected = browserTimezone();
+		if (detected === timezone) return;
+
+		setError(null);
+		setPending(true);
+		try {
+			await updateSettings(slug, {
+				timezone: detected,
+				timezone_source: "manual",
+			});
+			await onChanged();
+		} catch (err) {
+			setError(err instanceof ApiError ? err.message : "Something went wrong.");
+		} finally {
+			setPending(false);
+		}
+	}
+
 	return (
 		<Card className="max-w-lg">
 			<CardHeader>
@@ -133,6 +154,20 @@ export function TimezoneSettings({
 							</ComboboxList>
 						</ComboboxContent>
 					</Combobox>
+				</div>
+				<div className="flex items-center justify-between gap-3">
+					<p className="text-xs text-muted-foreground">
+						Browser timezone: {browserTimezone()}
+					</p>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						disabled={pending || timezone === browserTimezone()}
+						onClick={() => void onReset()}
+					>
+						Reset to browser
+					</Button>
 				</div>
 				{error ? (
 					<p className="text-sm text-destructive" role="alert">
