@@ -1,4 +1,6 @@
 module SsrfProtection
+  class BlockedAddressError < StandardError; end
+
   extend self
 
   DNS_RESOLUTION_TIMEOUT = 2

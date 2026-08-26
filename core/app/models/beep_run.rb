@@ -25,7 +25,7 @@ class BeepRun < ApplicationRecord
       return
     end
 
-    check_result = beep.plugin.run_check(config: beep.plugin_config)
+    check_result = beep.plugin.run_check(config: beep.effective_plugin_config)
     sanitized_result = sanitize_check_result(check_result.to_h)
 
     decision = BeepRun::AlertEvaluator.evaluate(

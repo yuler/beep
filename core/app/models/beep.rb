@@ -172,6 +172,15 @@ class Beep < ApplicationRecord
     plugin&.failure_threshold || 2
   end
 
+  def effective_plugin_config
+    cfg = (plugin_config || {}).deep_stringify_keys
+    if plugin&.webhook_ingest?
+      cfg["last_ping_at"] = last_ping_at
+      cfg["ping_token"] = ping_token
+    end
+    cfg
+  end
+
   def expired_plugin_run?(scheduled_for)
     return false unless plugin?
 

@@ -62,6 +62,7 @@ Rails.application.routes.draw do
       end
       get "me", to: "me#show"
       put "me/last_account", to: "me#update_last_account"
+      post "ping/:token", to: "pings#create", as: :ping
 
       namespace :my do
         resources :access_tokens, only: %i[ index create destroy ]
