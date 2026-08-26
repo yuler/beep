@@ -1,9 +1,10 @@
 class User < ApplicationRecord
   NOTIFICATION_CHANNELS = %w[ email web_push ].freeze
   DEFAULT_NOTIFICATION_CHANNELS = %w[ email ].freeze
-  TIMEZONE_SOURCES = %w[ detected manual ].freeze
 
   include Role
+
+  enum :timezone_source, %w[ detected manual ].index_by(&:itself)
 
   belongs_to :account
   belongs_to :identity, optional: true
@@ -93,7 +94,7 @@ class User < ApplicationRecord
     end
 
     def timezone_source_is_allowed
-      if timezone.present? && TIMEZONE_SOURCES.exclude?(timezone_source)
+      if timezone.present? && self.class.timezone_sources.exclude?(timezone_source)
         errors.add(:timezone_source, "is invalid")
       end
     end

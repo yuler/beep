@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
+	CardAction,
 	CardContent,
 	CardDescription,
 	CardHeader,
@@ -115,6 +117,16 @@ export function TimezoneSettings({
 				<CardDescription>
 					{sourceHint(timezoneSource, timezone)}
 				</CardDescription>
+				{timezoneSource ? (
+					<CardAction>
+						<Badge
+							variant={timezoneSource === "manual" ? "secondary" : "outline"}
+							className="capitalize"
+						>
+							{timezoneSource}
+						</Badge>
+					</CardAction>
+				) : null}
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3">
 				<div className="flex flex-col gap-1.5">
