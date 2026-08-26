@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
 	Card,
 	CardContent,
@@ -6,10 +6,23 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Combobox,
+	ComboboxContent,
+	ComboboxEmpty,
+	ComboboxInput,
+	ComboboxItem,
+	ComboboxList,
+	ComboboxTrigger,
+} from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { type TimezoneSource, updateSettings } from "@/lib/api/settings";
-import { ianaTimezones } from "@/lib/timezone";
+import {
+	type TimezoneOption,
+	timezoneOption,
+	timezoneOptions,
+} from "@/lib/timezone";
 
 function sourceHint(source: TimezoneSource | null, timezone: string | null) {
 	if (!timezone) {
@@ -19,6 +32,22 @@ function sourceHint(source: TimezoneSource | null, timezone: string | null) {
 		return "Set for this workspace. Browser detection will not overwrite it.";
 	}
 	return "Detected from this browser. Choosing another zone locks it for this workspace.";
+}
+
+function TimezoneLabel({ option }: { option: TimezoneOption }) {
+	return (
+		<span className="flex min-w-0 flex-1 items-center gap-2">
+			<span className="text-base leading-none" aria-hidden>
+				{option.flag}
+			</span>
+			<span className="truncate">{option.value}</span>
+			{option.countryName ? (
+				<span className="truncate text-xs text-muted-foreground">
+					{option.countryName}
+				</span>
+			) : null}
+		</span>
+	);
 }
 
 export function TimezoneSettings({
@@ -34,9 +63,14 @@ export function TimezoneSettings({
 }) {
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const zones = ianaTimezones();
-	const options =
-		timezone && !zones.includes(timezone) ? [timezone, ...zones] : zones;
+	const items = useMemo(() => {
+		const options = timezoneOptions();
+		if (timezone && !options.some((item) => item.value === timezone)) {
+			return [timezoneOption(timezone), ...options];
+		}
+		return options;
+	}, [timezone]);
+	const selected = items.find((item) => item.value === timezone) ?? null;
 
 	async function onSelect(next: string) {
 		if (!next || next === timezone) return;
@@ -62,26 +96,44 @@ export function TimezoneSettings({
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3">
-				<Label className="flex flex-col items-start gap-1.5 font-normal">
-					<span className="text-sm font-medium">IANA timezone</span>
-					<select
-						className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-						value={timezone ?? ""}
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor="account-timezone">IANA timezone</Label>
+					<Combobox
+						id="account-timezone"
+						items={items}
+						value={selected}
 						disabled={pending}
-						onChange={(event) => void onSelect(event.target.value)}
+						autoHighlight
+						itemToStringLabel={(item) => item.search}
+						isItemEqualToValue={(item, value) => item.value === value.value}
+						onValueChange={(next) => {
+							if (next && typeof next === "object") {
+								void onSelect(next.value);
+							}
+						}}
 					>
-						{timezone ? null : (
-							<option value="" disabled>
-								Not set
-							</option>
-						)}
-						{options.map((zone) => (
-							<option key={zone} value={zone}>
-								{zone}
-							</option>
-						))}
-					</select>
-				</Label>
+						<ComboboxTrigger className="w-full">
+							{selected ? (
+								<TimezoneLabel option={selected} />
+							) : (
+								<span className="text-muted-foreground">Not set</span>
+							)}
+						</ComboboxTrigger>
+						<ComboboxContent className="flex flex-col">
+							<div className="border-b border-border p-1.5">
+								<ComboboxInput placeholder="Search city, country, or zone" />
+							</div>
+							<ComboboxEmpty>No timezone found.</ComboboxEmpty>
+							<ComboboxList>
+								{(item: TimezoneOption) => (
+									<ComboboxItem key={item.value} value={item}>
+										<TimezoneLabel option={item} />
+									</ComboboxItem>
+								)}
+							</ComboboxList>
+						</ComboboxContent>
+					</Combobox>
+				</div>
 				{error ? (
 					<p className="text-sm text-destructive" role="alert">
 						{error}
