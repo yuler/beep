@@ -186,6 +186,25 @@ export function DashboardSidebar({
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											isActive={
+												pathname === `/${slug}/plugins` ||
+												pathname.startsWith(`/${slug}/plugins/`)
+											}
+											tooltip="Plugins"
+											render={
+												<Link
+													to="/$account_slug/plugins"
+													params={{ account_slug: slug }}
+													onClick={closeMobileSidebar}
+												/>
+											}
+										>
+											<Activity />
+											<span>Plugins</span>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											isActive={
 												pathname === settingsPath ||
 												pathname.startsWith(`${settingsPath}/`)
 											}

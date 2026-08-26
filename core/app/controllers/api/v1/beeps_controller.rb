@@ -45,7 +45,9 @@ class Api::V1::BeepsController < Api::V1::BaseController
 
   private
     def beep_params
-      params.permit(:title, :body, :run_at, :cron, :kind)
+      attrs = params.permit(:title, :body, :run_at, :cron, :kind, :plugin_id)
+      attrs[:plugin_config] = params[:plugin_config].to_unsafe_h if params[:plugin_config].respond_to?(:to_unsafe_h)
+      attrs
     end
 
     def beep_timezone
