@@ -156,5 +156,4 @@ class Api::V1::BeeperInstallsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "pending", body["status"]
     assert install.reload.firing?
   end
-
 end
