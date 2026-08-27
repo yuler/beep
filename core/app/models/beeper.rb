@@ -1,6 +1,4 @@
-class Plugin < ApplicationRecord
-  self.table_name = "plugins"
-
+class Beeper < ApplicationRecord
   belongs_to :account, optional: true
 
   validates :slug, presence: true, format: { with: /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/, message: "must be lowercase kebab-case" }
@@ -11,24 +9,19 @@ class Plugin < ApplicationRecord
   scope :official, -> { where(account_id: nil) }
 
   class << self
-    def official_plugins_dir
-      Rails.root.join("../apps/plugins").cleanpath
+    def official_dir
+      Rails.root.join("../apps/beepers").cleanpath
     end
 
-    def seed_official_plugins
-      return unless Dir.exist?(official_plugins_dir)
+    def seed_official
+      return unless Dir.exist?(official_dir)
 
-      manifest_files = Dir.glob(official_plugins_dir.join("*/manifest.json"))
-      manifest_files.each do |file_path|
-        raw_json = File.read(file_path)
-        manifest_data = JSON.parse(raw_json)
-        slug = manifest_data["slug"]
-        version = manifest_data["version"]
-
-        plugin = official.find_or_initialize_by(slug: slug)
-        plugin.version = version
-        plugin.manifest = manifest_data
-        plugin.save!
+      Dir.glob(official_dir.join("*/manifest.json")).each do |file_path|
+        manifest_data = JSON.parse(File.read(file_path))
+        beeper = official.find_or_initialize_by(slug: manifest_data["slug"])
+        beeper.version = manifest_data["version"]
+        beeper.manifest = manifest_data
+        beeper.save!
       end
     end
   end
@@ -74,8 +67,7 @@ class Plugin < ApplicationRecord
   end
 
   def checker_class
-    checker_name = slug.tr("-", "_").camelize
-    "Plugin::Checkers::#{checker_name}".safe_constantize
+    "Beeper::Checkers::#{slug.tr("-", "_").camelize}".safe_constantize
   end
 
   def run_check(config:)
@@ -83,14 +75,14 @@ class Plugin < ApplicationRecord
     if klass
       klass.call(config: config)
     else
-      Plugin::CheckResult.new(
+      Beeper::CheckResult.new(
         status: :error,
-        title: "Plugin implementation not found",
-        message: "No checker class implemented for plugin '#{slug}'"
+        title: "Beeper implementation not found",
+        message: "No checker class implemented for beeper '#{slug}'"
       )
     end
   rescue StandardError => e
-    Plugin::CheckResult.new(
+    Beeper::CheckResult.new(
       status: :error,
       title: "Check execution failed",
       message: e.message

@@ -1,7 +1,7 @@
-class Plugin::Checkers::Echo < Plugin::Checkers::Base
+class Beeper::Checkers::Echo < Beeper::Checkers::Base
   def call
     status = config["status"] || "ok"
-    Plugin::CheckResult.new(
+    Beeper::CheckResult.new(
       status: status,
       title: config["title"] || "Echo Check",
       message: config["message"] || "Echo check executed",

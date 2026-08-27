@@ -1,4 +1,4 @@
-class Plugin::ManifestValidator
+class Beeper::ManifestValidator
   SUPPORTED_MANIFEST_VERSIONS = [ 1 ].freeze
   SUPPORTED_INPUT_TYPES = %w[ string number boolean url enum secret ].freeze
 

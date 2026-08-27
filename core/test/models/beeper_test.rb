@@ -1,6 +1,6 @@
 require "test_helper"
 
-class PluginTest < ActiveSupport::TestCase
+class BeeperTest < ActiveSupport::TestCase
   setup do
     @valid_manifest = {
       "manifest_version" => 1,
@@ -35,40 +35,46 @@ class PluginTest < ActiveSupport::TestCase
     }
   end
 
-  test "validates official plugin with valid manifest" do
-    plugin = Plugin.new(
-      slug: "custom-monitor",
+  test "validates official beeper with valid manifest" do
+    beeper = Beeper.new(
+      slug: "echo",
       version: "1.0.0",
-      manifest: @valid_manifest
+      manifest: {
+        "manifest_version" => 1,
+        "slug" => "echo",
+        "name" => "Echo",
+        "version" => "1.0.0",
+        "author" => "Beep",
+        "schedule" => { "default_cron" => "*/5 * * * *" }
+      }
     )
-    assert plugin.valid?
-    assert plugin.official?
-    assert_not plugin.custom?
+    assert beeper.valid?
+    assert beeper.official?
   end
 
-  test "validates custom plugin scoped to account" do
+  test "validates custom beeper scoped to account" do
     account = accounts(:john_account)
-    plugin = Plugin.new(
+    beeper = Beeper.new(
       account: account,
       slug: "custom-monitor",
       version: "1.0.0",
       manifest: @valid_manifest
     )
-    assert plugin.valid?
-    assert plugin.custom?
-    assert_not plugin.official?
+    assert beeper.valid?
+    assert beeper.custom?
+    assert_not beeper.official?
   end
 
   test "enforces uniqueness of slug per account" do
     account = accounts(:john_account)
-    Plugin.create!(
+    Beeper.create!(
       account: account,
       slug: "custom-monitor",
       version: "1.0.0",
       manifest: @valid_manifest
     )
 
-    duplicate = Plugin.new(
+    duplicate = Beeper.new(
       account: account,
       slug: "custom-monitor",
       version: "1.0.0",
@@ -78,14 +84,14 @@ class PluginTest < ActiveSupport::TestCase
     assert_includes duplicate.errors[:slug], "has already been taken for this account"
   end
 
-  test "allows same slug between official and custom plugin" do
-    Plugin.create!(
+  test "allows same slug between official and custom beeper" do
+    Beeper.create!(
       slug: "custom-monitor",
       version: "1.0.0",
       manifest: @valid_manifest
     )
 
-    custom = Plugin.new(
+    custom = Beeper.new(
       account: accounts(:john_account),
       slug: "custom-monitor",
       version: "1.0.0",
@@ -95,44 +101,55 @@ class PluginTest < ActiveSupport::TestCase
   end
 
   test "enforces slug matches manifest slug" do
-    plugin = Plugin.new(
+    beeper = Beeper.new(
       slug: "different-slug",
       version: "1.0.0",
       manifest: @valid_manifest
     )
-    assert_not plugin.valid?
-    assert_includes plugin.errors[:slug], "must match manifest slug 'custom-monitor'"
+    assert_not beeper.valid?
+    assert_includes beeper.errors[:slug], "must match manifest slug 'custom-monitor'"
   end
 
   test "validates manifest schema contract" do
     invalid_manifest = @valid_manifest.merge("manifest_version" => 99, "schedule" => { "default_cron" => "invalid" })
-    plugin = Plugin.new(
+    beeper = Beeper.new(
       slug: "custom-monitor",
       version: "1.0.0",
       manifest: invalid_manifest
     )
-    assert_not plugin.valid?
-    assert plugin.errors[:manifest].present?
+    assert_not beeper.valid?
+    assert beeper.errors[:manifest].present?
   end
 
-  test "seed_official_plugins is idempotent" do
-    assert_difference -> { Plugin.official.count }, 3 do
-      Plugin.seed_official_plugins
+  test "seed_official is idempotent" do
+    assert_difference -> { Beeper.official.count }, 3 do
+      Beeper.seed_official
     end
 
-    site_uptime = Plugin.official.find_by(slug: "site-uptime")
+    site_uptime = Beeper.official.find_by(slug: "site-uptime")
     assert_not_nil site_uptime
     assert_equal "1.0.0", site_uptime.version
     assert_equal "*/5 * * * *", site_uptime.default_cron
     assert_equal 2, site_uptime.failure_threshold
 
-    heartbeat = Plugin.official.find_by(slug: "heartbeat")
+    heartbeat = Beeper.official.find_by(slug: "heartbeat")
     assert_not_nil heartbeat
     assert heartbeat.webhook_ingest?
 
     # Running again should not create duplicate rows
-    assert_no_difference -> { Plugin.official.count } do
-      Plugin.seed_official_plugins
+    assert_no_difference -> { Beeper.official.count } do
+      Beeper.seed_official
     end
+  end
+
+  test "run_check returns error when checker class is missing" do
+    beeper = Beeper.new(
+      slug: "custom-monitor",
+      version: "1.0.0",
+      manifest: @valid_manifest
+    )
+    result = beeper.run_check(config: {})
+    assert result.error?
+    assert_equal "Beeper implementation not found", result.title
   end
 end

@@ -27,7 +27,7 @@ else
     owner_name: "Yuler Doe"
   )
 
-  Plugin.seed_official_plugins
+  Beeper.seed_official
 
-  puts "OK: Seeded yuler identity, Yuler Company account, and official plugins (development only)."
+  puts "OK: Seeded yuler identity, Yuler Company account, and official beepers (development only)."
 end

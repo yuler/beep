@@ -1,4 +1,4 @@
-class Plugin::Checkers::SiteUptime < Plugin::Checkers::Base
+class Beeper::Checkers::SiteUptime < Beeper::Checkers::Base
   MAX_REDIRECTS = 3
   MAX_BODY_BYTES = 8.kilobytes
   DEFAULT_TIMEOUT_MS = 3000
@@ -10,7 +10,7 @@ class Plugin::Checkers::SiteUptime < Plugin::Checkers::Base
     timeout_seconds = timeout_ms / 1000.0
 
     if target_url.blank?
-      return Plugin::CheckResult.new(
+      return Beeper::CheckResult.new(
         status: :error,
         title: "Configuration error",
         message: "Target URL is required"
@@ -19,7 +19,7 @@ class Plugin::Checkers::SiteUptime < Plugin::Checkers::Base
 
     uri = URI.parse(target_url)
     unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
-      return Plugin::CheckResult.new(
+      return Beeper::CheckResult.new(
         status: :error,
         title: "Invalid URL",
         message: "Target URL must start with http:// or https://"
@@ -37,14 +37,14 @@ class Plugin::Checkers::SiteUptime < Plugin::Checkers::Base
     }
 
     if status_code == expected_status
-      Plugin::CheckResult.new(
+      Beeper::CheckResult.new(
         status: :ok,
         title: "Site is operational",
         message: "HTTP #{status_code} from #{final_uri.host} (#{elapsed_ms}ms)",
         metrics: metrics
       )
     else
-      Plugin::CheckResult.new(
+      Beeper::CheckResult.new(
         status: :alerting,
         title: "Site returned HTTP #{status_code}",
         message: "Expected HTTP #{expected_status} but received HTTP #{status_code} from #{final_uri.host} (#{elapsed_ms}ms)",
@@ -52,19 +52,19 @@ class Plugin::Checkers::SiteUptime < Plugin::Checkers::Base
       )
     end
   rescue SsrfProtection::BlockedAddressError => e
-    Plugin::CheckResult.new(
+    Beeper::CheckResult.new(
       status: :error,
       title: "Blocked target address",
       message: e.message
     )
   rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error => e
-    Plugin::CheckResult.new(
+    Beeper::CheckResult.new(
       status: :alerting,
       title: "Site check timed out",
       message: "Connection to #{uri&.host || target_url} timed out after #{timeout_ms}ms"
     )
   rescue StandardError => e
-    Plugin::CheckResult.new(
+    Beeper::CheckResult.new(
       status: :alerting,
       title: "Site check failed",
       message: "Failed to connect to #{uri&.host || target_url}: #{e.message}"
