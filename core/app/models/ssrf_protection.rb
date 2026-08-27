@@ -62,6 +62,12 @@ module SsrfProtection
   end
 
   def blocked_address?(ip)
+    # Development: skip SSRF blocking. Local Mihomo (Clash/Surge TUN) Fake-IP
+    # resolves public hostnames into 198.18.0.0/15, which production rules
+    # correctly reject — but that breaks site-uptime / ssl-expiry probes on a
+    # proxied laptop. Re-enable when we have a better local-proxy story.
+    return false if Rails.env.development?
+
     ipaddr = ip.is_a?(IPAddr) ? ip : IPAddr.new(ip.to_s)
 
     # DNS never legitimately returns these embedded forms, so block them all
@@ -93,19 +99,8 @@ module SsrfProtection
     end
 
     def disallowed_ipv4?(ipaddr)
-      # Allow Fake-IP range (RFC 2544 benchmark 198.18.0.0/15) in development
-      # (or when ALLOW_PRIVATE_SSRF_TARGETS is set) so developers with local
-      # TUN proxies (Clash/Mihomo/Surge) can test target domains seamlessly.
-      if allow_development_fake_ip? && (ipaddr.to_s.start_with?("198.18.") || ipaddr.to_s.start_with?("198.19."))
-        return false
-      end
-
       ipaddr.private? || ipaddr.loopback? || ipaddr.link_local? ||
         DISALLOWED_IP_RANGES.any? { |range| range.include?(ipaddr) }
-    end
-
-    def allow_development_fake_ip?
-      Rails.env.development? || ENV["ALLOW_PRIVATE_SSRF_TARGETS"].present?
     end
 
     def disallowed_ipv6?(ipaddr)
