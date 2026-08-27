@@ -1,66 +1,12 @@
 class BeepRun < ApplicationRecord
   class EmailDeliveryError < StandardError; end
 
-  CHECK_RESULT_MAX_BYTES = 8.kilobytes
-
   belongs_to :beep
 
   enum :status, %w[ pending running succeeded failed skipped expired ].index_by(&:itself)
-  enum :check_status, %w[ ok alerting error ].index_by(&:itself)
 
   def deliver_later
-    if beep.plugin?
-      RunCheckJob.perform_later(self)
-    else
-      DeliverBeepRunJob.perform_later(self)
-    end
-  end
-
-  def execute_check_now
-    return unless claim_delivery?
-
-    if beep.expired_plugin_run?(scheduled_for)
-      update!(status: :expired)
-      beep.finish_firing(last_run_at: scheduled_for)
-      return
-    end
-
-    check_result = beep.plugin.run_check(config: beep.effective_plugin_config)
-    sanitized_result = sanitize_check_result(check_result.to_h)
-
-    decision = BeepRun::AlertEvaluator.evaluate(
-      beep: beep,
-      check_result: check_result
-    )
-
-    update!(
-      check_status: check_result.status.to_s,
-      check_result: sanitized_result
-    )
-
-    beep.update!(
-      alert_state: decision.next_alert_state,
-      consecutive_failures: decision.next_consecutive_failures
-    )
-
-    if decision.should_notify
-      # Trigger delivery for alert / recovery notification
-      deliver_notifications_now
-    else
-      update!(status: :succeeded)
-      beep.finish_firing(last_run_at: scheduled_for)
-    end
-  rescue EmailDeliveryError
-    # Check outcome is already persisted above; delegate to the delivery job,
-    # which retries transient email failures without re-running the check.
     DeliverBeepRunJob.perform_later(self)
-  rescue StandardError => e
-    update!(
-      check_status: "error",
-      check_result: { "status" => "error", "message" => e.message },
-      status: :failed
-    )
-    beep.finish_firing(last_run_at: scheduled_for)
   end
 
   def deliver_now
@@ -90,32 +36,19 @@ class BeepRun < ApplicationRecord
       (result || {}).deep_stringify_keys
     end
 
-    def sanitize_check_result(hash)
-      json_str = hash.to_json
-      if json_str.bytesize > CHECK_RESULT_MAX_BYTES
-        {
-          "status" => hash["status"],
-          "title" => hash["title"],
-          "message" => hash["message"]&.truncate(500),
-          "metrics" => hash["metrics"],
-          "truncated" => true
-        }.compact
-      else
-        hash
-      end
-    end
-
     def persist_result(payload_result)
       update_columns(result: payload_result, updated_at: Time.current)
     end
 
     def deliver_for(user, payload_result)
-      if user.notification_channel?("web_push")
+      channels = Array(beep.notification_channels)
+
+      if channels.include?("web_push")
         payload_result = deliver_web_push(user, payload_result)
         persist_result(payload_result)
       end
 
-      if user.notification_channel?("email")
+      if channels.include?("email")
         payload_result = deliver_email(user, payload_result)
         persist_result(payload_result)
         if payload_result.dig("email", "status") == "error"

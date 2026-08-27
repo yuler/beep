@@ -1,8 +1,6 @@
 <h1><%= @beep.title %></h1>
 
-<% if @run&.check_result&.dig("message").present? %>
-  <%= simple_format(@run.check_result["message"]) %>
-<% elsif @beep.body_text.present? %>
+<% if @beep.body_text.present? %>
   <%= simple_format(@beep.body_text) %>
 <% end %>
 

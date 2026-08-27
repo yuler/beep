@@ -1,5 +1,5 @@
-class BeepRun::AlertEvaluator
-  # Table from plugin-ecosystem.md:
+class BeeperRun::AlertEvaluator
+  # Table from beeper-ecosystem.md:
   # | Previous alert_state | check_status       | Notify                            | Next state                                      |
   # | ok                   | ok                 | no                                | ok, counter 0                                   |
   # | ok                   | alerting / error   | only when counter + 1 >= threshold | alerting if notified, else ok (counter + 1)     |
@@ -8,10 +8,10 @@ class BeepRun::AlertEvaluator
 
   Decision = Data.define(:should_notify, :next_alert_state, :next_consecutive_failures, :is_recovery)
 
-  def self.evaluate(beep:, check_result:)
-    threshold = beep.failure_threshold
-    current_state = beep.alert_state.to_s
-    failures = beep.consecutive_failures || 0
+  def self.evaluate(install:, check_result:)
+    threshold = install.failure_threshold
+    current_state = install.alert_state.to_s
+    failures = install.consecutive_failures || 0
 
     if check_result.ok?
       if current_state == "alerting"
