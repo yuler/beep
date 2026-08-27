@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Open a Rails console inside the production core container.
+#
+# Connects to the Dokploy server over SSH, finds the running core container by
+# its <project>-<service> names, and runs `./bin/rails console` inside it.
 set -euo pipefail
 
 HOST=beep.yuler.cc
