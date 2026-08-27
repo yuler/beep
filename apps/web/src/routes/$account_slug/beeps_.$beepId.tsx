@@ -137,27 +137,23 @@ function BeepDetailPage() {
 								{beep.title}
 							</h1>
 							{beep.beeper ? (
-								beep.beeper_install_id ? (
+								beep.beeper_id ? (
 									<Link
 										to="/$account_slug/beepers/$beeperId"
 										params={{
 											account_slug: slug,
-											beeperId: beep.beeper_install_id,
+											beeperId: beep.beeper_id,
 										}}
-										className="inline-flex items-center"
 									>
-										<Badge
-											variant="secondary"
-											className="gap-1 text-xs transition-colors hover:bg-secondary/80"
-										>
-											<Activity className="size-3" />
-											Triggered by {beep.beeper.name} →
+										<Badge variant="outline" className="gap-1 cursor-pointer">
+											<Activity className="size-3 text-muted-foreground" />
+											{beep.beeper.name}
 										</Badge>
 									</Link>
 								) : (
-									<Badge variant="secondary" className="gap-1 text-xs">
-										<Activity className="size-3" />
-										Triggered by {beep.beeper.name}
+									<Badge variant="outline" className="gap-1">
+										<Activity className="size-3 text-muted-foreground" />
+										{beep.beeper.name}
 									</Badge>
 								)
 							) : null}

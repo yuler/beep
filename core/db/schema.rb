@@ -173,9 +173,33 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_27_120000) do
     t.index ["beep_id", "scheduled_for"], name: "index_beep_runs_on_beep_id_and_scheduled_for", unique: true
   end
 
-  create_table "beeper_installs", id: :uuid, force: :cascade do |t|
-    t.uuid "account_id", null: false
+  create_table "beeper_apps", id: :uuid, force: :cascade do |t|
+    t.string "slug", null: false
+    t.uuid "account_id"
+    t.string "version", null: false
+    t.json "manifest", default: {}, null: false
+    t.text "source"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_beeper_apps_on_account_id"
+    t.index ["slug", "account_id"], name: "index_beeper_apps_on_slug_and_account_id", unique: true
+  end
+
+  create_table "beeper_runs", id: :uuid, force: :cascade do |t|
     t.uuid "beeper_id", null: false
+    t.datetime "scheduled_for", null: false
+    t.string "status", default: "pending", null: false
+    t.string "signal_status"
+    t.json "signal_result"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["beeper_id", "scheduled_for"], name: "index_beeper_runs_on_beeper_id_and_scheduled_for", unique: true
+    t.index ["beeper_id"], name: "index_beeper_runs_on_beeper_id"
+  end
+
+  create_table "beepers", id: :uuid, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.uuid "beeper_app_id", null: false
     t.string "title", null: false
     t.json "config", default: {}
     t.string "cron", null: false
@@ -189,34 +213,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_27_120000) do
     t.json "notification_channels", default: [], null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index "(json_extract(signal_metadata, '$.ping_token'))", name: "index_beeper_installs_on_ping_token", unique: true
-    t.index ["account_id", "status", "next_run_at"], name: "index_beeper_installs_on_due"
-    t.index ["account_id"], name: "index_beeper_installs_on_account_id"
-    t.index ["beeper_id"], name: "index_beeper_installs_on_beeper_id"
-  end
-
-  create_table "beeper_runs", id: :uuid, force: :cascade do |t|
-    t.uuid "beeper_install_id", null: false
-    t.datetime "scheduled_for", null: false
-    t.string "status", default: "pending", null: false
-    t.string "signal_status"
-    t.json "signal_result"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["beeper_install_id", "scheduled_for"], name: "index_beeper_runs_on_beeper_install_id_and_scheduled_for", unique: true
-    t.index ["beeper_install_id"], name: "index_beeper_runs_on_beeper_install_id"
-  end
-
-  create_table "beepers", id: :uuid, force: :cascade do |t|
-    t.string "slug", null: false
-    t.uuid "account_id"
-    t.string "version", null: false
-    t.json "manifest", default: {}, null: false
-    t.text "source"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.index "(json_extract(signal_metadata, '$.ping_token'))", name: "index_beepers_on_ping_token", unique: true
+    t.index ["account_id", "status", "next_run_at"], name: "index_beepers_on_due"
     t.index ["account_id"], name: "index_beepers_on_account_id"
-    t.index ["slug", "account_id"], name: "index_beepers_on_slug_and_account_id", unique: true
+    t.index ["beeper_app_id"], name: "index_beepers_on_beeper_app_id"
   end
 
   create_table "beeps", id: :uuid, force: :cascade do |t|
@@ -233,9 +233,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_27_120000) do
     t.text "title", null: false
     t.text "body"
     t.json "notification_channels", default: [], null: false
-    t.uuid "beeper_install_id"
+    t.uuid "beeper_id"
     t.index ["account_id"], name: "index_beeps_on_account_id"
-    t.index ["beeper_install_id"], name: "index_beeps_on_beeper_install_id"
+    t.index ["beeper_id"], name: "index_beeps_on_beeper_id"
     t.index ["status", "next_run_at"], name: "index_beeps_on_status_and_next_run_at"
   end
 
@@ -325,12 +325,12 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_27_120000) do
   add_foreign_key "account_invitation_declines", "identities"
   add_foreign_key "account_slug_holds", "accounts"
   add_foreign_key "beep_runs", "beeps"
-  add_foreign_key "beeper_installs", "accounts"
-  add_foreign_key "beeper_installs", "beepers"
-  add_foreign_key "beeper_runs", "beeper_installs"
+  add_foreign_key "beeper_apps", "accounts"
+  add_foreign_key "beeper_runs", "beepers"
   add_foreign_key "beepers", "accounts"
+  add_foreign_key "beepers", "beeper_apps"
   add_foreign_key "beeps", "accounts"
-  add_foreign_key "beeps", "beeper_installs"
+  add_foreign_key "beeps", "beepers"
   add_foreign_key "identity_access_tokens", "identities"
   add_foreign_key "push_subscriptions", "accounts"
   add_foreign_key "push_subscriptions", "users"

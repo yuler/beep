@@ -13,11 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	type BeeperRun,
-	deleteBeeperInstall,
-	fetchBeeperInstall,
-	pauseBeeperInstall,
-	resumeBeeperInstall,
-	triggerBeeperInstallRun,
+	deleteBeeper,
+	fetchBeeper,
+	pauseBeeper,
+	resumeBeeper,
+	triggerBeeperRun,
 } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
@@ -27,7 +27,7 @@ const accountRoute = getRouteApi("/$account_slug");
 export const Route = createFileRoute("/$account_slug/beepers_/$beeperId")({
 	loader: withAuthRedirects(async ({ params }) => {
 		try {
-			return await fetchBeeperInstall(
+			return await fetchBeeper(
 				params?.account_slug ?? "",
 				params?.beeperId ?? "",
 			);
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/$account_slug/beepers_/$beeperId")({
 			throw err;
 		}
 	}),
-	component: BeeperInstallDetailPage,
+	component: BeeperDetailPage,
 });
 
 function formatWhen(value: string | null | undefined) {
@@ -67,10 +67,10 @@ const SIGNAL_STATUS_VARIANT: Record<
 	error: "destructive",
 };
 
-function BeeperInstallDetailPage() {
+function BeeperDetailPage() {
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
-	const install = Route.useLoaderData();
+	const beeper = Route.useLoaderData();
 	const [deleting, setDeleting] = useState(false);
 	const [triggering, setTriggering] = useState(false);
 	const [togglingStatus, setTogglingStatus] = useState(false);
@@ -80,7 +80,7 @@ function BeeperInstallDetailPage() {
 		setTriggering(true);
 		setError(null);
 		try {
-			await triggerBeeperInstallRun(slug, install.id);
+			await triggerBeeperRun(slug, beeper.id);
 			await router.invalidate();
 		} catch (err) {
 			setError(
@@ -95,10 +95,10 @@ function BeeperInstallDetailPage() {
 		setTogglingStatus(true);
 		setError(null);
 		try {
-			if (install.status === "paused") {
-				await resumeBeeperInstall(slug, install.id);
+			if (beeper.status === "paused") {
+				await resumeBeeper(slug, beeper.id);
 			} else {
-				await pauseBeeperInstall(slug, install.id);
+				await pauseBeeper(slug, beeper.id);
 			}
 			await router.invalidate();
 		} catch (err) {
@@ -113,14 +113,14 @@ function BeeperInstallDetailPage() {
 	}
 
 	async function handleDelete() {
-		if (!window.confirm(`Delete "${install.title}"? This cannot be undone.`)) {
+		if (!window.confirm(`Delete "${beeper.title}"? This cannot be undone.`)) {
 			return;
 		}
 
 		setDeleting(true);
 		setError(null);
 		try {
-			await deleteBeeperInstall(slug, install.id);
+			await deleteBeeper(slug, beeper.id);
 			await router.navigate({
 				to: "/$account_slug/beepers",
 				params: { account_slug: slug },
@@ -129,16 +129,14 @@ function BeeperInstallDetailPage() {
 		} catch (err) {
 			setDeleting(false);
 			setError(
-				err instanceof ApiError
-					? err.message
-					: "Failed to delete beeper install.",
+				err instanceof ApiError ? err.message : "Failed to delete beeper.",
 			);
 		}
 	}
 
-	const runs = install.runs ?? [];
-	const inputs = install.beeper?.inputs ?? [];
-	const configEntries = Object.entries(install.config ?? {});
+	const runs = beeper.runs ?? [];
+	const inputs = beeper.beeper_app?.inputs ?? [];
+	const configEntries = Object.entries(beeper.config ?? {});
 
 	return (
 		<>
@@ -154,7 +152,7 @@ function BeeperInstallDetailPage() {
 						to: "/$account_slug/beepers",
 						params: { account_slug: slug },
 					},
-					{ label: install.title, isCurrentPage: true },
+					{ label: beeper.title, isCurrentPage: true },
 				]}
 			/>
 
@@ -163,42 +161,42 @@ function BeeperInstallDetailPage() {
 					<div className="min-w-0">
 						<div className="flex items-center gap-2">
 							<h1 className="font-heading text-2xl font-semibold tracking-tight">
-								{install.title}
+								{beeper.title}
 							</h1>
 							<Badge
 								variant={
-									install.alert_state === "alerting" ? "destructive" : "outline"
+									beeper.alert_state === "alerting" ? "destructive" : "outline"
 								}
 							>
-								{install.alert_state}
+								{beeper.alert_state}
 							</Badge>
 						</div>
 						<p className="mt-1 text-sm text-muted-foreground">
-							{install.beeper?.name} (v{install.beeper?.version}) ·{" "}
-							{install.timezone}
+							{beeper.beeper_app?.name} (v{beeper.beeper_app?.version}) ·{" "}
+							{beeper.timezone}
 						</p>
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
 						<Badge
 							variant={
-								install.status === "active"
+								beeper.status === "active"
 									? "default"
-									: install.status === "paused"
+									: beeper.status === "paused"
 										? "secondary"
 										: "outline"
 							}
 						>
-							{install.status}
+							{beeper.status}
 						</Badge>
-						{install.status === "active" || install.status === "paused" ? (
+						{beeper.status === "active" || beeper.status === "paused" ? (
 							<Button
 								variant="outline"
 								size="sm"
 								disabled={togglingStatus || deleting || triggering}
-								aria-label={`${install.status === "paused" ? "Resume" : "Pause"} beeper ${install.title}`}
+								aria-label={`${beeper.status === "paused" ? "Resume" : "Pause"} beeper ${beeper.title}`}
 								onClick={() => void handleToggleStatus()}
 							>
-								{install.status === "paused" ? (
+								{beeper.status === "paused" ? (
 									<>
 										<Play data-icon="inline-start" />
 										{togglingStatus ? "Resuming…" : "Resume"}
@@ -218,15 +216,15 @@ function BeeperInstallDetailPage() {
 								triggering ||
 								deleting ||
 								togglingStatus ||
-								install.status === "firing"
+								beeper.status === "firing"
 							}
-							aria-label={`Trigger run for beeper ${install.title}`}
+							aria-label={`Trigger run for beeper ${beeper.title}`}
 							onClick={() => void handleTrigger()}
 						>
 							<Play data-icon="inline-start" />
 							{triggering
 								? "Triggering…"
-								: install.status === "firing"
+								: beeper.status === "firing"
 									? "Firing…"
 									: "Trigger run"}
 						</Button>
@@ -234,7 +232,7 @@ function BeeperInstallDetailPage() {
 							variant="destructive"
 							size="sm"
 							disabled={deleting || togglingStatus || triggering}
-							aria-label={`Delete beeper ${install.title}`}
+							aria-label={`Delete beeper ${beeper.title}`}
 							onClick={() => void handleDelete()}
 						>
 							<Trash2 data-icon="inline-start" />
@@ -255,39 +253,39 @@ function BeeperInstallDetailPage() {
 							<CardTitle>Schedule & Status</CardTitle>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-3 text-sm">
-							<DetailRow label="Cron" value={install.cron} />
+							<DetailRow label="Cron" value={beeper.cron} />
 							<DetailRow
 								label="Next run"
-								value={formatWhen(install.next_run_at)}
+								value={formatWhen(beeper.next_run_at)}
 							/>
 							<DetailRow
 								label="Last run"
-								value={formatWhen(install.last_run_at)}
+								value={formatWhen(beeper.last_run_at)}
 							/>
 							<DetailRow
 								label="Consecutive failures"
-								value={String(install.consecutive_failures)}
+								value={String(beeper.consecutive_failures)}
 							/>
-							{install.ping_token ? (
-								<DetailRow label="Ping token" value={install.ping_token} />
+							{beeper.ping_token ? (
+								<DetailRow label="Ping token" value={beeper.ping_token} />
 							) : null}
-							{install.last_ping_at ? (
+							{beeper.last_ping_at ? (
 								<DetailRow
 									label="Last ping"
-									value={formatWhen(install.last_ping_at)}
+									value={formatWhen(beeper.last_ping_at)}
 								/>
 							) : null}
 							<DetailRow
 								label="Channels"
 								value={
-									install.notification_channels?.length > 0
-										? install.notification_channels.join(", ")
+									beeper.notification_channels?.length > 0
+										? beeper.notification_channels.join(", ")
 										: "Default"
 								}
 							/>
 							<DetailRow
 								label="Created"
-								value={formatWhen(install.created_at)}
+								value={formatWhen(beeper.created_at)}
 							/>
 						</CardContent>
 					</Card>

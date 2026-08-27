@@ -9,7 +9,7 @@ class Beep < ApplicationRecord
   BODY_MAX_LENGTH = 2000
 
   belongs_to :account
-  belongs_to :beeper_install, optional: true
+  belongs_to :beeper, optional: true
   has_many :runs, class_name: "BeepRun", dependent: :destroy
 
   enum :kind, %w[ once recurring ].index_by(&:itself)

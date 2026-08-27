@@ -8,10 +8,10 @@ class BeeperRun::AlertEvaluator
 
   Decision = Data.define(:should_notify, :next_alert_state, :next_consecutive_failures, :is_recovery)
 
-  def self.evaluate(install:, signal:)
-    threshold = install.failure_threshold
-    current_state = install.alert_state.to_s
-    failures = install.consecutive_failures || 0
+  def self.evaluate(beeper:, signal:)
+    threshold = beeper.failure_threshold
+    current_state = beeper.alert_state.to_s
+    failures = beeper.consecutive_failures || 0
 
     if signal.ok?
       if current_state == "alerting"

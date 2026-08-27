@@ -3,9 +3,9 @@ require "test_helper"
 class BeeperPollerJobTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
-  test "perform claims due installs" do
+  test "perform claims due beepers" do
     account = accounts(:john_account)
-    beeper = Beeper.create!(
+    beeper_app = BeeperApp.create!(
       slug: "echo",
       version: "1.0.0",
       manifest: {
@@ -17,19 +17,19 @@ class BeeperPollerJobTest < ActiveSupport::TestCase
         "schedule" => { "default_cron" => "*/5 * * * *" }
       }
     )
-    install = BeeperInstall.create!(
+    beeper = Beeper.create!(
       account: account,
-      beeper: beeper,
+      beeper_app: beeper_app,
       title: "Echo Signal",
       cron: "*/5 * * * *",
       timezone: "UTC",
       notification_channels: %w[ email ]
     )
-    install.update_columns(next_run_at: 1.minute.ago)
+    beeper.update_columns(next_run_at: 1.minute.ago)
 
     BeeperPollerJob.perform_now
 
-    assert install.reload.firing? || install.active?
-    assert_equal 1, install.runs.count
+    assert beeper.reload.firing? || beeper.active?
+    assert_equal 1, beeper.runs.count
   end
 end

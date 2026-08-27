@@ -1,9 +1,9 @@
 require "test_helper"
 
-class Api::V1::BeeperInstalls::PingsControllerTest < ActionDispatch::IntegrationTest
+class Api::V1::Beepers::PingsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @account = accounts(:john_account)
-    @beeper = Beeper.create!(
+    @beeper_app = BeeperApp.create!(
       slug: "heartbeat",
       version: "1.0.0",
       manifest: {
@@ -16,9 +16,9 @@ class Api::V1::BeeperInstalls::PingsControllerTest < ActionDispatch::Integration
         "schedule" => { "default_cron" => "*/15 * * * *" }
       }
     )
-    @install = BeeperInstall.create!(
+    @beeper = Beeper.create!(
       account: @account,
-      beeper: @beeper,
+      beeper_app: @beeper_app,
       cron: "*/15 * * * *",
       timezone: "UTC",
       title: "Worker Heartbeat",
@@ -27,14 +27,14 @@ class Api::V1::BeeperInstalls::PingsControllerTest < ActionDispatch::Integration
   end
 
   test "stamps last_ping_at with valid token" do
-    assert_nil @install.last_ping_at
-    assert @install.ping_token.present?
+    assert_nil @beeper.last_ping_at
+    assert @beeper.ping_token.present?
 
-    post "/api/v1/ping/#{@install.ping_token}"
+    post "/api/v1/ping/#{@beeper.ping_token}"
 
     assert_response :success
-    @install.reload
-    assert_not_nil @install.last_ping_at
+    @beeper.reload
+    assert_not_nil @beeper.last_ping_at
   end
 
   test "returns 404 for unknown token" do

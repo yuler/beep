@@ -1,6 +1,6 @@
 import { apiFetch } from "@/lib/api/client";
 
-export type BeeperInput = {
+export type BeeperAppInput = {
 	name: string;
 	label: string;
 	type: "string" | "number" | "boolean" | "url" | "enum" | "secret";
@@ -12,14 +12,14 @@ export type BeeperInput = {
 	options?: (string | number)[];
 };
 
-export type BeeperMetric = {
+export type BeeperAppMetric = {
 	name: string;
 	label: string;
 	type: "number" | "string" | "boolean";
 	unit?: string;
 };
 
-export type Beeper = {
+export type BeeperApp = {
 	id: string;
 	slug: string;
 	name: string;
@@ -29,13 +29,13 @@ export type Beeper = {
 	failure_threshold?: number;
 	min_interval_seconds?: number;
 	webhook_ingest?: boolean;
-	inputs: BeeperInput[];
-	metrics: BeeperMetric[];
+	inputs: BeeperAppInput[];
+	metrics: BeeperAppMetric[];
 	created_at: string;
 };
 
-export type BeepersResponse = {
-	beepers: Beeper[];
+export type BeeperAppsResponse = {
+	beeper_apps: BeeperApp[];
 };
 
 export type BeeperRun = {
@@ -58,7 +58,7 @@ export type BeeperRun = {
 	created_at: string;
 };
 
-export type BeeperInstall = {
+export type Beeper = {
 	id: string;
 	title: string;
 	cron: string;
@@ -75,57 +75,51 @@ export type BeeperInstall = {
 	last_run_at?: string | null;
 	created_at: string;
 	updated_at: string;
-	beeper?: {
+	beeper_app?: {
 		id: string;
 		slug: string;
 		name: string;
 		version: string;
 		description?: string;
-		inputs?: BeeperInput[];
-		metrics?: BeeperMetric[];
+		inputs?: BeeperAppInput[];
+		metrics?: BeeperAppMetric[];
 	};
 	runs?: BeeperRun[];
 };
 
-export type BeeperInstallsResponse = {
-	beeper_installs: BeeperInstall[];
+export type BeepersResponse = {
+	beepers: Beeper[];
 };
 
-export function fetchBeepers() {
-	return apiFetch<BeepersResponse>("/api/v1/beepers", {
+export function fetchBeeperApps() {
+	return apiFetch<BeeperAppsResponse>("/api/v1/beeper_apps", {
 		method: "GET",
 	});
 }
 
-export function fetchBeeper(slug: string) {
-	return apiFetch<Beeper>(`/api/v1/beepers/${slug}`, {
+export function fetchBeeperApp(slug: string) {
+	return apiFetch<BeeperApp>(`/api/v1/beeper_apps/${slug}`, {
 		method: "GET",
 	});
 }
 
-export function fetchBeeperInstalls(accountSlug: string) {
-	return apiFetch<BeeperInstallsResponse>(
-		`/api/v1/${accountSlug}/beeper_installs`,
-		{
-			method: "GET",
-		},
-	);
+export function fetchBeepers(accountSlug: string) {
+	return apiFetch<BeepersResponse>(`/api/v1/${accountSlug}/beepers`, {
+		method: "GET",
+	});
 }
 
-export function fetchBeeperInstall(accountSlug: string, installId: string) {
-	return apiFetch<BeeperInstall>(
-		`/api/v1/${accountSlug}/beeper_installs/${installId}`,
-		{
-			method: "GET",
-		},
-	);
+export function fetchBeeper(accountSlug: string, beeperId: string) {
+	return apiFetch<Beeper>(`/api/v1/${accountSlug}/beepers/${beeperId}`, {
+		method: "GET",
+	});
 }
 
-export function createBeeperInstall(
+export function createBeeper(
 	accountSlug: string,
 	body: {
-		beeper_id?: string;
-		beeper_slug?: string;
+		beeper_app_id?: string;
+		beeper_app_slug?: string;
 		title: string;
 		cron?: string;
 		timezone?: string;
@@ -133,42 +127,33 @@ export function createBeeperInstall(
 		notification_channels?: string[];
 	},
 ) {
-	return apiFetch<BeeperInstall>(`/api/v1/${accountSlug}/beeper_installs`, {
+	return apiFetch<Beeper>(`/api/v1/${accountSlug}/beepers`, {
 		method: "POST",
 		body,
 	});
 }
 
-export function pauseBeeperInstall(accountSlug: string, installId: string) {
-	return apiFetch<BeeperInstall>(
-		`/api/v1/${accountSlug}/beeper_installs/${installId}/pause`,
-		{
-			method: "POST",
-		},
-	);
+export function pauseBeeper(accountSlug: string, beeperId: string) {
+	return apiFetch<Beeper>(`/api/v1/${accountSlug}/beepers/${beeperId}/pause`, {
+		method: "POST",
+	});
 }
 
-export function resumeBeeperInstall(accountSlug: string, installId: string) {
-	return apiFetch<BeeperInstall>(
-		`/api/v1/${accountSlug}/beeper_installs/${installId}/pause`,
-		{
-			method: "DELETE",
-		},
-	);
-}
-
-export function deleteBeeperInstall(accountSlug: string, installId: string) {
-	return apiFetch<void>(`/api/v1/${accountSlug}/beeper_installs/${installId}`, {
+export function resumeBeeper(accountSlug: string, beeperId: string) {
+	return apiFetch<Beeper>(`/api/v1/${accountSlug}/beepers/${beeperId}/pause`, {
 		method: "DELETE",
 	});
 }
 
-export function triggerBeeperInstallRun(
-	accountSlug: string,
-	installId: string,
-) {
+export function deleteBeeper(accountSlug: string, beeperId: string) {
+	return apiFetch<void>(`/api/v1/${accountSlug}/beepers/${beeperId}`, {
+		method: "DELETE",
+	});
+}
+
+export function triggerBeeperRun(accountSlug: string, beeperId: string) {
 	return apiFetch<BeeperRun>(
-		`/api/v1/${accountSlug}/beeper_installs/${installId}/runs`,
+		`/api/v1/${accountSlug}/beepers/${beeperId}/runs`,
 		{
 			method: "POST",
 		},

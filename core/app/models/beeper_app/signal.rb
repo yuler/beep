@@ -1,4 +1,4 @@
-Beeper::Signal = Data.define(:status, :title, :message, :metrics) do
+BeeperApp::Signal = Data.define(:status, :title, :message, :metrics) do
   def initialize(status:, title: nil, message: nil, metrics: {})
     status_sym = status.to_sym
     unless [ :ok, :alerting, :error ].include?(status_sym)

@@ -1,6 +1,6 @@
 require "test_helper"
 
-class BeeperTest < ActiveSupport::TestCase
+class BeeperAppTest < ActiveSupport::TestCase
   setup do
     @valid_manifest = {
       "manifest_version" => 1,
@@ -35,8 +35,8 @@ class BeeperTest < ActiveSupport::TestCase
     }
   end
 
-  test "validates official beeper with valid manifest" do
-    beeper = Beeper.new(
+  test "validates official beeper app with valid manifest" do
+    beeper_app = BeeperApp.new(
       slug: "echo",
       version: "1.0.0",
       manifest: {
@@ -48,33 +48,33 @@ class BeeperTest < ActiveSupport::TestCase
         "schedule" => { "default_cron" => "*/5 * * * *" }
       }
     )
-    assert beeper.valid?
-    assert beeper.official?
+    assert beeper_app.valid?
+    assert beeper_app.official?
   end
 
-  test "validates custom beeper scoped to account" do
+  test "validates custom beeper app scoped to account" do
     account = accounts(:john_account)
-    beeper = Beeper.new(
+    beeper_app = BeeperApp.new(
       account: account,
       slug: "custom-monitor",
       version: "1.0.0",
       manifest: @valid_manifest
     )
-    assert beeper.valid?
-    assert beeper.custom?
-    assert_not beeper.official?
+    assert beeper_app.valid?
+    assert beeper_app.custom?
+    assert_not beeper_app.official?
   end
 
   test "enforces uniqueness of slug per account" do
     account = accounts(:john_account)
-    Beeper.create!(
+    BeeperApp.create!(
       account: account,
       slug: "custom-monitor",
       version: "1.0.0",
       manifest: @valid_manifest
     )
 
-    duplicate = Beeper.new(
+    duplicate = BeeperApp.new(
       account: account,
       slug: "custom-monitor",
       version: "1.0.0",
@@ -84,14 +84,14 @@ class BeeperTest < ActiveSupport::TestCase
     assert_includes duplicate.errors[:slug], "has already been taken for this account"
   end
 
-  test "allows same slug between official and custom beeper" do
-    Beeper.create!(
+  test "allows same slug between official and custom beeper app" do
+    BeeperApp.create!(
       slug: "custom-monitor",
       version: "1.0.0",
       manifest: @valid_manifest
     )
 
-    custom = Beeper.new(
+    custom = BeeperApp.new(
       account: accounts(:john_account),
       slug: "custom-monitor",
       version: "1.0.0",
@@ -101,55 +101,55 @@ class BeeperTest < ActiveSupport::TestCase
   end
 
   test "enforces slug matches manifest slug" do
-    beeper = Beeper.new(
+    beeper_app = BeeperApp.new(
       slug: "different-slug",
       version: "1.0.0",
       manifest: @valid_manifest
     )
-    assert_not beeper.valid?
-    assert_includes beeper.errors[:slug], "must match manifest slug 'custom-monitor'"
+    assert_not beeper_app.valid?
+    assert_includes beeper_app.errors[:slug], "must match manifest slug 'custom-monitor'"
   end
 
   test "validates manifest schema contract" do
     invalid_manifest = @valid_manifest.merge("manifest_version" => 99, "schedule" => { "default_cron" => "invalid" })
-    beeper = Beeper.new(
+    beeper_app = BeeperApp.new(
       slug: "custom-monitor",
       version: "1.0.0",
       manifest: invalid_manifest
     )
-    assert_not beeper.valid?
-    assert beeper.errors[:manifest].present?
+    assert_not beeper_app.valid?
+    assert beeper_app.errors[:manifest].present?
   end
 
   test "seed_official is idempotent" do
-    assert_difference -> { Beeper.official.count }, 3 do
-      Beeper.seed_official
+    assert_difference -> { BeeperApp.official.count }, 3 do
+      BeeperApp.seed_official
     end
 
-    site_uptime = Beeper.official.find_by(slug: "site-uptime")
+    site_uptime = BeeperApp.official.find_by(slug: "site-uptime")
     assert_not_nil site_uptime
     assert_equal "1.0.0", site_uptime.version
     assert_equal "*/5 * * * *", site_uptime.default_cron
     assert_equal 2, site_uptime.failure_threshold
 
-    heartbeat = Beeper.official.find_by(slug: "heartbeat")
+    heartbeat = BeeperApp.official.find_by(slug: "heartbeat")
     assert_not_nil heartbeat
     assert heartbeat.webhook_ingest?
 
     # Running again should not create duplicate rows
-    assert_no_difference -> { Beeper.official.count } do
-      Beeper.seed_official
+    assert_no_difference -> { BeeperApp.official.count } do
+      BeeperApp.seed_official
     end
   end
 
   test "produce_signal returns error when receiver class is missing" do
-    beeper = Beeper.new(
+    beeper_app = BeeperApp.new(
       slug: "custom-monitor",
       version: "1.0.0",
       manifest: @valid_manifest
     )
-    result = beeper.produce_signal(config: {})
+    result = beeper_app.produce_signal(config: {})
     assert result.error?
-    assert_equal "Beeper implementation not found", result.title
+    assert_equal "Beeper app implementation not found", result.title
   end
 end

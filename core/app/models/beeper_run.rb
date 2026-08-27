@@ -3,7 +3,7 @@ class BeeperRun < ApplicationRecord
 
   SIGNAL_RESULT_MAX_BYTES = 8.kilobytes
 
-  belongs_to :beeper_install
+  belongs_to :beeper
 
   enum :status, %w[ pending running succeeded failed skipped expired ].index_by(&:itself)
   enum :signal_status, %w[ ok alerting error ].index_by(&:itself)
@@ -15,17 +15,17 @@ class BeeperRun < ApplicationRecord
   def execute_now
     return unless claim_execution?
 
-    if beeper_install.expired?(scheduled_for)
+    if beeper.expired?(scheduled_for)
       update!(status: :expired)
-      beeper_install.finish_firing(last_run_at: scheduled_for)
+      beeper.finish_firing(last_run_at: scheduled_for)
       return
     end
 
-    signal = beeper_install.beeper.produce_signal(config: beeper_install.effective_config)
+    signal = beeper.beeper_app.produce_signal(config: beeper.effective_config)
     sanitized_result = sanitize_signal_result(signal.to_h)
 
     decision = BeeperRun::AlertEvaluator.evaluate(
-      install: beeper_install,
+      beeper: beeper,
       signal: signal
     )
 
@@ -34,24 +34,24 @@ class BeeperRun < ApplicationRecord
       signal_result: sanitized_result
     )
 
-    beeper_install.update!(
+    beeper.update!(
       alert_state: decision.next_alert_state,
       consecutive_failures: decision.next_consecutive_failures
     )
 
     if decision.should_notify
-      beeper_install.notify_from!(signal)
+      beeper.notify_from!(signal)
     end
 
     update!(status: :succeeded)
-    beeper_install.finish_firing(last_run_at: scheduled_for)
+    beeper.finish_firing(last_run_at: scheduled_for)
   rescue StandardError => e
     update!(
       signal_status: "error",
       signal_result: { "status" => "error", "message" => e.message },
       status: :failed
     )
-    beeper_install.finish_firing(last_run_at: scheduled_for)
+    beeper.finish_firing(last_run_at: scheduled_for)
   end
 
   private

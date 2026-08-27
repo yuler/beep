@@ -1,11 +1,11 @@
 class Api::V1::BeepsController < Api::V1::BaseController
   def index
-    @beeps = Current.account.beeps.includes(:runs, beeper_install: :beeper).order(created_at: :desc)
+    @beeps = Current.account.beeps.includes(:runs, beeper: :beeper_app).order(created_at: :desc)
     render :index
   end
 
   def show
-    @beep = Current.account.beeps.includes(:runs, beeper_install: :beeper).find(params[:id])
+    @beep = Current.account.beeps.includes(:runs, beeper: :beeper_app).find(params[:id])
     render :show
   end
 

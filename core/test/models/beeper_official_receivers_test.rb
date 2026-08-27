@@ -9,7 +9,7 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
   test "SiteUptime receiver reports ok when status matches expected" do
     fake_response = Net::HTTPSuccess.new("1.1", "200", "OK")
 
-    receiver = Beeper::Receivers::SiteUptime.new(config: {
+    receiver = BeeperApp::Receivers::SiteUptime.new(config: {
       "target_url" => "https://example.com/health",
       "expected_status" => 200
     })
@@ -27,7 +27,7 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
   test "SiteUptime receiver reports alerting when status does not match" do
     fake_response = Net::HTTPNotFound.new("1.1", "404", "Not Found")
 
-    receiver = Beeper::Receivers::SiteUptime.new(config: {
+    receiver = BeeperApp::Receivers::SiteUptime.new(config: {
       "target_url" => "https://example.com/health",
       "expected_status" => 200
     })
@@ -45,7 +45,7 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
   test "SiteUptime blocks private / local IP addresses via SSRF protection" do
     stub_dns_resolution("127.0.0.1")
 
-    result = Beeper::Receivers::SiteUptime.call(config: {
+    result = BeeperApp::Receivers::SiteUptime.call(config: {
       "target_url" => "http://127.0.0.1:3000"
     })
 
@@ -55,7 +55,7 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
 
   test "SslExpiry receiver reports ok when days remaining >= threshold" do
     fake_cert = Struct.new(:not_after).new(30.days.from_now)
-    receiver = Beeper::Receivers::SslExpiry.new(config: {
+    receiver = BeeperApp::Receivers::SslExpiry.new(config: {
       "hostname" => "example.com",
       "alert_days_before" => 14
     })
@@ -72,7 +72,7 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
 
   test "SslExpiry receiver sanitizes full URL hostname" do
     fake_cert = Struct.new(:not_after).new(30.days.from_now)
-    receiver = Beeper::Receivers::SslExpiry.new(config: {
+    receiver = BeeperApp::Receivers::SslExpiry.new(config: {
       "hostname" => "https://example.com/path",
       "alert_days_before" => 14
     })
@@ -89,7 +89,7 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
 
   test "SslExpiry receiver reports alerting when expiring soon" do
     fake_cert = Struct.new(:not_after).new(5.days.from_now)
-    receiver = Beeper::Receivers::SslExpiry.new(config: {
+    receiver = BeeperApp::Receivers::SslExpiry.new(config: {
       "hostname" => "example.com",
       "alert_days_before" => 14
     })
@@ -105,7 +105,7 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
   end
 
   test "Heartbeat receiver reports ok when ping is recent" do
-    result = Beeper::Receivers::Heartbeat.call(config: {
+    result = BeeperApp::Receivers::Heartbeat.call(config: {
       "grace_period_minutes" => 15,
       "last_ping_at" => 5.minutes.ago.iso8601
     })
@@ -115,7 +115,7 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
   end
 
   test "Heartbeat receiver reports alerting when ping is stale" do
-    result = Beeper::Receivers::Heartbeat.call(config: {
+    result = BeeperApp::Receivers::Heartbeat.call(config: {
       "grace_period_minutes" => 15,
       "last_ping_at" => 30.minutes.ago.iso8601
     })
@@ -126,7 +126,7 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
   end
 
   test "Heartbeat receiver reports alerting when no ping was ever received" do
-    result = Beeper::Receivers::Heartbeat.call(config: {
+    result = BeeperApp::Receivers::Heartbeat.call(config: {
       "grace_period_minutes" => 15,
       "last_ping_at" => nil
     })

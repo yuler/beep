@@ -1,7 +1,7 @@
-json.extract! beep, :id, :title, :body, :kind, :status, :cron, :run_at, :next_run_at, :last_run_at, :timezone, :notification_channels, :beeper_install_id, :created_at
-if beep.beeper_install&.beeper
+json.extract! beep, :id, :title, :body, :kind, :status, :cron, :run_at, :next_run_at, :last_run_at, :timezone, :notification_channels, :beeper_id, :created_at
+if beep.beeper&.beeper_app
   json.beeper do
-    json.extract! beep.beeper_install.beeper, :slug, :name
+    json.extract! beep.beeper.beeper_app, :slug, :name
   end
 end
 json.runs beep.runs.sort_by(&:scheduled_for).reverse do |run|

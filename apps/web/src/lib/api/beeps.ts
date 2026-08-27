@@ -26,7 +26,7 @@ export type Beep = {
 	last_run_at: string | null;
 	timezone: string;
 	notification_channels: string[];
-	beeper_install_id?: string | null;
+	beeper_id?: string | null;
 	beeper?: {
 		slug: string;
 		name: string;

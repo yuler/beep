@@ -73,14 +73,14 @@ Rails.application.routes.draw do
       end
 
       resource :settings, only: %i[ show update ]
-      resources :beepers, only: %i[ index show ]
-      resources :beeper_installs, only: %i[ index show create update destroy ] do
-        scope module: :beeper_installs do
+      resources :beeper_apps, only: %i[ index show ]
+      resources :beepers, only: %i[ index show create update destroy ] do
+        scope module: :beepers do
           resource :pause, only: %i[ create destroy ]
           resources :runs, only: :create
         end
       end
-      scope module: :beeper_installs do
+      scope module: :beepers do
         post "ping/:token", to: "pings#create", as: :ping
       end
       resources :beep_proposals, only: :create

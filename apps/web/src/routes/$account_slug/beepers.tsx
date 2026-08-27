@@ -33,9 +33,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
 	type Beeper,
-	type BeeperInstall,
-	createBeeperInstall,
-	fetchBeeperInstalls,
+	type BeeperApp,
+	createBeeper,
+	fetchBeeperApps,
 	fetchBeepers,
 } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
@@ -48,16 +48,16 @@ const accountRoute = getRouteApi("/$account_slug");
 export const Route = createFileRoute("/$account_slug/beepers")({
 	loader: withAuthRedirects(async ({ params }) => {
 		const slug = params?.account_slug ?? "";
-		const [{ beepers }, { beeper_installs: installs }] = await Promise.all([
-			fetchBeepers(),
-			fetchBeeperInstalls(slug),
+		const [{ beeper_apps: beeperApps }, { beepers }] = await Promise.all([
+			fetchBeeperApps(),
+			fetchBeepers(slug),
 		]);
-		return { beepers, installs };
+		return { beeperApps, beepers };
 	}),
 	component: BeepersPage,
 });
 
-function getBeeperMeta(slug: string) {
+function getBeeperAppMeta(slug: string) {
 	switch (slug) {
 		case "site-uptime":
 			return {
@@ -94,19 +94,19 @@ function getBeeperMeta(slug: string) {
 	}
 }
 
-function BeeperCard({
-	beeper,
+function BeeperAppCard({
+	beeperApp,
 	selected,
 	onSelect,
 }: {
-	beeper: Beeper;
+	beeperApp: BeeperApp;
 	selected: boolean;
 	onSelect: () => void;
 }) {
-	const meta = getBeeperMeta(beeper.slug);
+	const meta = getBeeperAppMeta(beeperApp.slug);
 	const Icon = meta.icon;
-	const cron = beeper.default_cron || "*/5 * * * *";
-	const metricCount = beeper.metrics.length;
+	const cron = beeperApp.default_cron || "*/5 * * * *";
+	const metricCount = beeperApp.metrics.length;
 
 	return (
 		<Card
@@ -139,15 +139,17 @@ function BeeperCard({
 						variant="outline"
 						className="font-mono text-[10px] text-muted-foreground"
 					>
-						v{beeper.version}
+						v{beeperApp.version}
 					</Badge>
 				</div>
 			</div>
 
 			<CardHeader>
-				<CardTitle className="text-lg font-semibold">{beeper.name}</CardTitle>
+				<CardTitle className="text-lg font-semibold">
+					{beeperApp.name}
+				</CardTitle>
 				<CardDescription className="line-clamp-3 leading-relaxed">
-					{beeper.description}
+					{beeperApp.description}
 				</CardDescription>
 			</CardHeader>
 
@@ -162,7 +164,7 @@ function BeeperCard({
 							{metricCount} {metricCount === 1 ? "metric" : "metrics"}
 						</span>
 					) : null}
-					{beeper.webhook_ingest ? (
+					{beeperApp.webhook_ingest ? (
 						<span className="inline-flex items-center gap-1">
 							<Webhook className="size-3.5" />
 							Ingest
@@ -198,20 +200,22 @@ function BeeperCard({
 function BeepersPage() {
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
-	const { beepers, installs } = Route.useLoaderData();
-	const [selectedBeeper, setSelectedBeeper] = useState<Beeper | null>(null);
+	const { beeperApps, beepers } = Route.useLoaderData();
+	const [selectedBeeperApp, setSelectedBeeperApp] = useState<BeeperApp | null>(
+		null,
+	);
 	const [formTitle, setFormTitle] = useState("");
 	const [formCron, setFormCron] = useState("");
 	const [formInputs, setFormInputs] = useState<Record<string, unknown>>({});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	function handleSelectBeeper(beeper: Beeper) {
-		setSelectedBeeper(beeper);
-		setFormTitle(`${beeper.name}`);
-		setFormCron(beeper.default_cron || "*/5 * * * *");
+	function handleSelectBeeperApp(beeperApp: BeeperApp) {
+		setSelectedBeeperApp(beeperApp);
+		setFormTitle(`${beeperApp.name}`);
+		setFormCron(beeperApp.default_cron || "*/5 * * * *");
 		const initialInputs: Record<string, unknown> = {};
-		for (const input of beeper.inputs) {
+		for (const input of beeperApp.inputs) {
 			initialInputs[input.name] =
 				input.default !== undefined ? input.default : "";
 		}
@@ -221,24 +225,24 @@ function BeepersPage() {
 
 	async function handleInstall(event: React.FormEvent) {
 		event.preventDefault();
-		if (!selectedBeeper) return;
+		if (!selectedBeeperApp) return;
 
 		setSubmitting(true);
 		setError(null);
 
 		try {
-			const newInstall = await createBeeperInstall(slug, {
+			const newBeeper = await createBeeper(slug, {
 				title: formTitle.trim(),
 				cron: formCron.trim(),
 				timezone: browserTimezone(),
-				beeper_id: selectedBeeper.id,
+				beeper_app_id: selectedBeeperApp.id,
 				config: formInputs,
 			});
 
-			setSelectedBeeper(null);
+			setSelectedBeeperApp(null);
 			await router.navigate({
 				to: "/$account_slug/beepers/$beeperId",
-				params: { account_slug: slug, beeperId: newInstall.id },
+				params: { account_slug: slug, beeperId: newBeeper.id },
 			});
 		} catch (err) {
 			setError(
@@ -272,13 +276,13 @@ function BeepersPage() {
 					</p>
 				</div>
 
-				{installs.length > 0 ? (
+				{beepers.length > 0 ? (
 					<div className="flex flex-col gap-3">
 						<h2 className="font-heading text-lg font-semibold">Your Beepers</h2>
 						<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-							{installs.map((install: BeeperInstall) => (
+							{beepers.map((beeper: Beeper) => (
 								<Card
-									key={install.id}
+									key={beeper.id}
 									size="sm"
 									className="group relative overflow-hidden transition-all duration-150 hover:border-primary/40 hover:shadow-xs"
 								>
@@ -286,7 +290,7 @@ function BeepersPage() {
 										to="/$account_slug/beepers/$beeperId"
 										params={{
 											account_slug: slug,
-											beeperId: install.id,
+											beeperId: beeper.id,
 										}}
 										className="block p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 									>
@@ -294,45 +298,45 @@ function BeepersPage() {
 											<div className="flex items-center gap-1.5">
 												<Badge
 													variant={
-														install.status === "active"
+														beeper.status === "active"
 															? "default"
-															: install.status === "paused"
+															: beeper.status === "paused"
 																? "secondary"
 																: "outline"
 													}
 												>
-													{install.status}
+													{beeper.status}
 												</Badge>
 												<Badge
 													variant={
-														install.alert_state === "alerting"
+														beeper.alert_state === "alerting"
 															? "destructive"
 															: "outline"
 													}
 													className="gap-1 text-[10px] font-medium"
 												>
-													{install.alert_state === "alerting" ? (
+													{beeper.alert_state === "alerting" ? (
 														<ShieldAlert className="size-2.5" />
 													) : (
 														<ShieldCheck className="size-2.5 text-emerald-600 dark:text-emerald-400" />
 													)}
-													{install.alert_state.toUpperCase()}
+													{beeper.alert_state.toUpperCase()}
 												</Badge>
 											</div>
 											<span className="font-mono text-xs text-muted-foreground">
-												{install.cron}
+												{beeper.cron}
 											</span>
 										</div>
 
 										<div className="mt-2.5 flex items-start justify-between gap-3">
 											<h3 className="font-heading text-base font-semibold text-foreground transition-colors group-hover:text-primary">
-												{install.title}
+												{beeper.title}
 											</h3>
 											<ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-primary" />
 										</div>
 
 										<p className="mt-1 text-xs text-muted-foreground">
-											{install.beeper?.name}
+											{beeper.beeper_app?.name}
 										</p>
 									</Link>
 								</Card>
@@ -344,23 +348,23 @@ function BeepersPage() {
 				<div className="flex flex-col gap-3">
 					<h2 className="font-heading text-lg font-semibold">Catalog</h2>
 					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-						{beepers.map((beeper) => (
-							<BeeperCard
-								key={beeper.id}
-								beeper={beeper}
-								selected={selectedBeeper?.id === beeper.id}
-								onSelect={() => handleSelectBeeper(beeper)}
+						{beeperApps.map((beeperApp) => (
+							<BeeperAppCard
+								key={beeperApp.id}
+								beeperApp={beeperApp}
+								selected={selectedBeeperApp?.id === beeperApp.id}
+								onSelect={() => handleSelectBeeperApp(beeperApp)}
 							/>
 						))}
 					</div>
 				</div>
 
-				{selectedBeeper ? (
+				{selectedBeeperApp ? (
 					<Card className="mt-4 max-w-2xl">
 						<CardHeader>
 							<div className="flex items-center gap-3">
 								{(() => {
-									const meta = getBeeperMeta(selectedBeeper.slug);
+									const meta = getBeeperAppMeta(selectedBeeperApp.slug);
 									const Icon = meta.icon;
 									return (
 										<div
@@ -375,7 +379,7 @@ function BeepersPage() {
 								})()}
 								<div>
 									<CardTitle className="text-lg">
-										Configure {selectedBeeper.name}
+										Configure {selectedBeeperApp.name}
 									</CardTitle>
 									<CardDescription>
 										Fill in the parameters below to install this beeper into
@@ -387,7 +391,7 @@ function BeepersPage() {
 						<form onSubmit={handleInstall}>
 							<CardContent className="flex flex-col gap-4">
 								<div className="flex flex-col gap-2">
-									<Label htmlFor="beeper-title">Install Title</Label>
+									<Label htmlFor="beeper-title">Beeper Title</Label>
 									<Input
 										id="beeper-title"
 										required
@@ -408,11 +412,11 @@ function BeepersPage() {
 										className="font-mono text-sm"
 									/>
 									<p className="text-[11px] text-muted-foreground">
-										Default: {selectedBeeper.default_cron || "*/5 * * * *"}
+										Default: {selectedBeeperApp.default_cron || "*/5 * * * *"}
 									</p>
 								</div>
 
-								{selectedBeeper.inputs.map((input) => (
+								{selectedBeeperApp.inputs.map((input) => (
 									<div key={input.name} className="flex flex-col gap-2">
 										<Label htmlFor={`input-${input.name}`}>
 											{input.label}
@@ -454,7 +458,7 @@ function BeepersPage() {
 									type="button"
 									variant="ghost"
 									size="sm"
-									onClick={() => setSelectedBeeper(null)}
+									onClick={() => setSelectedBeeperApp(null)}
 									disabled={submitting}
 								>
 									Cancel

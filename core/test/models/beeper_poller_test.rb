@@ -1,0 +1,99 @@
+require "test_helper"
+
+class BeeperPollerTest < ActiveSupport::TestCase
+  setup do
+    @account = accounts(:john_account)
+    @beeper_app = BeeperApp.create!(slug: "echo", version: "1.0.0", manifest: echo_manifest)
+  end
+
+  test "poll_due_now claims an active beeper whose next_run_at is past" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Echo Beeper",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: { "status" => "ok" },
+      notification_channels: %w[ email ]
+    )
+    beeper.update_columns(next_run_at: 1.minute.ago, status: "active")
+
+    Beeper.poll_due_now
+
+    beeper.reload
+    assert beeper.firing? || beeper.active?
+    assert_equal 1, beeper.runs.count
+    assert_equal "pending", beeper.runs.first.status
+  end
+
+  test "poll_due_now ignores paused and non-due beepers" do
+    paused_beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Paused Echo",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      status: "paused",
+      next_run_at: 1.minute.ago,
+      notification_channels: %w[ email ]
+    )
+    future_beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Future Echo",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      next_run_at: 5.minutes.from_now,
+      notification_channels: %w[ email ]
+    )
+
+    Beeper.poll_due_now
+
+    assert_equal 0, paused_beeper.runs.count
+    assert_equal 0, future_beeper.runs.count
+  end
+
+  test "pause! and resume! change beeper status and calculate next_run_at" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Echo Lifecycle",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      notification_channels: %w[ email ]
+    )
+    assert beeper.active?
+    assert_not_nil beeper.next_run_at
+
+    beeper.pause!
+    assert beeper.paused?
+
+    beeper.resume!
+    assert beeper.active?
+    assert_not_nil beeper.next_run_at
+  end
+
+  test "default notification_channels copies from account owner if empty" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Default Channels",
+      cron: "*/5 * * * *",
+      timezone: "UTC"
+    )
+    assert_equal @account.owner_user.notification_channels, beeper.notification_channels
+  end
+
+  private
+
+  def echo_manifest
+    {
+      "manifest_version" => 1,
+      "slug" => "echo",
+      "name" => "Echo",
+      "version" => "1.0.0",
+      "author" => "Beep",
+      "schedule" => { "default_cron" => "*/5 * * * *" }
+    }
+  end
+end

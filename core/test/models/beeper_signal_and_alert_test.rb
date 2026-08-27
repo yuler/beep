@@ -6,7 +6,7 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
   setup do
     stub_web_push_dns_resolution
     @account = accounts(:john_account)
-    @beeper = Beeper.create!(
+    @beeper_app = BeeperApp.create!(
       slug: "echo",
       version: "1.0.0",
       manifest: {
@@ -22,9 +22,9 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
       }
     )
 
-    @install = BeeperInstall.create!(
+    @beeper = Beeper.create!(
       account: @account,
-      beeper: @beeper,
+      beeper_app: @beeper_app,
       cron: "*/5 * * * *",
       timezone: "UTC",
       title: "Echo Signal Monitor",
@@ -37,61 +37,61 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
 
   test "healthy signal stays silent and updates signal_status to ok" do
     assert_no_difference -> { @account.beeps.count } do
-      run = @install.runs.create!(scheduled_for: Time.current, status: :pending)
+      run = @beeper.runs.create!(scheduled_for: Time.current, status: :pending)
       run.execute_now
 
       run.reload
-      @install.reload
+      @beeper.reload
 
       assert_equal "succeeded", run.status
       assert_equal "ok", run.signal_status
-      assert_equal "ok", @install.alert_state
-      assert_equal 0, @install.consecutive_failures
+      assert_equal "ok", @beeper.alert_state
+      assert_equal 0, @beeper.consecutive_failures
       assert_empty ActionMailer::Base.deliveries
     end
   end
 
   test "single failure below threshold does not notify but increments consecutive_failures" do
-    @install.update!(config: { "status" => "alerting", "title" => "Target Down", "message" => "HTTP 500" })
+    @beeper.update!(config: { "status" => "alerting", "title" => "Target Down", "message" => "HTTP 500" })
 
     assert_no_difference -> { @account.beeps.count } do
-      run = @install.runs.create!(scheduled_for: Time.current, status: :pending)
+      run = @beeper.runs.create!(scheduled_for: Time.current, status: :pending)
       run.execute_now
 
       run.reload
-      @install.reload
+      @beeper.reload
 
       assert_equal "succeeded", run.status
       assert_equal "alerting", run.signal_status
-      assert_equal "ok", @install.alert_state
-      assert_equal 1, @install.consecutive_failures
+      assert_equal "ok", @beeper.alert_state
+      assert_equal 1, @beeper.consecutive_failures
       assert_empty ActionMailer::Base.deliveries
     end
   end
 
   test "reaching failure threshold triggers alert notification creating a once Beep" do
-    @install.update!(
+    @beeper.update!(
       consecutive_failures: 1,
       config: { "status" => "alerting", "title" => "Target Down", "message" => "HTTP 500" }
     )
 
     assert_difference -> { @account.beeps.count }, 1 do
-      run = @install.runs.create!(scheduled_for: Time.current, status: :pending)
+      run = @beeper.runs.create!(scheduled_for: Time.current, status: :pending)
       run.execute_now
 
       run.reload
-      @install.reload
+      @beeper.reload
 
       assert_equal "succeeded", run.status
       assert_equal "alerting", run.signal_status
-      assert_equal "alerting", @install.alert_state
-      assert_equal 2, @install.consecutive_failures
+      assert_equal "alerting", @beeper.alert_state
+      assert_equal 2, @beeper.consecutive_failures
 
       created_beep = @account.beeps.order(:created_at).last
       assert_equal "once", created_beep.kind
       assert_equal "Target Down", created_beep.title
       assert_equal "HTTP 500", created_beep.body
-      assert_equal @install.id, created_beep.beeper_install_id
+      assert_equal @beeper.id, created_beep.beeper_id
       assert_equal [ "email" ], created_beep.notification_channels
 
       # Deliver the created once beep run
@@ -104,49 +104,49 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
   end
 
   test "subsequent failures while already alerting do not spam notifications" do
-    @install.update!(
+    @beeper.update!(
       alert_state: :alerting,
       consecutive_failures: 2,
       config: { "status" => "alerting", "title" => "Target Down", "message" => "HTTP 500" }
     )
 
     assert_no_difference -> { @account.beeps.count } do
-      run = @install.runs.create!(scheduled_for: Time.current, status: :pending)
+      run = @beeper.runs.create!(scheduled_for: Time.current, status: :pending)
       run.execute_now
 
       run.reload
-      @install.reload
+      @beeper.reload
 
       assert_equal "succeeded", run.status
-      assert_equal "alerting", @install.alert_state
-      assert_equal 3, @install.consecutive_failures
+      assert_equal "alerting", @beeper.alert_state
+      assert_equal 3, @beeper.consecutive_failures
       assert_empty ActionMailer::Base.deliveries
     end
   end
 
   test "recovery from alerting creates recovery Beep and resets alert_state" do
-    @install.update!(
+    @beeper.update!(
       alert_state: :alerting,
       consecutive_failures: 3,
       config: { "status" => "ok", "title" => "Target Recovered", "message" => "Service back online" }
     )
 
     assert_difference -> { @account.beeps.count }, 1 do
-      run = @install.runs.create!(scheduled_for: Time.current, status: :pending)
+      run = @beeper.runs.create!(scheduled_for: Time.current, status: :pending)
       run.execute_now
 
       run.reload
-      @install.reload
+      @beeper.reload
 
       assert_equal "succeeded", run.status
       assert_equal "ok", run.signal_status
-      assert_equal "ok", @install.alert_state
-      assert_equal 0, @install.consecutive_failures
+      assert_equal "ok", @beeper.alert_state
+      assert_equal 0, @beeper.consecutive_failures
 
       created_beep = @account.beeps.order(:created_at).last
       assert_equal "once", created_beep.kind
       assert_equal "Target Recovered", created_beep.title
-      assert_equal @install.id, created_beep.beeper_install_id
+      assert_equal @beeper.id, created_beep.beeper_id
 
       # Deliver the created once beep run
       beep_run = created_beep.runs.sole
@@ -159,7 +159,7 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
 
   test "run execution routes to signals queue for beeper runs" do
     assert_enqueued_with(job: RunBeeperJob, queue: "signals") do
-      run = @install.runs.create!(scheduled_for: Time.current, status: :pending)
+      run = @beeper.runs.create!(scheduled_for: Time.current, status: :pending)
       run.deliver_later
     end
   end
