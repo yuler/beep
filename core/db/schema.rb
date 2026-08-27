@@ -10,19 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_08_26_130000) do
+ActiveRecord::Schema[8.2].define(version: 2026_08_27_120000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
+    t.uuid "subscription_id"
+    t.string "provider", null: false
+    t.string "plan_key", null: false
+    t.json "raw", null: false
+    t.string "checkout_id", null: false
+    t.string "currency", default: "USD"
     t.integer "amount", null: false
     t.integer "amount_refunded", default: 0
-    t.string "checkout_id", null: false
-    t.datetime "created_at", null: false
-    t.string "currency", default: "USD"
-    t.string "plan_key", null: false
-    t.string "provider", null: false
-    t.json "raw", null: false
     t.string "status", null: false
-    t.uuid "subscription_id"
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_account_charges_on_account_id"
     t.index ["provider", "checkout_id"], name: "index_account_charges_on_provider_and_checkout_id"
@@ -76,11 +76,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_26_130000) do
 
   create_table "account_payment_webhooks", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
-    t.datetime "created_at", null: false
-    t.string "event_id", null: false
-    t.string "event_type", null: false
     t.string "provider", null: false
+    t.string "event_type", null: false
+    t.string "event_id", null: false
     t.json "raw", null: false
+    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_account_payment_webhooks_on_account_id"
     t.index ["provider", "event_type"], name: "index_account_payment_webhooks_on_provider_and_event_type"
@@ -99,16 +99,16 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_26_130000) do
 
   create_table "account_subscriptions", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
+    t.string "provider", null: false
+    t.string "plan_key", null: false
+    t.json "raw", null: false
+    t.string "customer_id", null: false
+    t.string "subscription_id", null: false
+    t.string "status", null: false
+    t.integer "next_amount", null: false
+    t.datetime "current_period_end"
     t.datetime "canceled_at"
     t.datetime "created_at", null: false
-    t.datetime "current_period_end"
-    t.string "customer_id", null: false
-    t.integer "next_amount", null: false
-    t.string "plan_key", null: false
-    t.string "provider", null: false
-    t.json "raw", null: false
-    t.string "status", null: false
-    t.string "subscription_id", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_account_subscriptions_on_account_id"
     t.index ["provider", "subscription_id"], name: "index_account_subscriptions_on_provider_and_subscription_id"
@@ -170,9 +170,55 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_26_130000) do
     t.json "result"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["beep_id", "scheduled_for"], name: "index_beep_runs_on_beep_id_and_scheduled_for", unique: true
+  end
+
+  create_table "beeper_installs", id: :uuid, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.uuid "beeper_id", null: false
+    t.string "title", null: false
+    t.json "config", default: {}
+    t.string "cron", null: false
+    t.string "timezone", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "next_run_at"
+    t.datetime "last_run_at"
+    t.string "alert_state", default: "ok", null: false
+    t.integer "consecutive_failures", default: 0, null: false
+    t.integer "schedule_offset", default: 0, null: false
+    t.string "ping_token"
+    t.datetime "last_ping_at"
+    t.json "notification_channels", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status", "next_run_at"], name: "index_beeper_installs_on_due"
+    t.index ["account_id"], name: "index_beeper_installs_on_account_id"
+    t.index ["beeper_id"], name: "index_beeper_installs_on_beeper_id"
+    t.index ["ping_token"], name: "index_beeper_installs_on_ping_token", unique: true
+  end
+
+  create_table "beeper_runs", id: :uuid, force: :cascade do |t|
+    t.uuid "beeper_install_id", null: false
+    t.datetime "scheduled_for", null: false
+    t.string "status", default: "pending", null: false
     t.string "check_status"
     t.json "check_result"
-    t.index ["beep_id", "scheduled_for"], name: "index_beep_runs_on_beep_id_and_scheduled_for", unique: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["beeper_install_id", "scheduled_for"], name: "index_beeper_runs_on_beeper_install_id_and_scheduled_for", unique: true
+    t.index ["beeper_install_id"], name: "index_beeper_runs_on_beeper_install_id"
+  end
+
+  create_table "beepers", id: :uuid, force: :cascade do |t|
+    t.string "slug", null: false
+    t.uuid "account_id"
+    t.string "version", null: false
+    t.json "manifest", default: {}, null: false
+    t.text "source"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_beepers_on_account_id"
+    t.index ["slug", "account_id"], name: "index_beepers_on_slug_and_account_id", unique: true
   end
 
   create_table "beeps", id: :uuid, force: :cascade do |t|
@@ -188,16 +234,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_26_130000) do
     t.datetime "updated_at", null: false
     t.text "title", null: false
     t.text "body"
-    t.uuid "plugin_id"
-    t.json "plugin_config"
-    t.string "alert_state", default: "ok", null: false
-    t.integer "consecutive_failures", default: 0, null: false
-    t.integer "schedule_offset", default: 0, null: false
-    t.string "ping_token"
-    t.datetime "last_ping_at"
+    t.json "notification_channels", default: [], null: false
+    t.uuid "beeper_install_id"
     t.index ["account_id"], name: "index_beeps_on_account_id"
-    t.index ["ping_token"], name: "index_beeps_on_ping_token", unique: true
-    t.index ["plugin_id"], name: "index_beeps_on_plugin_id"
+    t.index ["beeper_install_id"], name: "index_beeps_on_beeper_install_id"
     t.index ["status", "next_run_at"], name: "index_beeps_on_status_and_next_run_at"
   end
 
@@ -239,18 +279,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_26_130000) do
     t.index ["code"], name: "index_magic_links_on_code", unique: true
     t.index ["expires_at"], name: "index_magic_links_on_expires_at"
     t.index ["identity_id"], name: "index_magic_links_on_identity_id"
-  end
-
-  create_table "plugins", id: :uuid, force: :cascade do |t|
-    t.string "slug", null: false
-    t.uuid "account_id"
-    t.string "version", null: false
-    t.json "manifest", default: {}, null: false
-    t.text "source"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_plugins_on_account_id"
-    t.index ["slug", "account_id"], name: "index_plugins_on_slug_and_account_id", unique: true
   end
 
   create_table "push_subscriptions", id: :uuid, force: :cascade do |t|
@@ -299,10 +327,13 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_26_130000) do
   add_foreign_key "account_invitation_declines", "identities"
   add_foreign_key "account_slug_holds", "accounts"
   add_foreign_key "beep_runs", "beeps"
+  add_foreign_key "beeper_installs", "accounts"
+  add_foreign_key "beeper_installs", "beepers"
+  add_foreign_key "beeper_runs", "beeper_installs"
+  add_foreign_key "beepers", "accounts"
   add_foreign_key "beeps", "accounts"
-  add_foreign_key "beeps", "plugins"
+  add_foreign_key "beeps", "beeper_installs"
   add_foreign_key "identity_access_tokens", "identities"
-  add_foreign_key "plugins", "accounts"
   add_foreign_key "push_subscriptions", "accounts"
   add_foreign_key "push_subscriptions", "users"
 end
