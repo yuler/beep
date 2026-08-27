@@ -133,4 +133,28 @@ class Api::V1::BeeperInstallsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "active", response.parsed_body["status"]
     assert install.reload.active?
   end
+
+  test "runs create triggers a new run for an existing beeper install" do
+    install = BeeperInstall.create!(
+      account: @account,
+      beeper: @beeper,
+      title: "Trigger Test",
+      cron: "*/5 * * * *",
+      timezone: "UTC"
+    )
+
+    assert_enqueued_with(job: RunBeeperJob, queue: "checks") do
+      assert_difference -> { install.runs.count }, 1 do
+        post "/api/v1/#{@account.slug}/beeper_installs/#{install.id}/runs",
+          headers: { "Authorization" => "Bearer #{@token}" },
+          as: :json
+      end
+    end
+
+    assert_response :created
+    body = response.parsed_body
+    assert_equal "pending", body["status"]
+    assert install.reload.firing?
+  end
+
 end

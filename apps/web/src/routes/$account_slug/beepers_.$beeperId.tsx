@@ -17,10 +17,10 @@ import {
 	fetchBeeperInstall,
 	pauseBeeperInstall,
 	resumeBeeperInstall,
+	triggerBeeperInstallRun,
 } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import { cn } from "@/lib/utils";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -72,8 +72,24 @@ function BeeperInstallDetailPage() {
 	const router = useRouter();
 	const install = Route.useLoaderData();
 	const [deleting, setDeleting] = useState(false);
+	const [triggering, setTriggering] = useState(false);
 	const [togglingStatus, setTogglingStatus] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	async function handleTrigger() {
+		setTriggering(true);
+		setError(null);
+		try {
+			await triggerBeeperInstallRun(slug, install.id);
+			await router.invalidate();
+		} catch (err) {
+			setError(
+				err instanceof ApiError ? err.message : "Failed to trigger beeper run.",
+			);
+		} finally {
+			setTriggering(false);
+		}
+	}
 
 	async function handleToggleStatus() {
 		setTogglingStatus(true);
@@ -176,7 +192,7 @@ function BeeperInstallDetailPage() {
 							<Button
 								variant="outline"
 								size="sm"
-								disabled={togglingStatus || deleting}
+								disabled={togglingStatus || deleting || triggering}
 								aria-label={`${install.status === "paused" ? "Resume" : "Pause"} beeper ${install.title}`}
 								onClick={() => void handleToggleStatus()}
 							>
@@ -194,9 +210,28 @@ function BeeperInstallDetailPage() {
 							</Button>
 						) : null}
 						<Button
+							variant="outline"
+							size="sm"
+							disabled={
+								triggering ||
+								deleting ||
+								togglingStatus ||
+								install.status === "firing"
+							}
+							aria-label={`Trigger run for beeper ${install.title}`}
+							onClick={() => void handleTrigger()}
+						>
+							<Play data-icon="inline-start" />
+							{triggering
+								? "Triggering…"
+								: install.status === "firing"
+									? "Firing…"
+									: "Trigger check"}
+						</Button>
+						<Button
 							variant="destructive"
 							size="sm"
-							disabled={deleting || togglingStatus}
+							disabled={deleting || togglingStatus || triggering}
 							aria-label={`Delete beeper ${install.title}`}
 							onClick={() => void handleDelete()}
 						>

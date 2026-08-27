@@ -44,6 +44,19 @@ class BeeperInstall < ApplicationRecord
     end
   end
 
+  def trigger_run!
+    scheduled_for = Time.current
+    update!(status: :firing, next_run_at: nil)
+
+    run = begin
+      runs.create!(scheduled_for: scheduled_for, status: :pending)
+    rescue ActiveRecord::RecordNotUnique
+      runs.find_by!(scheduled_for: scheduled_for)
+    end
+    run.deliver_later
+    run
+  end
+
   def pause!
     if active? || firing?
       update!(status: :paused)

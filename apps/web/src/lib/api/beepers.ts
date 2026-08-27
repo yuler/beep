@@ -159,3 +159,15 @@ export function deleteBeeperInstall(accountSlug: string, installId: string) {
 		method: "DELETE",
 	});
 }
+
+export function triggerBeeperInstallRun(
+	accountSlug: string,
+	installId: string,
+) {
+	return apiFetch<BeeperRun>(
+		`/api/v1/${accountSlug}/beeper_installs/${installId}/runs`,
+		{
+			method: "POST",
+		},
+	);
+}
