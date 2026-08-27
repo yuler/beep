@@ -1,29 +1,28 @@
-# examples:
-#   periodic_cleanup:
-#     class: CleanSoftDeletedRecordsJob
-#     queue: background
-#     args: [ 1000, { batch_size: 500 } ]
-#     schedule: every hour
-#   periodic_cleanup_with_command:
-#     command: "SoftDeletedRecord.due.delete_all"
-#     priority: 2
-#     schedule: at 5am every day
-
 beep_poller: &beep_poller
   class: BeepPollerJob
+  schedule: every 10 seconds
+
+beeper_poller: &beeper_poller
+  class: BeeperPollerJob
   schedule: every 10 seconds
 
 development:
   beep_poller:
     <<: *beep_poller
+  beeper_poller:
+    <<: *beeper_poller
 
 test:
   beep_poller:
     <<: *beep_poller
+  beeper_poller:
+    <<: *beeper_poller
 
 production:
   beep_poller:
     <<: *beep_poller
+  beeper_poller:
+    <<: *beeper_poller
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every day at 00:00
