@@ -31,6 +31,10 @@ description = "Open the Rails console"
 dir = "core"
 run = "bin/rails console"
 
+[tasks."core:console:production"]
+description = "Open the Rails console in the production container"
+run = "bash scripts/rails-console-production.sh"
+
 [tasks."web:dev"]
 description = "Start the Vite development server"
 dir = "apps/web"
