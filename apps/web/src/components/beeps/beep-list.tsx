@@ -19,12 +19,7 @@ import type { Beep } from "@/lib/api/beeps";
 import { beepRunAt } from "@/lib/beep-stats";
 import { cn } from "@/lib/utils";
 
-type FilterStatus =
-	| "all"
-	| "active"
-	| "firing"
-	| "recurring"
-	| "completed";
+type FilterStatus = "all" | "active" | "firing" | "recurring" | "completed";
 
 export function BeepList({
 	beeps,
@@ -81,8 +76,7 @@ export function BeepList({
 					No beeps yet
 				</h3>
 				<p className="mt-1 max-w-sm text-sm text-muted-foreground">
-					Create your first reminder above or install a beeper from the
-					gallery.
+					Create your first reminder above or install a beeper from the gallery.
 				</p>
 			</Card>
 		);

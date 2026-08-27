@@ -124,10 +124,7 @@ export function resumeBeeperInstall(accountSlug: string, installId: string) {
 }
 
 export function deleteBeeperInstall(accountSlug: string, installId: string) {
-	return apiFetch<void>(
-		`/api/v1/${accountSlug}/beeper_installs/${installId}`,
-		{
-			method: "DELETE",
-		},
-	);
+	return apiFetch<void>(`/api/v1/${accountSlug}/beeper_installs/${installId}`, {
+		method: "DELETE",
+	});
 }

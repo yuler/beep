@@ -29,11 +29,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+	type Beeper,
+	type BeeperInstall,
 	createBeeperInstall,
 	fetchBeeperInstalls,
 	fetchBeepers,
-	type Beeper,
-	type BeeperInstall,
 } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
@@ -274,7 +274,9 @@ function BeepersPage() {
 								<Card key={install.id} size="sm">
 									<CardHeader>
 										<div className="flex items-center justify-between">
-											<CardTitle className="text-base">{install.title}</CardTitle>
+											<CardTitle className="text-base">
+												{install.title}
+											</CardTitle>
 											<Badge
 												variant={
 													install.alert_state === "alerting"
