@@ -1,11 +1,11 @@
 class Api::V1::BeepsController < Api::V1::BaseController
   def index
-    @beeps = Current.account.beeps.includes(:runs, :plugin).order(created_at: :desc)
+    @beeps = Current.account.beeps.includes(:runs, beeper_install: :beeper).order(created_at: :desc)
     render :index
   end
 
   def show
-    @beep = Current.account.beeps.includes(:runs).find(params[:id])
+    @beep = Current.account.beeps.includes(:runs, beeper_install: :beeper).find(params[:id])
     render :show
   end
 
@@ -45,9 +45,7 @@ class Api::V1::BeepsController < Api::V1::BaseController
 
   private
     def beep_params
-      attrs = params.permit(:title, :body, :run_at, :cron, :kind, :plugin_id)
-      attrs[:plugin_config] = params[:plugin_config].to_unsafe_h if params[:plugin_config].respond_to?(:to_unsafe_h)
-      attrs
+      params.permit(:title, :body, :run_at, :cron, :kind, notification_channels: [])
     end
 
     def beep_timezone

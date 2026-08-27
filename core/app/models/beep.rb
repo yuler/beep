@@ -29,7 +29,7 @@ class Beep < ApplicationRecord
   validate :validate_cron_expression, if: :recurring?
   validate :validate_notification_channels
 
-  before_validation :assign_default_notification_channels
+  before_validation :assign_default_notification_channels, on: :create
   before_validation :sync_run_attributes
   after_create_commit :deliver_if_due_on_create
 
