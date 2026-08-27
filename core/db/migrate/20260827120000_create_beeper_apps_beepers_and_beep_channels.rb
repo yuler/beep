@@ -1,4 +1,4 @@
-class CreateBeepersInstallsAndBeepChannels < ActiveRecord::Migration[8.2]
+class CreateBeeperAppsBeepersAndBeepChannels < ActiveRecord::Migration[8.2]
   def change
     create_table :beeper_apps, id: :uuid do |t|
       t.string :slug, null: false
