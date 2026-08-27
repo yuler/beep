@@ -267,8 +267,8 @@ function BeepersPage() {
 						Beeper Gallery
 					</h1>
 					<p className="text-sm text-muted-foreground">
-						Install monitoring probes and automated checkers to watch your
-						services and send notifications when issues arise.
+						Install monitoring probes and automated signal receivers to watch
+						your services and send notifications when issues arise.
 					</p>
 				</div>
 

@@ -48,8 +48,8 @@ export type BeeperRun = {
 		| "failed"
 		| "skipped"
 		| "expired";
-	check_status?: "ok" | "alerting" | "error" | null;
-	check_result?: {
+	signal_status?: "ok" | "alerting" | "error" | null;
+	signal_result?: {
 		status?: string;
 		title?: string;
 		message?: string;

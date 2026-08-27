@@ -1,4 +1,4 @@
-class Beeper::Checkers::Heartbeat < Beeper::Checkers::Base
+class Beeper::Receivers::Heartbeat < Beeper::Receivers::Base
   DEFAULT_GRACE_PERIOD_MINUTES = 15
 
   def call
@@ -6,7 +6,7 @@ class Beeper::Checkers::Heartbeat < Beeper::Checkers::Base
     last_ping_at = config["last_ping_at"].present? ? Time.zone.parse(config["last_ping_at"].to_s) : nil
 
     if last_ping_at.nil?
-      return Beeper::CheckResult.new(
+      return Beeper::Signal.new(
         status: :alerting,
         title: "Heartbeat never received",
         message: "No ping has ever been received for this heartbeat monitor (grace period: #{grace_period_minutes}m)",
@@ -23,14 +23,14 @@ class Beeper::Checkers::Heartbeat < Beeper::Checkers::Base
     }
 
     if minutes_since_ping > grace_period_minutes
-      Beeper::CheckResult.new(
+      Beeper::Signal.new(
         status: :alerting,
         title: "Heartbeat is missing",
         message: "Last ping was received #{minutes_since_ping} minutes ago (exceeded grace period of #{grace_period_minutes}m)",
         metrics: metrics
       )
     else
-      Beeper::CheckResult.new(
+      Beeper::Signal.new(
         status: :ok,
         title: "Heartbeat is healthy",
         message: "Last ping was received #{minutes_since_ping} minutes ago (within grace period of #{grace_period_minutes}m)",

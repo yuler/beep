@@ -142,13 +142,13 @@ class BeeperTest < ActiveSupport::TestCase
     end
   end
 
-  test "run_check returns error when checker class is missing" do
+  test "produce_signal returns error when receiver class is missing" do
     beeper = Beeper.new(
       slug: "custom-monitor",
       version: "1.0.0",
       manifest: @valid_manifest
     )
-    result = beeper.run_check(config: {})
+    result = beeper.produce_signal(config: {})
     assert result.error?
     assert_equal "Beeper implementation not found", result.title
   end

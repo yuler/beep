@@ -58,7 +58,7 @@ const RUN_STATUS_VARIANT: Record<
 	expired: "destructive",
 };
 
-const CHECK_STATUS_VARIANT: Record<
+const SIGNAL_STATUS_VARIANT: Record<
 	string,
 	"default" | "secondary" | "outline" | "destructive"
 > = {
@@ -228,7 +228,7 @@ function BeeperInstallDetailPage() {
 								? "Triggering…"
 								: install.status === "firing"
 									? "Firing…"
-									: "Trigger check"}
+									: "Trigger run"}
 						</Button>
 						<Button
 							variant="destructive"
@@ -361,14 +361,14 @@ function BeeperInstallDetailPage() {
 												{formatWhen(run.scheduled_for)}
 											</span>
 											<div className="flex items-center gap-1.5">
-												{run.check_status ? (
+												{run.signal_status ? (
 													<Badge
 														variant={
-															CHECK_STATUS_VARIANT[run.check_status] ??
+															SIGNAL_STATUS_VARIANT[run.signal_status] ??
 															"secondary"
 														}
 													>
-														Check: {run.check_status.toUpperCase()}
+														Signal: {run.signal_status.toUpperCase()}
 													</Badge>
 												) : null}
 												<Badge
@@ -381,21 +381,21 @@ function BeeperInstallDetailPage() {
 											</div>
 										</div>
 
-										{run.check_result ? (
+										{run.signal_result ? (
 											<div className="rounded bg-muted/40 p-2 text-xs">
-												{run.check_result.title ? (
+												{run.signal_result.title ? (
 													<div className="font-medium text-foreground">
-														{run.check_result.title}
+														{run.signal_result.title}
 													</div>
 												) : null}
-												{run.check_result.message ? (
+												{run.signal_result.message ? (
 													<div className="text-muted-foreground mt-0.5">
-														{run.check_result.message}
+														{run.signal_result.message}
 													</div>
 												) : null}
-												{run.check_result.metrics ? (
+												{run.signal_result.metrics ? (
 													<div className="mt-1 flex flex-wrap gap-2 text-[11px] font-mono text-muted-foreground">
-														{Object.entries(run.check_result.metrics).map(
+														{Object.entries(run.signal_result.metrics).map(
 															([k, v]) => (
 																<span
 																	key={k}

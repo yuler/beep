@@ -156,12 +156,12 @@ class BeeperInstall < ApplicationRecord
     scheduled_for < EXPIRED_AFTER.ago
   end
 
-  def notify_from!(check_result)
+  def notify_from!(signal)
     channels = Array(notification_channels).presence || account.owner_user.notification_channels
     account.beeps.create!(
       kind: :once,
-      title: check_result.title.presence || title,
-      body: check_result.message,
+      title: signal.title.presence || title,
+      body: signal.message,
       timezone: timezone,
       notification_channels: channels,
       beeper_install: self

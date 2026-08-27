@@ -66,25 +66,25 @@ class Beeper < ApplicationRecord
     manifest["metrics"] || []
   end
 
-  def checker_class
-    "Beeper::Checkers::#{slug.tr("-", "_").camelize}".safe_constantize
+  def receiver_class
+    "Beeper::Receivers::#{slug.tr("-", "_").camelize}".safe_constantize
   end
 
-  def run_check(config:)
-    klass = checker_class
+  def produce_signal(config:)
+    klass = receiver_class
     if klass
       klass.call(config: config)
     else
-      Beeper::CheckResult.new(
+      Beeper::Signal.new(
         status: :error,
         title: "Beeper implementation not found",
-        message: "No checker class implemented for beeper '#{slug}'"
+        message: "No receiver class implemented for beeper '#{slug}'"
       )
     end
   rescue StandardError => e
-    Beeper::CheckResult.new(
+    Beeper::Signal.new(
       status: :error,
-      title: "Check execution failed",
+      title: "Signal production failed",
       message: e.message
     )
   end

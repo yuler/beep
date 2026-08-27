@@ -1,12 +1,12 @@
 class BeeperRun < ApplicationRecord
   self.table_name = "beeper_runs"
 
-  CHECK_RESULT_MAX_BYTES = 8.kilobytes
+  SIGNAL_RESULT_MAX_BYTES = 8.kilobytes
 
   belongs_to :beeper_install
 
   enum :status, %w[ pending running succeeded failed skipped expired ].index_by(&:itself)
-  enum :check_status, %w[ ok alerting error ].index_by(&:itself)
+  enum :signal_status, %w[ ok alerting error ].index_by(&:itself)
 
   def deliver_later
     RunBeeperJob.perform_later(self)
@@ -21,17 +21,17 @@ class BeeperRun < ApplicationRecord
       return
     end
 
-    check_result = beeper_install.beeper.run_check(config: beeper_install.effective_config)
-    sanitized_result = sanitize_check_result(check_result.to_h)
+    signal = beeper_install.beeper.produce_signal(config: beeper_install.effective_config)
+    sanitized_result = sanitize_signal_result(signal.to_h)
 
     decision = BeeperRun::AlertEvaluator.evaluate(
       install: beeper_install,
-      check_result: check_result
+      signal: signal
     )
 
     update!(
-      check_status: check_result.status.to_s,
-      check_result: sanitized_result
+      signal_status: signal.status.to_s,
+      signal_result: sanitized_result
     )
 
     beeper_install.update!(
@@ -40,15 +40,15 @@ class BeeperRun < ApplicationRecord
     )
 
     if decision.should_notify
-      beeper_install.notify_from!(check_result)
+      beeper_install.notify_from!(signal)
     end
 
     update!(status: :succeeded)
     beeper_install.finish_firing(last_run_at: scheduled_for)
   rescue StandardError => e
     update!(
-      check_status: "error",
-      check_result: { "status" => "error", "message" => e.message },
+      signal_status: "error",
+      signal_result: { "status" => "error", "message" => e.message },
       status: :failed
     )
     beeper_install.finish_firing(last_run_at: scheduled_for)
@@ -61,9 +61,9 @@ class BeeperRun < ApplicationRecord
     claimed || running?
   end
 
-  def sanitize_check_result(hash)
+  def sanitize_signal_result(hash)
     json_str = hash.to_json
-    if json_str.bytesize > CHECK_RESULT_MAX_BYTES
+    if json_str.bytesize > SIGNAL_RESULT_MAX_BYTES
       {
         "status" => hash["status"],
         "title" => hash["title"],

@@ -143,7 +143,7 @@ class Api::V1::BeeperInstallsControllerTest < ActionDispatch::IntegrationTest
       timezone: "UTC"
     )
 
-    assert_enqueued_with(job: RunBeeperJob, queue: "checks") do
+    assert_enqueued_with(job: RunBeeperJob, queue: "signals") do
       assert_difference -> { install.runs.count }, 1 do
         post "/api/v1/#{@account.slug}/beeper_installs/#{install.id}/runs",
           headers: { "Authorization" => "Bearer #{@token}" },

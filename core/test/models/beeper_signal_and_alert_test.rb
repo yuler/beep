@@ -1,6 +1,6 @@
 require "test_helper"
 
-class BeeperCheckAndAlertTest < ActiveSupport::TestCase
+class BeeperSignalAndAlertTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
   setup do
@@ -27,7 +27,7 @@ class BeeperCheckAndAlertTest < ActiveSupport::TestCase
       beeper: @beeper,
       cron: "*/5 * * * *",
       timezone: "UTC",
-      title: "Echo Check Monitor",
+      title: "Echo Signal Monitor",
       config: { "status" => "ok" },
       notification_channels: %w[ email ]
     )
@@ -35,7 +35,7 @@ class BeeperCheckAndAlertTest < ActiveSupport::TestCase
     ActionMailer::Base.deliveries.clear
   end
 
-  test "healthy check stays silent and updates check_status to ok" do
+  test "healthy signal stays silent and updates signal_status to ok" do
     assert_no_difference -> { @account.beeps.count } do
       run = @install.runs.create!(scheduled_for: Time.current, status: :pending)
       run.execute_now
@@ -44,7 +44,7 @@ class BeeperCheckAndAlertTest < ActiveSupport::TestCase
       @install.reload
 
       assert_equal "succeeded", run.status
-      assert_equal "ok", run.check_status
+      assert_equal "ok", run.signal_status
       assert_equal "ok", @install.alert_state
       assert_equal 0, @install.consecutive_failures
       assert_empty ActionMailer::Base.deliveries
@@ -62,7 +62,7 @@ class BeeperCheckAndAlertTest < ActiveSupport::TestCase
       @install.reload
 
       assert_equal "succeeded", run.status
-      assert_equal "alerting", run.check_status
+      assert_equal "alerting", run.signal_status
       assert_equal "ok", @install.alert_state
       assert_equal 1, @install.consecutive_failures
       assert_empty ActionMailer::Base.deliveries
@@ -83,7 +83,7 @@ class BeeperCheckAndAlertTest < ActiveSupport::TestCase
       @install.reload
 
       assert_equal "succeeded", run.status
-      assert_equal "alerting", run.check_status
+      assert_equal "alerting", run.signal_status
       assert_equal "alerting", @install.alert_state
       assert_equal 2, @install.consecutive_failures
 
@@ -139,7 +139,7 @@ class BeeperCheckAndAlertTest < ActiveSupport::TestCase
       @install.reload
 
       assert_equal "succeeded", run.status
-      assert_equal "ok", run.check_status
+      assert_equal "ok", run.signal_status
       assert_equal "ok", @install.alert_state
       assert_equal 0, @install.consecutive_failures
 
@@ -157,8 +157,8 @@ class BeeperCheckAndAlertTest < ActiveSupport::TestCase
     end
   end
 
-  test "run execution routes to checks queue for beeper runs" do
-    assert_enqueued_with(job: RunBeeperJob, queue: "checks") do
+  test "run execution routes to signals queue for beeper runs" do
+    assert_enqueued_with(job: RunBeeperJob, queue: "signals") do
       run = @install.runs.create!(scheduled_for: Time.current, status: :pending)
       run.deliver_later
     end

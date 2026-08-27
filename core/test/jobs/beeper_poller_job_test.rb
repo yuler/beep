@@ -20,7 +20,7 @@ class BeeperPollerJobTest < ActiveSupport::TestCase
     install = BeeperInstall.create!(
       account: account,
       beeper: beeper,
-      title: "Echo Check",
+      title: "Echo Signal",
       cron: "*/5 * * * *",
       timezone: "UTC",
       notification_channels: %w[ email ]

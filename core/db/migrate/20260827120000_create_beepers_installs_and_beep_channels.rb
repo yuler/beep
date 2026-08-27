@@ -35,8 +35,8 @@ class CreateBeepersInstallsAndBeepChannels < ActiveRecord::Migration[8.2]
       t.references :beeper_install, null: false, foreign_key: true, type: :uuid
       t.datetime :scheduled_for, null: false
       t.string :status, null: false, default: "pending"
-      t.string :check_status
-      t.json :check_result
+      t.string :signal_status
+      t.json :signal_result
       t.timestamps
     end
     add_index :beeper_runs, [ :beeper_install_id, :scheduled_for ], unique: true

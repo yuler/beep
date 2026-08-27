@@ -1,4 +1,4 @@
-class Beeper::Checkers::Base
+class Beeper::Receivers::Base
   attr_reader :config
 
   def initialize(config: {})

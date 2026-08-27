@@ -201,8 +201,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_27_120000) do
     t.uuid "beeper_install_id", null: false
     t.datetime "scheduled_for", null: false
     t.string "status", default: "pending", null: false
-    t.string "check_status"
-    t.json "check_result"
+    t.string "signal_status"
+    t.json "signal_result"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["beeper_install_id", "scheduled_for"], name: "index_beeper_runs_on_beeper_install_id_and_scheduled_for", unique: true

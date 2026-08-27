@@ -1,42 +1,42 @@
 require "test_helper"
 
-class BeeperOfficialCheckersTest < ActiveSupport::TestCase
+class BeeperOfficialReceiversTest < ActiveSupport::TestCase
   setup do
     stub_web_push_dns_resolution
     @account = accounts(:john_account)
   end
 
-  test "SiteUptime checker reports ok when status matches expected" do
+  test "SiteUptime receiver reports ok when status matches expected" do
     fake_response = Net::HTTPSuccess.new("1.1", "200", "OK")
 
-    checker = Beeper::Checkers::SiteUptime.new(config: {
+    receiver = Beeper::Receivers::SiteUptime.new(config: {
       "target_url" => "https://example.com/health",
       "expected_status" => 200
     })
 
-    checker.define_singleton_method(:fetch_with_redirects) do |*, **|
+    receiver.define_singleton_method(:fetch_with_redirects) do |*, **|
       [ fake_response, URI("https://example.com/health") ]
     end
 
-    result = checker.call
+    result = receiver.call
     assert result.ok?
     assert_equal 200, result.metrics["status"]
     assert_match(/operational/, result.title)
   end
 
-  test "SiteUptime checker reports alerting when status does not match" do
+  test "SiteUptime receiver reports alerting when status does not match" do
     fake_response = Net::HTTPNotFound.new("1.1", "404", "Not Found")
 
-    checker = Beeper::Checkers::SiteUptime.new(config: {
+    receiver = Beeper::Receivers::SiteUptime.new(config: {
       "target_url" => "https://example.com/health",
       "expected_status" => 200
     })
 
-    checker.define_singleton_method(:fetch_with_redirects) do |*, **|
+    receiver.define_singleton_method(:fetch_with_redirects) do |*, **|
       [ fake_response, URI("https://example.com/health") ]
     end
 
-    result = checker.call
+    result = receiver.call
     assert result.alerting?
     assert_equal 404, result.metrics["status"]
     assert_match(/HTTP 404/, result.title)
@@ -45,7 +45,7 @@ class BeeperOfficialCheckersTest < ActiveSupport::TestCase
   test "SiteUptime blocks private / local IP addresses via SSRF protection" do
     stub_dns_resolution("127.0.0.1")
 
-    result = Beeper::Checkers::SiteUptime.call(config: {
+    result = Beeper::Receivers::SiteUptime.call(config: {
       "target_url" => "http://127.0.0.1:3000"
     })
 
@@ -53,59 +53,59 @@ class BeeperOfficialCheckersTest < ActiveSupport::TestCase
     assert_match(/Blocked target address/, result.title)
   end
 
-  test "SslExpiry checker reports ok when days remaining >= threshold" do
+  test "SslExpiry receiver reports ok when days remaining >= threshold" do
     fake_cert = Struct.new(:not_after).new(30.days.from_now)
-    checker = Beeper::Checkers::SslExpiry.new(config: {
+    receiver = Beeper::Receivers::SslExpiry.new(config: {
       "hostname" => "example.com",
       "alert_days_before" => 14
     })
 
     stub_dns_resolution("93.184.216.34")
-    checker.define_singleton_method(:fetch_peer_certificate) do |*, **|
+    receiver.define_singleton_method(:fetch_peer_certificate) do |*, **|
       fake_cert
     end
 
-    result = checker.call
+    result = receiver.call
     assert result.ok?
     assert result.metrics["days_remaining"] >= 29
   end
 
-  test "SslExpiry checker sanitizes full URL hostname" do
+  test "SslExpiry receiver sanitizes full URL hostname" do
     fake_cert = Struct.new(:not_after).new(30.days.from_now)
-    checker = Beeper::Checkers::SslExpiry.new(config: {
+    receiver = Beeper::Receivers::SslExpiry.new(config: {
       "hostname" => "https://example.com/path",
       "alert_days_before" => 14
     })
 
     stub_dns_resolution("93.184.216.34")
-    checker.define_singleton_method(:fetch_peer_certificate) do |*, **kwargs|
+    receiver.define_singleton_method(:fetch_peer_certificate) do |*, **kwargs|
       fake_cert
     end
 
-    result = checker.call
+    result = receiver.call
     assert_equal "example.com", result.title.match(/for (.*?) is/)[1] rescue nil || "example.com"
     assert result.ok?
   end
 
-  test "SslExpiry checker reports alerting when expiring soon" do
+  test "SslExpiry receiver reports alerting when expiring soon" do
     fake_cert = Struct.new(:not_after).new(5.days.from_now)
-    checker = Beeper::Checkers::SslExpiry.new(config: {
+    receiver = Beeper::Receivers::SslExpiry.new(config: {
       "hostname" => "example.com",
       "alert_days_before" => 14
     })
 
     stub_dns_resolution("93.184.216.34")
-    checker.define_singleton_method(:fetch_peer_certificate) do |*, **|
+    receiver.define_singleton_method(:fetch_peer_certificate) do |*, **|
       fake_cert
     end
 
-    result = checker.call
+    result = receiver.call
     assert result.alerting?
     assert_match(/expiring soon/, result.title)
   end
 
-  test "Heartbeat checker reports ok when ping is recent" do
-    result = Beeper::Checkers::Heartbeat.call(config: {
+  test "Heartbeat receiver reports ok when ping is recent" do
+    result = Beeper::Receivers::Heartbeat.call(config: {
       "grace_period_minutes" => 15,
       "last_ping_at" => 5.minutes.ago.iso8601
     })
@@ -114,8 +114,8 @@ class BeeperOfficialCheckersTest < ActiveSupport::TestCase
     assert_equal 5, result.metrics["minutes_since_last_ping"]
   end
 
-  test "Heartbeat checker reports alerting when ping is stale" do
-    result = Beeper::Checkers::Heartbeat.call(config: {
+  test "Heartbeat receiver reports alerting when ping is stale" do
+    result = Beeper::Receivers::Heartbeat.call(config: {
       "grace_period_minutes" => 15,
       "last_ping_at" => 30.minutes.ago.iso8601
     })
@@ -125,8 +125,8 @@ class BeeperOfficialCheckersTest < ActiveSupport::TestCase
     assert_equal 30, result.metrics["minutes_since_last_ping"]
   end
 
-  test "Heartbeat checker reports alerting when no ping was ever received" do
-    result = Beeper::Checkers::Heartbeat.call(config: {
+  test "Heartbeat receiver reports alerting when no ping was ever received" do
+    result = Beeper::Receivers::Heartbeat.call(config: {
       "grace_period_minutes" => 15,
       "last_ping_at" => nil
     })

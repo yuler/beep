@@ -1,4 +1,4 @@
-class Beeper::Checkers::SiteUptime < Beeper::Checkers::Base
+class Beeper::Receivers::SiteUptime < Beeper::Receivers::Base
   MAX_REDIRECTS = 3
   MAX_BODY_BYTES = 8.kilobytes
   DEFAULT_TIMEOUT_MS = 3000
@@ -10,7 +10,7 @@ class Beeper::Checkers::SiteUptime < Beeper::Checkers::Base
     timeout_seconds = timeout_ms / 1000.0
 
     if target_url.blank?
-      return Beeper::CheckResult.new(
+      return Beeper::Signal.new(
         status: :error,
         title: "Configuration error",
         message: "Target URL is required"
@@ -19,7 +19,7 @@ class Beeper::Checkers::SiteUptime < Beeper::Checkers::Base
 
     uri = URI.parse(target_url)
     unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
-      return Beeper::CheckResult.new(
+      return Beeper::Signal.new(
         status: :error,
         title: "Invalid URL",
         message: "Target URL must start with http:// or https://"
@@ -37,14 +37,14 @@ class Beeper::Checkers::SiteUptime < Beeper::Checkers::Base
     }
 
     if status_code == expected_status
-      Beeper::CheckResult.new(
+      Beeper::Signal.new(
         status: :ok,
         title: "Site is operational",
         message: "HTTP #{status_code} from #{final_uri.host} (#{elapsed_ms}ms)",
         metrics: metrics
       )
     else
-      Beeper::CheckResult.new(
+      Beeper::Signal.new(
         status: :alerting,
         title: "Site returned HTTP #{status_code}",
         message: "Expected HTTP #{expected_status} but received HTTP #{status_code} from #{final_uri.host} (#{elapsed_ms}ms)",
@@ -52,21 +52,21 @@ class Beeper::Checkers::SiteUptime < Beeper::Checkers::Base
       )
     end
   rescue SsrfProtection::BlockedAddressError => e
-    Beeper::CheckResult.new(
+    Beeper::Signal.new(
       status: :error,
       title: "Blocked target address",
       message: e.message
     )
   rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error => e
-    Beeper::CheckResult.new(
+    Beeper::Signal.new(
       status: :alerting,
-      title: "Site check timed out",
+      title: "Site signal timed out",
       message: "Connection to #{uri&.host || target_url} timed out after #{timeout_ms}ms"
     )
   rescue StandardError => e
-    Beeper::CheckResult.new(
+    Beeper::Signal.new(
       status: :alerting,
-      title: "Site check failed",
+      title: "Site signal failed",
       message: "Failed to connect to #{uri&.host || target_url}: #{e.message}"
     )
   end
@@ -95,7 +95,7 @@ class Beeper::Checkers::SiteUptime < Beeper::Checkers::Base
 
     request = Net::HTTP::Get.new(uri.request_uri)
     request["Host"] = uri.host
-    request["User-Agent"] = "Beep-Check-Uptime/1.0"
+    request["User-Agent"] = "Beep-Signal-Uptime/1.0"
 
     response = http.request(request)
 

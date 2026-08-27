@@ -1,4 +1,4 @@
-class Beeper::Checkers::SslExpiry < Beeper::Checkers::Base
+class Beeper::Receivers::SslExpiry < Beeper::Receivers::Base
   DEFAULT_PORT = 443
   DEFAULT_ALERT_DAYS_BEFORE = 14
   CONNECT_TIMEOUT = 5
@@ -9,7 +9,7 @@ class Beeper::Checkers::SslExpiry < Beeper::Checkers::Base
     alert_days_before = (config["alert_days_before"] || DEFAULT_ALERT_DAYS_BEFORE).to_i
 
     if raw_host.blank?
-      return Beeper::CheckResult.new(
+      return Beeper::Signal.new(
         status: :error,
         title: "Configuration error",
         message: "Hostname is required"
@@ -20,7 +20,7 @@ class Beeper::Checkers::SslExpiry < Beeper::Checkers::Base
 
     resolved_ip = SsrfProtection.resolve_public_ip(hostname)
     if resolved_ip.nil?
-      return Beeper::CheckResult.new(
+      return Beeper::Signal.new(
         status: :error,
         title: "Blocked target address",
         message: "Host #{hostname} resolved to a private/disallowed IP address or cannot be resolved"
@@ -38,21 +38,21 @@ class Beeper::Checkers::SslExpiry < Beeper::Checkers::Base
     }
 
     if days_remaining <= 0
-      Beeper::CheckResult.new(
+      Beeper::Signal.new(
         status: :alerting,
         title: "SSL certificate has expired",
         message: "SSL certificate for #{hostname} expired #{days_remaining.abs} days ago (#{not_after.strftime('%Y-%m-%d %H:%M:%S UTC')})",
         metrics: metrics
       )
     elsif days_remaining < alert_days_before
-      Beeper::CheckResult.new(
+      Beeper::Signal.new(
         status: :alerting,
         title: "SSL certificate expiring soon",
         message: "SSL certificate for #{hostname} expires in #{days_remaining} days (#{not_after.strftime('%Y-%m-%d %H:%M:%S UTC')})",
         metrics: metrics
       )
     else
-      Beeper::CheckResult.new(
+      Beeper::Signal.new(
         status: :ok,
         title: "SSL certificate is valid",
         message: "SSL certificate for #{hostname} is valid for #{days_remaining} more days",
@@ -60,15 +60,15 @@ class Beeper::Checkers::SslExpiry < Beeper::Checkers::Base
       )
     end
   rescue OpenSSL::SSL::SSLError => e
-    Beeper::CheckResult.new(
+    Beeper::Signal.new(
       status: :alerting,
       title: "SSL handshake failed",
       message: "SSL error for #{hostname || raw_host}: #{e.message}"
     )
   rescue StandardError => e
-    Beeper::CheckResult.new(
+    Beeper::Signal.new(
       status: :alerting,
-      title: "SSL check failed",
+      title: "SSL signal failed",
       message: "Could not inspect SSL certificate for #{hostname || raw_host}: #{e.message}"
     )
   end
