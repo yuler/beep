@@ -2,7 +2,7 @@
 
 A **Plugin** turns a Beep into a monitor: instead of firing a fixed message on schedule, the Beep runs a **Check** and only notifies when the Check says something is wrong. Scheduling (`BeepPollerJob` → `claim_due` → `BeepRun`) and delivery (email / web push) are reused unchanged.
 
-Terms: [`TERMS.md`](../TERMS.md). New vocabulary below; add it there when PR 1 lands.
+Terms: [`TERMS.md`](../TERMS.md). Remaining work lives in [`TODO.md`](../../TODO.md), not here.
 
 | Term        | Meaning                                                                              |
 | ----------- | ------------------------------------------------------------------------------------ |
@@ -36,7 +36,7 @@ These four are load-bearing; everything below follows from them.
 
 **3. Notification is a decision, not a side effect.** Today `BeepRun#deliver_now` always delivers. For plugin Beeps delivery is gated by the alert state machine, so a 5-minute check does not email every 5 minutes for the whole outage.
 
-**4. Phase 1 runs first-party Ruby in-process. No JS sandbox, no new service.** The sandbox exists to run *untrusted* code, which is Phase 3. Site Uptime and SSL expiry are ~30 lines each of `Net::HTTP` / `OpenSSL`. Building a Deno service, image, CI pipeline and RPC protocol to execute code we wrote ourselves buys isolation we do not need yet and costs a new deployable (`compose.yml` has three services today). The `Plugin::Checker` interface is the seam: swapping in a sandboxed runner later is an implementation change behind it, not a refactor.
+**4. First-party checkers run in-process Ruby. No JS sandbox, no new service.** The sandbox exists to run *untrusted* code. Site Uptime and SSL expiry are ~30 lines each of `Net::HTTP` / `OpenSSL`. Building a Deno service, image, CI pipeline and RPC protocol to execute code we wrote ourselves buys isolation we do not need and costs a new deployable (`compose.yml` has three services today). The `Plugin::Checker` interface is the seam: swapping in a sandboxed runner later is an implementation change behind it, not a refactor.
 
 ---
 
@@ -46,13 +46,13 @@ Plugin **definition** and plugin **installation** are different records. Putting
 
 ### `plugins` (new)
 
-| Column       | Type   | Notes                                                    |
-| ------------ | ------ | -------------------------------------------------------- |
-| `slug`       | string | `site-uptime`. Unique per owner.                         |
-| `account_id` | uuid   | `nil` = official. Set = custom, private to that account. |
-| `version`    | string | Semver from the manifest.                                |
-| `manifest`   | jsonb  | Validated against the contract on write.                 |
-| `source`     | text   | Phase 3 only. Null for official checkers (Ruby classes). |
+| Column       | Type   | Notes                                                         |
+| ------------ | ------ | ------------------------------------------------------------- |
+| `slug`       | string | `site-uptime`. Unique per owner.                              |
+| `account_id` | uuid   | `nil` = official. Set = custom, private to that account.      |
+| `version`    | string | Semver from the manifest.                                     |
+| `manifest`   | jsonb  | Validated against the contract on write.                      |
+| `source`     | text   | Null for official checkers (Ruby classes). Custom JS later.   |
 
 Official rows are seeded from `apps/plugins/*/manifest.json` (or `apps/plugins/`); the seed is idempotent on `(slug, version)`.
 
@@ -148,7 +148,7 @@ Checks run on their own Solid Queue queue (`checks`), never on `default`. A slow
 ```
 
 - **`manifest_version`** is mandatory. Third-party plugins are an explicit goal, so forward compatibility has to exist before the first plugin ships.
-- **`inputs[].type`** is `string | number | boolean | url | enum | secret`. `secret` inputs are masked in the UI and are why `plugin_config` is encrypted. `enum` carries `options`. Validation keys: `required`, `min`, `max`, `pattern`. Phase 2 generates forms from this, so the schema must be rich enough now — widening it later is a breaking change for installed plugins.
+- **`inputs[].type`** is `string | number | boolean | url | enum | secret`. `secret` inputs are masked in the UI and are why `plugin_config` is encrypted. `enum` carries `options`. Validation keys: `required`, `min`, `max`, `pattern`. The install / settings form is generated from this, so the schema must be rich enough — widening it later is a breaking change for installed plugins.
 - **`metrics`** must be declared. Charting latency over time needs names, types and units up front.
 - **`min_interval_seconds`** is enforced by comparing two consecutive `Fugit#next_time` values against it, rejecting the cron otherwise.
 - **`ingest.webhook`** grants the Beep a ping token (see Heartbeat below).
@@ -172,15 +172,15 @@ Heartbeat is not an outbound probe, which the earlier draft's manifest could not
 
 ## Security
 
-**SSRF is the main exposure, and it exists in Phase 1 too** — `target_url` is user-supplied and the Ruby checker fetches it, sandbox or not. Without egress control, plugins become a proxy into our own network and to the cloud metadata endpoint (`169.254.169.254`).
+**SSRF is the main exposure** — `target_url` is user-supplied and the Ruby checker fetches it, sandbox or not. Without egress control, plugins become a proxy into our own network and to the cloud metadata endpoint (`169.254.169.254`).
 
-Phase 1, in-process:
+In-process (official checkers):
 
 - Reuse the `SsrfProtection` concept: resolve the host, reject private / link-local / loopback ranges, then **pin the resolved IP** on connect. A resolve-then-fetch pre-check alone is defeated by DNS rebinding.
 - Cap redirects (and re-validate each hop), response body size, and total time.
 - No custom scripts. The only code executed is ours.
 
-Phase 3, when custom JS arrives, isolation becomes a hard boundary rather than defence in depth, and these become requirements rather than nice-to-haves: egress allowlist enforced at the network layer (separate namespace or proxy, not just DNS checks), authenticated and non-internet-reachable runner endpoint (shared secret or mTLS), per-isolate memory and CPU caps, 8 KB output cap enforced runner-side, and per-account concurrency and quota limits.
+When custom JS arrives, isolation is a hard boundary rather than defence in depth: egress allowlist enforced at the network layer (separate namespace or proxy, not just DNS checks), authenticated and non-internet-reachable runner endpoint (shared secret or mTLS), per-isolate memory and CPU caps, 8 KB output cap enforced runner-side, and per-account concurrency and quota limits.
 
 ---
 
@@ -194,27 +194,6 @@ A 5-minute check produces ~8,640 `beep_runs` rows per month **per Beep**. That t
 
 ---
 
-## Roadmap
-
-### Phase 1 — model and first-party checks
-
-1. **Manifest contract + validator + `plugins` table**, with official seeds in `apps/plugins/`. No execution yet.
-2. **Check / alert model end to end**: migrations, `Plugin::Checker` seam, alert state machine, gated delivery, `checks` queue — validated with one trivial checker and its tests.
-3. **Site Uptime** with the SSRF guards and response caps above.
-4. **SSL / TLS expiry.**
-5. **Heartbeat**: ping endpoint with rate limiting + staleness checker.
-6. **Retention job** and `schedule_offset` jitter.
-
-### Phase 2 — UI
-
-Plugin list / template gallery, install flow with the form generated from `inputs`, run history with metrics and check logs. Test Run is mostly free: `Beep#trigger_run!` and `POST /api/v1/:slug/beeps/:id/runs` already exist (the TODO item "手动触发测试" is the same work).
-
-### Phase 3 — custom scripts
-
-Sandboxed execution of user JS. Blocked on the open questions below, not scheduled.
-
----
-
 ## Open questions
 
 - **One runner protocol or two.** [`TODO.md`](../../TODO.md) plans a self-hosted Runner / Agent with registration, token auth, heartbeat, task pull and result reporting. A sandbox runner is the same job with a different protocol (synchronous push). Is the managed plugin runner just the hosted deployment of that Runner? If so the protocol should be designed once, pull-based, before either is built.
@@ -224,4 +203,4 @@ Sandboxed execution of user JS. Blocked on the open questions below, not schedul
 
 ## Do not
 
-Add `plugin` to `Beep#kind`; overload `beep_runs.status` with check outcome; reuse `Beep#status: firing` for alert state; run checks on the `default` queue; build a JS sandbox to execute first-party code; ship custom scripts before the Phase 3 isolation requirements are met.
+Add `plugin` to `Beep#kind`; overload `beep_runs.status` with check outcome; reuse `Beep#status: firing` for alert state; run checks on the `default` queue; build a JS sandbox to execute first-party code; ship custom scripts before the isolation requirements above are met.
