@@ -41,4 +41,20 @@ class Api::V1::Beepers::PingsControllerTest < ActionDispatch::IntegrationTest
     post "/api/v1/ping/non-existent-token"
     assert_response :not_found
   end
+
+  test "rate limits excessive pings" do
+    old_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    begin
+      60.times do
+        post "/api/v1/ping/#{@beeper.ping_token}"
+        assert_response :success
+      end
+
+      post "/api/v1/ping/#{@beeper.ping_token}"
+      assert_response :too_many_requests
+    ensure
+      Rails.cache = old_cache
+    end
+  end
 end

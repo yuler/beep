@@ -65,6 +65,12 @@ class BeeperApp::Receivers::SslExpiry < BeeperApp::Receivers::Base
       title: "SSL handshake failed",
       message: "SSL error for #{hostname || raw_host}: #{e.message}"
     )
+  rescue Timeout::Error => e
+    BeeperApp::Signal.new(
+      status: :alerting,
+      title: "SSL signal timed out",
+      message: "SSL connection to #{hostname || raw_host} timed out after #{CONNECT_TIMEOUT}s"
+    )
   rescue StandardError => e
     BeeperApp::Signal.new(
       status: :alerting,
@@ -83,18 +89,22 @@ class BeeperApp::Receivers::SslExpiry < BeeperApp::Receivers::Base
   end
 
   def fetch_peer_certificate(resolved_ip:, hostname:, port:)
-    tcp_socket = Socket.tcp(resolved_ip, port, connect_timeout: CONNECT_TIMEOUT)
-    ctx = OpenSSL::SSL::SSLContext.new
-    ctx.set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
+    tcp_socket = nil
+    ssl_socket = nil
+    Timeout.timeout(CONNECT_TIMEOUT) do
+      tcp_socket = Socket.tcp(resolved_ip, port, connect_timeout: CONNECT_TIMEOUT)
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
 
-    ssl_socket = OpenSSL::SSL::SSLSocket.new(tcp_socket, ctx)
-    ssl_socket.hostname = hostname # SNI
-    ssl_socket.sync_close = true
-    ssl_socket.connect
+      ssl_socket = OpenSSL::SSL::SSLSocket.new(tcp_socket, ctx)
+      ssl_socket.hostname = hostname # SNI
+      ssl_socket.sync_close = true
+      ssl_socket.connect
 
-    cert = ssl_socket.peer_cert
-    ssl_socket.close
-    cert
+      cert = ssl_socket.peer_cert
+      ssl_socket.close
+      cert
+    end
   ensure
     ssl_socket&.close rescue nil
     tcp_socket&.close rescue nil

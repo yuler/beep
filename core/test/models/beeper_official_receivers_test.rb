@@ -104,6 +104,22 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
     assert_match(/expiring soon/, result.title)
   end
 
+  test "SslExpiry receiver reports alerting on connection or handshake timeout" do
+    receiver = BeeperApp::Receivers::SslExpiry.new(config: {
+      "hostname" => "example.com",
+      "alert_days_before" => 14
+    })
+
+    stub_dns_resolution("93.184.216.34")
+    receiver.define_singleton_method(:fetch_peer_certificate) do |*, **|
+      raise Timeout::Error, "execution expired"
+    end
+
+    result = receiver.call
+    assert result.alerting?
+    assert_match(/timed out/, result.title)
+  end
+
   test "Heartbeat receiver reports ok when ping is recent" do
     result = BeeperApp::Receivers::Heartbeat.call(config: {
       "grace_period_minutes" => 15,

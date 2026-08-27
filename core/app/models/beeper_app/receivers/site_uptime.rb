@@ -97,7 +97,13 @@ class BeeperApp::Receivers::SiteUptime < BeeperApp::Receivers::Base
     request["Host"] = uri.host
     request["User-Agent"] = "Beep-Signal-Uptime/1.0"
 
-    response = http.request(request)
+    response = http.request(request) do |res|
+      bytes_read = 0
+      res.read_body do |chunk|
+        bytes_read += chunk.bytesize
+        break if bytes_read >= MAX_BODY_BYTES
+      end
+    end
 
     if response.is_a?(Net::HTTPRedirection) && response["location"].present?
       new_uri = URI.join(uri.to_s, response["location"])

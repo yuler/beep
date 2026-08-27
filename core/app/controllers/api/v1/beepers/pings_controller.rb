@@ -1,4 +1,12 @@
 class Api::V1::Beepers::PingsController < ActionController::API
+  CACHE_STORE = Class.new {
+    def self.increment(...)
+      Rails.cache.increment(...)
+    end
+  }
+
+  rate_limit to: 60, within: 1.minute, by: -> { params[:token].presence || request.remote_ip }, with: -> { head :too_many_requests }, store: CACHE_STORE
+
   def create
     token = params[:token].to_s.strip
     if token.blank?
