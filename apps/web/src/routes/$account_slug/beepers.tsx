@@ -28,21 +28,33 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createBeep } from "@/lib/api/beeps";
+import {
+	createBeeperInstall,
+	fetchBeeperInstalls,
+	fetchBeepers,
+	type Beeper,
+	type BeeperInstall,
+} from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
-import { fetchPlugins, type Plugin } from "@/lib/api/plugins";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 const accountRoute = getRouteApi("/$account_slug");
 
-export const Route = createFileRoute("/$account_slug/plugins")({
-	loader: withAuthRedirects(() => fetchPlugins()),
-	component: PluginsPage,
+export const Route = createFileRoute("/$account_slug/beepers")({
+	loader: withAuthRedirects(async ({ params }) => {
+		const slug = params?.account_slug ?? "";
+		const [{ beepers }, { beeper_installs: installs }] = await Promise.all([
+			fetchBeepers(),
+			fetchBeeperInstalls(slug),
+		]);
+		return { beepers, installs };
+	}),
+	component: BeepersPage,
 });
 
-function getPluginMeta(slug: string) {
+function getBeeperMeta(slug: string) {
 	switch (slug) {
 		case "site-uptime":
 			return {
@@ -79,19 +91,19 @@ function getPluginMeta(slug: string) {
 	}
 }
 
-function PluginCard({
-	plugin,
+function BeeperCard({
+	beeper,
 	selected,
 	onSelect,
 }: {
-	plugin: Plugin;
+	beeper: Beeper;
 	selected: boolean;
 	onSelect: () => void;
 }) {
-	const meta = getPluginMeta(plugin.slug);
+	const meta = getBeeperMeta(beeper.slug);
 	const Icon = meta.icon;
-	const cron = plugin.default_cron || "*/5 * * * *";
-	const metricCount = plugin.metrics.length;
+	const cron = beeper.default_cron || "*/5 * * * *";
+	const metricCount = beeper.metrics.length;
 
 	return (
 		<Card
@@ -124,15 +136,15 @@ function PluginCard({
 						variant="outline"
 						className="font-mono text-[10px] text-muted-foreground"
 					>
-						v{plugin.version}
+						v{beeper.version}
 					</Badge>
 				</div>
 			</div>
 
 			<CardHeader>
-				<CardTitle className="text-lg font-semibold">{plugin.name}</CardTitle>
+				<CardTitle className="text-lg font-semibold">{beeper.name}</CardTitle>
 				<CardDescription className="line-clamp-3 leading-relaxed">
-					{plugin.description}
+					{beeper.description}
 				</CardDescription>
 			</CardHeader>
 
@@ -147,7 +159,7 @@ function PluginCard({
 							{metricCount} {metricCount === 1 ? "metric" : "metrics"}
 						</span>
 					) : null}
-					{plugin.webhook_ingest ? (
+					{beeper.webhook_ingest ? (
 						<span className="inline-flex items-center gap-1">
 							<Webhook className="size-3.5" />
 							Ingest
@@ -180,23 +192,23 @@ function PluginCard({
 	);
 }
 
-function PluginsPage() {
+function BeepersPage() {
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
-	const { plugins } = Route.useLoaderData();
-	const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
+	const { beepers, installs } = Route.useLoaderData();
+	const [selectedBeeper, setSelectedBeeper] = useState<Beeper | null>(null);
 	const [formTitle, setFormTitle] = useState("");
 	const [formCron, setFormCron] = useState("");
 	const [formInputs, setFormInputs] = useState<Record<string, unknown>>({});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	function handleSelectPlugin(plugin: Plugin) {
-		setSelectedPlugin(plugin);
-		setFormTitle(`${plugin.name} Monitor`);
-		setFormCron(plugin.default_cron || "*/5 * * * *");
+	function handleSelectBeeper(beeper: Beeper) {
+		setSelectedBeeper(beeper);
+		setFormTitle(`${beeper.name}`);
+		setFormCron(beeper.default_cron || "*/5 * * * *");
 		const initialInputs: Record<string, unknown> = {};
-		for (const input of plugin.inputs) {
+		for (const input of beeper.inputs) {
 			initialInputs[input.name] =
 				input.default !== undefined ? input.default : "";
 		}
@@ -206,28 +218,25 @@ function PluginsPage() {
 
 	async function handleInstall(event: React.FormEvent) {
 		event.preventDefault();
-		if (!selectedPlugin) return;
+		if (!selectedBeeper) return;
 
 		setSubmitting(true);
 		setError(null);
 
 		try {
-			const newBeep = await createBeep(slug, {
+			await createBeeperInstall(slug, {
 				title: formTitle.trim(),
-				kind: "recurring",
 				cron: formCron.trim(),
 				timezone: browserTimezone(),
-				plugin_id: selectedPlugin.id,
-				plugin_config: formInputs,
+				beeper_id: selectedBeeper.id,
+				config: formInputs,
 			});
 
-			await router.navigate({
-				to: "/$account_slug/beeps/$beepId",
-				params: { account_slug: slug, beepId: newBeep.id },
-			});
+			setSelectedBeeper(null);
+			await router.invalidate();
 		} catch (err) {
 			setError(
-				err instanceof ApiError ? err.message : "Failed to install plugin.",
+				err instanceof ApiError ? err.message : "Failed to install beeper.",
 			);
 			setSubmitting(false);
 		}
@@ -242,38 +251,70 @@ function PluginsPage() {
 						to: "/$account_slug",
 						params: { account_slug: slug },
 					},
-					{ label: "Plugins", isCurrentPage: true },
+					{ label: "Beepers", isCurrentPage: true },
 				]}
 			/>
 
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
 				<div className="flex flex-col gap-1">
 					<h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
-						Plugin Gallery
+						Beeper Gallery
 					</h1>
 					<p className="text-sm text-muted-foreground">
-						Install monitoring probes and automated checks to watch your
-						services and notify you on failure.
+						Install monitoring probes and automated checkers to watch your
+						services and send notifications when issues arise.
 					</p>
 				</div>
 
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{plugins.map((plugin) => (
-						<PluginCard
-							key={plugin.id}
-							plugin={plugin}
-							selected={selectedPlugin?.id === plugin.id}
-							onSelect={() => handleSelectPlugin(plugin)}
-						/>
-					))}
+				{installs.length > 0 ? (
+					<div className="flex flex-col gap-3">
+						<h2 className="font-heading text-lg font-semibold">Your Beepers</h2>
+						<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+							{installs.map((install: BeeperInstall) => (
+								<Card key={install.id} size="sm">
+									<CardHeader>
+										<div className="flex items-center justify-between">
+											<CardTitle className="text-base">{install.title}</CardTitle>
+											<Badge
+												variant={
+													install.alert_state === "alerting"
+														? "destructive"
+														: "outline"
+												}
+											>
+												{install.alert_state}
+											</Badge>
+										</div>
+										<CardDescription className="text-xs">
+											{install.beeper?.name} · Cron: {install.cron}
+										</CardDescription>
+									</CardHeader>
+								</Card>
+							))}
+						</div>
+					</div>
+				) : null}
+
+				<div className="flex flex-col gap-3">
+					<h2 className="font-heading text-lg font-semibold">Catalog</h2>
+					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{beepers.map((beeper) => (
+							<BeeperCard
+								key={beeper.id}
+								beeper={beeper}
+								selected={selectedBeeper?.id === beeper.id}
+								onSelect={() => handleSelectBeeper(beeper)}
+							/>
+						))}
+					</div>
 				</div>
 
-				{selectedPlugin ? (
+				{selectedBeeper ? (
 					<Card className="mt-4 max-w-2xl">
 						<CardHeader>
 							<div className="flex items-center gap-3">
 								{(() => {
-									const meta = getPluginMeta(selectedPlugin.slug);
+									const meta = getBeeperMeta(selectedBeeper.slug);
 									const Icon = meta.icon;
 									return (
 										<div
@@ -288,11 +329,11 @@ function PluginsPage() {
 								})()}
 								<div>
 									<CardTitle className="text-lg">
-										Configure {selectedPlugin.name}
+										Configure {selectedBeeper.name}
 									</CardTitle>
 									<CardDescription>
-										Fill in the parameters below to instantiate this monitor
-										into your Beep schedule.
+										Fill in the parameters below to install this beeper into
+										your account.
 									</CardDescription>
 								</div>
 							</div>
@@ -300,9 +341,9 @@ function PluginsPage() {
 						<form onSubmit={handleInstall}>
 							<CardContent className="flex flex-col gap-4">
 								<div className="flex flex-col gap-2">
-									<Label htmlFor="plugin-title">Monitor Title</Label>
+									<Label htmlFor="beeper-title">Install Title</Label>
 									<Input
-										id="plugin-title"
+										id="beeper-title"
 										required
 										value={formTitle}
 										onChange={(e) => setFormTitle(e.target.value)}
@@ -311,9 +352,9 @@ function PluginsPage() {
 								</div>
 
 								<div className="flex flex-col gap-2">
-									<Label htmlFor="plugin-cron">Cron Schedule</Label>
+									<Label htmlFor="beeper-cron">Cron Schedule</Label>
 									<Input
-										id="plugin-cron"
+										id="beeper-cron"
 										required
 										value={formCron}
 										onChange={(e) => setFormCron(e.target.value)}
@@ -321,11 +362,11 @@ function PluginsPage() {
 										className="font-mono text-sm"
 									/>
 									<p className="text-[11px] text-muted-foreground">
-										Default: {selectedPlugin.default_cron || "*/5 * * * *"}
+										Default: {selectedBeeper.default_cron || "*/5 * * * *"}
 									</p>
 								</div>
 
-								{selectedPlugin.inputs.map((input) => (
+								{selectedBeeper.inputs.map((input) => (
 									<div key={input.name} className="flex flex-col gap-2">
 										<Label htmlFor={`input-${input.name}`}>
 											{input.label}
@@ -367,7 +408,7 @@ function PluginsPage() {
 									type="button"
 									variant="ghost"
 									size="sm"
-									onClick={() => setSelectedPlugin(null)}
+									onClick={() => setSelectedBeeper(null)}
 									disabled={submitting}
 								>
 									Cancel
@@ -377,7 +418,7 @@ function PluginsPage() {
 									size="sm"
 									disabled={submitting || !formTitle.trim()}
 								>
-									{submitting ? "Installing…" : "Create & Start Monitoring"}
+									{submitting ? "Installing…" : "Install Beeper"}
 								</Button>
 							</CardFooter>
 						</form>

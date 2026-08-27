@@ -10,13 +10,6 @@ export type BeepRun = {
 		| "failed"
 		| "skipped"
 		| "expired";
-	check_status?: "ok" | "alerting" | "error" | null;
-	check_result?: {
-		status?: string;
-		title?: string;
-		message?: string;
-		metrics?: Record<string, unknown>;
-	} | null;
 	result: Record<string, unknown> | null;
 	created_at: string;
 };
@@ -27,24 +20,17 @@ export type Beep = {
 	body: string | null;
 	kind: "once" | "recurring";
 	status: "active" | "paused" | "completed" | "cancelled" | "firing";
-	alert_state?: "ok" | "alerting";
-	consecutive_failures?: number;
-	ping_token?: string | null;
-	last_ping_at?: string | null;
-	plugin_id?: string | null;
-	plugin_config?: Record<string, unknown> | null;
-	plugin?: {
-		id: string;
-		slug: string;
-		name: string;
-		version: string;
-		description: string;
-	} | null;
 	cron: string | null;
 	run_at: string | null;
 	next_run_at: string | null;
 	last_run_at: string | null;
 	timezone: string;
+	notification_channels: string[];
+	beeper_install_id?: string | null;
+	beeper?: {
+		slug: string;
+		name: string;
+	} | null;
 	created_at: string;
 	runs: BeepRun[];
 };
@@ -74,8 +60,7 @@ export function createBeep(
 		run_at?: string | null;
 		cron?: string | null;
 		timezone?: string;
-		plugin_id?: string | null;
-		plugin_config?: Record<string, unknown> | null;
+		notification_channels?: string[];
 	},
 ) {
 	return apiFetch<Beep>(`/api/v1/${slug}/beeps`, {

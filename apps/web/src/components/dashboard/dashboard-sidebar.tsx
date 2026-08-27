@@ -186,20 +186,20 @@ export function DashboardSidebar({
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											isActive={
-												pathname === `/${slug}/plugins` ||
-												pathname.startsWith(`/${slug}/plugins/`)
+												pathname === `/${slug}/beepers` ||
+												pathname.startsWith(`/${slug}/beepers/`)
 											}
-											tooltip="Plugins"
+											tooltip="Beepers"
 											render={
 												<Link
-													to="/$account_slug/plugins"
+													to="/$account_slug/beepers"
 													params={{ account_slug: slug }}
 													onClick={closeMobileSidebar}
 												/>
 											}
 										>
 											<Activity />
-											<span>Plugins</span>
+											<span>Beepers</span>
 										</SidebarMenuButton>
 									</SidebarMenuItem>
 									<SidebarMenuItem>

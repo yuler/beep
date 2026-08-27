@@ -5,8 +5,6 @@ import {
 	Clock,
 	Repeat,
 	Search,
-	ShieldAlert,
-	ShieldCheck,
 	Sparkles,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -24,7 +22,6 @@ import { cn } from "@/lib/utils";
 type FilterStatus =
 	| "all"
 	| "active"
-	| "plugins"
 	| "firing"
 	| "recurring"
 	| "completed";
@@ -45,7 +42,6 @@ export function BeepList({
 		return beeps.filter((beep) => {
 			// Status / Kind filter
 			if (statusFilter === "active" && beep.status !== "active") return false;
-			if (statusFilter === "plugins" && !beep.plugin_id) return false;
 			if (statusFilter === "firing" && beep.status !== "firing") return false;
 			if (statusFilter === "completed" && beep.status !== "completed")
 				return false;
@@ -57,8 +53,8 @@ export function BeepList({
 				const query = search.toLowerCase();
 				const matchTitle = beep.title.toLowerCase().includes(query);
 				const matchBody = beep.body?.toLowerCase().includes(query);
-				const matchPlugin = beep.plugin?.name.toLowerCase().includes(query);
-				if (!matchTitle && !matchBody && !matchPlugin) return false;
+				const matchBeeper = beep.beeper?.name.toLowerCase().includes(query);
+				if (!matchTitle && !matchBody && !matchBeeper) return false;
 			}
 
 			return true;
@@ -69,7 +65,6 @@ export function BeepList({
 		return {
 			all: beeps.length,
 			active: beeps.filter((b) => b.status === "active").length,
-			plugins: beeps.filter((b) => Boolean(b.plugin_id)).length,
 			firing: beeps.filter((b) => b.status === "firing").length,
 			recurring: beeps.filter((b) => b.kind === "recurring").length,
 			completed: beeps.filter((b) => b.status === "completed").length,
@@ -86,8 +81,8 @@ export function BeepList({
 					No beeps yet
 				</h3>
 				<p className="mt-1 max-w-sm text-sm text-muted-foreground">
-					Create your first reminder above or install a monitoring plugin from
-					the gallery.
+					Create your first reminder above or install a beeper from the
+					gallery.
 				</p>
 			</Card>
 		);
@@ -103,7 +98,6 @@ export function BeepList({
 							[
 								{ id: "all", label: "All", count: counts.all },
 								{ id: "active", label: "Active", count: counts.active },
-								{ id: "plugins", label: "Plugins", count: counts.plugins },
 								{ id: "firing", label: "Firing", count: counts.firing },
 								{
 									id: "recurring",
@@ -151,7 +145,7 @@ export function BeepList({
 						<Input
 							value={search}
 							onChange={(event) => setSearch(event.target.value)}
-							placeholder="Search beeps and plugins…"
+							placeholder="Search beeps…"
 							className="h-8.5 pl-8 text-xs"
 						/>
 					</div>
@@ -250,11 +244,7 @@ function BeepListCard({
 	return (
 		<Card
 			size="sm"
-			className={cn(
-				"group relative overflow-hidden transition-all duration-150 hover:border-primary/40 hover:shadow-xs",
-				beep.alert_state === "alerting" &&
-					"border-destructive/60 bg-destructive/[0.02]",
-			)}
+			className="group relative overflow-hidden transition-all duration-150 hover:border-primary/40 hover:shadow-xs"
 		>
 			<Link
 				to="/$account_slug/beeps/$beepId"
@@ -268,13 +258,13 @@ function BeepListCard({
 				<div className="flex flex-wrap items-center justify-between gap-2">
 					<div className="flex flex-wrap items-center gap-1.5">
 						<StatusIndicator status={beep.status} />
-						{beep.plugin ? (
+						{beep.beeper ? (
 							<Badge
 								variant="secondary"
 								className="gap-1 text-[10px] font-normal bg-primary/10 text-primary dark:bg-primary/20"
 							>
 								<Activity className="size-2.5" />
-								{beep.plugin.name}
+								from {beep.beeper.name}
 							</Badge>
 						) : (
 							<Badge
@@ -294,21 +284,6 @@ function BeepListCard({
 								)}
 							</Badge>
 						)}
-						{beep.alert_state ? (
-							<Badge
-								variant={
-									beep.alert_state === "alerting" ? "destructive" : "outline"
-								}
-								className="text-[10px] font-medium"
-							>
-								{beep.alert_state === "alerting" ? (
-									<ShieldAlert className="size-2.5 mr-0.5" />
-								) : (
-									<ShieldCheck className="size-2.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
-								)}
-								{beep.alert_state.toUpperCase()}
-							</Badge>
-						) : null}
 					</div>
 
 					{schedule ? (
@@ -346,32 +321,17 @@ function BeepListCard({
 							{lastRun ? (
 								<span className="inline-flex items-center gap-1 text-[11px]">
 									· Last:{" "}
-									{lastRun.check_status ? (
-										<span
-											className={cn(
-												"font-medium",
-												lastRun.check_status === "ok" &&
-													"text-emerald-600 dark:text-emerald-400",
-												lastRun.check_status === "alerting" &&
-													"text-destructive",
-												lastRun.check_status === "error" && "text-destructive",
-											)}
-										>
-											Check {lastRun.check_status.toUpperCase()}
-										</span>
-									) : (
-										<span
-											className={cn(
-												"font-medium",
-												lastRun.status === "succeeded" &&
-													"text-emerald-600 dark:text-emerald-400",
-												lastRun.status === "failed" && "text-destructive",
-												lastRun.status === "running" && "text-primary",
-											)}
-										>
-											{lastRun.status}
-										</span>
-									)}
+									<span
+										className={cn(
+											"font-medium",
+											lastRun.status === "succeeded" &&
+												"text-emerald-600 dark:text-emerald-400",
+											lastRun.status === "failed" && "text-destructive",
+											lastRun.status === "running" && "text-primary",
+										)}
+									>
+										{lastRun.status}
+									</span>
 								</span>
 							) : null}
 						</div>

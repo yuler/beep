@@ -4,7 +4,7 @@ import {
 	notFound,
 	useRouter,
 } from "@tanstack/react-router";
-import { Check, Copy, Pause, Play, Trash2 } from "lucide-react";
+import { Activity, Pause, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
@@ -16,11 +16,9 @@ import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
-	CardDescription,
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { publicApiOrigin } from "@/config";
 import {
 	deleteBeep,
 	fetchBeep,
@@ -59,22 +57,7 @@ function BeepDetailPage() {
 	const [deleting, setDeleting] = useState(false);
 	const [triggering, setTriggering] = useState(false);
 	const [togglingStatus, setTogglingStatus] = useState(false);
-	const [copied, setCopied] = useState<"url" | "curl" | null>(null);
 	const [error, setError] = useState<string | null>(null);
-
-	const pingUrl = beep.ping_token
-		? `${publicApiOrigin()}/api/v1/ping/${beep.ping_token}`
-		: null;
-	const pingCurl = pingUrl
-		? `curl -fsS -X POST ${JSON.stringify(pingUrl)}`
-		: null;
-
-	function copyText(which: "url" | "curl", value: string) {
-		void navigator.clipboard.writeText(value).then(() => {
-			setCopied(which);
-			window.setTimeout(() => setCopied(null), 2000);
-		});
-	}
 
 	async function handleTrigger() {
 		setTriggering(true);
@@ -153,9 +136,17 @@ function BeepDetailPage() {
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div className="min-w-0">
-						<h1 className="font-heading text-2xl font-semibold tracking-tight">
-							{beep.title}
-						</h1>
+						<div className="flex items-center gap-2">
+							<h1 className="font-heading text-2xl font-semibold tracking-tight">
+								{beep.title}
+							</h1>
+							{beep.beeper ? (
+								<Badge variant="secondary" className="gap-1 text-xs">
+									<Activity className="size-3" />
+									Triggered by {beep.beeper.name}
+								</Badge>
+							) : null}
+						</div>
 						<p className="mt-1 text-sm text-muted-foreground">
 							{beep.kind} · {beep.timezone}
 						</p>
@@ -223,38 +214,6 @@ function BeepDetailPage() {
 					</p>
 				) : null}
 
-				{pingUrl && pingCurl ? (
-					<Card className="max-w-lg">
-						<CardHeader>
-							<CardTitle>Ping endpoint</CardTitle>
-							<CardDescription>
-								POST this URL from your cron job or worker after a successful
-								run. Beep alerts if no ping arrives within the grace period.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="flex flex-col gap-4">
-							<CopyableBlock
-								label="URL"
-								value={pingUrl}
-								copied={copied === "url"}
-								onCopy={() => copyText("url", pingUrl)}
-							/>
-							<CopyableBlock
-								label="curl"
-								value={pingCurl}
-								copied={copied === "curl"}
-								onCopy={() => copyText("curl", pingCurl)}
-							/>
-							<p className="text-sm">
-								<span className="text-muted-foreground">Last ping</span>
-								<span className="ml-2 tabular-nums">
-									{formatWhen(beep.last_ping_at ?? null)}
-								</span>
-							</p>
-						</CardContent>
-					</Card>
-				) : null}
-
 				{beep.body ? (
 					<Card className="max-w-lg">
 						<CardHeader>
@@ -268,7 +227,7 @@ function BeepDetailPage() {
 
 				<Card className="max-w-lg">
 					<CardHeader>
-						<CardTitle>Schedule</CardTitle>
+						<CardTitle>Details & Channels</CardTitle>
 					</CardHeader>
 					<CardContent className="flex flex-col gap-3 text-sm">
 						{beep.kind === "once" ? (
@@ -278,6 +237,14 @@ function BeepDetailPage() {
 						)}
 						<DetailRow label="Next" value={formatWhen(beep.next_run_at)} />
 						<DetailRow label="Last" value={formatWhen(beep.last_run_at)} />
+						<DetailRow
+							label="Channels"
+							value={
+								beep.notification_channels?.length > 0
+									? beep.notification_channels.join(", ")
+									: "None"
+							}
+						/>
 						<DetailRow label="Created" value={formatWhen(beep.created_at)} />
 					</CardContent>
 				</Card>
@@ -295,38 +262,6 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 		<div className="flex justify-between gap-4">
 			<span className="text-muted-foreground">{label}</span>
 			<span className="text-right tabular-nums">{value}</span>
-		</div>
-	);
-}
-
-function CopyableBlock({
-	label,
-	value,
-	copied,
-	onCopy,
-}: {
-	label: string;
-	value: string;
-	copied: boolean;
-	onCopy: () => void;
-}) {
-	return (
-		<div className="flex flex-col gap-1.5">
-			<span className="text-xs font-medium text-muted-foreground">{label}</span>
-			<div className="flex items-start gap-1.5 rounded-md border bg-muted/30 p-1.5">
-				<pre className="min-w-0 flex-1 overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs">
-					{value}
-				</pre>
-				<Button
-					type="button"
-					size="icon-xs"
-					variant="ghost"
-					aria-label={copied ? `${label} copied` : `Copy ${label}`}
-					onClick={onCopy}
-				>
-					{copied ? <Check /> : <Copy />}
-				</Button>
-			</div>
 		</div>
 	);
 }
