@@ -3,21 +3,18 @@ set -euo pipefail
 
 HOST=beep.yuler.cc
 USER=root
-DOCKER_CONTAINER_NAME=beep-core
+SERVICE_NAME=core
 
-# Convert underscores to hyphens for matching (container names use hyphens)
-CONTAINER_PREFIX=$(echo "$DOCKER_CONTAINER_NAME" | tr '_' '-')
-
-# SSH to server and find matching container
-# Match container names that start with the prefix
+# SSH to server and find the core container
+# Match container names like <project>-<service>-<replica> (Dokploy), e.g. sides-beep-hhjmh1-core-1
 CONTAINER_ID=$(
-  ssh "$USER@$HOST" "docker ps --format '{{.ID}}\t{{.Names}}' | awk -F'\t' -v prefix=\"${CONTAINER_PREFIX}\" '\$2 ~ \"^\" prefix || \$2 ~ \",\" prefix {print \$1; exit}'"
+  ssh -o StrictHostKeyChecking=accept-new "$USER@$HOST" "docker ps --format '{{.ID}}\t{{.Names}}' | awk -F'\t' -v svc=\"${SERVICE_NAME}\" '\$2 ~ \"-\" svc \"-[0-9]+\$\" {print \$1; exit}'"
 )
 
 if [ -z "$CONTAINER_ID" ]; then
-  echo "Error: No container found matching prefix '$CONTAINER_PREFIX'"
+  echo "Error: No container found matching service '$SERVICE_NAME'"
   echo "Available containers:"
-  ssh "$USER@$HOST" "docker ps --format '{{.Names}}'"
+  ssh -o StrictHostKeyChecking=accept-new "$USER@$HOST" "docker ps --format '{{.Names}}'"
   exit 1
 fi
 
@@ -25,4 +22,4 @@ echo "Found container: $CONTAINER_ID"
 echo "Connecting to container..."
 
 # Connect to container
-ssh -t "$USER@$HOST" "docker exec -it $CONTAINER_ID ./bin/rails console"
+ssh -t -o StrictHostKeyChecking=accept-new "$USER@$HOST" "docker exec -it $CONTAINER_ID ./bin/rails console"
