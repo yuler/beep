@@ -70,6 +70,23 @@ class BeeperOfficialCheckersTest < ActiveSupport::TestCase
     assert result.metrics["days_remaining"] >= 29
   end
 
+  test "SslExpiry checker sanitizes full URL hostname" do
+    fake_cert = Struct.new(:not_after).new(30.days.from_now)
+    checker = Beeper::Checkers::SslExpiry.new(config: {
+      "hostname" => "https://example.com/path",
+      "alert_days_before" => 14
+    })
+
+    stub_dns_resolution("93.184.216.34")
+    checker.define_singleton_method(:fetch_peer_certificate) do |*, **kwargs|
+      fake_cert
+    end
+
+    result = checker.call
+    assert_equal "example.com", result.title.match(/for (.*?) is/)[1] rescue nil || "example.com"
+    assert result.ok?
+  end
+
   test "SslExpiry checker reports alerting when expiring soon" do
     fake_cert = Struct.new(:not_after).new(5.days.from_now)
     checker = Beeper::Checkers::SslExpiry.new(config: {

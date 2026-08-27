@@ -4,17 +4,19 @@ class Beeper::Checkers::SslExpiry < Beeper::Checkers::Base
   CONNECT_TIMEOUT = 5
 
   def call
-    hostname = config["hostname"].to_s.strip
+    raw_host = config["hostname"].to_s.strip
     port = (config["port"] || DEFAULT_PORT).to_i
     alert_days_before = (config["alert_days_before"] || DEFAULT_ALERT_DAYS_BEFORE).to_i
 
-    if hostname.blank?
+    if raw_host.blank?
       return Beeper::CheckResult.new(
         status: :error,
         title: "Configuration error",
         message: "Hostname is required"
       )
     end
+
+    hostname = sanitize_hostname(raw_host)
 
     resolved_ip = SsrfProtection.resolve_public_ip(hostname)
     if resolved_ip.nil?
@@ -61,17 +63,24 @@ class Beeper::Checkers::SslExpiry < Beeper::Checkers::Base
     Beeper::CheckResult.new(
       status: :alerting,
       title: "SSL handshake failed",
-      message: "SSL error for #{hostname}: #{e.message}"
+      message: "SSL error for #{hostname || raw_host}: #{e.message}"
     )
   rescue StandardError => e
     Beeper::CheckResult.new(
       status: :alerting,
       title: "SSL check failed",
-      message: "Could not inspect SSL certificate for #{hostname}: #{e.message}"
+      message: "Could not inspect SSL certificate for #{hostname || raw_host}: #{e.message}"
     )
   end
 
   private
+
+  def sanitize_hostname(value)
+    # Strip URL schemes (http://, https://), paths, and port numbers if provided
+    cleaned = value.sub(%r{\A[a-zA-Z]+://}, "")
+    cleaned = cleaned.split("/").first || ""
+    cleaned.split(":").first || ""
+  end
 
   def fetch_peer_certificate(resolved_ip:, hostname:, port:)
     tcp_socket = Socket.tcp(resolved_ip, port, connect_timeout: CONNECT_TIMEOUT)

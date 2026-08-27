@@ -80,6 +80,8 @@ export type BeeperInstall = {
 		name: string;
 		version: string;
 		description?: string;
+		inputs?: BeeperInput[];
+		metrics?: BeeperMetric[];
 	};
 	runs?: BeeperRun[];
 };

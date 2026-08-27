@@ -137,6 +137,8 @@ function BeeperInstallDetailPage() {
 	}
 
 	const runs = install.runs ?? [];
+	const inputs = install.beeper?.inputs ?? [];
+	const configEntries = Object.entries(install.config ?? {});
 
 	return (
 		<>
@@ -247,50 +249,96 @@ function BeeperInstallDetailPage() {
 					</p>
 				) : null}
 
-				<Card className="max-w-lg">
-					<CardHeader>
-						<CardTitle>Schedule & Details</CardTitle>
-					</CardHeader>
-					<CardContent className="flex flex-col gap-3 text-sm">
-						<DetailRow label="Cron" value={install.cron} />
-						<DetailRow
-							label="Next run"
-							value={formatWhen(install.next_run_at)}
-						/>
-						<DetailRow
-							label="Last run"
-							value={formatWhen(install.last_run_at)}
-						/>
-						<DetailRow
-							label="Consecutive failures"
-							value={String(install.consecutive_failures)}
-						/>
-						<DetailRow
-							label="Channels"
-							value={
-								install.notification_channels?.length > 0
-									? install.notification_channels.join(", ")
-									: "Default"
-							}
-						/>
-						<DetailRow label="Created" value={formatWhen(install.created_at)} />
-					</CardContent>
-				</Card>
+				<div className="grid gap-6 md:grid-cols-2">
+					<Card>
+						<CardHeader>
+							<CardTitle>Schedule & Status</CardTitle>
+						</CardHeader>
+						<CardContent className="flex flex-col gap-3 text-sm">
+							<DetailRow label="Cron" value={install.cron} />
+							<DetailRow
+								label="Next run"
+								value={formatWhen(install.next_run_at)}
+							/>
+							<DetailRow
+								label="Last run"
+								value={formatWhen(install.last_run_at)}
+							/>
+							<DetailRow
+								label="Consecutive failures"
+								value={String(install.consecutive_failures)}
+							/>
+							{install.ping_token ? (
+								<DetailRow label="Ping token" value={install.ping_token} />
+							) : null}
+							{install.last_ping_at ? (
+								<DetailRow
+									label="Last ping"
+									value={formatWhen(install.last_ping_at)}
+								/>
+							) : null}
+							<DetailRow
+								label="Channels"
+								value={
+									install.notification_channels?.length > 0
+										? install.notification_channels.join(", ")
+										: "Default"
+								}
+							/>
+							<DetailRow
+								label="Created"
+								value={formatWhen(install.created_at)}
+							/>
+						</CardContent>
+					</Card>
 
-				{install.config && Object.keys(install.config).length > 0 ? (
-					<Card className="max-w-lg">
+					<Card>
 						<CardHeader>
 							<CardTitle>Configuration</CardTitle>
 						</CardHeader>
-						<CardContent>
-							<pre className="max-h-48 overflow-auto rounded bg-muted/50 p-2 text-xs font-mono leading-snug whitespace-pre-wrap">
-								{JSON.stringify(install.config, null, 2)}
-							</pre>
+						<CardContent className="flex flex-col gap-3 text-sm">
+							{configEntries.length === 0 ? (
+								<p className="text-sm text-muted-foreground">
+									No configuration parameters set.
+								</p>
+							) : (
+								configEntries.map(([key, val]) => {
+									const inputDef = inputs.find((i) => i.name === key);
+									const label = inputDef?.label || key;
+									const displayVal =
+										val === null || val === undefined
+											? "—"
+											: typeof val === "boolean"
+												? val
+													? "true"
+													: "false"
+												: String(val);
+
+									return (
+										<div
+											key={key}
+											className="flex justify-between gap-4 border-b border-border/40 pb-2 last:border-0 last:pb-0"
+										>
+											<div className="flex flex-col min-w-0">
+												<span className="font-medium text-foreground">
+													{label}
+												</span>
+												<span className="font-mono text-[11px] text-muted-foreground">
+													{key}
+												</span>
+											</div>
+											<span className="font-mono text-sm text-right break-all max-w-[60%]">
+												{displayVal}
+											</span>
+										</div>
+									);
+								})
+							)}
 						</CardContent>
 					</Card>
-				) : null}
+				</div>
 
-				<div className="max-w-lg">
+				<div>
 					<details className="group/runs rounded-lg border bg-muted/20 text-sm">
 						<summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
 							<ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open/runs:rotate-90" />
