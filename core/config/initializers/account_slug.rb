@@ -10,7 +10,7 @@ module AccountSlug
   # - EXTRA: policy / future / infra words reserved even without a matching route today.
   RESERVED_FROM_ROUTES = %w[
     admin api cable home hotwire-spark invitations join join_code
-    landing letter_opener manifest my payment ping plugins rails service-worker session settings
+    beepers landing letter_opener manifest my payment ping plugins rails service-worker session settings
     subscription up users webhooks
   ].freeze
   RESERVED_EXTRA = %w[

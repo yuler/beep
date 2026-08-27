@@ -5,6 +5,7 @@ class Account < ApplicationRecord
 
   has_many :users, dependent: :destroy
   has_many :beeps, dependent: :destroy
+  has_many :beeper_installs, dependent: :destroy
   has_many :push_subscriptions, class_name: "Push::Subscription", dependent: :destroy
   has_many :invitations, dependent: :destroy
   has_many :slug_holds, class_name: "Account::SlugHold", dependent: :delete_all

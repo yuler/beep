@@ -74,7 +74,12 @@ Rails.application.routes.draw do
       end
 
       resource :settings, only: %i[ show update ]
-      resources :plugins, only: %i[ index show ]
+      resources :beepers, only: %i[ index show ]
+      resources :beeper_installs, only: %i[ index show create update destroy ] do
+        scope module: :beeper_installs do
+          resource :pause, only: %i[ create destroy ]
+        end
+      end
       resources :beep_proposals, only: :create
       resources :beeps, only: %i[ index show create update destroy ] do
         scope module: :beeps do

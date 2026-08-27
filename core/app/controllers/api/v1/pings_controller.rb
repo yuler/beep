@@ -3,8 +3,8 @@ class Api::V1::PingsController < ActionController::API
     token = params[:token].to_s.strip
     if token.blank?
       head :bad_request
-    elsif (beep = Beep.find_by(ping_token: token))
-      beep.record_ping
+    elsif (install = BeeperInstall.find_by(ping_token: token))
+      install.record_ping
       head :ok
     else
       head :not_found
