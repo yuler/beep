@@ -67,6 +67,7 @@ export type BeeperInstall = {
 	alert_state: "ok" | "alerting";
 	consecutive_failures: number;
 	config: Record<string, unknown>;
+	signal_metadata?: Record<string, unknown>;
 	notification_channels: string[];
 	ping_token?: string | null;
 	last_ping_at?: string | null;

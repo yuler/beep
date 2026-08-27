@@ -185,16 +185,14 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_27_120000) do
     t.datetime "last_run_at"
     t.string "alert_state", default: "ok", null: false
     t.integer "consecutive_failures", default: 0, null: false
-    t.integer "schedule_offset", default: 0, null: false
-    t.string "ping_token"
-    t.datetime "last_ping_at"
+    t.json "signal_metadata", default: {}, null: false
     t.json "notification_channels", default: [], null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index "(json_extract(signal_metadata, '$.ping_token'))", name: "index_beeper_installs_on_ping_token", unique: true
     t.index ["account_id", "status", "next_run_at"], name: "index_beeper_installs_on_due"
     t.index ["account_id"], name: "index_beeper_installs_on_account_id"
     t.index ["beeper_id"], name: "index_beeper_installs_on_beeper_id"
-    t.index ["ping_token"], name: "index_beeper_installs_on_ping_token", unique: true
   end
 
   create_table "beeper_runs", id: :uuid, force: :cascade do |t|

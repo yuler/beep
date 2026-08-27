@@ -3,7 +3,7 @@ class Api::V1::BeeperInstalls::PingsController < ActionController::API
     token = params[:token].to_s.strip
     if token.blank?
       head :bad_request
-    elsif (install = BeeperInstall.find_by(ping_token: token))
+    elsif (install = BeeperInstall.find_by_ping_token(token))
       install.record_ping
       head :ok
     else

@@ -65,9 +65,7 @@ This period writes official rows only (`account_id` nil). Official rows are seed
 | `last_run_at`           | datetime | Last finished Beeper Run.                                         |
 | `alert_state`           | string   | `ok` or `alerting`. Default `ok`. Lives here, not on Beep.        |
 | `consecutive_failures`  | integer  | Default 0. Reset on `ok`.                                         |
-| `schedule_offset`       | integer  | Seconds. Spreading a shared `*/5 * * * *` is later work.          |
-| `ping_token`            | string   | Unique, nullable. Issued when the manifest sets `ingest.webhook`. |
-| `last_ping_at`          | datetime | Stamped by the ping endpoint, read by the Heartbeat receiver.     |
+| `signal_metadata`       | json     | Runtime metadata for signals (e.g. `ping_token`, `last_ping_at`). |
 | `notification_channels` | json     | Default channel types for notify (`email`, `web_push`).           |
 
 Do not reuse `status: firing` for alerting — there it means *a Beeper Run is in flight*. `alert_state` is a separate column on purpose.

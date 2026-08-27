@@ -22,13 +22,11 @@ class CreateBeepersInstallsAndBeepChannels < ActiveRecord::Migration[8.2]
       t.datetime :last_run_at
       t.string :alert_state, null: false, default: "ok"
       t.integer :consecutive_failures, null: false, default: 0
-      t.integer :schedule_offset, null: false, default: 0
-      t.string :ping_token
-      t.datetime :last_ping_at
+      t.json :signal_metadata, null: false, default: {}
       t.json :notification_channels, null: false, default: []
       t.timestamps
     end
-    add_index :beeper_installs, :ping_token, unique: true
+    add_index :beeper_installs, "(json_extract(signal_metadata, '$.ping_token'))", unique: true, name: "index_beeper_installs_on_ping_token"
     add_index :beeper_installs, [ :account_id, :status, :next_run_at ], name: "index_beeper_installs_on_due"
 
     create_table :beeper_runs, id: :uuid do |t|

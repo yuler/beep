@@ -15,6 +15,8 @@ class BeeperInstall < ApplicationRecord
   enum :status, %w[ active paused completed cancelled firing ].index_by(&:itself)
   enum :alert_state, %w[ ok alerting ].index_by(&:itself)
 
+  store_accessor :signal_metadata, :ping_token, :last_ping_at
+
   normalizes :title, with: ->(value) { value.strip.presence }
 
   validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }
@@ -34,6 +36,12 @@ class BeeperInstall < ApplicationRecord
   scope :due, -> { active.where(next_run_at: ..Time.current) }
 
   class << self
+    def find_by_ping_token(token)
+      return nil if token.blank?
+
+      where("json_extract(signal_metadata, '$.ping_token') = ?", token).first
+    end
+
     def poll_due_now
       due.order(:next_run_at).limit(POLL_BATCH_SIZE).each(&:claim_due)
       reclaim_stale_firing
@@ -147,7 +155,8 @@ class BeeperInstall < ApplicationRecord
   end
 
   def record_ping
-    update_columns(last_ping_at: Time.current, updated_at: Time.current)
+    meta = (signal_metadata || {}).merge("last_ping_at" => Time.current.utc.iso8601)
+    update_columns(signal_metadata: meta, updated_at: Time.current)
   end
 
   def expired?(scheduled_for)
