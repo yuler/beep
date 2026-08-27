@@ -1,6 +1,7 @@
 import {
 	createFileRoute,
 	getRouteApi,
+	Link,
 	notFound,
 	useRouter,
 } from "@tanstack/react-router";
@@ -136,10 +137,29 @@ function BeepDetailPage() {
 								{beep.title}
 							</h1>
 							{beep.beeper ? (
-								<Badge variant="secondary" className="gap-1 text-xs">
-									<Activity className="size-3" />
-									Triggered by {beep.beeper.name}
-								</Badge>
+								beep.beeper_install_id ? (
+									<Link
+										to="/$account_slug/beepers/$beeperId"
+										params={{
+											account_slug: slug,
+											beeperId: beep.beeper_install_id,
+										}}
+										className="inline-flex items-center"
+									>
+										<Badge
+											variant="secondary"
+											className="gap-1 text-xs transition-colors hover:bg-secondary/80"
+										>
+											<Activity className="size-3" />
+											Triggered by {beep.beeper.name} →
+										</Badge>
+									</Link>
+								) : (
+									<Badge variant="secondary" className="gap-1 text-xs">
+										<Activity className="size-3" />
+										Triggered by {beep.beeper.name}
+									</Badge>
+								)
 							) : null}
 						</div>
 						<p className="mt-1 text-sm text-muted-foreground">

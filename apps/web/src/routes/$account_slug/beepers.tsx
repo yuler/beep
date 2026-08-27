@@ -1,15 +1,18 @@
 import {
 	createFileRoute,
 	getRouteApi,
+	Link,
 	useRouter,
 } from "@tanstack/react-router";
 import {
 	Activity,
 	ArrowRight,
+	ArrowUpRight,
 	Check,
 	Clock,
 	Globe,
 	Radio,
+	ShieldAlert,
 	ShieldCheck,
 	Webhook,
 } from "lucide-react";
@@ -224,7 +227,7 @@ function BeepersPage() {
 		setError(null);
 
 		try {
-			await createBeeperInstall(slug, {
+			const newInstall = await createBeeperInstall(slug, {
 				title: formTitle.trim(),
 				cron: formCron.trim(),
 				timezone: browserTimezone(),
@@ -233,7 +236,10 @@ function BeepersPage() {
 			});
 
 			setSelectedBeeper(null);
-			await router.invalidate();
+			await router.navigate({
+				to: "/$account_slug/beepers/$beeperId",
+				params: { account_slug: slug, beeperId: newInstall.id },
+			});
 		} catch (err) {
 			setError(
 				err instanceof ApiError ? err.message : "Failed to install beeper.",
@@ -271,26 +277,64 @@ function BeepersPage() {
 						<h2 className="font-heading text-lg font-semibold">Your Beepers</h2>
 						<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 							{installs.map((install: BeeperInstall) => (
-								<Card key={install.id} size="sm">
-									<CardHeader>
-										<div className="flex items-center justify-between">
-											<CardTitle className="text-base">
-												{install.title}
-											</CardTitle>
-											<Badge
-												variant={
-													install.alert_state === "alerting"
-														? "destructive"
-														: "outline"
-												}
-											>
-												{install.alert_state}
-											</Badge>
+								<Card
+									key={install.id}
+									size="sm"
+									className="group relative overflow-hidden transition-all duration-150 hover:border-primary/40 hover:shadow-xs"
+								>
+									<Link
+										to="/$account_slug/beepers/$beeperId"
+										params={{
+											account_slug: slug,
+											beeperId: install.id,
+										}}
+										className="block p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+									>
+										<div className="flex items-center justify-between gap-2">
+											<div className="flex items-center gap-1.5">
+												<Badge
+													variant={
+														install.status === "active"
+															? "default"
+															: install.status === "paused"
+																? "secondary"
+																: "outline"
+													}
+												>
+													{install.status}
+												</Badge>
+												<Badge
+													variant={
+														install.alert_state === "alerting"
+															? "destructive"
+															: "outline"
+													}
+													className="gap-1 text-[10px] font-medium"
+												>
+													{install.alert_state === "alerting" ? (
+														<ShieldAlert className="size-2.5" />
+													) : (
+														<ShieldCheck className="size-2.5 text-emerald-600 dark:text-emerald-400" />
+													)}
+													{install.alert_state.toUpperCase()}
+												</Badge>
+											</div>
+											<span className="font-mono text-xs text-muted-foreground">
+												{install.cron}
+											</span>
 										</div>
-										<CardDescription className="text-xs">
-											{install.beeper?.name} · Cron: {install.cron}
-										</CardDescription>
-									</CardHeader>
+
+										<div className="mt-2.5 flex items-start justify-between gap-3">
+											<h3 className="font-heading text-base font-semibold text-foreground transition-colors group-hover:text-primary">
+												{install.title}
+											</h3>
+											<ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-primary" />
+										</div>
+
+										<p className="mt-1 text-xs text-muted-foreground">
+											{install.beeper?.name}
+										</p>
+									</Link>
 								</Card>
 							))}
 						</div>

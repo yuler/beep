@@ -38,6 +38,26 @@ export type BeepersResponse = {
 	beepers: Beeper[];
 };
 
+export type BeeperRun = {
+	id: string;
+	scheduled_for: string;
+	status:
+		| "pending"
+		| "running"
+		| "succeeded"
+		| "failed"
+		| "skipped"
+		| "expired";
+	check_status?: "ok" | "alerting" | "error" | null;
+	check_result?: {
+		status?: string;
+		title?: string;
+		message?: string;
+		metrics?: Record<string, unknown>;
+	} | null;
+	created_at: string;
+};
+
 export type BeeperInstall = {
 	id: string;
 	title: string;
@@ -59,7 +79,9 @@ export type BeeperInstall = {
 		slug: string;
 		name: string;
 		version: string;
+		description?: string;
 	};
+	runs?: BeeperRun[];
 };
 
 export type BeeperInstallsResponse = {
@@ -81,6 +103,15 @@ export function fetchBeeper(slug: string) {
 export function fetchBeeperInstalls(accountSlug: string) {
 	return apiFetch<BeeperInstallsResponse>(
 		`/api/v1/${accountSlug}/beeper_installs`,
+		{
+			method: "GET",
+		},
+	);
+}
+
+export function fetchBeeperInstall(accountSlug: string, installId: string) {
+	return apiFetch<BeeperInstall>(
+		`/api/v1/${accountSlug}/beeper_installs/${installId}`,
 		{
 			method: "GET",
 		},
