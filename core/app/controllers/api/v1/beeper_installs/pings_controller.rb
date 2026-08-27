@@ -1,4 +1,4 @@
-class Api::V1::PingsController < ActionController::API
+class Api::V1::BeeperInstalls::PingsController < ActionController::API
   def create
     token = params[:token].to_s.strip
     if token.blank?

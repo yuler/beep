@@ -62,7 +62,6 @@ Rails.application.routes.draw do
       end
       get "me", to: "me#show"
       put "me/last_account", to: "me#update_last_account"
-      post "ping/:token", to: "pings#create", as: :ping
 
       namespace :my do
         resources :access_tokens, only: %i[ index create destroy ]
@@ -80,6 +79,9 @@ Rails.application.routes.draw do
           resource :pause, only: %i[ create destroy ]
           resources :runs, only: :create
         end
+      end
+      scope module: :beeper_installs do
+        post "ping/:token", to: "pings#create", as: :ping
       end
       resources :beep_proposals, only: :create
       resources :beeps, only: %i[ index show create update destroy ] do

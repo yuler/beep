@@ -1,6 +1,6 @@
 require "test_helper"
 
-class Api::V1::PingsControllerTest < ActionDispatch::IntegrationTest
+class Api::V1::BeeperInstalls::PingsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @account = accounts(:john_account)
     @beeper = Beeper.create!(
