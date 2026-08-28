@@ -8,7 +8,7 @@ Terms: [`TERMS.md`](../TERMS.md). Remaining work lives in [`TODO.md`](../../TODO
 flowchart TD
   Poller["BeeperPollerJob (every 10s)"] --> Claim["Beeper#claim_due → firing"]
   Claim --> Run["BeeperRun (pending)"]
-  Run --> Job["RunBeeperJob (queue: signals)"]
+  Run --> Job["RunBeeperJob"]
   Job --> Produce["BeeperApp#produce_signal(config:)"]
   Produce -->|Built-in / Official| Native["BeeperApp::Receivers::* (In-process Ruby)"]
   Produce -->|Custom / Community| Sandbox["Sandbox / Remote Runner (JS/Script/Agent)"]
@@ -95,7 +95,7 @@ A `BeeperApp::Signal` instance representing one of three canonical states:
 - **Built-in Official Receivers**: Implemented under `BeeperApp::Receivers::* < BeeperApp::Receivers::Base`, executing in-process Ruby with SSRF IP-pinning.
 - **Custom / Third-party Apps**: Dispatched to isolated sandbox / remote workers with network namespace boundaries and CPU/memory limits.
 
-Signals run on their own Solid Queue queue (`signals`), never on `default`. A slow target must not delay reminder delivery — reminders are the core product, and `queue.yml` already runs separate workers.
+All application jobs use the `default` queue. `solid_queue_recurring` is reserved for Solid Queue's own recurring scheduler (`config/recurring.yml`).
 
 ---
 
@@ -159,5 +159,5 @@ Still open:
 
 ## Do not
 
-Add `plugin` or a monitor kind to `Beep#kind`; put alert state, ping token, or signal outcome on `beeps` / `beep_runs`; overload `beep_runs.status` with probe outcome; reuse `status: firing` for alert state; run signals on the `default` queue; build a JS sandbox to execute first-party code; ship custom scripts before the isolation requirements above are met.
+Add `plugin` or a monitor kind to `Beep#kind`; put alert state, ping token, or signal outcome on `beeps` / `beep_runs`; overload `beep_runs.status` with probe outcome; reuse `status: firing` for alert state; build a JS sandbox to execute first-party code; ship custom scripts before the isolation requirements above are met.
 

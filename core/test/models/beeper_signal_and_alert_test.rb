@@ -157,13 +157,6 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
     end
   end
 
-  test "run execution routes to signals queue for beeper runs" do
-    assert_enqueued_with(job: RunBeeperJob, queue: "signals") do
-      run = @beeper.runs.create!(scheduled_for: Time.current, status: :pending)
-      run.deliver_later
-    end
-  end
-
   test "trigger_run! on a paused beeper preserves paused status after run completes" do
     @beeper.pause!
     assert @beeper.paused?

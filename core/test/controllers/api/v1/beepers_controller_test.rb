@@ -149,7 +149,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
       config: { "target_url" => "https://example.com" }
     )
 
-    assert_enqueued_with(job: RunBeeperJob, queue: "signals") do
+    assert_enqueued_with(job: RunBeeperJob) do
       assert_difference -> { beeper.runs.count }, 1 do
         post "/api/v1/#{@account.slug}/beepers/#{beeper.id}/runs",
           headers: { "Authorization" => "Bearer #{@token}" },
