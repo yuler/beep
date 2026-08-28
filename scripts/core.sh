@@ -27,11 +27,9 @@ while IFS= read -r line; do
   [ -z "$line" ] && continue
   case "$line" in
     "db:reset + db:seed")
-      # Rails `db:reset` usually includes seeding; to avoid double-seeding, we do reset-like steps + seed explicitly.
-      ruby "$RAILS_BIN" db:drop
-      ruby "$RAILS_BIN" db:create
-      ruby "$RAILS_BIN" db:migrate
-      ruby "$RAILS_BIN" db:seed
+      # db:reset loads checked-in schemas (primary + queue + cable); do not use db:migrate here —
+      # it dumps schemas and can overwrite queue/cable/cache_schema.rb when those DBs are empty.
+      ruby "$RAILS_BIN" db:reset
       ;;
     "log:clear + tmp:clear")
       ruby "$RAILS_BIN" log:clear

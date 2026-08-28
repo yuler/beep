@@ -40,3 +40,4 @@ Local CORS for web → core `/api/v1` is development-only: [`core/config/initial
 
 - API JSON responses use jbuilder views (`.json.jbuilder`), not inline hashes in controllers.
 - Do not add gems or other package dependencies without asking first.
+- Do not edit or commit [`core/db/queue_schema.rb`](core/db/queue_schema.rb), [`core/db/cable_schema.rb`](core/db/cable_schema.rb), or [`core/db/cache_schema.rb`](core/db/cache_schema.rb); use `bin/rails db:prepare` or per-DB `db:reset:primary` / `db:reset:queue` / `db:reset:cable` — not `db:migrate` or `db:schema:dump`, which overwrite those files when a secondary DB is empty.
