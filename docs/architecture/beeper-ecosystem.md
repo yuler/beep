@@ -9,9 +9,14 @@ flowchart TD
   Poller["BeeperPollerJob (every 10s)"] --> Claim["Beeper#claim_due → firing"]
   Claim --> Run["BeeperRun (pending)"]
   Run --> Job["RunBeeperJob (queue: signals)"]
-  Job --> Receiver["BeeperApp::Receivers::*#call(config:)"]
-  Receiver --> Target["Target URL / TLS endpoint / heartbeat state"]
-  Receiver --> Eval["AlertEvaluator on the Beeper"]
+  Job --> Produce["BeeperApp#produce_signal(config:)"]
+  Produce -->|Built-in / Official| Native["BeeperApp::Receivers::* (In-process Ruby)"]
+  Produce -->|Custom / Community| Sandbox["Sandbox / Remote Runner (JS/Script/Agent)"]
+  Native --> Target["Target Check (HTTP / TLS / Heartbeat)"]
+  Sandbox --> Target
+  Native --> Signal["Signal Result (status, metrics, message)"]
+  Sandbox --> Signal
+  Signal --> Eval["AlertEvaluator on the Beeper"]
   Eval -->|notify| Create["Beeps.create!(kind: once)"]
   Eval -->|stay silent| Finish["finish_firing (next_run_at)"]
   Create --> Deliver["Beep poller / deliver_if_due_on_create → email / web push"]
@@ -30,7 +35,7 @@ These four are load-bearing; everything below follows from them.
 
 **3. Notification is a decision on the Beeper; a notify creates a new once Beep.** The alert state machine (`AlertEvaluator`) runs against the Beeper. `should_notify` → `Beeps.create!(kind: once, …)` with channels copied onto the Beep and optional `beeper_id` so the inbox can point back at the Beeper. Delivery then uses the existing Beep path. One notify event → one Beep → N channel types on that Beep (same BeepRun). A 5-minute schedule does not email every 5 minutes for the whole outage.
 
-**4. Official receivers stay in-process Ruby behind `BeeperApp::Receivers::*`.** No JS sandbox and no new service in this period. Site Uptime and SSL expiry are small `Net::HTTP` / `OpenSSL` classes. The `BeeperApp::Receivers::Base` interface is the seam: a sandboxed runner later is an implementation change behind it, not a refactor of Beeper / Beep.
+**4. Signal production is unified behind `BeeperApp#produce_signal`.** Built-in official receivers (`BeeperApp::Receivers::*`) run in-process for low latency and zero external dependencies, while custom or community apps use isolated sandbox/runners. The job and alert evaluation layers only consume the standardized `Signal` contract, remaining completely decoupled from how or where the signal was produced.
 
 ---
 
@@ -42,7 +47,6 @@ Probe state must **never** live on `beeps` / `beep_runs`. The ecosystem cleanly 
 - **`Beeper` (Running Monitor Instance)**: Account-owned instance tracking schedule (cron, timezone), user configuration, execution status (`active`, `paused`, `firing`), and alert evaluation state (`alert_state`, `consecutive_failures`).
 - **`BeeperRun` (Probe Execution)**: Tracks probe job execution and signal outcomes (`ok`, `alerting`, `error`) with capped signal results.
 - **`Beep` & `BeepRun` (Notification Dispatch)**: Standard notification records (`kind: once`) created only when the Beeper alert state machine decides to notify. Standard channel delivery mechanics apply.
-
 
 ---
 
@@ -65,18 +69,31 @@ Threshold comes from the manifest (`failure_threshold`, default 2) and is user-o
 
 ---
 
-## Receiver interface
+## Signal Execution Abstraction & Contract
+
+Signal evaluation is decoupled from execution environment through `BeeperApp#produce_signal(config:)`:
 
 ```ruby
-# BeeperApp::Signal = Data.define(:status, :title, :message, :metrics)
-#   status: :ok | :alerting | :error
-
-class BeeperApp::Receivers::SiteUptime < BeeperApp::Receivers::Base
-  def call
-    # → BeeperApp::Signal
-  end
-end
+# Standard Signal Data Contract:
+BeeperApp::Signal = Data.define(:status, :title, :message, :metrics)
+# - status:  :ok | :alerting | :error
+# - title:   Short human-readable summary (e.g. "example.com is operational")
+# - message: Detailed diagnostic or error description
+# - metrics: Hash of key-value numbers/units declared in the manifest (e.g. { "latency_ms" => 42, "status" => 200 })
 ```
+
+### Input Contract
+- **`config`**: Validated user configuration input dictionary (`Hash<String, Any>`) merged with runtime metadata (e.g., `last_ping_at`, `ping_token` for webhooks).
+
+### Output Contract
+A `BeeperApp::Signal` instance representing one of three canonical states:
+1. **`:ok`**: Target health is nominal according to probe assertions.
+2. **`:alerting`**: Target failed health assertions (e.g., HTTP 500, TLS certificate expiring soon, heartbeat missed).
+3. **`:error`**: Probe infrastructure or probe execution failed (e.g., DNS resolution error, SSRF block, timeout, runtime exception).
+
+### Execution Seam
+- **Built-in Official Receivers**: Implemented under `BeeperApp::Receivers::* < BeeperApp::Receivers::Base`, executing in-process Ruby with SSRF IP-pinning.
+- **Custom / Third-party Apps**: Dispatched to isolated sandbox / remote workers with network namespace boundaries and CPU/memory limits.
 
 Signals run on their own Solid Queue queue (`signals`), never on `default`. A slow target must not delay reminder delivery — reminders are the core product, and `queue.yml` already runs separate workers.
 
