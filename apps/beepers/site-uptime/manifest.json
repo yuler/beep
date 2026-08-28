@@ -10,9 +10,7 @@
     "min_interval_seconds": 60,
     "failure_threshold": 2
   },
-  "ingest": {
-    "webhook": false
-  },
+
   "inputs": [
     {
       "name": "target_url",

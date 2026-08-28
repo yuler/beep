@@ -28,7 +28,8 @@ export type BeeperApp = {
 	default_cron?: string;
 	failure_threshold?: number;
 	min_interval_seconds?: number;
-	webhook_ingest?: boolean;
+	capabilities?: string[];
+	webhook_ping?: boolean;
 	inputs: BeeperAppInput[];
 	metrics: BeeperAppMetric[];
 	created_at: string;

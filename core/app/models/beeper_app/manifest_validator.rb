@@ -30,7 +30,7 @@ class BeeperApp::ManifestValidator
     validate_schedule
     validate_inputs
     validate_metrics
-    validate_ingest
+    validate_capabilities
   end
 
   def validate_manifest_version
@@ -149,17 +149,19 @@ class BeeperApp::ManifestValidator
     end
   end
 
-  def validate_ingest
-    ingest = manifest["ingest"]
-    return if ingest.nil?
+  def validate_capabilities
+    capabilities = manifest["capabilities"]
+    return if capabilities.nil?
 
-    unless ingest.is_a?(Hash)
-      @errors << "ingest must be an object"
+    unless capabilities.is_a?(Array)
+      @errors << "capabilities must be an array"
       return
     end
 
-    if ingest.key?("webhook") && ![ true, false ].include?(ingest["webhook"])
-      @errors << "ingest.webhook must be a boolean"
+    capabilities.each_with_index do |cap, index|
+      unless cap.is_a?(String) && cap.present?
+        @errors << "capabilities[#{index}] must be a non-empty string"
+      end
     end
   end
 

@@ -77,8 +77,12 @@ class BeeperApp < ApplicationRecord
     manifest.dig("schedule", "min_interval_seconds") || 60
   end
 
-  def webhook_ingest?
-    manifest.dig("ingest", "webhook") == true
+  def capabilities
+    manifest["capabilities"] || []
+  end
+
+  def webhook_ping?
+    capabilities.include?("webhook_ping")
   end
 
   def inputs

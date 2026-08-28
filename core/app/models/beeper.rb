@@ -150,7 +150,7 @@ class Beeper < ApplicationRecord
 
   def effective_config
     cfg = (config || {}).deep_stringify_keys
-    if beeper_app&.webhook_ingest?
+    if beeper_app&.webhook_ping?
       cfg["last_ping_at"] = last_ping_at
       cfg["ping_token"] = ping_token
       cfg["beeper_created_at"] = created_at&.utc&.iso8601
@@ -212,7 +212,7 @@ class Beeper < ApplicationRecord
   end
 
   def ensure_ping_token_if_needed
-    return unless beeper_app&.webhook_ingest?
+    return unless beeper_app&.webhook_ping?
 
     self.ping_token ||= SecureRandom.alphanumeric(32)
   end

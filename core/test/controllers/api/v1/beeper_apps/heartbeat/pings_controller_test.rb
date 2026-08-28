@@ -12,7 +12,7 @@ class Api::V1::BeeperApps::Heartbeat::PingsControllerTest < ActionDispatch::Inte
         "name" => "Heartbeat",
         "version" => "1.0.0",
         "author" => "Beep",
-        "ingest" => { "webhook" => true },
+        "capabilities" => [ "webhook_ping" ],
         "schedule" => { "default_cron" => "*/15 * * * *" }
       }
     )

@@ -14,9 +14,9 @@ class BeeperAppTest < ActiveSupport::TestCase
         "min_interval_seconds" => 60,
         "failure_threshold" => 3
       },
-      "ingest" => {
-        "webhook" => false
-      },
+      "capabilities" => [
+        "webhook_ping"
+      ],
       "inputs" => [
         {
           "name" => "url",
@@ -136,7 +136,8 @@ class BeeperAppTest < ActiveSupport::TestCase
 
     heartbeat = BeeperApp.official.find_by(slug: "heartbeat")
     assert_not_nil heartbeat
-    assert heartbeat.webhook_ingest?
+    assert heartbeat.webhook_ping?
+    assert_includes heartbeat.capabilities, "webhook_ping"
 
     # Running again should not create duplicate rows or update unchanged records
     second_stats = nil

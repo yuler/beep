@@ -61,7 +61,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "email", "web_push" ], body["notification_channels"]
   end
 
-  test "create without run_at triggers immediately as an ingest" do
+  test "create without run_at triggers immediately" do
     assert_enqueued_with(job: DeliverBeepRunJob) do
       assert_difference -> { @account.beeps.count }, 1 do
         post "/api/v1/#{@account.slug}/beeps",

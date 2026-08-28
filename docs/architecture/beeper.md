@@ -106,7 +106,7 @@ The manifest defines the contract between the Beeper catalog and the system runt
 - **Identity & Versioning**: Uniquely identified by `slug` and semver `version`, with `manifest_version` ensuring forward compatibility across iterations.
 - **Dynamic Configuration Form**: `inputs` specify fields (type, validations, defaults, options) used by the web UI to dynamically render installation and configuration forms.
 - **Observability Declarations**: `metrics` declare structured numerical/status outputs that the probe produces for visualization and alerting.
-- **Schedule & Ingest Rules**: Dictates default execution frequency, minimum intervals, failure alert thresholds, and ingest modes (e.g. webhook ping tokens for Heartbeat).
+- **Schedule & Capabilities**: Dictates default execution frequency, minimum intervals, failure alert thresholds, and declared app capabilities (e.g. `webhook_ping` for Heartbeat).
 
 Validation is enforced during catalog sync or custom app upload to ensure data integrity.
 

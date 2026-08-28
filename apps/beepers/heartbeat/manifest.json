@@ -10,9 +10,9 @@
     "min_interval_seconds": 60,
     "failure_threshold": 1
   },
-  "ingest": {
-    "webhook": true
-  },
+  "capabilities": [
+    "webhook_ping"
+  ],
   "inputs": [
     {
       "name": "grace_period_minutes",

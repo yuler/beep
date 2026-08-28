@@ -164,10 +164,10 @@ function BeeperAppCard({
 							{metricCount} {metricCount === 1 ? "metric" : "metrics"}
 						</span>
 					) : null}
-					{beeperApp.webhook_ingest ? (
+					{beeperApp.webhook_ping ? (
 						<span className="inline-flex items-center gap-1">
 							<Webhook className="size-3.5" />
-							Ingest
+							Ping
 						</span>
 					) : null}
 				</div>
