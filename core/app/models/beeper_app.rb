@@ -13,7 +13,7 @@ class BeeperApp < ApplicationRecord
 
   class << self
     def official_dir
-      Rails.root.join("../apps/beepers").cleanpath
+      Rails.root.join("../beeper_apps").cleanpath
     end
 
     def seed_official(logger: Rails.logger)

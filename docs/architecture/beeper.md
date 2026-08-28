@@ -43,7 +43,7 @@ These four are load-bearing; everything below follows from them.
 
 Probe state must **never** live on `beeps` / `beep_runs`. The ecosystem cleanly separates definitions, running instances, probe executions, and notification dispatches:
 
-- **`BeeperApp` (Catalog Definition)**: Manifest contracts and metadata. Official apps are system-level (`account_id: nil`), seeded idempotently from `apps/beepers/*/manifest.json`. Custom apps are scoped to accounts.
+- **`BeeperApp` (Catalog Definition)**: Manifest contracts and metadata. Official apps are system-level (`account_id: nil`), seeded idempotently from `beeper_apps/*/manifest.json`. Custom apps are scoped to accounts.
 - **`Beeper` (Running Monitor Instance)**: Account-owned instance tracking schedule (cron, timezone), user configuration, execution status (`active`, `paused`, `firing`), and alert evaluation state (`alert_state`, `consecutive_failures`).
 - **`BeeperRun` (Probe Execution)**: Tracks probe job execution and signal outcomes (`ok`, `alerting`, `error`) with capped signal results.
 - **`Beep` & `BeepRun` (Notification Dispatch)**: Standard notification records (`kind: once`) created only when the Beeper alert state machine decides to notify. Standard channel delivery mechanics apply.
