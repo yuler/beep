@@ -20,7 +20,8 @@
       "name": "target_url",
       "label": "Target URL",
       "type": "url",
-      "required": true
+      "required": true,
+      "placeholder": "https://example.com"
     },
     {
       "name": "expected_status",

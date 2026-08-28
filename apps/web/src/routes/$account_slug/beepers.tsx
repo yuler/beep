@@ -29,6 +29,14 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -101,11 +109,9 @@ function getBeeperAppMeta(slug: string) {
 
 function BeeperAppCard({
 	beeperApp,
-	selected,
 	onSelect,
 }: {
 	beeperApp: BeeperApp;
-	selected: boolean;
 	onSelect: () => void;
 }) {
 	const meta = getBeeperAppMeta(beeperApp.slug);
@@ -115,14 +121,7 @@ function BeeperAppCard({
 	const isBuiltIn = beeperApp.official !== false;
 
 	return (
-		<Card
-			className={cn(
-				"relative flex h-full flex-col overflow-hidden pt-0 transition-all duration-200",
-				selected
-					? "ring-2 ring-primary/25 shadow-md"
-					: "hover:ring-foreground/15 hover:shadow-xs",
-			)}
-		>
+		<Card className="relative flex h-full flex-col overflow-hidden pt-0 transition-all duration-200 hover:ring-foreground/15 hover:shadow-xs">
 			<div
 				className={cn(
 					"relative flex items-end justify-between gap-3 bg-gradient-to-br px-4 pb-3 pt-6",
@@ -191,21 +190,12 @@ function BeeperAppCard({
 			<CardFooter className="mt-auto">
 				<Button
 					size="sm"
-					variant={selected ? "default" : "outline"}
+					variant="outline"
 					className="w-full"
 					onClick={onSelect}
 				>
-					{selected ? (
-						<>
-							<Check data-icon="inline-start" />
-							Configuring
-						</>
-					) : (
-						<>
-							Configure & Install
-							<ArrowRight data-icon="inline-end" />
-						</>
-					)}
+					Configure & Install
+					<ArrowRight data-icon="inline-end" />
 				</Button>
 			</CardFooter>
 		</Card>
@@ -300,128 +290,11 @@ function BeepersPage() {
 							<BeeperAppCard
 								key={beeperApp.id}
 								beeperApp={beeperApp}
-								selected={selectedBeeperApp?.id === beeperApp.id}
 								onSelect={() => handleSelectBeeperApp(beeperApp)}
 							/>
 						))}
 					</div>
 				</div>
-
-				{selectedBeeperApp ? (
-					<Card className="max-w-2xl">
-						<CardHeader>
-							<div className="flex items-center gap-3">
-								{(() => {
-									const meta = getBeeperAppMeta(selectedBeeperApp.slug);
-									const Icon = meta.icon;
-									return (
-										<div
-											className={cn(
-												"flex size-9 items-center justify-center rounded-lg ring-1 ring-inset ring-foreground/8",
-												meta.well,
-											)}
-										>
-											<Icon className="size-4" />
-										</div>
-									);
-								})()}
-								<div>
-									<CardTitle className="text-lg">
-										Configure {selectedBeeperApp.name}
-									</CardTitle>
-									<CardDescription>
-										Fill in the parameters below to install this beeper into
-										your account.
-									</CardDescription>
-								</div>
-							</div>
-						</CardHeader>
-						<form onSubmit={handleInstall}>
-							<CardContent className="flex flex-col gap-4">
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="beeper-title">Beeper Title</Label>
-									<Input
-										id="beeper-title"
-										required
-										value={formTitle}
-										onChange={(e) => setFormTitle(e.target.value)}
-										disabled={submitting}
-									/>
-								</div>
-
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="beeper-cron">Cron Schedule</Label>
-									<Input
-										id="beeper-cron"
-										required
-										value={formCron}
-										onChange={(e) => setFormCron(e.target.value)}
-										disabled={submitting}
-										className="font-mono text-sm"
-									/>
-									<p className="text-[11px] text-muted-foreground">
-										Default: {selectedBeeperApp.default_cron || "*/5 * * * *"}
-									</p>
-								</div>
-
-								{selectedBeeperApp.inputs.map((input) => (
-									<div key={input.name} className="flex flex-col gap-2">
-										<Label htmlFor={`input-${input.name}`}>
-											{input.label}
-											{input.required ? (
-												<span className="text-destructive ml-1">*</span>
-											) : null}
-										</Label>
-										<Input
-											id={`input-${input.name}`}
-											type={input.type === "number" ? "number" : "text"}
-											required={input.required}
-											min={input.min}
-											max={input.max}
-											placeholder={input.placeholder}
-											value={String(formInputs[input.name] ?? "")}
-											onChange={(e) => {
-												const val =
-													input.type === "number"
-														? Number(e.target.value)
-														: e.target.value;
-												setFormInputs((curr) => ({
-													...curr,
-													[input.name]: val,
-												}));
-											}}
-											disabled={submitting}
-										/>
-									</div>
-								))}
-
-								{error ? (
-									<p className="text-sm text-destructive" role="alert">
-										{error}
-									</p>
-								) : null}
-							</CardContent>
-							<CardFooter className="justify-end gap-2">
-								<Button
-									type="button"
-									variant="ghost"
-									size="sm"
-									onClick={() => setSelectedBeeperApp(null)}
-									disabled={submitting}
-								>
-									Cancel
-								</Button>
-								<Button
-									type="submit"
-									size="sm"
-									disabled={submitting || !formTitle.trim()}
-								>
-									{submitting ? "Installing…" : "Install Beeper"}
-								</Button>
-							</CardFooter>
-						</form>
-					</Card>
-				) : null}
 
 				{/* 2. Installed Beepers on Bottom */}
 				{beepers.length > 0 ? (
@@ -493,6 +366,134 @@ function BeepersPage() {
 						</div>
 					</div>
 				) : null}
+
+				{/* 3. Install Configuration Modal Popup */}
+				<Dialog
+					open={selectedBeeperApp !== null}
+					onOpenChange={(open) => {
+						if (!open && !submitting) {
+							setSelectedBeeperApp(null);
+						}
+					}}
+				>
+					<DialogContent className="sm:max-w-lg">
+						{selectedBeeperApp ? (
+							<form onSubmit={handleInstall} className="flex flex-col gap-4">
+								<DialogHeader>
+									<div className="flex items-center gap-3">
+										{(() => {
+											const meta = getBeeperAppMeta(selectedBeeperApp.slug);
+											const Icon = meta.icon;
+											return (
+												<div
+													className={cn(
+														"flex size-9 items-center justify-center rounded-lg ring-1 ring-inset ring-foreground/8",
+														meta.well,
+													)}
+												>
+													<Icon className="size-4" />
+												</div>
+											);
+										})()}
+										<div>
+											<DialogTitle className="text-lg">
+												Install {selectedBeeperApp.name}
+											</DialogTitle>
+											<DialogDescription>
+												Fill in the parameters below to install this beeper into
+												your account.
+											</DialogDescription>
+										</div>
+									</div>
+								</DialogHeader>
+
+								<div className="flex flex-col gap-4 py-2">
+									<div className="flex flex-col gap-2">
+										<Label htmlFor="beeper-title">Beeper Title</Label>
+										<Input
+											id="beeper-title"
+											required
+											value={formTitle}
+											onChange={(e) => setFormTitle(e.target.value)}
+											disabled={submitting}
+										/>
+									</div>
+
+									<div className="flex flex-col gap-2">
+										<Label htmlFor="beeper-cron">Cron Schedule</Label>
+										<Input
+											id="beeper-cron"
+											required
+											value={formCron}
+											onChange={(e) => setFormCron(e.target.value)}
+											disabled={submitting}
+											className="font-mono text-sm"
+										/>
+										<p className="text-[11px] text-muted-foreground">
+											Default: {selectedBeeperApp.default_cron || "*/5 * * * *"}
+										</p>
+									</div>
+
+									{selectedBeeperApp.inputs.map((input) => (
+										<div key={input.name} className="flex flex-col gap-2">
+											<Label htmlFor={`input-${input.name}`}>
+												{input.label}
+												{input.required ? (
+													<span className="text-destructive ml-1">*</span>
+												) : null}
+											</Label>
+											<Input
+												id={`input-${input.name}`}
+												type={input.type === "number" ? "number" : "text"}
+												required={input.required}
+												min={input.min}
+												max={input.max}
+												placeholder={input.placeholder}
+												value={String(formInputs[input.name] ?? "")}
+												onChange={(e) => {
+													const val =
+														input.type === "number"
+															? Number(e.target.value)
+															: e.target.value;
+													setFormInputs((curr) => ({
+														...curr,
+														[input.name]: val,
+													}));
+												}}
+												disabled={submitting}
+											/>
+										</div>
+									))}
+
+									{error ? (
+										<p className="text-sm text-destructive" role="alert">
+											{error}
+										</p>
+									) : null}
+								</div>
+
+								<DialogFooter className="gap-2 sm:gap-0">
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										onClick={() => setSelectedBeeperApp(null)}
+										disabled={submitting}
+									>
+										Cancel
+									</Button>
+									<Button
+										type="submit"
+										size="sm"
+										disabled={submitting || !formTitle.trim()}
+									>
+										{submitting ? "Installing…" : "Install Beeper"}
+									</Button>
+								</DialogFooter>
+							</form>
+						) : null}
+					</DialogContent>
+				</Dialog>
 			</div>
 		</>
 	);
