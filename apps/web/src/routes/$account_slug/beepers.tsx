@@ -117,7 +117,7 @@ function BeeperAppCard({
 	return (
 		<Card
 			className={cn(
-				"flex h-full flex-col pt-0 transition-all duration-200",
+				"relative flex h-full flex-col overflow-hidden pt-0 transition-all duration-200",
 				selected
 					? "ring-2 ring-primary/25 shadow-md"
 					: "hover:ring-foreground/15 hover:shadow-xs",
@@ -125,10 +125,19 @@ function BeeperAppCard({
 		>
 			<div
 				className={cn(
-					"relative flex items-end justify-between gap-3 bg-gradient-to-br px-4 pb-3 pt-5",
+					"relative flex items-end justify-between gap-3 bg-gradient-to-br px-4 pb-3 pt-6",
 					meta.band,
 				)}
 			>
+				{isBuiltIn ? (
+					<div className="absolute left-3.5 top-2.5">
+						<span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2 py-0.5 text-[10px] font-medium tracking-tight text-muted-foreground backdrop-blur-xs">
+							<span className="size-1.5 rounded-full bg-emerald-500" />
+							Built-in
+						</span>
+					</div>
+				) : null}
+
 				<div
 					className={cn(
 						"flex size-11 items-center justify-center rounded-xl ring-1 ring-inset ring-foreground/8",
@@ -138,12 +147,7 @@ function BeeperAppCard({
 					<Icon className="size-5" />
 				</div>
 				<div className="flex flex-wrap items-center justify-end gap-1.5">
-					{isBuiltIn ? (
-						<Badge variant="outline" className="font-normal text-[10px]">
-							Built-in
-						</Badge>
-					) : null}
-					<Badge variant="secondary" className="font-normal">
+					<Badge variant="secondary" className="font-normal text-[11px]">
 						{meta.tag}
 					</Badge>
 					<Badge
