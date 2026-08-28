@@ -162,4 +162,36 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "pending", body["status"]
     assert beeper.reload.firing?
   end
+
+  test "create allows installing custom beeper app belonging to the account" do
+    custom_app = BeeperApp.create!(
+      account: @account,
+      slug: "custom-checker",
+      version: "1.0.0",
+      manifest: {
+        "manifest_version" => 1,
+        "slug" => "custom-checker",
+        "name" => "Custom Checker",
+        "version" => "1.0.0",
+        "author" => "Me",
+        "schedule" => { "default_cron" => "*/10 * * * *" }
+      }
+    )
+
+    assert_difference -> { @account.beepers.count }, 1 do
+      post "/api/v1/#{@account.slug}/beepers",
+        headers: { "Authorization" => "Bearer #{@token}" },
+        params: {
+          beeper_app_id: custom_app.id,
+          title: "My Custom Probe",
+          config: {}
+        },
+        as: :json
+    end
+
+    assert_response :created
+    beeper = @account.beepers.order(:created_at).last
+    assert_equal custom_app.id, beeper.beeper_app_id
+    assert_equal "My Custom Probe", beeper.title
+  end
 end

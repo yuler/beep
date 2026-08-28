@@ -14,7 +14,7 @@ class Api::V1::BeepersController < Api::V1::BaseController
     unless beeper_app
       return render_json_error(
         status: :unprocessable_entity,
-        message: "Beeper app not found or not official",
+        message: "Beeper app not found",
         code: "VALIDATION_ERROR"
       )
     end
@@ -61,16 +61,17 @@ class Api::V1::BeepersController < Api::V1::BaseController
   private
 
   def find_beeper_app
+    scope = BeeperApp.where(account_id: [ nil, Current.account.id ])
     if params[:beeper_app_id].present?
-      BeeperApp.official.find_by(id: params[:beeper_app_id])
+      scope.find_by(id: params[:beeper_app_id])
     elsif params[:beeper_app_slug].present?
-      BeeperApp.official.find_by(slug: params[:beeper_app_slug])
+      scope.find_by(slug: params[:beeper_app_slug])
     elsif params[:beeper_id].present?
       # backward compat fallback if needed
-      BeeperApp.official.find_by(id: params[:beeper_id])
+      scope.find_by(id: params[:beeper_id])
     elsif params[:beeper_slug].present?
       # backward compat fallback if needed
-      BeeperApp.official.find_by(slug: params[:beeper_slug])
+      scope.find_by(slug: params[:beeper_slug])
     end
   end
 

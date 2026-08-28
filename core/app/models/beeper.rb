@@ -247,8 +247,21 @@ class Beeper < ApplicationRecord
     return if cron.blank?
 
     tz = timezone.presence || IanaTimezone::DEFAULT
-    if Fugit.parse("#{cron} #{tz}").nil?
+    parsed = Fugit.parse("#{cron} #{tz}")
+    if parsed.nil?
       errors.add(:cron, "is invalid")
+      return
+    end
+
+    if beeper_app.present?
+      min_interval = beeper_app.min_interval_seconds.to_i
+      if min_interval > 0
+        t1 = parsed.next_time(Time.current)
+        t2 = t1 ? parsed.next_time(t1) : nil
+        if t1 && t2 && (t2.to_i - t1.to_i) < min_interval
+          errors.add(:cron, "interval cannot be shorter than #{min_interval} seconds")
+        end
+      end
     end
   end
 

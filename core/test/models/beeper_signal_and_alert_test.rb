@@ -290,4 +290,57 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
     )
     assert valid_beeper.valid?
   end
+
+  test "beeper validates cron against beeper_app min_interval_seconds" do
+    app_with_min_interval = BeeperApp.create!(
+      account: @account,
+      slug: "custom-hourly",
+      version: "1.0.0",
+      manifest: {
+        "manifest_version" => 1,
+        "slug" => "custom-hourly",
+        "name" => "Custom Hourly",
+        "version" => "1.0.0",
+        "author" => "Me",
+        "schedule" => {
+          "default_cron" => "0 * * * *",
+          "min_interval_seconds" => 300 # 5 minutes
+        }
+      }
+    )
+
+    # 1 minute cron should fail
+    beeper = Beeper.new(
+      account: @account,
+      beeper_app: app_with_min_interval,
+      title: "Too Fast",
+      cron: "* * * * *",
+      timezone: "UTC",
+      config: {}
+    )
+    assert_not beeper.valid?
+    assert_includes beeper.errors[:cron], "interval cannot be shorter than 300 seconds"
+
+    # 5 minutes cron should pass
+    beeper.cron = "*/5 * * * *"
+    assert beeper.valid?
+  end
+
+  test "sanitize_signal_result truncates oversized messages and trims large metrics" do
+    run = @beeper.runs.new(scheduled_for: Time.current, status: :pending)
+
+    huge_hash = {
+      "status" => "ok",
+      "title" => "T" * 300,
+      "message" => "M" * 10_000,
+      "metrics" => (1..50).to_h { |i| [ "metric_#{i}", "value_#{i}_" + ("X" * 200) ] }
+    }
+
+    sanitized = run.send(:sanitize_signal_result, huge_hash)
+    assert sanitized["truncated"]
+    assert sanitized["message"].length <= 503 # 500 + '...'
+    assert sanitized["title"].length <= 203
+    assert sanitized["metrics"].size <= 20
+    assert sanitized.to_json.bytesize <= BeeperRun::SIGNAL_RESULT_MAX_BYTES
+  end
 end

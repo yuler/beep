@@ -61,16 +61,36 @@ class BeeperRun < ApplicationRecord
 
   def sanitize_signal_result(hash)
     json_str = hash.to_json
-    if json_str.bytesize > SIGNAL_RESULT_MAX_BYTES
-      {
-        "status" => hash["status"],
-        "title" => hash["title"],
-        "message" => hash["message"]&.truncate(500),
-        "metrics" => hash["metrics"],
-        "truncated" => true
-      }.compact
-    else
-      hash
+    return hash if json_str.bytesize <= SIGNAL_RESULT_MAX_BYTES
+
+    sanitized_metrics = sanitize_metrics(hash["metrics"])
+    truncated_hash = {
+      "status" => hash["status"],
+      "title" => hash["title"]&.to_s&.truncate(200),
+      "message" => hash["message"]&.to_s&.truncate(500),
+      "metrics" => sanitized_metrics,
+      "truncated" => true
+    }.compact
+
+    if truncated_hash.to_json.bytesize > SIGNAL_RESULT_MAX_BYTES
+      truncated_hash.delete("metrics")
+    end
+
+    truncated_hash
+  end
+
+  def sanitize_metrics(metrics)
+    return nil unless metrics.is_a?(Hash)
+
+    # Keep at most 20 scalar metrics entries, truncate long string values
+    metrics.slice(*metrics.keys.first(20)).transform_values do |val|
+      if val.is_a?(String)
+        val.truncate(100)
+      elsif val.is_a?(Numeric) || val.is_a?(TrueClass) || val.is_a?(FalseClass)
+        val
+      else
+        val.to_s.truncate(100)
+      end
     end
   end
 end
