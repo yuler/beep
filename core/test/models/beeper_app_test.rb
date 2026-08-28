@@ -122,9 +122,11 @@ class BeeperAppTest < ActiveSupport::TestCase
   end
 
   test "seed_official is idempotent" do
+    first_stats = nil
     assert_difference -> { BeeperApp.official.count }, 3 do
-      BeeperApp.seed_official
+      first_stats = BeeperApp.seed_official
     end
+    assert_equal({ created: 3, updated: 0, unchanged: 0 }, first_stats)
 
     site_uptime = BeeperApp.official.find_by(slug: "site-uptime")
     assert_not_nil site_uptime
@@ -136,10 +138,12 @@ class BeeperAppTest < ActiveSupport::TestCase
     assert_not_nil heartbeat
     assert heartbeat.webhook_ingest?
 
-    # Running again should not create duplicate rows
+    # Running again should not create duplicate rows or update unchanged records
+    second_stats = nil
     assert_no_difference -> { BeeperApp.official.count } do
-      BeeperApp.seed_official
+      second_stats = BeeperApp.seed_official
     end
+    assert_equal({ created: 0, updated: 0, unchanged: 3 }, second_stats)
   end
 
   test "produce_signal returns error when receiver class is missing" do

@@ -16,16 +16,36 @@ class BeeperApp < ApplicationRecord
       Rails.root.join("../apps/beepers").cleanpath
     end
 
-    def seed_official
-      return unless Dir.exist?(official_dir)
+    def seed_official(logger: Rails.logger)
+      return { created: 0, updated: 0, unchanged: 0 } unless Dir.exist?(official_dir)
+
+      stats = { created: 0, updated: 0, unchanged: 0 }
 
       Dir.glob(official_dir.join("*/manifest.json")).each do |file_path|
         manifest_data = JSON.parse(File.read(file_path))
-        beeper_app = official.find_or_initialize_by(slug: manifest_data["slug"])
-        beeper_app.version = manifest_data["version"]
+        slug = manifest_data["slug"]
+        version = manifest_data["version"]
+
+        beeper_app = official.find_or_initialize_by(slug: slug)
+        is_new = beeper_app.new_record?
+
+        beeper_app.version = version
         beeper_app.manifest = manifest_data
-        beeper_app.save!
+
+        if is_new
+          beeper_app.save!
+          stats[:created] += 1
+          logger&.info "[BeeperApp] Created official beeper app: #{slug} (#{version})"
+        elsif beeper_app.has_changes_to_save?
+          beeper_app.save!
+          stats[:updated] += 1
+          logger&.info "[BeeperApp] Updated official beeper app: #{slug} (#{version})"
+        else
+          stats[:unchanged] += 1
+        end
       end
+
+      stats
     end
   end
 
