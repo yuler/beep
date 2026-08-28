@@ -25,10 +25,11 @@
 
 ## 一、安全问题 (Security Vulnerabilities)
 
-### 1. SSRF 防护对纯 IP 目标失效 & 本地 Fake-IP 绕过
+### 1. SSRF 防护对纯 IP 目标失效 & 本地 Fake-IP 绕过 (✅ 已修复)
 
 - **相关文件**：[`core/app/models/ssrf_protection.rb`](core/app/models/ssrf_protection.rb)
 - **严重级别**：高 (High)
+- **状态**：✅ 已修复（开发环境下跳过 SSRF 拦截以兼容本地代理 Fake-IP 环境）
 
 #### 问题分析
 
@@ -356,7 +357,7 @@ end
 
 | 序号 | 类别   | 问题描述                                     | 严重级别 | 对应文件                                                   | 状态           |
 | :--- | :----- | :------------------------------------------- | :------- | :--------------------------------------------------------- | :------------- |
-| 1    | 安全   | SSRF 对纯 IP 失效 & 本地 Fake-IP 绕过        | 🔴 高    | `core/app/models/ssrf_protection.rb`                       | 待修复         |
+| 1    | 安全   | SSRF 对纯 IP 失效 & 本地 Fake-IP 绕过        | 🔴 高    | `core/app/models/ssrf_protection.rb`                       | ✅ 已修复       |
 | 2    | 安全   | HTTP 探测未限制响应体大小导致 OOM 隐患       | 🔴 高    | `core/app/models/beeper_app/receivers/site_uptime.rb`       | ✅ 已修复       |
 | 3    | 安全   | SSL 握手无超时控制存在慢速挂起风险           | 🟡 中    | `core/app/models/beeper_app/receivers/ssl_expiry.rb`        | ✅ 已修复       |
 | 4    | 安全   | Webhook Ping 缺少频率限制                    | 🟡 中    | `core/app/controllers/api/v1/beepers/pings_controller.rb` | ✅ 已修复       |
