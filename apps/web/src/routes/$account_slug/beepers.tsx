@@ -130,7 +130,7 @@ function BeeperAppCard({
 				)}
 			>
 				{isBuiltIn ? (
-					<div className="absolute left-3.5 top-2.5">
+					<div className="absolute right-3.5 top-2.5">
 						<span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2 py-0.5 text-[10px] font-medium tracking-tight text-muted-foreground backdrop-blur-xs">
 							<span className="size-1.5 rounded-full bg-emerald-500" />
 							Built-in
