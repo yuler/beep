@@ -96,6 +96,7 @@ class BeeperApp::Receivers::SiteUptime < BeeperApp::Receivers::Base
     request = Net::HTTP::Get.new(uri.request_uri)
     request["Host"] = uri.host
     request["User-Agent"] = "Beep-Signal-Uptime/1.0"
+    request["Accept-Encoding"] = "identity"
 
     response = http.request(request) do |res|
       bytes_read = 0
