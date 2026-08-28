@@ -8,7 +8,6 @@ import {
 	Activity,
 	ArrowRight,
 	ArrowUpRight,
-	Check,
 	Clock,
 	Globe,
 	Radio,
@@ -357,9 +356,13 @@ function BeepersPage() {
 											<ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-primary" />
 										</div>
 
-										<p className="mt-1 text-xs text-muted-foreground">
-											{beeper.beeper_app?.name}
-										</p>
+										<div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+											<span>{beeper.beeper_app?.name}</span>
+											<span className="font-mono text-[11px]">
+												{beeper.runs?.length ?? 0}{" "}
+												{beeper.runs?.length === 1 ? "run" : "runs"}
+											</span>
+										</div>
 									</Link>
 								</Card>
 							))}
