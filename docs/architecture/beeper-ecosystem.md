@@ -34,66 +34,15 @@ These four are load-bearing; everything below follows from them.
 
 ---
 
-## Data model
+## Core Data Model & Separation of Concerns
 
-Beeper App **definition**, **Beeper** instance, and **notification Beep** are different records. Probe state must not live on `beeps` / `beep_runs`.
+Probe state must **never** live on `beeps` / `beep_runs`. The ecosystem cleanly separates definitions, running instances, probe executions, and notification dispatches:
 
-### `beeper_apps` (catalog)
+- **`BeeperApp` (Catalog Definition)**: Manifest contracts and metadata. Official apps are system-level (`account_id: nil`), seeded idempotently from `apps/beepers/*/manifest.json`. Custom apps are scoped to accounts.
+- **`Beeper` (Running Monitor Instance)**: Account-owned instance tracking schedule (cron, timezone), user configuration, execution status (`active`, `paused`, `firing`), and alert evaluation state (`alert_state`, `consecutive_failures`).
+- **`BeeperRun` (Probe Execution)**: Tracks probe job execution and signal outcomes (`ok`, `alerting`, `error`) with capped signal results.
+- **`Beep` & `BeepRun` (Notification Dispatch)**: Standard notification records (`kind: once`) created only when the Beeper alert state machine decides to notify. Standard channel delivery mechanics apply.
 
-| Column       | Type   | Notes                                                        |
-| ------------ | ------ | ------------------------------------------------------------ |
-| `slug`       | string | `site-uptime`. Unique per owner.                             |
-| `account_id` | uuid   | `nil` = official. Set = custom, private to that account.     |
-| `version`    | string | Semver from the manifest.                                    |
-| `manifest`   | json   | Validated against the contract on write.                     |
-| `source`     | text   | Null for official receivers (Ruby classes). Custom JS later. |
-
-This period writes official rows only (`account_id` nil). Official rows are seeded from `apps/beepers/*/manifest.json`; the seed is idempotent on slug for official beeper apps.
-
-### `beepers` (running instance)
-
-| Column                  | Type     | Notes                                                             |
-| ----------------------- | -------- | ----------------------------------------------------------------- |
-| `account_id`            | uuid     | Owner account.                                                    |
-| `beeper_app_id`         | uuid     | Catalog Beeper App.                                               |
-| `title`                 | string   | Monitor name the user typed (`example.com availability`).         |
-| `config`                | json     | User answers to `inputs`. Encryption is out of scope this period. |
-| `cron`                  | string   | Beeper schedule. Not copied onto the notification Beep.           |
-| `timezone`              | string   | IANA.                                                             |
-| `status`                | string   | Same strings as Beep (`active`, `paused`, `firing`, …).           |
-| `next_run_at`           | datetime | Claimed by the Beeper poller.                                     |
-| `last_run_at`           | datetime | Last finished Beeper Run.                                         |
-| `alert_state`           | string   | `ok` or `alerting`. Default `ok`. Lives here, not on Beep.        |
-| `consecutive_failures`  | integer  | Default 0. Reset on `ok`.                                         |
-| `signal_metadata`       | json     | Runtime metadata for signals (e.g. `ping_token`, `last_ping_at`). |
-| `notification_channels` | json     | Default channel types for notify (`email`, `web_push`).           |
-
-Do not reuse `status: firing` for alerting — there it means *a Beeper Run is in flight*. `alert_state` is a separate column on purpose.
-
-### `beeper_runs` (probe)
-
-| Column          | Type     | Notes                                                                |
-| --------------- | -------- | -------------------------------------------------------------------- |
-| `beeper_id`     | uuid     | Owning Beeper.                                                       |
-| `scheduled_for` | datetime | Unique per Beeper.                                                   |
-| `status`        | string   | Probe job lifecycle (`pending running succeeded failed …`).          |
-| `signal_status` | string   | `ok`, `alerting`, or `error`.                                        |
-| `signal_result` | json     | `{ title, message, metrics, log }`. **Capped at 8 KB** before write. |
-
-### `beeps` (notification only)
-
-| Column                  | Type | Notes                                                               |
-| ----------------------- | ---- | ------------------------------------------------------------------- |
-| `notification_channels` | json | Channel types on this Beep. Delivery reads this list, not the User. |
-| `beeper_id`             | uuid | Nullable FK. Set when a Beeper notify created this Beep.            |
-
-Copied from the Beeper at notify (else owner `User#notification_channels`). Recipients stay `account.owner_user` — team fan-out is out of scope here.
-
-### Columns removed
-
-From `beeps`: `plugin_id`, `plugin_config`, `alert_state`, `consecutive_failures`, `schedule_offset`, `ping_token`, `last_ping_at`.
-
-From `beep_runs`: `check_status`, `check_result`. Delivery metadata stays in `beep_runs.result`.
 
 ---
 
@@ -133,42 +82,16 @@ Signals run on their own Solid Queue queue (`signals`), never on `default`. A sl
 
 ---
 
-## Manifest contract
+## Manifest Contract & Extensibility
 
-```json
-{
-  "manifest_version": 1,
-  "slug": "site-uptime",
-  "name": "Site Uptime & Health Check",
-  "version": "1.0.0",
-  "description": "HTTP status and latency probe",
-  "author": "Beep Official",
-  "schedule": {
-    "default_cron": "*/5 * * * *",
-    "min_interval_seconds": 60,
-    "failure_threshold": 2
-  },
-  "ingest": { "webhook": false },
-  "inputs": [
-    { "name": "target_url",      "label": "Target URL", "type": "url",     "required": true },
-    { "name": "expected_status", "label": "Expected status", "type": "number", "default": 200, "min": 100, "max": 599 },
-    { "name": "timeout_ms",      "label": "Timeout (ms)", "type": "number", "default": 3000, "max": 10000 }
-  ],
-  "metrics": [
-    { "name": "latency_ms", "label": "Latency", "type": "number", "unit": "ms" },
-    { "name": "status",     "label": "HTTP status", "type": "number" }
-  ]
-}
-```
+The manifest defines the contract between the Beeper catalog and the system runtime:
 
-- **`manifest_version`** is mandatory. Third-party beepers are an explicit later goal, so forward compatibility has to exist before the first beeper ships.
-- **`inputs[].type`** is `string | number | boolean | url | enum | secret`. `secret` inputs are masked in the UI. `enum` carries `options`. Validation keys: `required`, `min`, `max`, `pattern`. The install / settings form is generated from this, so the schema must be rich enough — widening it later is a breaking change for Beepers.
-- **`metrics`** must be declared. Charting latency over time needs names, types and units up front.
-- **`min_interval_seconds`** is enforced by comparing two consecutive `Fugit#next_time` values against it, rejecting the cron otherwise. Enforcement is later work.
-- **`ingest.webhook`** grants the Beeper a ping token (see Heartbeat below).
-- **`schedule.default_cron`** is a starting point only; `schedule_offset` is meant to spread beepers so every account does not fire at `:00` / `:05`.
+- **Identity & Versioning**: Uniquely identified by `slug` and semver `version`, with `manifest_version` ensuring forward compatibility across iterations.
+- **Dynamic Configuration Form**: `inputs` specify fields (type, validations, defaults, options) used by the web UI to dynamically render installation and configuration forms.
+- **Observability Declarations**: `metrics` declare structured numerical/status outputs that the probe produces for visualization and alerting.
+- **Schedule & Ingest Rules**: Dictates default execution frequency, minimum intervals, failure alert thresholds, and ingest modes (e.g. webhook ping tokens for Heartbeat).
 
-Manifest validation is hand-rolled against this fixed shape. Adding a JSON-Schema gem is an open question, not a decision.
+Validation is enforced during catalog sync or custom app upload to ensure data integrity.
 
 ---
 
