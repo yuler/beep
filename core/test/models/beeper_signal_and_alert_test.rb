@@ -16,7 +16,9 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
         "version" => "1.0.0",
         "author" => "Beep",
         "schedule" => {
-          "default_cron" => "*/5 * * * *",
+          "default_cron" => "*/5 * * * *"
+        },
+        "alerting" => {
           "failure_threshold" => 2
         }
       }
@@ -51,7 +53,7 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
     end
   end
 
-  test "single failure below threshold does not notify but increments consecutive_failures" do
+  test "single failure below threshold does not notify, sets alert_state to pending, and increments consecutive_failures" do
     @beeper.update!(config: { "status" => "alerting", "title" => "Target Down", "message" => "HTTP 500" })
 
     assert_no_difference -> { @account.beeps.count } do
@@ -63,14 +65,15 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
 
       assert_equal "succeeded", run.status
       assert_equal "alerting", run.signal_status
-      assert_equal "ok", @beeper.alert_state
+      assert_equal "pending", @beeper.alert_state
       assert_equal 1, @beeper.consecutive_failures
       assert_empty ActionMailer::Base.deliveries
     end
   end
 
-  test "reaching failure threshold triggers alert notification creating a once Beep" do
+  test "reaching failure threshold transitions from pending to alerting and triggers alert notification" do
     @beeper.update!(
+      alert_state: :pending,
       consecutive_failures: 1,
       config: { "status" => "alerting", "title" => "Target Down", "message" => "HTTP 500" }
     )
@@ -124,7 +127,7 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
     end
   end
 
-  test "recovery from alerting creates recovery Beep and resets alert_state" do
+  test "recovery from alerting with default recovery_threshold of 1 creates recovery Beep and resets alert_state" do
     @beeper.update!(
       alert_state: :alerting,
       consecutive_failures: 3,
@@ -142,6 +145,7 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
       assert_equal "ok", run.signal_status
       assert_equal "ok", @beeper.alert_state
       assert_equal 0, @beeper.consecutive_failures
+      assert_equal 0, @beeper.consecutive_recoveries
 
       created_beep = @account.beeps.order(:created_at).last
       assert_equal "once", created_beep.kind
@@ -154,6 +158,58 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
 
       assert_equal 1, ActionMailer::Base.deliveries.size
       assert_equal "Target Recovered", ActionMailer::Base.deliveries.last.subject
+    end
+  end
+
+  test "recovery hysteresis with recovery_threshold > 1 transitions through recovering state before ok" do
+    @beeper.update!(
+      config: { "status" => "ok", "title" => "Target Recovered", "message" => "Service back online", "alerting" => { "recovery_threshold" => 2 } },
+      alert_state: :alerting,
+      consecutive_failures: 2
+    )
+
+    # First ok run -> transitions to recovering, no notification yet
+    assert_no_difference -> { @account.beeps.count } do
+      run1 = @beeper.runs.create!(scheduled_for: Time.current, status: :pending)
+      run1.execute_now
+      @beeper.reload
+      assert_equal "recovering", @beeper.alert_state
+      assert_equal 1, @beeper.consecutive_recoveries
+    end
+
+    # Second ok run -> reaches recovery_threshold (2), triggers recovery notification and resets to ok
+    assert_difference -> { @account.beeps.count }, 1 do
+      run2 = @beeper.runs.create!(scheduled_for: Time.current, status: :pending)
+      run2.execute_now
+      @beeper.reload
+      assert_equal "ok", @beeper.alert_state
+      assert_equal 0, @beeper.consecutive_recoveries
+      assert_equal 0, @beeper.consecutive_failures
+    end
+  end
+
+  test "windowed alert policy triggers alert when failure count within window reaches min_failures" do
+    @beeper.update!(
+      config: {
+        "status" => "alerting",
+        "title" => "Flapping Target",
+        "message" => "Intermittent failure",
+        "alerting" => { "policy" => "windowed", "window_size" => 3, "min_failures" => 2 }
+      }
+    )
+
+    # 1st failure: 1/3 in window -> pending
+    assert_no_difference -> { @account.beeps.count } do
+      run1 = @beeper.runs.create!(scheduled_for: 2.minutes.ago, status: :pending)
+      run1.execute_now
+      assert_equal "pending", @beeper.reload.alert_state
+    end
+
+    # 2nd failure: 2/3 in window -> triggers alerting Beep
+    assert_difference -> { @account.beeps.count }, 1 do
+      run2 = @beeper.runs.create!(scheduled_for: 1.minute.ago, status: :pending)
+      run2.execute_now
+      assert_equal "alerting", @beeper.reload.alert_state
     end
   end
 

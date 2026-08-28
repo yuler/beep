@@ -24,10 +24,7 @@ class BeeperRun < ApplicationRecord
     signal = beeper.beeper_app.produce_signal(config: beeper.effective_config)
     sanitized_result = sanitize_signal_result(signal.to_h)
 
-    decision = BeeperRun::AlertEvaluator.evaluate(
-      beeper: beeper,
-      signal: signal
-    )
+    decision = Beeper::AlertPolicy.for(beeper).evaluate(signal: signal)
 
     update!(
       signal_status: signal.status.to_s,
@@ -36,7 +33,8 @@ class BeeperRun < ApplicationRecord
 
     beeper.update!(
       alert_state: decision.next_alert_state,
-      consecutive_failures: decision.next_consecutive_failures
+      consecutive_failures: decision.next_consecutive_failures,
+      consecutive_recoveries: decision.next_consecutive_recoveries
     )
 
     if decision.should_notify

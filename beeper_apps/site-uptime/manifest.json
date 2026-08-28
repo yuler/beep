@@ -7,8 +7,12 @@
   "author": "Beep Official",
   "schedule": {
     "default_cron": "*/5 * * * *",
-    "min_interval_seconds": 60,
-    "failure_threshold": 2
+    "min_interval_seconds": 60
+  },
+  "alerting": {
+    "policy": "consecutive_failures",
+    "failure_threshold": 2,
+    "recovery_threshold": 1
   },
 
   "inputs": [

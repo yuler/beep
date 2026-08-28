@@ -11,7 +11,9 @@ class BeeperAppTest < ActiveSupport::TestCase
       "author" => "Community",
       "schedule" => {
         "default_cron" => "*/10 * * * *",
-        "min_interval_seconds" => 60,
+        "min_interval_seconds" => 60
+      },
+      "alerting" => {
         "failure_threshold" => 3
       },
       "capabilities" => [

@@ -28,6 +28,7 @@ class BeeperApp::ManifestValidator
     validate_manifest_version
     validate_metadata
     validate_schedule
+    validate_alerting
     validate_inputs
     validate_metrics
     validate_capabilities
@@ -71,10 +72,40 @@ class BeeperApp::ManifestValidator
     if min_interval.present? && (!min_interval.is_a?(Integer) || min_interval <= 0)
       @errors << "schedule.min_interval_seconds must be a positive integer"
     end
+  end
 
-    failure_threshold = schedule["failure_threshold"]
+  def validate_alerting
+    alerting = manifest["alerting"]
+    return if alerting.nil?
+
+    unless alerting.is_a?(Hash)
+      @errors << "alerting must be an object"
+      return
+    end
+
+    policy = alerting["policy"]
+    if policy.present? && (!policy.is_a?(String) || !%w[ consecutive_failures windowed ].include?(policy))
+      @errors << "alerting.policy must be one of: consecutive_failures, windowed"
+    end
+
+    failure_threshold = alerting["failure_threshold"]
     if failure_threshold.present? && (!failure_threshold.is_a?(Integer) || failure_threshold < 1)
-      @errors << "schedule.failure_threshold must be an integer >= 1"
+      @errors << "alerting.failure_threshold must be an integer >= 1"
+    end
+
+    recovery_threshold = alerting["recovery_threshold"]
+    if recovery_threshold.present? && (!recovery_threshold.is_a?(Integer) || recovery_threshold < 1)
+      @errors << "alerting.recovery_threshold must be an integer >= 1"
+    end
+
+    window_size = alerting["window_size"]
+    if window_size.present? && (!window_size.is_a?(Integer) || window_size < 1)
+      @errors << "alerting.window_size must be an integer >= 1"
+    end
+
+    min_failures = alerting["min_failures"]
+    if min_failures.present? && (!min_failures.is_a?(Integer) || min_failures < 1)
+      @errors << "alerting.min_failures must be an integer >= 1"
     end
   end
 

@@ -13,9 +13,9 @@ class Beeper < ApplicationRecord
   has_many :beeps, dependent: :nullify
 
   enum :status, %w[ active paused completed cancelled firing ].index_by(&:itself)
-  enum :alert_state, %w[ ok alerting ].index_by(&:itself)
+  enum :alert_state, %w[ ok pending alerting recovering ].index_by(&:itself)
 
-  store_accessor :signal_metadata, :ping_token, :last_ping_at
+  store_accessor :signal_metadata, :ping_token, :last_ping_at, :consecutive_recoveries
 
   normalizes :title, with: ->(value) { value.strip.presence }
 
@@ -144,8 +144,28 @@ class Beeper < ApplicationRecord
     end
   end
 
+  def alert_policy_name
+    alert_policy_config["policy"] || "consecutive_failures"
+  end
+
+  def alert_policy_config
+    # Precedence: Beeper config["alerting"] > BeeperApp manifest["alerting"] > defaults
+    instance_alerting = (config || {})["alerting"]
+    return instance_alerting if instance_alerting.is_a?(Hash) && instance_alerting.present?
+
+    beeper_app&.alert_policy_config || {}
+  end
+
   def failure_threshold
-    beeper_app&.failure_threshold || 2
+    (alert_policy_config["failure_threshold"] || beeper_app&.failure_threshold || 2).to_i
+  end
+
+  def recovery_threshold
+    (alert_policy_config["recovery_threshold"] || beeper_app&.recovery_threshold || 1).to_i
+  end
+
+  def consecutive_recoveries
+    (super || 0).to_i
   end
 
   def effective_config

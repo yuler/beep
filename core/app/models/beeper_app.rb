@@ -69,8 +69,16 @@ class BeeperApp < ApplicationRecord
     manifest.dig("schedule", "default_cron")
   end
 
+  def alert_policy_config
+    manifest["alerting"] || {}
+  end
+
   def failure_threshold
-    manifest.dig("schedule", "failure_threshold") || 2
+    manifest.dig("alerting", "failure_threshold") || 2
+  end
+
+  def recovery_threshold
+    manifest.dig("alerting", "recovery_threshold") || 1
   end
 
   def min_interval_seconds

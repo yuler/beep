@@ -56,14 +56,22 @@ Probe state must **never** live on `beeps` / `beep_runs`. The ecosystem cleanly 
 
 Notify means **create a Beep** (`Beeps.create!(kind: once)`), not deliver from the Beeper Run.
 
-| Previous `alert_state` | `signal_status`      | Notify                            | Next state                                      |
-| ---------------------- | -------------------- | --------------------------------- | ----------------------------------------------- |
-| `ok`                   | `ok`                 | no                                | `ok`, counter 0                                 |
-| `ok`                   | `alerting` / `error` | only when counter + 1 ≥ threshold | `alerting` if notified, else `ok` (counter + 1) |
-| `alerting`             | `alerting` / `error` | no (already alerting)             | `alerting`, counter + 1                         |
-| `alerting`             | `ok`                 | **yes — recovery**                | `ok`, counter 0                                 |
+| Previous `alert_state` | `signal_status`      | Threshold Logic                               | Next state                                      | Notify?            |
+| ---------------------- | -------------------- | --------------------------------------------- | ----------------------------------------------- | ------------------ |
+| `ok`                   | `ok`                 | Passing check                                 | `ok`, counters 0                                | no                 |
+| `ok`                   | `alerting` / `error` | `failure_threshold == 1`                      | `alerting`                                      | **yes — alert**    |
+| `ok`                   | `alerting` / `error` | `failure_threshold > 1`                       | `pending`, failures = 1                         | no                 |
+| `pending`              | `ok`                 | Restored before alerting                      | `ok`, counters 0                                | no                 |
+| `pending`              | `alerting` / `error` | `failures + 1 >= failure_threshold`           | `alerting`                                      | **yes — alert**    |
+| `pending`              | `alerting` / `error` | `failures + 1 < failure_threshold`            | `pending`, failures + 1                         | no                 |
+| `alerting`             | `alerting` / `error` | Ongoing failure                               | `alerting`, failures + 1                        | no (suppress spam) |
+| `alerting`             | `ok`                 | `recovery_threshold == 1`                     | `ok`, counters 0                                | **yes — recovery** |
+| `alerting`             | `ok`                 | `recovery_threshold > 1`                      | `recovering`, recoveries = 1                    | no                 |
+| `recovering`           | `alerting` / `error` | Failed during recovery                        | `alerting`, failures + 1, recoveries = 0        | no                 |
+| `recovering`           | `ok`                 | `recoveries + 1 >= recovery_threshold`        | `ok`, counters 0                                | **yes — recovery** |
+| `recovering`           | `ok`                 | `recoveries + 1 < recovery_threshold`         | `recovering`, recoveries + 1                    | no                 |
 
-Threshold comes from the manifest (`failure_threshold`, default 2) and is user-overridable. Created Beep copy distinguishes "target is failing" from "the signal could not be produced"; a Beeper with many consecutive `error` results is surfaced as broken in the UI rather than reported as an outage.
+Alert policies are pluggable via `Beeper::AlertPolicy` (default: `ConsecutiveFailures`, optional: `Windowed`). Thresholds are configured in manifest `alerting: { policy, failure_threshold, recovery_threshold, ... }` or overridden at Beeper instance level (`beeper.config.alerting`). Created Beep copy distinguishes "target is failing" from "the signal could not be produced"; a Beeper with many consecutive `error` results is surfaced as broken in the UI rather than reported as an outage.
 
 `EXPIRED_AFTER = 1.hour` applies to Beepers: a probe result an hour late is worthless, so an expired Beeper Run is dropped without evaluating or notifying. Reminder Beeps keep today's late-is-better-than-never behaviour.
 
