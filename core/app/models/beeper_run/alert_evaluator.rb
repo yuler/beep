@@ -1,5 +1,5 @@
 class BeeperRun::AlertEvaluator
-  # Table from beeper-ecosystem.md:
+  # Table from docs/architecture/beeper.md:
   # | Previous alert_state | signal_status      | Notify                            | Next state                                      |
   # | ok                   | ok                 | no                                | ok, counter 0                                   |
   # | ok                   | alerting / error   | only when counter + 1 >= threshold | alerting if notified, else ok (counter + 1)     |

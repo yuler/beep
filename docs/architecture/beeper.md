@@ -1,4 +1,4 @@
-# Beeper Ecosystem
+# Beeper
 
 A **Beeper App** is a catalog definition (manifest + receiver). A **Beeper** is an account-owned running instance of that Beeper App: config, cron, alert state, and default channels. When the alert state machine says to notify, the Beeper creates a one-shot **Beep**. Beep is only the notification; it never produces a signal.
 
