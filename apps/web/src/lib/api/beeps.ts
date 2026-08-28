@@ -25,6 +25,12 @@ export type Beep = {
 	next_run_at: string | null;
 	last_run_at: string | null;
 	timezone: string;
+	notification_channels: string[];
+	beeper_id?: string | null;
+	beeper?: {
+		slug: string;
+		name: string;
+	} | null;
 	created_at: string;
 	runs: BeepRun[];
 };
@@ -54,6 +60,7 @@ export function createBeep(
 		run_at?: string | null;
 		cron?: string | null;
 		timezone?: string;
+		notification_channels?: string[];
 	},
 ) {
 	return apiFetch<Beep>(`/api/v1/${slug}/beeps`, {

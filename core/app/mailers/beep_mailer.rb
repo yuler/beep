@@ -7,7 +7,7 @@ class BeepMailer < ApplicationMailer
 
     headers["List-Unsubscribe"] = "<#{@unsubscribe_url}>"
     headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
-
+    @run = beep_run
     mail to: user.identity.email, subject: @beep.title
   end
 end

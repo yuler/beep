@@ -1,0 +1,38 @@
+{
+  "manifest_version": 1,
+  "slug": "heartbeat",
+  "name": "Dead Man's Snitch / Heartbeat",
+  "version": "1.0.0",
+  "description": "Monitors periodic cron jobs and pings, alerts when silent",
+  "author": "Beep Official",
+  "schedule": {
+    "default_cron": "*/15 * * * *",
+    "min_interval_seconds": 60
+  },
+  "alerting": {
+    "policy": "consecutive_failures",
+    "failure_threshold": 1,
+    "recovery_threshold": 1
+  },
+  "capabilities": [
+    "webhook_ping"
+  ],
+  "inputs": [
+    {
+      "name": "grace_period_minutes",
+      "label": "Grace Period (minutes)",
+      "type": "number",
+      "default": 15,
+      "min": 1,
+      "max": 1440
+    }
+  ],
+  "metrics": [
+    {
+      "name": "minutes_since_last_ping",
+      "label": "Minutes Since Last Ping",
+      "type": "number",
+      "unit": "min"
+    }
+  ]
+}

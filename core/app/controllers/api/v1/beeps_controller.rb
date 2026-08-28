@@ -1,11 +1,11 @@
 class Api::V1::BeepsController < Api::V1::BaseController
   def index
-    @beeps = Current.account.beeps.includes(:runs).order(created_at: :desc)
+    @beeps = Current.account.beeps.includes(:runs, beeper: :beeper_app).order(created_at: :desc)
     render :index
   end
 
   def show
-    @beep = Current.account.beeps.includes(:runs).find(params[:id])
+    @beep = Current.account.beeps.includes(:runs, beeper: :beeper_app).find(params[:id])
     render :show
   end
 
@@ -45,7 +45,7 @@ class Api::V1::BeepsController < Api::V1::BaseController
 
   private
     def beep_params
-      params.permit(:title, :body, :run_at, :cron, :kind)
+      params.permit(:title, :body, :run_at, :cron, :kind, notification_channels: [])
     end
 
     def beep_timezone

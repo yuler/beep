@@ -1,0 +1,51 @@
+{
+  "manifest_version": 1,
+  "slug": "ssl-expiry",
+  "name": "SSL / TLS Certificate Expiry",
+  "version": "1.0.0",
+  "description": "Monitors SSL/TLS certificates and alerts before expiration",
+  "author": "Beep Official",
+  "schedule": {
+    "default_cron": "0 8 * * *",
+    "min_interval_seconds": 3600
+  },
+  "alerting": {
+    "policy": "consecutive_failures",
+    "failure_threshold": 2,
+    "recovery_threshold": 1
+  },
+
+  "inputs": [
+    {
+      "name": "hostname",
+      "label": "Domain / Hostname",
+      "type": "string",
+      "required": true,
+      "placeholder": "example.com"
+    },
+    {
+      "name": "port",
+      "label": "Port",
+      "type": "number",
+      "default": 443,
+      "min": 1,
+      "max": 65535
+    },
+    {
+      "name": "alert_days_before",
+      "label": "Alert when days remaining less than",
+      "type": "number",
+      "default": 14,
+      "min": 1,
+      "max": 90
+    }
+  ],
+  "metrics": [
+    {
+      "name": "days_remaining",
+      "label": "Days Remaining",
+      "type": "number",
+      "unit": "days"
+    }
+  ]
+}

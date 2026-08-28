@@ -9,6 +9,7 @@ class Beep < ApplicationRecord
   BODY_MAX_LENGTH = 2000
 
   belongs_to :account
+  belongs_to :beeper, optional: true
   has_many :runs, class_name: "BeepRun", dependent: :destroy
 
   enum :kind, %w[ once recurring ].index_by(&:itself)
@@ -26,7 +27,9 @@ class Beep < ApplicationRecord
 
   validate :timezone_is_iana
   validate :validate_cron_expression, if: :recurring?
+  validate :validate_notification_channels
 
+  before_validation :assign_default_notification_channels, on: :create
   before_validation :sync_run_attributes
   after_create_commit :deliver_if_due_on_create
 
@@ -156,13 +159,10 @@ class Beep < ApplicationRecord
     Beep::Plaintext.from_markdown(body)
   end
 
-  def push_payload
+  def push_payload(run: nil)
     options = { data: { url: web_url, badge: 1 } }
     text = body_text
-    if text.present?
-      options[:body] = text
-    end
-
+    options[:body] = text if text.present?
     { title: title, options: options }
   end
 
@@ -183,6 +183,18 @@ class Beep < ApplicationRecord
 
     def expired?(scheduled_for)
       scheduled_for < EXPIRED_AFTER.ago
+    end
+
+    def assign_default_notification_channels
+      if Array(notification_channels).empty?
+        self.notification_channels = if Current.user
+          Current.user.notification_channels
+        elsif account&.owner_user
+          account.owner_user.notification_channels
+        else
+          []
+        end
+      end
     end
 
     def sync_run_attributes
@@ -212,6 +224,15 @@ class Beep < ApplicationRecord
     def timezone_is_iana
       if timezone.present? && !IanaTimezone.valid?(timezone)
         errors.add(:timezone, "is invalid")
+      end
+    end
+
+    def validate_notification_channels
+      return if notification_channels.blank?
+
+      invalid = Array(notification_channels) - User::NOTIFICATION_CHANNELS
+      if invalid.any?
+        errors.add(:notification_channels, "contains unsupported channels: #{invalid.join(', ')}")
       end
     end
 

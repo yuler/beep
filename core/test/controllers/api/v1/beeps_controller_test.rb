@@ -58,10 +58,10 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "UTC", body["timezone"]
     assert_equal @run_at.iso8601, Time.iso8601(body["run_at"]).iso8601
     assert_equal @run_at.iso8601, Time.iso8601(body["next_run_at"]).iso8601
-    assert_nil body["channels"]
+    assert_equal [ "email", "web_push" ], body["notification_channels"]
   end
 
-  test "create without run_at triggers immediately as an ingest" do
+  test "create without run_at triggers immediately" do
     assert_enqueued_with(job: DeliverBeepRunJob) do
       assert_difference -> { @account.beeps.count }, 1 do
         post "/api/v1/#{@account.slug}/beeps",
@@ -132,7 +132,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_nil body["cron"]
     assert_equal "active", body["status"]
     assert_equal [], body["runs"]
-    assert_nil body["channels"]
+    assert_equal [ "email", "web_push" ], body["notification_channels"]
   end
 
   test "show includes beep runs newest first" do

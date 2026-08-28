@@ -1,0 +1,11 @@
+json.extract! beeper_app, :id, :slug, :version, :created_at
+json.name beeper_app.name
+json.description beeper_app.description
+json.default_cron beeper_app.default_cron
+json.failure_threshold beeper_app.failure_threshold
+json.min_interval_seconds beeper_app.min_interval_seconds
+json.capabilities beeper_app.capabilities
+json.webhook_ping beeper_app.webhook_ping?
+json.official beeper_app.official?
+json.inputs beeper_app.inputs
+json.metrics beeper_app.metrics

@@ -27,5 +27,7 @@ else
     owner_name: "Yuler Doe"
   )
 
-  puts "OK: Seeded yuler identity and Yuler Company account (development only)."
+  BeeperApp.seed_official
+
+  puts "OK: Seeded yuler identity, Yuler Company account, and official beeper apps (development only)."
 end

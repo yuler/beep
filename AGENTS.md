@@ -6,7 +6,8 @@ Guidelines for coding agents in this beep monorepo.
 
 - [`core/`](core/) — Rails 8.1 backend → [`docs/core/DEVELOP.md`](docs/core/DEVELOP.md), [`docs/core/STYLE.md`](docs/core/STYLE.md), [`docs/core/ACCOUNT.md`](docs/core/ACCOUNT.md)
 - [`apps/web/`](apps/web/) — TanStack Router → [`.agents/web.md`](.agents/web.md)
-- `apps/` — other client apps (admin, mobile, desktop)
+- `apps/` — client apps (web, admin, mobile, desktop)
+- `beeper_apps/` — runtime probe mini-apps / manifest templates
 - `packages/` — shared TypeScript packages
 - `scripts/` — monorepo setup / automation
 
@@ -40,3 +41,4 @@ Local CORS for web → core `/api/v1` is development-only: [`core/config/initial
 
 - API JSON responses use jbuilder views (`.json.jbuilder`), not inline hashes in controllers.
 - Do not add gems or other package dependencies without asking first.
+- Do not edit or commit [`core/db/queue_schema.rb`](core/db/queue_schema.rb), [`core/db/cable_schema.rb`](core/db/cable_schema.rb), or [`core/db/cache_schema.rb`](core/db/cache_schema.rb); use `bin/rails db:prepare` or per-DB `db:reset:primary` / `db:reset:queue` / `db:reset:cable` — not `db:migrate` or `db:schema:dump`, which overwrite those files when a secondary DB is empty.

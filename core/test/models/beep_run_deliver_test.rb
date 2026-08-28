@@ -136,8 +136,8 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     assert_equal 1, ActionMailer::Base.deliveries.size
   end
 
-  test "deliver skips email when the user has no email channel" do
-    users(:john).update!(notification_channels: %w[ web_push ])
+  test "deliver skips email when the beep lists only web_push" do
+    @beep.update!(notification_channels: %w[ web_push ])
 
     @run.deliver_now
 
@@ -147,9 +147,9 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     assert_equal 0, ActionMailer::Base.deliveries.size
   end
 
-  test "deliver skips web push when the user has no web push channel" do
+  test "deliver skips web push when the beep lists only email" do
     subscribe("https://fcm.googleapis.com/fcm/send/one")
-    users(:john).update!(notification_channels: %w[ email ])
+    @beep.update!(notification_channels: %w[ email ])
     sent = 0
 
     stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
@@ -162,8 +162,8 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     assert_equal "sent", @run.result.dig("email", "status")
   end
 
-  test "deliver succeeds with an empty result when the user has no channels" do
-    users(:john).update!(notification_channels: [])
+  test "deliver succeeds with an empty result when the beep has no channels" do
+    @beep.update!(notification_channels: [])
 
     @run.deliver_now
 

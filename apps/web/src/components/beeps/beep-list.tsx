@@ -1,11 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import {
-	AlertCircle,
+	Activity,
 	ArrowUpRight,
-	CheckCircle2,
 	Clock,
-	Flame,
-	PauseCircle,
 	Repeat,
 	Search,
 	Sparkles,
@@ -13,6 +10,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
+import { BEEP_STATUS_META } from "@/components/beeps/beep-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -50,7 +48,8 @@ export function BeepList({
 				const query = search.toLowerCase();
 				const matchTitle = beep.title.toLowerCase().includes(query);
 				const matchBody = beep.body?.toLowerCase().includes(query);
-				if (!matchTitle && !matchBody) return false;
+				const matchBeeper = beep.beeper?.name.toLowerCase().includes(query);
+				if (!matchTitle && !matchBody && !matchBeeper) return false;
 			}
 
 			return true;
@@ -77,8 +76,7 @@ export function BeepList({
 					No beeps yet
 				</h3>
 				<p className="mt-1 max-w-sm text-sm text-muted-foreground">
-					Create your first reminder above using the prompt assistant or manual
-					form.
+					Create your first reminder above or install a beeper from the gallery.
 				</p>
 			</Card>
 		);
@@ -159,84 +157,50 @@ export function BeepList({
 						size="sm"
 						className="mt-2"
 						onClick={() => {
-							setSearch("");
 							setStatusFilter("all");
+							setSearch("");
 						}}
 					>
 						Clear filters
 					</Button>
 				</Card>
 			) : (
-				<ul className="flex flex-col gap-3">
+				<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 					{filteredBeeps.map((beep) => (
-						<li key={beep.id}>
-							<BeepListCard beep={beep} slug={slug} variant={variant} />
-						</li>
+						<BeepListCard
+							key={beep.id}
+							beep={beep}
+							slug={slug}
+							variant={variant}
+						/>
 					))}
-				</ul>
+				</div>
 			)}
 		</div>
 	);
 }
 
-function StatusIndicator({ status }: { status: string }) {
-	switch (status) {
-		case "active":
-			return (
-				<Badge
-					variant="outline"
-					className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-				>
-					<span className="size-1.5 rounded-full bg-emerald-500" />
-					Active
-				</Badge>
-			);
-		case "firing":
-			return (
-				<Badge
-					variant="outline"
-					className="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
-				>
-					<Flame className="size-3 animate-pulse text-violet-500" />
-					Firing
-				</Badge>
-			);
-		case "completed":
-			return (
-				<Badge
-					variant="outline"
-					className="border-border bg-muted/40 text-muted-foreground"
-				>
-					<CheckCircle2 className="size-3 text-muted-foreground" />
-					Completed
-				</Badge>
-			);
-		case "paused":
-			return (
-				<Badge
-					variant="outline"
-					className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-				>
-					<PauseCircle className="size-3 text-amber-500" />
-					Paused
-				</Badge>
-			);
-		case "cancelled":
-			return (
-				<Badge
-					variant="outline"
-					className="border-destructive/30 bg-destructive/10 text-destructive"
-				>
-					<AlertCircle className="size-3 text-destructive" />
-					Cancelled
-				</Badge>
-			);
-		default:
-			return <Badge variant="secondary">{status}</Badge>;
-	}
+function StatusIndicator({ status }: { status: Beep["status"] }) {
+	const meta = BEEP_STATUS_META[status];
+	const Icon = meta.icon;
+	return (
+		<span
+			className={cn(
+				"inline-flex items-center gap-1 text-[11px] font-medium",
+				meta.colorClass,
+			)}
+		>
+			<Icon className={cn("size-3", status === "firing" && "animate-pulse")} />
+			{meta.label}
+		</span>
+	);
 }
 
 function formatSchedule(beep: Beep) {
+	if (beep.status === "completed") {
+		return { label: "Completed", isRecurring: false };
+	}
+
 	if (beep.kind === "recurring") {
 		return {
 			label: `Cron: ${beep.cron ?? "Scheduled"}`,
@@ -288,22 +252,32 @@ function BeepListCard({
 				<div className="flex flex-wrap items-center justify-between gap-2">
 					<div className="flex flex-wrap items-center gap-1.5">
 						<StatusIndicator status={beep.status} />
-						<Badge
-							variant="secondary"
-							className="gap-1 text-[11px] font-normal"
-						>
-							{beep.kind === "recurring" ? (
-								<>
-									<Repeat className="size-2.5" />
-									Recurring
-								</>
-							) : (
-								<>
-									<Clock className="size-2.5" />
-									Once
-								</>
-							)}
-						</Badge>
+						{beep.beeper ? (
+							<Badge
+								variant="secondary"
+								className="gap-1 text-[10px] font-normal bg-primary/10 text-primary dark:bg-primary/20"
+							>
+								<Activity className="size-2.5" />
+								from {beep.beeper.name}
+							</Badge>
+						) : (
+							<Badge
+								variant="secondary"
+								className="gap-1 text-[11px] font-normal"
+							>
+								{beep.kind === "recurring" ? (
+									<>
+										<Repeat className="size-2.5" />
+										Recurring
+									</>
+								) : (
+									<>
+										<Clock className="size-2.5" />
+										Once
+									</>
+								)}
+							</Badge>
+						)}
 					</div>
 
 					{schedule ? (

@@ -12,16 +12,21 @@ class BeepRun < ApplicationRecord
   def deliver_now
     return unless claim_delivery?
 
-    payload_result = stringify_result
-    beep.recipient_users.each do |user|
-      payload_result = deliver_for(user, payload_result)
-    end
-
-    update!(status: :succeeded, result: payload_result)
-    beep.finish_firing(last_run_at: scheduled_for)
+    deliver_notifications_now
   end
 
   private
+
+    def deliver_notifications_now
+      payload_result = stringify_result
+      beep.recipient_users.each do |user|
+        payload_result = deliver_for(user, payload_result)
+      end
+
+      update!(status: :succeeded, result: payload_result)
+      beep.finish_firing(last_run_at: scheduled_for)
+    end
+
     def claim_delivery?
       claimed = self.class.where(id: id, status: :pending).update_all(status: "running", updated_at: Time.current) == 1
       claimed || running?
@@ -36,12 +41,14 @@ class BeepRun < ApplicationRecord
     end
 
     def deliver_for(user, payload_result)
-      if user.notification_channel?("web_push")
+      channels = Array(beep.notification_channels)
+
+      if channels.include?("web_push")
         payload_result = deliver_web_push(user, payload_result)
         persist_result(payload_result)
       end
 
-      if user.notification_channel?("email")
+      if channels.include?("email")
         payload_result = deliver_email(user, payload_result)
         persist_result(payload_result)
         if payload_result.dig("email", "status") == "error"
@@ -74,7 +81,7 @@ class BeepRun < ApplicationRecord
     end
 
     def deliver_to(subscription)
-      subscription.deliver_beep(beep)
+      subscription.deliver_beep(beep, run: self)
       { "subscription_id" => subscription.id, "status" => "sent" }
     rescue WebPush::ExpiredSubscription, WebPush::InvalidSubscription
       subscription.destroy!

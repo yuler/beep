@@ -12,6 +12,7 @@ Monorepo for the beep project, based on the MonoSolo template.
 │   ├── admin/           # Vite + Vue3 (Internal dashboard & B2B management)
 │   ├── mobile/          # Mobile application (Capacitor/React Native)
 │   └── desktop/         # Desktop application (Tauri/Electron)
+├── beeper_apps/         # Runtime probe mini-apps & manifest templates
 ├── packages/            # Shared workspace packages
 │   ├── api-client/      # Auto-generated SDK/Hooks for Rails API
 │   ├── shared-utils/    # Shared TypeScript types, constants & helpers

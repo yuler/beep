@@ -1,4 +1,6 @@
 module SsrfProtection
+  class BlockedAddressError < StandardError; end
+
   extend self
 
   DNS_RESOLUTION_TIMEOUT = 2
@@ -60,6 +62,12 @@ module SsrfProtection
   end
 
   def blocked_address?(ip)
+    # Development: skip SSRF blocking. Local Mihomo (Clash/Surge TUN) Fake-IP
+    # resolves public hostnames into 198.18.0.0/15, which production rules
+    # correctly reject — but that breaks site-uptime / ssl-expiry probes on a
+    # proxied laptop. Re-enable when we have a better local-proxy story.
+    return false if Rails.env.development?
+
     ipaddr = ip.is_a?(IPAddr) ? ip : IPAddr.new(ip.to_s)
 
     # DNS never legitimately returns these embedded forms, so block them all

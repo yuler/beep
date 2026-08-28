@@ -1,14 +1,16 @@
 import {
 	createFileRoute,
 	getRouteApi,
+	Link,
 	notFound,
 	useRouter,
 } from "@tanstack/react-router";
-import { Pause, Play, Trash2 } from "lucide-react";
+import { Activity, Pause, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { BeepRuns } from "@/components/beeps/beep-runs";
+import { BEEP_STATUS_META } from "@/components/beeps/beep-status";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,17 +40,6 @@ export const Route = createFileRoute("/$account_slug/beeps_/$beepId")({
 	}),
 	component: BeepDetailPage,
 });
-
-const STATUS_VARIANT: Record<
-	string,
-	"default" | "secondary" | "outline" | "destructive"
-> = {
-	active: "default",
-	paused: "secondary",
-	completed: "outline",
-	cancelled: "destructive",
-	firing: "default",
-};
 
 function formatWhen(value: string | null) {
 	if (!value) return "—";
@@ -141,15 +132,38 @@ function BeepDetailPage() {
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div className="min-w-0">
-						<h1 className="font-heading text-2xl font-semibold tracking-tight">
-							{beep.title}
-						</h1>
+						<div className="flex items-center gap-2">
+							<h1 className="font-heading text-2xl font-semibold tracking-tight">
+								{beep.title}
+							</h1>
+							{beep.beeper ? (
+								beep.beeper_id ? (
+									<Link
+										to="/$account_slug/beepers/$beeperId"
+										params={{
+											account_slug: slug,
+											beeperId: beep.beeper_id,
+										}}
+									>
+										<Badge variant="outline" className="gap-1 cursor-pointer">
+											<Activity className="size-3 text-muted-foreground" />
+											{beep.beeper.name}
+										</Badge>
+									</Link>
+								) : (
+									<Badge variant="outline" className="gap-1">
+										<Activity className="size-3 text-muted-foreground" />
+										{beep.beeper.name}
+									</Badge>
+								)
+							) : null}
+						</div>
 						<p className="mt-1 text-sm text-muted-foreground">
 							{beep.kind} · {beep.timezone}
 						</p>
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
-						<Badge variant={STATUS_VARIANT[beep.status] ?? "secondary"}>
+						<Badge variant={BEEP_STATUS_META[beep.status].badgeVariant}>
 							{beep.status}
 						</Badge>
 						{beep.status === "active" || beep.status === "paused" ? (
@@ -224,7 +238,7 @@ function BeepDetailPage() {
 
 				<Card className="max-w-lg">
 					<CardHeader>
-						<CardTitle>Schedule</CardTitle>
+						<CardTitle>Details & Channels</CardTitle>
 					</CardHeader>
 					<CardContent className="flex flex-col gap-3 text-sm">
 						{beep.kind === "once" ? (
@@ -234,6 +248,14 @@ function BeepDetailPage() {
 						)}
 						<DetailRow label="Next" value={formatWhen(beep.next_run_at)} />
 						<DetailRow label="Last" value={formatWhen(beep.last_run_at)} />
+						<DetailRow
+							label="Channels"
+							value={
+								beep.notification_channels?.length > 0
+									? beep.notification_channels.join(", ")
+									: "None"
+							}
+						/>
 						<DetailRow label="Created" value={formatWhen(beep.created_at)} />
 					</CardContent>
 				</Card>
