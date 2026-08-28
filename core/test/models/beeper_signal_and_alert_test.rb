@@ -213,6 +213,60 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
     end
   end
 
+  test "windowed alert policy recovery uses recovery_threshold before notifying" do
+    @beeper.update!(
+      config: {
+        "status" => "ok",
+        "title" => "Target Recovered",
+        "message" => "Service back online",
+        "alerting" => {
+          "policy" => "windowed",
+          "window_size" => 3,
+          "min_failures" => 2,
+          "recovery_threshold" => 2
+        }
+      },
+      alert_state: :alerting,
+      consecutive_failures: 2
+    )
+
+    assert_no_difference -> { @account.beeps.count } do
+      run1 = @beeper.runs.create!(scheduled_for: 2.minutes.ago, status: :pending)
+      run1.execute_now
+      assert_equal "recovering", @beeper.reload.alert_state
+      assert_equal 1, @beeper.consecutive_recoveries
+    end
+
+    assert_difference -> { @account.beeps.count }, 1 do
+      run2 = @beeper.runs.create!(scheduled_for: 1.minute.ago, status: :pending)
+      run2.execute_now
+      assert_equal "ok", @beeper.reload.alert_state
+    end
+  end
+
+  test "execute_now rolls back alert_state when notify_from! fails" do
+    @beeper.update!(
+      alert_state: :pending,
+      consecutive_failures: 1,
+      config: { "status" => "alerting", "title" => "Target Down", "message" => "HTTP 500" }
+    )
+
+    run = @beeper.runs.create!(scheduled_for: Time.current, status: :pending)
+
+    @beeper.define_singleton_method(:notify_from!) do |*_args|
+      raise ActiveRecord::RecordInvalid, self
+    end
+
+    run.execute_now
+
+    run.reload
+    @beeper.reload
+    assert_equal "failed", run.status
+    assert_equal "pending", @beeper.alert_state
+    assert_equal 1, @beeper.consecutive_failures
+    assert_equal 0, @account.beeps.count
+  end
+
   test "trigger_run! on a paused beeper preserves paused status after run completes" do
     @beeper.pause!
     assert @beeper.paused?
@@ -240,12 +294,13 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
 
   test "validates config inputs against beeper_app manifest inputs" do
     manifest_app = BeeperApp.create!(
-      slug: "custom-probe",
+      account: @account,
+      slug: "echo",
       version: "1.0.0",
       manifest: {
         "manifest_version" => 1,
-        "slug" => "custom-probe",
-        "name" => "Custom Probe",
+        "slug" => "echo",
+        "name" => "Echo Probe",
         "version" => "1.0.0",
         "author" => "Beep",
         "schedule" => { "default_cron" => "*/5 * * * *" },
@@ -294,12 +349,12 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
   test "beeper validates cron against beeper_app min_interval_seconds" do
     app_with_min_interval = BeeperApp.create!(
       account: @account,
-      slug: "custom-hourly",
+      slug: "echo",
       version: "1.0.0",
       manifest: {
         "manifest_version" => 1,
-        "slug" => "custom-hourly",
-        "name" => "Custom Hourly",
+        "slug" => "echo",
+        "name" => "Echo Hourly",
         "version" => "1.0.0",
         "author" => "Me",
         "schedule" => {

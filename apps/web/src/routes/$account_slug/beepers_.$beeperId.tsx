@@ -36,6 +36,11 @@ import {
 } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
+import {
+	beeperHealthIsDestructive,
+	beeperHealthLabel,
+	isBeeperProbeBroken,
+} from "@/lib/beeper-health";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -192,11 +197,17 @@ function BeeperDetailPage() {
 							</h1>
 							<Badge
 								variant={
-									beeper.alert_state === "alerting" ? "destructive" : "outline"
+									beeperHealthIsDestructive(beeper) ? "destructive" : "outline"
 								}
 							>
-								{beeper.alert_state}
+								{beeperHealthLabel(beeper)}
 							</Badge>
+							{isBeeperProbeBroken(beeper.runs) ? (
+								<p className="text-sm text-muted-foreground">
+									Probe is failing to run — check configuration or network
+									access, not target health.
+								</p>
+							) : null}
 						</div>
 						<p className="mt-1 text-sm text-muted-foreground">
 							{beeper.beeper_app?.name} (v{beeper.beeper_app?.version}) ·{" "}

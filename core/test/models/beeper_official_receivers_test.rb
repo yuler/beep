@@ -104,7 +104,7 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
     assert_match(/expiring soon/, result.title)
   end
 
-  test "SslExpiry receiver reports alerting on connection or handshake timeout" do
+  test "SslExpiry receiver reports error on connection or handshake timeout" do
     receiver = BeeperApp::Receivers::SslExpiry.new(config: {
       "hostname" => "example.com",
       "alert_days_before" => 14
@@ -116,8 +116,39 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
     end
 
     result = receiver.call
-    assert result.alerting?
+    assert result.error?
     assert_match(/timed out/, result.title)
+  end
+
+  test "SiteUptime receiver reports error on connection failure" do
+    receiver = BeeperApp::Receivers::SiteUptime.new(config: {
+      "target_url" => "https://example.com/health",
+      "expected_status" => 200
+    })
+
+    receiver.define_singleton_method(:fetch_with_redirects) do |*, **|
+      raise Errno::ECONNREFUSED, "Connection refused"
+    end
+
+    result = receiver.call
+    assert result.error?
+    assert_match(/Site signal failed/, result.title)
+  end
+
+  test "SslExpiry receiver reports error on connection failure" do
+    receiver = BeeperApp::Receivers::SslExpiry.new(config: {
+      "hostname" => "example.com",
+      "alert_days_before" => 14
+    })
+
+    stub_dns_resolution("93.184.216.34")
+    receiver.define_singleton_method(:fetch_peer_certificate) do |*, **|
+      raise Errno::ECONNREFUSED, "Connection refused"
+    end
+
+    result = receiver.call
+    assert result.error?
+    assert_match(/SSL signal failed/, result.title)
   end
 
   test "Heartbeat receiver reports ok when ping is recent" do

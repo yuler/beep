@@ -40,6 +40,11 @@ import {
 } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
+import {
+	beeperHealthIsDestructive,
+	beeperHealthLabel,
+	isBeeperProbeBroken,
+} from "@/lib/beeper-health";
 import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
@@ -268,7 +273,7 @@ function BeepersPage() {
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
 				<div className="flex flex-col gap-1">
 					<h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
-						Beeper Gallery
+						Beeper Apps Gallery
 					</h1>
 					<p className="text-sm text-muted-foreground">
 						Install monitoring probes and automated signal receivers to watch
@@ -309,18 +314,19 @@ function BeepersPage() {
 												</Badge>
 												<Badge
 													variant={
-														beeper.alert_state === "alerting"
+														beeperHealthIsDestructive(beeper)
 															? "destructive"
 															: "outline"
 													}
 													className="gap-1 text-[10px] font-medium"
 												>
-													{beeper.alert_state === "alerting" ? (
+													{beeperHealthLabel(beeper) === "alerting" ||
+													isBeeperProbeBroken(beeper.runs) ? (
 														<ShieldAlert className="size-2.5" />
 													) : (
 														<ShieldCheck className="size-2.5 text-emerald-600 dark:text-emerald-400" />
 													)}
-													{beeper.alert_state.toUpperCase()}
+													{beeperHealthLabel(beeper).toUpperCase()}
 												</Badge>
 											</div>
 											<span className="font-mono text-xs text-muted-foreground">

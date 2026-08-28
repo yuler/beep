@@ -105,6 +105,10 @@ class BeeperApp < ApplicationRecord
     "BeeperApp::Receivers::#{slug.tr("-", "_").camelize}".safe_constantize
   end
 
+  def receiver_available?
+    receiver_class.present?
+  end
+
   def produce_signal(config:)
     klass = receiver_class
     if klass

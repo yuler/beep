@@ -65,15 +65,15 @@ class BeeperApp::Receivers::SslExpiry < BeeperApp::Receivers::Base
       title: "SSL handshake failed",
       message: "SSL error for #{hostname || raw_host}: #{e.message}"
     )
-  rescue Timeout::Error => e
+  rescue Timeout::Error
     BeeperApp::Signal.new(
-      status: :alerting,
+      status: :error,
       title: "SSL signal timed out",
       message: "SSL connection to #{hostname || raw_host} timed out after #{CONNECT_TIMEOUT}s"
     )
   rescue StandardError => e
     BeeperApp::Signal.new(
-      status: :alerting,
+      status: :error,
       title: "SSL signal failed",
       message: "Could not inspect SSL certificate for #{hostname || raw_host}: #{e.message}"
     )

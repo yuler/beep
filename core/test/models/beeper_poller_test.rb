@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BeeperPollerTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @account = accounts(:john_account)
     @beeper_app = BeeperApp.create!(slug: "echo", version: "1.0.0", manifest: echo_manifest)
@@ -82,6 +84,44 @@ class BeeperPollerTest < ActiveSupport::TestCase
       timezone: "UTC"
     )
     assert_equal @account.owner_user.notification_channels, beeper.notification_channels
+  end
+
+  test "claim_run re-enqueues job when duplicate pending run exists" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Duplicate Run",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: { "status" => "ok" },
+      notification_channels: %w[ email ]
+    )
+    scheduled_for = 1.minute.from_now.change(usec: 0)
+    beeper.update_columns(next_run_at: scheduled_for, status: "active")
+    existing = beeper.runs.create!(scheduled_for: scheduled_for, status: :pending)
+
+    assert_enqueued_with(job: RunBeeperJob, args: [ existing ]) do
+      beeper.send(:claim_run, scheduled_for)
+    end
+  end
+
+  test "claim_run does not re-enqueue job when duplicate run already succeeded" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Duplicate Succeeded Run",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: { "status" => "ok" },
+      notification_channels: %w[ email ]
+    )
+    scheduled_for = 1.minute.from_now.change(usec: 0)
+    beeper.update_columns(next_run_at: scheduled_for, status: "active")
+    beeper.runs.create!(scheduled_for: scheduled_for, status: :succeeded, signal_status: :ok)
+
+    assert_no_enqueued_jobs only: RunBeeperJob do
+      beeper.send(:claim_run, scheduled_for)
+    end
   end
 
   private

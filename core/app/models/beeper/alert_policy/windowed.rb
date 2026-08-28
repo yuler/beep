@@ -7,6 +7,7 @@ class Beeper::AlertPolicy::Windowed < Beeper::AlertPolicy
     config = policy_config
     window_size = (config["window_size"] || DEFAULT_WINDOW_SIZE).to_i
     min_failures = (config["min_failures"] || DEFAULT_MIN_FAILURES).to_i
+    rec_threshold = beeper.recovery_threshold
 
     current_state = beeper.alert_state.to_s
     failures = beeper.consecutive_failures || 0
@@ -39,9 +40,17 @@ class Beeper::AlertPolicy::Windowed < Beeper::AlertPolicy
           is_recovery: false
         )
       end
-    else
-      if current_state == "alerting" || current_state == "recovering"
-        # Window no longer breached -> recovery
+    elsif current_state == "recovering" && !signal.ok?
+      Decision.new(
+        should_notify: false,
+        next_alert_state: "alerting",
+        next_consecutive_failures: failures + 1,
+        next_consecutive_recoveries: 0,
+        is_recovery: false
+      )
+    elsif (current_state == "alerting" || current_state == "recovering") && signal.ok?
+      new_recoveries = (current_state == "alerting" ? 0 : recoveries) + 1
+      if new_recoveries >= rec_threshold
         Decision.new(
           should_notify: true,
           next_alert_state: "ok",
@@ -49,23 +58,31 @@ class Beeper::AlertPolicy::Windowed < Beeper::AlertPolicy
           next_consecutive_recoveries: 0,
           is_recovery: true
         )
-      elsif failure_count_in_window > 0
-        Decision.new(
-          should_notify: false,
-          next_alert_state: "pending",
-          next_consecutive_failures: signal.ok? ? failures : failures + 1,
-          next_consecutive_recoveries: 0,
-          is_recovery: false
-        )
       else
         Decision.new(
           should_notify: false,
-          next_alert_state: "ok",
-          next_consecutive_failures: 0,
-          next_consecutive_recoveries: 0,
+          next_alert_state: "recovering",
+          next_consecutive_failures: failures,
+          next_consecutive_recoveries: new_recoveries,
           is_recovery: false
         )
       end
+    elsif failure_count_in_window > 0
+      Decision.new(
+        should_notify: false,
+        next_alert_state: "pending",
+        next_consecutive_failures: signal.ok? ? failures : failures + 1,
+        next_consecutive_recoveries: 0,
+        is_recovery: false
+      )
+    else
+      Decision.new(
+        should_notify: false,
+        next_alert_state: "ok",
+        next_consecutive_failures: 0,
+        next_consecutive_recoveries: 0,
+        is_recovery: false
+      )
     end
   end
 end

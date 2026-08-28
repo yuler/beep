@@ -26,19 +26,19 @@ class BeeperRun < ApplicationRecord
 
     decision = Beeper::AlertPolicy.for(beeper).evaluate(signal: signal)
 
-    update!(
-      signal_status: signal.status.to_s,
-      signal_result: sanitized_result
-    )
+    ApplicationRecord.transaction do
+      update!(
+        signal_status: signal.status.to_s,
+        signal_result: sanitized_result
+      )
 
-    beeper.update!(
-      alert_state: decision.next_alert_state,
-      consecutive_failures: decision.next_consecutive_failures,
-      consecutive_recoveries: decision.next_consecutive_recoveries
-    )
+      beeper.update!(
+        alert_state: decision.next_alert_state,
+        consecutive_failures: decision.next_consecutive_failures,
+        consecutive_recoveries: decision.next_consecutive_recoveries
+      )
 
-    if decision.should_notify
-      beeper.notify_from!(signal)
+      beeper.notify_from!(signal) if decision.should_notify
     end
 
     update!(status: :succeeded)

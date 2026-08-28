@@ -57,15 +57,15 @@ class BeeperApp::Receivers::SiteUptime < BeeperApp::Receivers::Base
       title: "Blocked target address",
       message: e.message
     )
-  rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error => e
+  rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error
     BeeperApp::Signal.new(
-      status: :alerting,
+      status: :error,
       title: "Site signal timed out",
       message: "Connection to #{uri&.host || target_url} timed out after #{timeout_ms}ms"
     )
   rescue StandardError => e
     BeeperApp::Signal.new(
-      status: :alerting,
+      status: :error,
       title: "Site signal failed",
       message: "Failed to connect to #{uri&.host || target_url}: #{e.message}"
     )

@@ -29,6 +29,7 @@ class Beeper < ApplicationRecord
   validate :validate_cron_expression
   validate :validate_notification_channels
   validate :validate_config_inputs
+  validate :validate_beeper_app_has_receiver, on: :create
 
   before_validation :assign_default_notification_channels
   before_validation :sync_next_run_at
@@ -216,7 +217,9 @@ class Beeper < ApplicationRecord
       run.deliver_later
     end
   rescue ActiveRecord::RecordNotUnique
-    runs.find_by!(scheduled_for: scheduled_for)
+    run = runs.find_by!(scheduled_for: scheduled_for)
+    run.deliver_later if run.pending?
+    run
   end
 
   def assign_default_notification_channels
@@ -272,6 +275,13 @@ class Beeper < ApplicationRecord
     if invalid.any?
       errors.add(:notification_channels, "contains unsupported channels: #{invalid.join(', ')}")
     end
+  end
+
+  def validate_beeper_app_has_receiver
+    return if beeper_app.nil?
+    return if beeper_app.receiver_class.present?
+
+    errors.add(:beeper_app, "is not installable: no receiver implementation is available")
   end
 
   def validate_config_inputs
