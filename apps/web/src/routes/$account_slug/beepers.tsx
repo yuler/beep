@@ -112,11 +112,12 @@ function BeeperAppCard({
 	const Icon = meta.icon;
 	const cron = beeperApp.default_cron || "*/5 * * * *";
 	const metricCount = beeperApp.metrics.length;
+	const isBuiltIn = beeperApp.official !== false;
 
 	return (
 		<Card
 			className={cn(
-				"pt-0 transition-all duration-200",
+				"flex h-full flex-col pt-0 transition-all duration-200",
 				selected
 					? "ring-2 ring-primary/25 shadow-md"
 					: "hover:ring-foreground/15 hover:shadow-xs",
@@ -137,6 +138,11 @@ function BeeperAppCard({
 					<Icon className="size-5" />
 				</div>
 				<div className="flex flex-wrap items-center justify-end gap-1.5">
+					{isBuiltIn ? (
+						<Badge variant="outline" className="font-normal text-[10px]">
+							Built-in
+						</Badge>
+					) : null}
 					<Badge variant="secondary" className="font-normal">
 						{meta.tag}
 					</Badge>
@@ -149,11 +155,11 @@ function BeeperAppCard({
 				</div>
 			</div>
 
-			<CardHeader>
+			<CardHeader className="flex-1">
 				<CardTitle className="text-lg font-semibold">
 					{beeperApp.name}
 				</CardTitle>
-				<CardDescription className="line-clamp-3 leading-relaxed">
+				<CardDescription className="line-clamp-3 leading-relaxed min-h-[4.5rem]">
 					{beeperApp.description}
 				</CardDescription>
 			</CardHeader>
@@ -178,7 +184,7 @@ function BeeperAppCard({
 				</div>
 			</CardContent>
 
-			<CardFooter>
+			<CardFooter className="mt-auto">
 				<Button
 					size="sm"
 					variant={selected ? "default" : "outline"}
@@ -245,6 +251,7 @@ function BeepersPage() {
 			});
 
 			setSelectedBeeperApp(null);
+			await router.invalidate();
 			await router.navigate({
 				to: "/$account_slug/beepers/$beeperId",
 				params: { account_slug: slug, beeperId: newBeeper.id },
@@ -270,7 +277,7 @@ function BeepersPage() {
 				]}
 			/>
 
-			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+			<div className="flex flex-1 flex-col gap-8 p-4 md:p-6">
 				<div className="flex flex-col gap-1">
 					<h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
 						Beeper Apps Gallery
@@ -281,76 +288,7 @@ function BeepersPage() {
 					</p>
 				</div>
 
-				{beepers.length > 0 ? (
-					<div className="flex flex-col gap-3">
-						<h2 className="font-heading text-lg font-semibold">Your Beepers</h2>
-						<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-							{beepers.map((beeper: Beeper) => (
-								<Card
-									key={beeper.id}
-									size="sm"
-									className="group relative overflow-hidden transition-all duration-150 hover:border-primary/40 hover:shadow-xs"
-								>
-									<Link
-										to="/$account_slug/beepers/$beeperId"
-										params={{
-											account_slug: slug,
-											beeperId: beeper.id,
-										}}
-										className="block p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-									>
-										<div className="flex items-center justify-between gap-2">
-											<div className="flex items-center gap-1.5">
-												<Badge
-													variant={
-														beeper.status === "active"
-															? "default"
-															: beeper.status === "paused"
-																? "secondary"
-																: "outline"
-													}
-												>
-													{beeper.status}
-												</Badge>
-												<Badge
-													variant={
-														beeperHealthIsDestructive(beeper)
-															? "destructive"
-															: "outline"
-													}
-													className="gap-1 text-[10px] font-medium"
-												>
-													{beeperHealthLabel(beeper) === "alerting" ||
-													isBeeperProbeBroken(beeper.runs) ? (
-														<ShieldAlert className="size-2.5" />
-													) : (
-														<ShieldCheck className="size-2.5 text-emerald-600 dark:text-emerald-400" />
-													)}
-													{beeperHealthLabel(beeper).toUpperCase()}
-												</Badge>
-											</div>
-											<span className="font-mono text-xs text-muted-foreground">
-												{beeper.cron}
-											</span>
-										</div>
-
-										<div className="mt-2.5 flex items-start justify-between gap-3">
-											<h3 className="font-heading text-base font-semibold text-foreground transition-colors group-hover:text-primary">
-												{beeper.title}
-											</h3>
-											<ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-primary" />
-										</div>
-
-										<p className="mt-1 text-xs text-muted-foreground">
-											{beeper.beeper_app?.name}
-										</p>
-									</Link>
-								</Card>
-							))}
-						</div>
-					</div>
-				) : null}
-
+				{/* 1. Catalog / Apps Gallery on Top */}
 				<div className="flex flex-col gap-3">
 					<h2 className="font-heading text-lg font-semibold">Catalog</h2>
 					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -366,7 +304,7 @@ function BeepersPage() {
 				</div>
 
 				{selectedBeeperApp ? (
-					<Card className="mt-4 max-w-2xl">
+					<Card className="max-w-2xl">
 						<CardHeader>
 							<div className="flex items-center gap-3">
 								{(() => {
@@ -479,6 +417,77 @@ function BeepersPage() {
 							</CardFooter>
 						</form>
 					</Card>
+				) : null}
+
+				{/* 2. Installed Beepers on Bottom */}
+				{beepers.length > 0 ? (
+					<div className="flex flex-col gap-3">
+						<h2 className="font-heading text-lg font-semibold">Your Beepers</h2>
+						<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+							{beepers.map((beeper: Beeper) => (
+								<Card
+									key={beeper.id}
+									size="sm"
+									className="group relative overflow-hidden transition-all duration-150 hover:border-primary/40 hover:shadow-xs"
+								>
+									<Link
+										to="/$account_slug/beepers/$beeperId"
+										params={{
+											account_slug: slug,
+											beeperId: beeper.id,
+										}}
+										className="block p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+									>
+										<div className="flex items-center justify-between gap-2">
+											<div className="flex items-center gap-1.5">
+												<Badge
+													variant={
+														beeper.status === "active"
+															? "default"
+															: beeper.status === "paused"
+																? "secondary"
+																: "outline"
+													}
+												>
+													{beeper.status}
+												</Badge>
+												<Badge
+													variant={
+														beeperHealthIsDestructive(beeper)
+															? "destructive"
+															: "outline"
+													}
+													className="gap-1 text-[10px] font-medium"
+												>
+													{beeperHealthLabel(beeper) === "alerting" ||
+													isBeeperProbeBroken(beeper.runs) ? (
+														<ShieldAlert className="size-2.5" />
+													) : (
+														<ShieldCheck className="size-2.5 text-emerald-600 dark:text-emerald-400" />
+													)}
+													{beeperHealthLabel(beeper).toUpperCase()}
+												</Badge>
+											</div>
+											<span className="font-mono text-xs text-muted-foreground">
+												{beeper.cron}
+											</span>
+										</div>
+
+										<div className="mt-2.5 flex items-start justify-between gap-3">
+											<h3 className="font-heading text-base font-semibold text-foreground transition-colors group-hover:text-primary">
+												{beeper.title}
+											</h3>
+											<ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-primary" />
+										</div>
+
+										<p className="mt-1 text-xs text-muted-foreground">
+											{beeper.beeper_app?.name}
+										</p>
+									</Link>
+								</Card>
+							))}
+						</div>
+					</div>
 				) : null}
 			</div>
 		</>

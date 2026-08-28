@@ -30,6 +30,7 @@ export type BeeperApp = {
 	min_interval_seconds?: number;
 	capabilities?: string[];
 	webhook_ping?: boolean;
+	official?: boolean;
 	inputs: BeeperAppInput[];
 	metrics: BeeperAppMetric[];
 	created_at: string;
