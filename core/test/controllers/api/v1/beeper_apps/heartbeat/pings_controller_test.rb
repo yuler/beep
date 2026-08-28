@@ -30,7 +30,7 @@ class Api::V1::BeeperApps::Heartbeat::PingsControllerTest < ActionDispatch::Inte
     assert_nil @beeper.last_ping_at
     assert @beeper.ping_token.present?
 
-    post ping_api_v1_heartbeat_beeper_app_path(id: "heartbeat", token: @beeper.ping_token)
+    post api_v1_beeper_app_heartbeat_pings_path(beeper_app_id: "heartbeat", token: @beeper.ping_token)
 
     assert_response :success
     @beeper.reload
@@ -38,7 +38,7 @@ class Api::V1::BeeperApps::Heartbeat::PingsControllerTest < ActionDispatch::Inte
   end
 
   test "returns 404 for unknown token" do
-    post ping_api_v1_heartbeat_beeper_app_path(id: "heartbeat", token: "non-existent-token")
+    post api_v1_beeper_app_heartbeat_pings_path(beeper_app_id: "heartbeat", token: "non-existent-token")
     assert_response :not_found
   end
 
@@ -47,11 +47,11 @@ class Api::V1::BeeperApps::Heartbeat::PingsControllerTest < ActionDispatch::Inte
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
     begin
       60.times do
-        post ping_api_v1_heartbeat_beeper_app_path(id: "heartbeat", token: @beeper.ping_token)
+        post api_v1_beeper_app_heartbeat_pings_path(beeper_app_id: "heartbeat", token: @beeper.ping_token)
         assert_response :success
       end
 
-      post ping_api_v1_heartbeat_beeper_app_path(id: "heartbeat", token: @beeper.ping_token)
+      post api_v1_beeper_app_heartbeat_pings_path(beeper_app_id: "heartbeat", token: @beeper.ping_token)
       assert_response :too_many_requests
     ensure
       Rails.cache = old_cache

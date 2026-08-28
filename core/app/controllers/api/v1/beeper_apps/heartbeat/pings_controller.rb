@@ -11,7 +11,7 @@ class Api::V1::BeeperApps::Heartbeat::PingsController < ActionController::API
     token = params[:token].to_s.strip
     if token.blank?
       head :bad_request
-    elsif (beeper = Beeper.find_by_ping_token(token, beeper_app_slug: params[:id]))
+    elsif (beeper = Beeper.find_by_ping_token(token, beeper_app_slug: params[:beeper_app_id] || params[:id]))
       beeper.record_ping
       head :ok
     else

@@ -74,9 +74,9 @@ Rails.application.routes.draw do
 
       resource :settings, only: %i[ show update ]
       resources :beeper_apps, only: %i[ index show ] do
-        member do
-          namespace :heartbeat, module: "beeper_apps/heartbeat" do
-            post "ping/:token", to: "pings#create", as: :ping
+        scope module: :beeper_apps do
+          namespace :heartbeat do
+            resources :pings, param: :token, only: :create
           end
         end
       end
