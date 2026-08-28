@@ -1,4 +1,4 @@
-class Api::V1::Beepers::PingsController < ActionController::API
+class Api::V1::BeeperApps::Heartbeat::PingsController < ActionController::API
   CACHE_STORE = Class.new {
     def self.increment(...)
       Rails.cache.increment(...)
@@ -11,7 +11,7 @@ class Api::V1::Beepers::PingsController < ActionController::API
     token = params[:token].to_s.strip
     if token.blank?
       head :bad_request
-    elsif (beeper = Beeper.find_by_ping_token(token))
+    elsif (beeper = Beeper.find_by_ping_token(token, beeper_app_slug: params[:id]))
       beeper.record_ping
       head :ok
     else

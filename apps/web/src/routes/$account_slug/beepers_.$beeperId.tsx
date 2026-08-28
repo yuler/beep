@@ -93,7 +93,7 @@ function BeeperDetailPage() {
 	const [error, setError] = useState<string | null>(null);
 
 	const pingUrl = beeper.ping_token
-		? `${publicApiOrigin()}/api/v1/ping/${beeper.ping_token}`
+		? `${publicApiOrigin()}/api/v1/beeper_apps/heartbeat/ping/${beeper.ping_token}`
 		: null;
 
 	function handleCopyPing() {

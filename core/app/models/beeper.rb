@@ -37,10 +37,12 @@ class Beeper < ApplicationRecord
   scope :due, -> { active.where(next_run_at: ..Time.current) }
 
   class << self
-    def find_by_ping_token(token)
+    def find_by_ping_token(token, beeper_app_slug: nil)
       return nil if token.blank?
 
-      where("json_extract(signal_metadata, '$.ping_token') = ?", token).first
+      scope = where("json_extract(signal_metadata, '$.ping_token') = ?", token)
+      scope = scope.joins(:beeper_app).where(beeper_apps: { slug: beeper_app_slug }) if beeper_app_slug.present?
+      scope.first
     end
 
     def poll_due_now

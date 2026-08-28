@@ -120,7 +120,7 @@ Validation is enforced during catalog sync or custom app upload to ensure data i
 | SSL / TLS expiry   | schedule                | `OpenSSL::SSL` peer cert; alerts under N days remaining  |
 | Heartbeat (Snitch) | schedule + inbound ping | Reads `last_ping_at`; alerts when the window is exceeded |
 
-Heartbeat is not an outbound probe. It fits the same interface: the inbound `POST /ping/:token` endpoint only stamps `last_ping_at` on the Beeper, and the *scheduled* probe evaluates staleness locally. That endpoint is public and unauthenticated by nature (that is the product), so it needs rate limiting per token, an opaque high-entropy token, and no response body that leaks account information.
+Heartbeat is not an outbound probe. It fits the same interface: the inbound `POST /api/v1/beeper_apps/heartbeat/ping/:token` endpoint only stamps `last_ping_at` on the Beeper, and the *scheduled* probe evaluates staleness locally. That endpoint is public and unauthenticated by nature (that is the product), so it needs rate limiting per token, an opaque high-entropy token, and no response body that leaks account information.
 
 ---
 
