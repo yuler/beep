@@ -141,10 +141,28 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
     assert_equal 30, result.metrics["minutes_since_last_ping"]
   end
 
-  test "Heartbeat receiver reports alerting when no ping was ever received" do
+  test "SslExpiry receiver handles Basic Auth and IPv6 correctly" do
+    receiver = BeeperApp::Receivers::SslExpiry.new(config: { "hostname" => "https://user:pass@example.com:8443/path" })
+    assert_equal "example.com", receiver.send(:sanitize_hostname, "https://user:pass@example.com:8443/path")
+    assert_equal "2001:db8::1", receiver.send(:sanitize_hostname, "https://[2001:db8::1]:443/")
+  end
+
+  test "Heartbeat receiver reports ok when within initial grace period for new beeper" do
     result = BeeperApp::Receivers::Heartbeat.call(config: {
       "grace_period_minutes" => 15,
-      "last_ping_at" => nil
+      "last_ping_at" => nil,
+      "beeper_created_at" => 5.minutes.ago.iso8601
+    })
+
+    assert result.ok?
+    assert_match(/Waiting for first heartbeat/, result.title)
+  end
+
+  test "Heartbeat receiver reports alerting when no ping was received and past grace period" do
+    result = BeeperApp::Receivers::Heartbeat.call(config: {
+      "grace_period_minutes" => 15,
+      "last_ping_at" => nil,
+      "beeper_created_at" => 20.minutes.ago.iso8601
     })
 
     assert result.alerting?

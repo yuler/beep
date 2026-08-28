@@ -16,7 +16,8 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
       beeper_app: @beeper_app,
       title: "My Uptime",
       cron: "*/5 * * * *",
-      timezone: "UTC"
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
     )
 
     get "/api/v1/#{@account.slug}/beepers",
@@ -37,7 +38,8 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
       beeper_app: @beeper_app,
       title: "My Uptime",
       cron: "*/5 * * * *",
-      timezone: "UTC"
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
     )
 
     get "/api/v1/#{@account.slug}/beepers/#{beeper.id}",
@@ -77,7 +79,8 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
       beeper_app: @beeper_app,
       title: "Old Title",
       cron: "*/5 * * * *",
-      timezone: "UTC"
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
     )
 
     patch "/api/v1/#{@account.slug}/beepers/#{beeper.id}",
@@ -96,7 +99,8 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
       beeper_app: @beeper_app,
       title: "To Delete",
       cron: "*/5 * * * *",
-      timezone: "UTC"
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
     )
 
     assert_difference -> { @account.beepers.count }, -1 do
@@ -114,7 +118,8 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
       beeper_app: @beeper_app,
       title: "To Pause",
       cron: "*/5 * * * *",
-      timezone: "UTC"
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
     )
 
     post "/api/v1/#{@account.slug}/beepers/#{beeper.id}/pause",
@@ -140,7 +145,8 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
       beeper_app: @beeper_app,
       title: "Trigger Test",
       cron: "*/5 * * * *",
-      timezone: "UTC"
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
     )
 
     assert_enqueued_with(job: RunBeeperJob, queue: "signals") do

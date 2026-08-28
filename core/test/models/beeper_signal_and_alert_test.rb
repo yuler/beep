@@ -163,4 +163,82 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
       run.deliver_later
     end
   end
+
+  test "trigger_run! on a paused beeper preserves paused status after run completes" do
+    @beeper.pause!
+    assert @beeper.paused?
+
+    run = @beeper.trigger_run!
+    assert @beeper.reload.paused?
+
+    run.execute_now
+    assert @beeper.reload.paused?
+  end
+
+  test "notify_from! truncates long titles and messages to fit Beep constraints" do
+    long_title = "A" * 150
+    long_message = "B" * 3000
+    signal = BeeperApp::Signal.new(status: :alerting, title: long_title, message: long_message)
+
+    assert_difference -> { @account.beeps.count }, 1 do
+      @beeper.notify_from!(signal)
+    end
+
+    created_beep = @account.beeps.order(:created_at).last
+    assert_equal Beep::TITLE_MAX_LENGTH, created_beep.title.length
+    assert_equal Beep::BODY_MAX_LENGTH, created_beep.body.length
+  end
+
+  test "validates config inputs against beeper_app manifest inputs" do
+    manifest_app = BeeperApp.create!(
+      slug: "custom-probe",
+      version: "1.0.0",
+      manifest: {
+        "manifest_version" => 1,
+        "slug" => "custom-probe",
+        "name" => "Custom Probe",
+        "version" => "1.0.0",
+        "author" => "Beep",
+        "schedule" => { "default_cron" => "*/5 * * * *" },
+        "inputs" => [
+          { "name" => "endpoint", "label" => "Endpoint", "type" => "url", "required" => true },
+          { "name" => "retries", "label" => "Retries", "type" => "number", "min" => 1, "max" => 5 },
+          { "name" => "mode", "label" => "Mode", "type" => "enum", "options" => %w[ fast deep ] }
+        ]
+      }
+    )
+
+    # Missing required endpoint
+    invalid_beeper = Beeper.new(
+      account: @account,
+      beeper_app: manifest_app,
+      title: "Test Probe",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: {}
+    )
+    assert_not invalid_beeper.valid?
+    assert_includes invalid_beeper.errors[:config], "Endpoint is required"
+
+    # Number out of range
+    invalid_beeper.config = { "endpoint" => "https://example.com", "retries" => 10 }
+    assert_not invalid_beeper.valid?
+    assert_includes invalid_beeper.errors[:config], "Retries must be at most 5"
+
+    # Invalid enum
+    invalid_beeper.config = { "endpoint" => "https://example.com", "retries" => 3, "mode" => "invalid" }
+    assert_not invalid_beeper.valid?
+    assert_includes invalid_beeper.errors[:config], "Mode must be one of: fast, deep"
+
+    # Valid config
+    valid_beeper = Beeper.new(
+      account: @account,
+      beeper_app: manifest_app,
+      title: "Test Probe",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: { "endpoint" => "https://example.com/api", "retries" => 3, "mode" => "fast" }
+    )
+    assert valid_beeper.valid?
+  end
 end

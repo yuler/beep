@@ -28,6 +28,7 @@ class Beeper < ApplicationRecord
   validate :timezone_is_iana
   validate :validate_cron_expression
   validate :validate_notification_channels
+  validate :validate_config_inputs
 
   before_validation :assign_default_notification_channels
   before_validation :sync_next_run_at
@@ -54,7 +55,7 @@ class Beeper < ApplicationRecord
 
   def trigger_run!
     scheduled_for = Time.current
-    update!(status: :firing, next_run_at: nil)
+    update!(status: :firing, next_run_at: nil) if active?
 
     run = begin
       runs.create!(scheduled_for: scheduled_for, status: :pending)
@@ -150,6 +151,7 @@ class Beeper < ApplicationRecord
     if beeper_app&.webhook_ingest?
       cfg["last_ping_at"] = last_ping_at
       cfg["ping_token"] = ping_token
+      cfg["beeper_created_at"] = created_at&.utc&.iso8601
     end
     cfg
   end
@@ -167,10 +169,13 @@ class Beeper < ApplicationRecord
 
   def notify_from!(signal)
     channels = Array(notification_channels).presence || account.owner_user.notification_channels
+    title_text = (signal.title.presence || title).to_s.strip.truncate(Beep::TITLE_MAX_LENGTH)
+    body_text = signal.message.to_s.strip.truncate(Beep::BODY_MAX_LENGTH)
+
     account.beeps.create!(
       kind: :once,
-      title: signal.title.presence || title,
-      body: signal.message,
+      title: title_text,
+      body: body_text.presence,
       timezone: timezone,
       notification_channels: channels,
       beeper: self
@@ -231,6 +236,57 @@ class Beeper < ApplicationRecord
     invalid = Array(notification_channels) - User::NOTIFICATION_CHANNELS
     if invalid.any?
       errors.add(:notification_channels, "contains unsupported channels: #{invalid.join(', ')}")
+    end
+  end
+
+  def validate_config_inputs
+    return if beeper_app.nil?
+
+    inputs = beeper_app.inputs
+    return if inputs.blank?
+
+    cfg = (config || {}).deep_stringify_keys
+
+    inputs.each do |input|
+      name = input["name"]
+      value = cfg[name]
+      required = input["required"] == true
+      input_type = input["type"]
+      label = input["label"] || name
+
+      if required && (value.nil? || (value.is_a?(String) && value.strip.empty?))
+        errors.add(:config, "#{label} is required")
+        next
+      end
+
+      next if value.nil? || (value.is_a?(String) && value.strip.empty?)
+
+      case input_type
+      when "number"
+        num = Float(value, exception: false)
+        if num.nil?
+          errors.add(:config, "#{label} must be a number")
+        else
+          min = input["min"]
+          max = input["max"]
+          if min && num < min
+            errors.add(:config, "#{label} must be at least #{min}")
+          end
+          if max && num > max
+            errors.add(:config, "#{label} must be at most #{max}")
+          end
+        end
+      when "url"
+        uri = URI.parse(value.to_s) rescue nil
+        unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
+          errors.add(:config, "#{label} must be a valid http or https URL")
+        end
+      when "enum"
+        options = Array(input["options"]).map(&:to_s)
+        if options.present? && !options.include?(value.to_s)
+          errors.add(:config, "#{label} must be one of: #{options.join(', ')}")
+        end
+      end
     end
   end
 end

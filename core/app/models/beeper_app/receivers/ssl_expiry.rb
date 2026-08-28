@@ -82,10 +82,12 @@ class BeeperApp::Receivers::SslExpiry < BeeperApp::Receivers::Base
   private
 
   def sanitize_hostname(value)
-    # Strip URL schemes (http://, https://), paths, and port numbers if provided
-    cleaned = value.sub(%r{\A[a-zA-Z]+://}, "")
-    cleaned = cleaned.split("/").first || ""
-    cleaned.split(":").first || ""
+    url = value.to_s.strip
+    url = "https://#{url}" unless url.match?(%r{\A[a-zA-Z]+://})
+    parsed = URI.parse(url)
+    (parsed.host || "").delete_prefix("[").delete_suffix("]")
+  rescue URI::InvalidURIError
+    value.to_s.strip.sub(%r{\A[a-zA-Z]+://}, "").split("/").first.to_s.split(":").first.to_s
   end
 
   def fetch_peer_certificate(resolved_ip:, hostname:, port:)

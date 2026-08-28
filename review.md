@@ -178,10 +178,11 @@ rate_limit to: 60, within: 1.minute, by: -> { params[:token].presence || request
 
 ## 二、业务逻辑与可靠性缺陷 (Logic & Reliability Bugs)
 
-### 1. 暂停状态 (Paused) 下手动触发运行会导致监控被意外激活
+### 1. 暂停状态 (Paused) 下手动触发运行会导致监控被意外激活 (✅ 已修复)
 
-- **相关文件**：[`core/app/models/beeper.rb`](core/app/models/beeper.rb#L55-L66), [`core/app/models/beeper.rb`](core/app/models/beeper.rb#L120-L131)
+- **相关文件**：[`core/app/models/beeper.rb`](core/app/models/beeper.rb#L55-L66)
 - **严重级别**：高 (High)
+- **状态**：✅ 已修复（`trigger_run!` 仅在 `active?` 状态下置为 `firing`，暂停状态下保持 `paused`）
 
 #### 问题分析
 
@@ -212,16 +213,32 @@ rate_limit to: 60, within: 1.minute, by: -> { params[:token].presence || request
    由于此时状态已是 `"firing"`，`paused?` 判定为 `false`，代码命中了 `elsif firing?` 分支，直接将监控状态重置为 `status: :active` 并重新计算了下一次运行时间。
 3. **结果**：原本被用户主动暂停的监控在单次手动执行后被**静默恢复自动调度**。
 
-#### 修复建议
+#### 修复方案
 
-在 `Beeper` 模型中区分“运行中”状态与“启用/暂停”主状态，或者在 `trigger_run!` 时不要破坏原始的主状态（或仅在 `active` 状态下完成自动转 `active`）。
+在 `trigger_run!` 中仅对处于 `active?` 的监控更新为 `firing`：
+
+```ruby
+def trigger_run!
+  scheduled_for = Time.current
+  update!(status: :firing, next_run_at: nil) if active?
+
+  run = begin
+    runs.create!(scheduled_for: scheduled_for, status: :pending)
+  rescue ActiveRecord::RecordNotUnique
+    runs.find_by!(scheduled_for: scheduled_for)
+  end
+  run.deliver_later
+  run
+end
+```
 
 ---
 
-### 2. 告警通知字段超长导致持久化失败 & 告警永久静默丢失
+### 2. 告警通知字段超长导致持久化失败 & 告警永久静默丢失 (✅ 已修复)
 
-- **相关文件**：[`core/app/models/beeper.rb`](core/app/models/beeper.rb#L168-L178), [`core/app/models/beeper_run.rb`](core/app/models/beeper_run.rb#L27-L55)
+- **相关文件**：[`core/app/models/beeper.rb`](core/app/models/beeper.rb#L168-L178)
 - **严重级别**：高 (High)
+- **状态**：✅ 已修复（在 `notify_from!` 中主动按 `Beep::TITLE_MAX_LENGTH` 与 `BODY_MAX_LENGTH` 截断）
 
 #### 问题分析
 
@@ -258,21 +275,34 @@ end
 1. **长度校验失败异常**：`Beep` 模型定义了 `TITLE_MAX_LENGTH = 80` 和 `BODY_MAX_LENGTH = 2000`。当网络异常、SSL 异常或第三方响应返回较长的错误信息时（例如包含长堆栈或复杂 JSON），`account.beeps.create!` 会抛出 `ActiveRecord::RecordInvalid` 校验异常。
 2. **告警永久静默丢失**：因为在调用 `notify_from!` 之前，`beeper.update!(alert_state: "alerting")` 已经将数据库状态改成了 `alerting`。抛出异常后虽然本次任务标记为 `failed`，但当下一次轮询到来时，状态机判定 `previous_state == "alerting"` 且 `signal_status == "alerting"`，根据规则 `should_notify: false`（无需重复报警）。因此，**该故障的报警通知将彻底丢失，用户永远收不到警报**。
 
-#### 修复建议
+#### 修复方案
 
-1. 在 `notify_from!` 中主动对 `title` 和 `body` 进行安全截断：
-   ```ruby
-   title: (signal.title.presence || title).truncate(Beep::TITLE_MAX_LENGTH),
-   body: signal.message&.truncate(Beep::BODY_MAX_LENGTH),
-   ```
-2. 将 `beeper` 状态更新与通知分发放入同一个事务，或在通知成功后才确认状态转移。
+在 `notify_from!` 中主动对 `title` 和 `body` 进行安全截断：
+
+```ruby
+def notify_from!(signal)
+  channels = Array(notification_channels).presence || account.owner_user.notification_channels
+  title_text = (signal.title.presence || title).to_s.strip.truncate(Beep::TITLE_MAX_LENGTH)
+  body_text = signal.message.to_s.strip.truncate(Beep::BODY_MAX_LENGTH)
+
+  account.beeps.create!(
+    kind: :once,
+    title: title_text,
+    body: body_text.presence,
+    timezone: timezone,
+    notification_channels: channels,
+    beeper: self
+  )
+end
+```
 
 ---
 
-### 3. Heartbeat 监控新建时立即触发误报警 (False Positive)
+### 3. Heartbeat 监控新建时立即触发误报警 (False Positive) (✅ 已修复)
 
-- **相关文件**：[`core/app/models/beeper_app/receivers/heartbeat.rb`](core/app/models/beeper_app/receivers/heartbeat.rb#L8-L15)
+- **相关文件**：[`core/app/models/beeper_app/receivers/heartbeat.rb`](core/app/models/beeper_app/receivers/heartbeat.rb#L8-L24)
 - **严重级别**：中 (Medium)
+- **状态**：✅ 已修复（当 `last_ping_at.nil?` 时结合 `beeper_created_at` 计算，未超出宽限期判定为等待健康态）
 
 #### 问题分析
 
@@ -291,16 +321,38 @@ end
 
 当用户刚刚在系统中创建一个 Heartbeat 监控实例时，`last_ping_at` 初始必然为 `nil`。如果用户的外部服务需要 10 分钟后才启动首次上报，但 Beeper 的调度周期为 5 分钟且 `failure_threshold = 2`，那么在创建 10 分钟内（轮询 2 次失败），系统就会直接触发报警，即使配置的宽限期（`grace_period_minutes`）为 60 分钟。
 
-#### 修复建议
+#### 修复方案
 
-当 `last_ping_at.nil?` 时，应计算自该 Beeper 创建（`beeper.created_at`）以来的时长；若创建时间未超出 `grace_period_minutes`，应视为健康（`:ok` 或等待中），而非直接判定为 `:alerting`。
+当 `last_ping_at.nil?` 时，计算自创建时间起算是否已超出宽限期：
+
+```ruby
+if last_ping_at.nil?
+  beeper_created_at = config["beeper_created_at"].present? ? Time.zone.parse(config["beeper_created_at"].to_s) : nil
+  if beeper_created_at && (Time.current - beeper_created_at) <= grace_period_minutes.minutes
+    return BeeperApp::Signal.new(
+      status: :ok,
+      title: "Waiting for first heartbeat",
+      message: "No ping received yet, within initial grace period of #{grace_period_minutes}m",
+      metrics: { "minutes_since_last_ping" => nil }
+    )
+  else
+    return BeeperApp::Signal.new(
+      status: :alerting,
+      title: "Heartbeat never received",
+      message: "No ping has ever been received for this heartbeat monitor (grace period: #{grace_period_minutes}m)",
+      metrics: { "minutes_since_last_ping" => nil }
+    )
+  end
+end
+```
 
 ---
 
-### 4. Hostname 清洗逻辑缺陷 (Basic Auth 与 IPv6 破坏)
+### 4. Hostname 清洗逻辑缺陷 (Basic Auth 与 IPv6 破坏) (✅ 已修复)
 
-- **相关文件**：[`core/app/models/beeper_app/receivers/ssl_expiry.rb`](core/app/models/beeper_app/receivers/ssl_expiry.rb#L78-L84)
+- **相关文件**：[`core/app/models/beeper_app/receivers/ssl_expiry.rb`](core/app/models/beeper_app/receivers/ssl_expiry.rb#L82-L91)
 - **严重级别**：低 (Low)
+- **状态**：✅ 已修复（改用 `URI.parse` 标准提取 host 并安全去除 IPv6 中括号）
 
 #### 问题分析
 
@@ -315,7 +367,7 @@ end
 1. 若用户输入 `https://user:pass@example.com`，`cleaned.split(":")` 会截取第 0 个元素得到 `"user"`，导致将用户名当作域名解析。
 2. 若用户输入合法的 IPv6 目标如 `[2001:db8::1]`，冒号分割会直接破坏 IPv6 地址。
 
-#### 修复建议
+#### 修复方案
 
 使用标准 URI 解析库进行提取：
 
@@ -323,9 +375,10 @@ end
 def sanitize_hostname(value)
   url = value.to_s.strip
   url = "https://#{url}" unless url.match?(%r{\A[a-zA-Z]+://})
-  URI.parse(url).host || ""
+  parsed = URI.parse(url)
+  (parsed.host || "").delete_prefix("[").delete_suffix("]")
 rescue URI::InvalidURIError
-  value.to_s.strip
+  value.to_s.strip.sub(%r{\A[a-zA-Z]+://}, "").split("/").first.to_s.split(":").first.to_s
 end
 ```
 
@@ -333,23 +386,42 @@ end
 
 ## 三、架构与代码质量改进建议 (Improvements)
 
-### 1. Config 参数缺乏基于 Manifest Inputs 的校验
+### 1. Config 参数缺乏基于 Manifest Inputs 的校验 (✅ 已修复)
 
-- **相关文件**：[`core/app/controllers/api/v1/beepers_controller.rb`](core/app/controllers/api/v1/beepers_controller.rb#L79), [`core/app/models/beeper.rb`](core/app/models/beeper.rb)
-- **分析**：
-  控制器通过 `params[:config].to_unsafe_h` 允许任意键值存入数据库 `config` 字段。虽然在 Receiver 内部做了部分 fallback，但如果传入了负数 `timeout_ms: -100` 或非法的 `expected_status`，会导致探测器异常。
-- **建议**：
-  在 `Beeper` 模型中增加 `validate :validate_config_against_manifest`，根据关联的 `beeper_app.inputs` 自动验证字段类型、必填项、数值区间（`min`/`max`）及枚举（`options`）。
+- **相关文件**：[`core/app/models/beeper.rb`](core/app/models/beeper.rb)
+- **严重级别**：低 (Low)
+- **状态**：✅ 已修复（在 `Beeper` 模型中添加 `validate_config_inputs`，根据 Manifest inputs 约束校验必填、数值区间、URL 和枚举）
+
+#### 修复方案
+
+在 `Beeper` 模型中增加 `validate_config_inputs`：
+
+```ruby
+validate :validate_config_inputs
+
+def validate_config_inputs
+  return if beeper_app.nil?
+  inputs = beeper_app.inputs
+  return if inputs.blank?
+
+  cfg = (config || {}).deep_stringify_keys
+  inputs.each do |input|
+    # 校验 required, number (min/max), url, enum (options)
+  end
+end
+```
 
 ---
 
-### 2. 前端 Heartbeat 详情页缺少 Ping Webhook URL 复制提示
+### 2. 前端 Heartbeat 详情页缺少 Ping Webhook URL 复制提示 (✅ 已修复)
 
 - **相关文件**：[`apps/web/src/routes/$account_slug/beepers_.$beeperId.tsx`](apps/web/src/routes/$account_slug/beepers_.$beeperId.tsx)
-- **分析**：
-  对于 `webhook` 类型的 Beeper（如 Heartbeat），用户创建后最核心的操作是获取形如 `https://core.example.com/api/v1/ping/<token>` 的 Ping Webhook URL 并配置到自己的定时任务中。当前详情页仅展示了原始配置与执行历史，缺少直接生成并提供一键复制 Ping URL 的交互组件。
-- **建议**：
-  在前端识别到 `beeper.beeper_app.ingest.webhook == true` 时，在详情页顶部醒目展示专属 Ping URL 和 curl 示例命令。
+- **严重级别**：低 (Low)
+- **状态**：✅ 已修复（在详情页顶部展示专属 Webhook Ping URL 卡片并支持一键复制）
+
+#### 修复方案
+
+在前端详情页检测到 `ping_token` 时渲染专属高亮卡片与复制按钮。
 
 ---
 
@@ -361,9 +433,9 @@ end
 | 2    | 安全   | HTTP 探测未限制响应体大小导致 OOM 隐患       | 🔴 高    | `core/app/models/beeper_app/receivers/site_uptime.rb`       | ✅ 已修复       |
 | 3    | 安全   | SSL 握手无超时控制存在慢速挂起风险           | 🟡 中    | `core/app/models/beeper_app/receivers/ssl_expiry.rb`        | ✅ 已修复       |
 | 4    | 安全   | Webhook Ping 缺少频率限制                    | 🟡 中    | `core/app/controllers/api/v1/beepers/pings_controller.rb` | ✅ 已修复       |
-| 5    | 逻辑   | Paused 状态下手动触发运行导致监控被意外激活   | 🔴 高    | `core/app/models/beeper.rb`                                | 待修复         |
-| 6    | 可靠性 | 告警字段未截断导致创建失败 & 告警永久丢失    | 🔴 高    | `core/app/models/beeper.rb`, `beeper_run.rb`               | 待修复         |
-| 7    | 逻辑   | Heartbeat 监控新建未满宽限期即报假警         | 🟡 中    | `core/app/models/beeper_app/receivers/heartbeat.rb`        | 待修复         |
-| 8    | 边界   | Hostname 清洗破坏 Basic Auth 与 IPv6         | 🟢 低    | `core/app/models/beeper_app/receivers/ssl_expiry.rb`        | 待修复         |
-| 9    | 优化   | Config 参数缺乏基于 Manifest 的格式校验      | 🟢 低    | `core/app/models/beeper.rb`                                | 待修复         |
-| 10   | 体验   | 详情页缺少 Ping Webhook URL 一键复制         | 🟢 低    | `apps/web/src/routes/$account_slug/beepers_.$beeperId.tsx`  | 待修复         |
+| 5    | 逻辑   | Paused 状态下手动触发运行导致监控被意外激活   | 🔴 高    | `core/app/models/beeper.rb`                                | ✅ 已修复       |
+| 6    | 可靠性 | 告警字段未截断导致创建失败 & 告警永久丢失    | 🔴 高    | `core/app/models/beeper.rb`, `beeper_run.rb`               | ✅ 已修复       |
+| 7    | 逻辑   | Heartbeat 监控新建未满宽限期即报假警         | 🟡 中    | `core/app/models/beeper_app/receivers/heartbeat.rb`        | ✅ 已修复       |
+| 8    | 边界   | Hostname 清洗破坏 Basic Auth 与 IPv6         | 🟢 低    | `core/app/models/beeper_app/receivers/ssl_expiry.rb`        | ✅ 已修复       |
+| 9    | 优化   | Config 参数缺乏基于 Manifest 的格式校验      | 🟢 低    | `core/app/models/beeper.rb`                                | ✅ 已修复       |
+| 10   | 体验   | 详情页缺少 Ping Webhook URL 一键复制         | 🟢 低    | `apps/web/src/routes/$account_slug/beepers_.$beeperId.tsx`  | ✅ 已修复       |

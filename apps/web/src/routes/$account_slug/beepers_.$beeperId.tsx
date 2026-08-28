@@ -4,13 +4,28 @@ import {
 	notFound,
 	useRouter,
 } from "@tanstack/react-router";
-import { ChevronRight, Pause, Play, Trash2 } from "lucide-react";
+import {
+	Check,
+	ChevronRight,
+	Copy,
+	Pause,
+	Play,
+	Trash2,
+	Webhook,
+} from "lucide-react";
 import { useState } from "react";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { publicApiOrigin } from "@/config";
 import {
 	type BeeperRun,
 	deleteBeeper,
@@ -74,7 +89,19 @@ function BeeperDetailPage() {
 	const [deleting, setDeleting] = useState(false);
 	const [triggering, setTriggering] = useState(false);
 	const [togglingStatus, setTogglingStatus] = useState(false);
+	const [hasCopiedPing, setHasCopiedPing] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	const pingUrl = beeper.ping_token
+		? `${publicApiOrigin()}/api/v1/ping/${beeper.ping_token}`
+		: null;
+
+	function handleCopyPing() {
+		if (!pingUrl) return;
+		void navigator.clipboard.writeText(pingUrl);
+		setHasCopiedPing(true);
+		setTimeout(() => setHasCopiedPing(false), 2000);
+	}
 
 	async function handleTrigger() {
 		setTriggering(true);
@@ -245,6 +272,46 @@ function BeeperDetailPage() {
 					<p className="text-sm text-destructive" role="alert">
 						{error}
 					</p>
+				) : null}
+
+				{pingUrl ? (
+					<Card className="border-primary/25 bg-primary/5">
+						<CardHeader className="pb-3">
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<div className="flex items-center gap-2">
+									<Webhook className="size-4 text-primary" />
+									<CardTitle className="text-base">Webhook Ping URL</CardTitle>
+								</div>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleCopyPing}
+									className="gap-1.5 font-normal"
+								>
+									{hasCopiedPing ? (
+										<>
+											<Check className="size-3.5 text-green-500" />
+											<span>Copied</span>
+										</>
+									) : (
+										<>
+											<Copy className="size-3.5" />
+											<span>Copy URL</span>
+										</>
+									)}
+								</Button>
+							</div>
+							<CardDescription className="text-xs">
+								Send an HTTP POST request to this endpoint after each job run or
+								backup.
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="pt-0">
+							<div className="rounded-md bg-muted/60 px-3 py-2 font-mono text-xs text-foreground select-all break-all">
+								{pingUrl}
+							</div>
+						</CardContent>
+					</Card>
 				) : null}
 
 				<div className="grid gap-6 md:grid-cols-2">
