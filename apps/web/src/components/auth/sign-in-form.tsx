@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { startSession } from "@/lib/api/session";
 import { safeReturnTo } from "@/lib/auth/return-to";
+import { useTranslation } from "@/lib/i18n";
 
 export function SignInForm({
 	idPrefix = "sign",
@@ -22,6 +23,7 @@ export function SignInForm({
 	stayInPlace?: boolean;
 	onSuccess?: (info: { email: string }) => void;
 }) {
+	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const [email, setEmail] = useState(initialEmail);
 	const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,9 @@ export function SignInForm({
 				});
 			}
 		} catch (err) {
-			setError(err instanceof ApiError ? err.message : "Something went wrong.");
+			setError(
+				err instanceof ApiError ? err.message : t("errors.something_went_wrong"),
+			);
 		} finally {
 			setPending(false);
 		}
@@ -59,7 +63,7 @@ export function SignInForm({
 	return (
 		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
 			<div className="flex flex-col gap-2">
-				<Label htmlFor={emailId}>Email</Label>
+				<Label htmlFor={emailId}>{t("auth.email")}</Label>
 				<Input
 					id={emailId}
 					name="email"
@@ -68,7 +72,7 @@ export function SignInForm({
 					required
 					value={email}
 					onChange={(event) => setEmail(event.target.value)}
-					placeholder="you@example.com"
+					placeholder={t("auth.email_placeholder")}
 				/>
 			</div>
 			{error ? (
@@ -77,7 +81,7 @@ export function SignInForm({
 				</p>
 			) : null}
 			<Button type="submit" disabled={pending} className="w-full">
-				{pending ? "Sending…" : "Continue"}
+				{pending ? t("auth.sending") : t("auth.continue")}
 			</Button>
 		</form>
 	);

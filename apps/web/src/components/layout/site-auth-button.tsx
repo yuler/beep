@@ -6,13 +6,14 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { resolveDashboardTarget } from "@/lib/auth/account";
 import { navigateForTarget } from "@/lib/auth/guards";
 import { useMe } from "@/lib/auth/use-me";
+import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type ButtonProps = ComponentProps<typeof Button>;
 
 export function SiteAuthButton({
-	signInLabel = "Sign in",
-	dashboardLabel = "Dashboard",
+	signInLabel,
+	dashboardLabel,
 	size,
 	variant,
 	className,
@@ -23,15 +24,18 @@ export function SiteAuthButton({
 	variant?: ButtonProps["variant"];
 	className?: string;
 }) {
+	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const { me } = useMe();
+	const resolvedSignInLabel = signInLabel ?? t("auth.sign_in");
+	const resolvedDashboardLabel = dashboardLabel ?? t("common.dashboard");
 	const target =
 		me && me.accounts.length > 0 ? resolveDashboardTarget(me.accounts) : null;
 
 	if (!target || target.kind === "sign") {
 		return (
 			<SignInDialog
-				label={signInLabel}
+				label={resolvedSignInLabel}
 				size={size}
 				variant={variant}
 				className={className}
@@ -46,7 +50,7 @@ export function SiteAuthButton({
 				params={{ account_slug: target.slug }}
 				className={cn(buttonVariants({ size, variant }), className)}
 			>
-				{dashboardLabel}
+				{resolvedDashboardLabel}
 			</Link>
 		);
 	}
@@ -57,7 +61,7 @@ export function SiteAuthButton({
 				to="/accounts"
 				className={cn(buttonVariants({ size, variant }), className)}
 			>
-				{dashboardLabel}
+				{resolvedDashboardLabel}
 			</Link>
 		);
 	}
@@ -71,7 +75,7 @@ export function SiteAuthButton({
 				void navigateForTarget(navigate, target);
 			}}
 		>
-			{dashboardLabel}
+			{resolvedDashboardLabel}
 		</Button>
 	);
 }

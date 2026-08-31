@@ -9,8 +9,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { updateSettings } from "@/lib/api/settings";
+import { useTranslation } from "@/lib/i18n";
+import { channelLabel, translateError } from "@/lib/i18n-labels";
 import {
-	CHANNEL_LABELS,
 	NOTIFICATION_CHANNELS,
 	type NotificationChannel,
 	toggleChannel,
@@ -25,6 +26,7 @@ export function NotificationChannelSettings({
 	channels: NotificationChannel[];
 	onChanged: () => Promise<void> | void;
 }) {
+	const { t, dict } = useTranslation();
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +39,11 @@ export function NotificationChannelSettings({
 			});
 			await onChanged();
 		} catch (err) {
-			setError(err instanceof ApiError ? err.message : "Something went wrong.");
+			setError(
+				err instanceof ApiError
+					? err.message
+					: translateError(dict, t, err),
+			);
 		} finally {
 			setPending(false);
 		}
@@ -46,15 +52,14 @@ export function NotificationChannelSettings({
 	return (
 		<Card className="max-w-lg">
 			<CardHeader>
-				<CardTitle>Notifications</CardTitle>
+				<CardTitle>{t("settings.notifications_title")}</CardTitle>
 				<CardDescription>
-					How you receive due beeps in this workspace. You can turn email off
-					from the link in each reminder.
+					{t("settings.notifications_description")}
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3">
 				<fieldset className="flex flex-col gap-2" disabled={pending}>
-					<legend className="sr-only">Channels</legend>
+					<legend className="sr-only">{t("beeps.channels")}</legend>
 					{NOTIFICATION_CHANNELS.map((channel) => (
 						<Label key={channel} className="font-normal">
 							<input
@@ -66,7 +71,7 @@ export function NotificationChannelSettings({
 									void setChannel(channel, event.target.checked)
 								}
 							/>
-							{CHANNEL_LABELS[channel]}
+							{channelLabel(t, channel)}
 						</Label>
 					))}
 				</fieldset>

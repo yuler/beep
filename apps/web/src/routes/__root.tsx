@@ -7,19 +7,18 @@ import {
 	useLocation,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo } from "react";
 import { NotFound } from "@/components/not-found";
 import { VersionUpdateDialog } from "@/components/version-update-dialog";
 import { fetchMeOrNull } from "@/lib/api/session";
 import { logBuildInfo } from "@/lib/build-info";
 import {
-	buildLocalizedUrl,
+	buildLocalizedPath,
 	DEFAULT_LOCALE,
 	extractLocaleFromPath,
-	getStoredLocale,
 	I18nContext,
 	type Locale,
-	saveLocalePreference,
+	resolveLocaleFromUrl,
 	type TranslationKey,
 } from "@/lib/i18n";
 
@@ -53,7 +52,9 @@ export const Route = createRootRoute({
 		meta: [
 			{ charSet: "utf-8" },
 			{ name: "viewport", content: "width=device-width, initial-scale=1" },
-			{ title: "beep" },
+			{
+				title: translate(getDictionary(DEFAULT_LOCALE), "term.beep"),
+			},
 		],
 		links: [{ rel: "stylesheet", href: appCss }],
 		scripts: [{ children: themeBootScript }],
@@ -65,40 +66,33 @@ export const Route = createRootRoute({
 
 function RootComponent() {
 	const location = useLocation();
-	const pathLocale = extractLocaleFromPath(location.pathname).locale;
-
-	const [locale, setLocaleState] = useState<Locale>(
-		() => pathLocale ?? getStoredLocale(),
-	);
 
 	useEffect(() => {
 		logBuildInfo();
 	}, []);
 
+	const currentLocale: Locale = useMemo(() => {
+		return resolveLocaleFromUrl(location.pathname);
+	}, [location.pathname]);
+
 	useEffect(() => {
-		const current = pathLocale ?? getStoredLocale();
-		setLocaleState(current);
-		document.documentElement.lang = current;
-	}, [pathLocale]);
+		document.documentElement.lang = currentLocale;
+	}, [currentLocale]);
 
 	const dict = useMemo(() => {
-		return getDictionary(locale);
-	}, [locale]);
+		return getDictionary(currentLocale);
+	}, [currentLocale]);
 
 	const i18nValue = useMemo(() => {
 		return {
-			locale,
+			locale: currentLocale,
 			dict,
 			t: (key: TranslationKey, params?: Record<string, string | number>) =>
 				translate(dict, key, params),
-			setLocale: (newLocale: Locale) => {
-				setLocaleState(newLocale);
-				saveLocalePreference(newLocale);
-			},
 			getLocalizedPath: (pathname: string, targetLocale?: Locale) =>
-				buildLocalizedUrl(pathname, targetLocale ?? locale),
+				buildLocalizedPath(pathname, targetLocale ?? currentLocale),
 		};
-	}, [locale, dict]);
+	}, [currentLocale, dict]);
 
 	return (
 		<I18nContext.Provider value={i18nValue}>

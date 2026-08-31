@@ -3,8 +3,10 @@ import { Activity, Calendar, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Beep } from "@/lib/api/beeps";
 import { beepStats } from "@/lib/beep-stats";
+import { useTranslation } from "@/lib/i18n";
 
 export function BeepStats({ beeps }: { beeps: Beep[] }) {
+	const { t } = useTranslation();
 	const stats = beepStats(beeps);
 
 	return (
@@ -16,7 +18,7 @@ export function BeepStats({ beeps }: { beeps: Beep[] }) {
 				<CardContent className="flex items-center justify-between p-3.5 sm:p-4">
 					<div className="flex flex-col gap-0.5">
 						<span className="text-xs font-medium text-muted-foreground">
-							Active
+							{t("beeps.active")}
 						</span>
 						<span className="font-heading text-xl font-bold tabular-nums tracking-tight sm:text-2xl">
 							{stats.active}
@@ -35,7 +37,7 @@ export function BeepStats({ beeps }: { beeps: Beep[] }) {
 				<CardContent className="flex items-center justify-between p-3.5 sm:p-4">
 					<div className="flex flex-col gap-0.5">
 						<span className="text-xs font-medium text-muted-foreground">
-							Due today
+							{t("beeps.due_today")}
 						</span>
 						<span className="font-heading text-xl font-bold tabular-nums tracking-tight sm:text-2xl">
 							{stats.dueToday}
@@ -54,7 +56,7 @@ export function BeepStats({ beeps }: { beeps: Beep[] }) {
 				<CardContent className="flex items-center justify-between p-3.5 sm:p-4">
 					<div className="flex flex-col gap-0.5">
 						<span className="text-xs font-medium text-muted-foreground">
-							Firing
+							{t("beeps.firing")}
 						</span>
 						<span className="font-heading text-xl font-bold tabular-nums tracking-tight sm:text-2xl">
 							{stats.firing}

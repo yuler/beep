@@ -46,7 +46,65 @@ export function extractLocaleFromPath(pathname: string): {
 }
 
 /**
- * Determines current active locale purely from URL pathname and browser settings (no cookies)
+ * Low-level URL de-localization function for TanStack Router `rewrite.input`
+ * Maps localized URLs e.g. `/zh/about` -> `/about`, `/zh` -> `/`
+ */
+export function deLocalizeUrl(url: URL): URL {
+	const newUrl = new URL(url.href);
+	const segments = newUrl.pathname.split("/").filter(Boolean);
+	const first = segments[0]?.toLowerCase();
+
+	if (first === "zh" || first === "zh-cn" || first === "zh_cn") {
+		segments.shift();
+		newUrl.pathname = "/" + segments.join("/");
+	}
+	return newUrl;
+}
+
+/**
+ * Low-level URL localization function for TanStack Router `rewrite.output`
+ * Ensures /zh prefix is preserved consistently in SSR and client
+ */
+export function localizeUrl(url: URL, targetLocale?: Locale): URL {
+	const newUrl = new URL(url.href);
+
+	// Bypass non-app routes / static assets
+	if (
+		newUrl.pathname.startsWith("/api") ||
+		newUrl.pathname.startsWith("/up") ||
+		newUrl.pathname === "/version.json" ||
+		newUrl.pathname === "/service-worker.js"
+	) {
+		return newUrl;
+	}
+
+	const segments = newUrl.pathname.split("/").filter(Boolean);
+	const first = segments[0]?.toLowerCase();
+
+	const isTargetZh =
+		targetLocale === "zh" ||
+		first === "zh" ||
+		first === "zh-cn" ||
+		first === "zh_cn" ||
+		(typeof window !== "undefined" &&
+			window.location.pathname.toLowerCase().startsWith("/zh"));
+
+	if (first === "zh" || first === "zh-cn" || first === "zh_cn") {
+		segments.shift();
+	}
+
+	if (isTargetZh) {
+		newUrl.pathname =
+			"/zh" + (segments.length > 0 ? "/" + segments.join("/") : "");
+	} else {
+		newUrl.pathname = "/" + segments.join("/");
+	}
+
+	return newUrl;
+}
+
+/**
+ * Determines current active locale purely from URL pathname (no cookies)
  */
 export function resolveLocaleFromUrl(pathname: string): Locale {
 	const { locale: pathLocale } = extractLocaleFromPath(pathname);
@@ -54,18 +112,11 @@ export function resolveLocaleFromUrl(pathname: string): Locale {
 		return pathLocale;
 	}
 
-	if (typeof window !== "undefined") {
-		const navLang = navigator.language;
-		if (navLang.startsWith("zh")) {
-			return "zh";
-		}
-	}
-
 	return DEFAULT_LOCALE;
 }
 
 /**
- * Builds localized URL based on target locale
+ * Builds localized URL path based on target locale
  */
 export function buildLocalizedPath(
 	pathname: string,

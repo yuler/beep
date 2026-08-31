@@ -16,11 +16,13 @@ import { cn } from "@/lib/utils";
 
 /** Shown while client-only auth routes probe `session_id` on Core. */
 export function AuthPending() {
+	const { t } = useTranslation();
+
 	return (
 		<div className="flex min-h-svh items-center justify-center bg-background">
 			<Loader2
 				className="size-6 animate-spin text-muted-foreground"
-				aria-label="Checking session"
+				aria-label={t("auth.checking_session")}
 			/>
 		</div>
 	);
@@ -57,10 +59,16 @@ export function AuthCard({
 	children: ReactNode;
 	className?: string;
 }) {
+	const { t } = useTranslation();
+
 	return (
 		<Card className={cn("border border-border shadow-xs", className)}>
 			<CardHeader className="flex flex-col items-center gap-2 text-center">
-				<Link to="/" aria-label="beep" className="mb-1 text-foreground">
+				<Link
+					to="/"
+					aria-label={t("term.beep")}
+					className="mb-1 text-foreground"
+				>
 					<span className="inline-flex size-10 items-center justify-center rounded-lg bg-foreground text-background">
 						<LogoMark className="size-6" />
 					</span>

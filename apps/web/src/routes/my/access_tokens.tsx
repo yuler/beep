@@ -45,6 +45,7 @@ import {
 } from "@/lib/api/access-tokens";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
+import { useTranslation } from "@/lib/i18n";
 
 const myRoute = getRouteApi("/my");
 
@@ -54,6 +55,7 @@ export const Route = createFileRoute("/my/access_tokens")({
 });
 
 function AccessTokensPage() {
+	const { t } = useTranslation();
 	const { account } = myRoute.useRouteContext();
 	const data = Route.useLoaderData();
 	const router = useRouter();
@@ -87,7 +89,7 @@ function AccessTokensPage() {
 			setCreateError(
 				err instanceof ApiError
 					? err.message
-					: "Failed to create API access token",
+					: t("errors.create_token_failed"),
 			);
 		} finally {
 			setIsCreating(false);
@@ -95,11 +97,7 @@ function AccessTokensPage() {
 	}
 
 	async function handleDelete(id: string) {
-		if (
-			!confirm(
-				"Are you sure you want to revoke this API token? Any application using it will lose access immediately.",
-			)
-		) {
+		if (!confirm(t("my.revoke_confirm"))) {
 			return;
 		}
 
@@ -108,7 +106,9 @@ function AccessTokensPage() {
 			await deleteAccessToken(id);
 			await router.invalidate();
 		} catch (err) {
-			alert(err instanceof ApiError ? err.message : "Failed to revoke token");
+			alert(
+				err instanceof ApiError ? err.message : t("errors.revoke_token_failed"),
+			);
 		} finally {
 			setDeletingId(null);
 		}
@@ -126,12 +126,12 @@ function AccessTokensPage() {
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: "Home",
+						label: t("nav.home"),
 						to: "/$account_slug",
 						params: { account_slug: account.slug },
 					},
-					{ label: "Personal Settings" },
-					{ label: "API Access Tokens", isCurrentPage: true },
+					{ label: t("my.personal_settings") },
+					{ label: t("my.api_tokens_breadcrumb"), isCurrentPage: true },
 				]}
 			/>
 
@@ -139,11 +139,10 @@ function AccessTokensPage() {
 				<div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 					<div>
 						<h1 className="font-heading text-2xl font-semibold tracking-tight">
-							Personal API Access Tokens
+							{t("my.api_tokens_title")}
 						</h1>
 						<p className="mt-1 text-sm text-muted-foreground">
-							Create and manage tokens to access the Beep API from AI agents,
-							CLI tools, Raycast, and scripts.
+							{t("my.api_tokens_description")}
 						</p>
 					</div>
 
@@ -159,7 +158,7 @@ function AccessTokensPage() {
 					>
 						<DialogTrigger render={<Button className="gap-2" />}>
 							<Plus className="size-4" />
-							Generate Token
+							{t("my.generate_token")}
 						</DialogTrigger>
 
 						<DialogContent className="sm:max-w-md">
@@ -168,11 +167,10 @@ function AccessTokensPage() {
 									<DialogHeader>
 										<DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500">
 											<ShieldCheck className="size-5" />
-											Token Generated Successfully
+											{t("my.token_generated")}
 										</DialogTitle>
 										<DialogDescription>
-											Make sure to copy your personal access token now. You
-											won't be able to see it again!
+											{t("my.token_copy_warning")}
 										</DialogDescription>
 									</DialogHeader>
 
@@ -191,12 +189,12 @@ function AccessTokensPage() {
 											{hasCopied ? (
 												<>
 													<Check className="size-4 text-emerald-600" />
-													Copied
+													{t("common.copied")}
 												</>
 											) : (
 												<>
 													<Copy className="size-4" />
-													Copy
+													{t("common.copy")}
 												</>
 											)}
 										</Button>
@@ -211,17 +209,16 @@ function AccessTokensPage() {
 												setCreatedToken(null);
 											}}
 										>
-											Done
+											{t("common.done")}
 										</Button>
 									</DialogFooter>
 								</>
 							) : (
 								<form onSubmit={handleCreate} className="space-y-4">
 									<DialogHeader>
-										<DialogTitle>Generate New Access Token</DialogTitle>
+										<DialogTitle>{t("my.generate_new_token")}</DialogTitle>
 										<DialogDescription>
-											Tokens authenticate as you and can access your workspaces
-											according to the permission granted.
+											{t("my.token_auth_description")}
 										</DialogDescription>
 									</DialogHeader>
 
@@ -235,10 +232,12 @@ function AccessTokensPage() {
 									) : null}
 
 									<div className="space-y-2">
-										<Label htmlFor="token-description">Description</Label>
+										<Label htmlFor="token-description">
+											{t("common.description")}
+										</Label>
 										<Input
 											id="token-description"
-											placeholder="What's this token for?"
+											placeholder={t("my.token_description_placeholder")}
 											value={description}
 											onChange={(e) => setDescription(e.target.value)}
 											required
@@ -247,7 +246,9 @@ function AccessTokensPage() {
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="token-permission">Permission</Label>
+										<Label htmlFor="token-permission">
+											{t("common.permission")}
+										</Label>
 										<select
 											id="token-permission"
 											className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
@@ -256,10 +257,8 @@ function AccessTokensPage() {
 												setPermission(e.target.value as AccessTokenPermission)
 											}
 										>
-											<option value="write">Read & Write (Full Access)</option>
-											<option value="read">
-												Read Only (GET / HEAD requests)
-											</option>
+											<option value="write">{t("my.permission_write")}</option>
+											<option value="read">{t("my.permission_read")}</option>
 										</select>
 									</div>
 
@@ -269,16 +268,16 @@ function AccessTokensPage() {
 											variant="outline"
 											onClick={() => setIsCreateOpen(false)}
 										>
-											Cancel
+											{t("common.cancel")}
 										</Button>
 										<Button type="submit" disabled={isCreating}>
 											{isCreating ? (
 												<>
 													<Loader2 className="mr-2 size-4 animate-spin" />
-													Generating…
+													{t("common.generating")}
 												</>
 											) : (
-												"Generate Token"
+												t("my.generate_token")
 											)}
 										</Button>
 									</DialogFooter>
@@ -290,9 +289,9 @@ function AccessTokensPage() {
 
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-lg">Active Access Tokens</CardTitle>
+						<CardTitle className="text-lg">{t("my.active_tokens")}</CardTitle>
 						<CardDescription>
-							Tokens currently authorized to make requests on your behalf.
+							{t("my.active_tokens_description")}
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="p-0">
@@ -300,12 +299,9 @@ function AccessTokensPage() {
 							<div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
 								<KeyRound className="mb-2 size-8 text-muted-foreground/50" />
 								<p className="font-medium text-foreground">
-									No access tokens yet
+									{t("my.no_tokens")}
 								</p>
-								<p className="text-sm">
-									Generate a token to interact with Beep through external tools
-									or agents.
-								</p>
+								<p className="text-sm">{t("my.no_tokens_description")}</p>
 							</div>
 						) : (
 							<div className="divide-y divide-border">
@@ -317,7 +313,7 @@ function AccessTokensPage() {
 										<div className="space-y-1">
 											<div className="flex items-center gap-2">
 												<span className="font-medium">
-													{token.description || "Personal Access Token"}
+													{token.description || t("my.personal_access_token")}
 												</span>
 												<Badge
 													variant={
@@ -328,16 +324,20 @@ function AccessTokensPage() {
 													className="text-xs"
 												>
 													{token.permission === "write"
-														? "Read / Write"
-														: "Read Only"}
+														? t("my.read_write")
+														: t("my.read_only")}
 												</Badge>
 											</div>
 											<div className="text-xs text-muted-foreground">
-												Created on{" "}
+												{t("admin.jobs_created")}{" "}
 												{new Date(token.created_at).toLocaleDateString()} ·{" "}
 												{token.last_used_at
-													? `Last used ${new Date(token.last_used_at).toLocaleDateString()}`
-													: "Never used"}
+													? t("common.last_used", {
+															date: new Date(
+																token.last_used_at,
+															).toLocaleDateString(),
+														})
+													: t("common.never_used")}
 											</div>
 										</div>
 
@@ -353,7 +353,9 @@ function AccessTokensPage() {
 											) : (
 												<Trash2 className="size-4" />
 											)}
-											<span className="ml-1 sm:hidden">Revoke</span>
+											<span className="ml-1 sm:hidden">
+												{t("common.revoke")}
+											</span>
 										</Button>
 									</div>
 								))}
@@ -362,11 +364,7 @@ function AccessTokensPage() {
 					</CardContent>
 					<CardFooter className="border-t bg-muted/30 px-6 py-3">
 						<p className="text-xs text-muted-foreground">
-							Access tokens can be passed via the HTTP header{" "}
-							<code className="rounded bg-muted px-1 py-0.5 font-mono">
-								Authorization: Bearer &lt;TOKEN&gt;
-							</code>
-							.
+							{t("my.api_header_hint")}
 						</p>
 					</CardFooter>
 				</Card>
@@ -374,9 +372,11 @@ function AccessTokensPage() {
 				{data.access_tokens.length > 0 ? (
 					<Card>
 						<CardHeader>
-							<CardTitle className="text-lg">Quick Example</CardTitle>
+							<CardTitle className="text-lg">
+								{t("my.api_example_title")}
+							</CardTitle>
 							<CardDescription>
-								Use your token to authenticate API requests with cURL.
+								{t("my.api_example_description")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-3">
@@ -387,11 +387,7 @@ function AccessTokensPage() {
 								</pre>
 							</div>
 							<p className="text-xs text-muted-foreground">
-								To list or create beeps in your workspace, target{" "}
-								<code className="rounded bg-muted px-1 py-0.5 font-mono">
-									/api/v1/{account.slug}/beeps
-								</code>
-								.
+								{t("my.api_example_beeps_hint", { slug: account.slug })}
 							</p>
 						</CardContent>
 					</Card>

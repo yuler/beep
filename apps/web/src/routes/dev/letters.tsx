@@ -24,6 +24,7 @@ import {
 	fetchDevLetters,
 } from "@/lib/api/dev";
 import { withAuthRedirects } from "@/lib/auth/guards";
+import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const devRoute = getRouteApi("/dev");
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/dev/letters")({
 });
 
 function LettersPage() {
+	const { t } = useTranslation();
 	const { account } = devRoute.useRouteContext();
 	const router = useRouter();
 	const { letters } = Route.useLoaderData();
@@ -49,7 +51,7 @@ function LettersPage() {
 			await router.invalidate();
 		} catch (err) {
 			setError(
-				err instanceof ApiError ? err.message : "Failed to delete letter.",
+				err instanceof ApiError ? err.message : t("dev.delete_letter_failed"),
 			);
 		} finally {
 			setPendingId(null);
@@ -58,7 +60,7 @@ function LettersPage() {
 
 	async function handleClear() {
 		if (!letters.length) return;
-		if (!window.confirm("Delete all captured letters?")) return;
+		if (!window.confirm(t("dev.clear_letters_confirm"))) return;
 
 		setClearing(true);
 		setError(null);
@@ -67,7 +69,7 @@ function LettersPage() {
 			await router.invalidate();
 		} catch (err) {
 			setError(
-				err instanceof ApiError ? err.message : "Failed to clear letters.",
+				err instanceof ApiError ? err.message : t("dev.letters_clear_failed"),
 			);
 		} finally {
 			setClearing(false);
@@ -79,12 +81,12 @@ function LettersPage() {
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: "Home",
+						label: t("nav.home"),
 						to: "/$account_slug",
 						params: { account_slug: account.slug },
 					},
-					{ label: "Dev" },
-					{ label: "Letters", isCurrentPage: true },
+					{ label: t("nav.dev") },
+					{ label: t("dev.letters"), isCurrentPage: true },
 				]}
 			/>
 
@@ -92,10 +94,10 @@ function LettersPage() {
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div>
 						<h1 className="font-heading text-2xl font-semibold tracking-tight">
-							Letters
+							{t("dev.letters")}
 						</h1>
 						<p className="mt-1 text-sm text-muted-foreground">
-							Recent emails captured by letter opener in development.
+							{t("dev.letters_description")}
 						</p>
 					</div>
 					<div className="flex flex-wrap gap-2">
@@ -106,7 +108,7 @@ function LettersPage() {
 								onClick={() => void handleClear()}
 							>
 								<Trash2 data-icon="inline-start" />
-								Clear all
+								{t("common.clear_all")}
 							</Button>
 						) : null}
 						<a
@@ -115,7 +117,7 @@ function LettersPage() {
 							rel="noreferrer"
 							className={cn(buttonVariants({ variant: "outline" }))}
 						>
-							Open letter
+							{t("dev.open_letter")}
 							<ExternalLink data-icon="inline-end" />
 						</a>
 					</div>
@@ -129,63 +131,67 @@ function LettersPage() {
 
 				{letters.length === 0 ? (
 					<p className="text-sm text-muted-foreground">
-						No letters yet. Sign in or trigger an email to see them here.
+						{t("dev.letters_empty")}
 					</p>
 				) : (
 					<ul className="flex flex-col gap-3">
-						{letters.map((letter) => (
-							<li key={letter.id}>
-								<Card size="sm" className="transition-colors hover:bg-muted/30">
-									<CardHeader className="border-b">
-										<CardTitle className="truncate">
-											{letter.subject ?? "(no subject)"}
-										</CardTitle>
-										<CardDescription className="truncate">
-											{letter.to ? `To ${letter.to}` : letter.id}
-										</CardDescription>
-										<CardAction className="flex items-center gap-2">
-											<a
-												href={coreAppUrl(`/letter_opener/${letter.id}`)}
-												target="_blank"
-												rel="noreferrer"
-												aria-label={`Open letter ${letter.subject ?? letter.id}`}
-												className={cn(
-													buttonVariants({ variant: "outline", size: "sm" }),
-												)}
-											>
-												Open
-												<ExternalLink data-icon="inline-end" />
-											</a>
-											<Button
-												variant="destructive"
-												size="sm"
-												disabled={pendingId === letter.id || clearing}
-												aria-label={`Delete letter ${letter.subject ?? letter.id}`}
-												onClick={() => void handleDelete(letter.id)}
-											>
-												<Trash2 data-icon="inline-start" />
-												Delete
-											</Button>
-										</CardAction>
-									</CardHeader>
-									{(letter.from || letter.sent_at) && (
-										<CardContent className="flex flex-wrap gap-x-4 gap-y-1 pt-0 text-xs text-muted-foreground">
-											{letter.from ? (
-												<span className="min-w-0 truncate">
-													<span className="text-foreground/60">From</span>{" "}
-													{letter.from}
-												</span>
-											) : null}
-											{letter.sent_at ? (
-												<span className="tabular-nums">
-													{new Date(letter.sent_at).toLocaleString()}
-												</span>
-											) : null}
-										</CardContent>
-									)}
-								</Card>
-							</li>
-						))}
+						{letters.map((letter) => {
+							const subjectLabel =
+								letter.subject ?? t("common.no_subject");
+							return (
+								<li key={letter.id}>
+									<Card size="sm" className="transition-colors hover:bg-muted/30">
+										<CardHeader className="border-b">
+											<CardTitle className="truncate">{subjectLabel}</CardTitle>
+											<CardDescription className="truncate">
+												{letter.to ? `To ${letter.to}` : letter.id}
+											</CardDescription>
+											<CardAction className="flex items-center gap-2">
+												<a
+													href={coreAppUrl(`/letter_opener/${letter.id}`)}
+													target="_blank"
+													rel="noreferrer"
+													aria-label={`${t("dev.open_letter")} ${subjectLabel}`}
+													className={cn(
+														buttonVariants({ variant: "outline", size: "sm" }),
+													)}
+												>
+													{t("common.open")}
+													<ExternalLink data-icon="inline-end" />
+												</a>
+												<Button
+													variant="destructive"
+													size="sm"
+													disabled={pendingId === letter.id || clearing}
+													aria-label={`${t("common.delete")} ${subjectLabel}`}
+													onClick={() => void handleDelete(letter.id)}
+												>
+													<Trash2 data-icon="inline-start" />
+													{t("common.delete")}
+												</Button>
+											</CardAction>
+										</CardHeader>
+										{(letter.from || letter.sent_at) && (
+											<CardContent className="flex flex-wrap gap-x-4 gap-y-1 pt-0 text-xs text-muted-foreground">
+												{letter.from ? (
+													<span className="min-w-0 truncate">
+														<span className="text-foreground/60">
+															{t("common.from")}
+														</span>{" "}
+														{letter.from}
+													</span>
+												) : null}
+												{letter.sent_at ? (
+													<span className="tabular-nums">
+														{new Date(letter.sent_at).toLocaleString()}
+													</span>
+												) : null}
+											</CardContent>
+										)}
+									</Card>
+								</li>
+							);
+						})}
 					</ul>
 				)}
 			</div>

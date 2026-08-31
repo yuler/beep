@@ -5,6 +5,7 @@ import {
 	fetchWebPushConfig,
 	testPushSubscription,
 } from "@/lib/api/push";
+import { I18nError } from "@/lib/notification-channels";
 
 const SERVICE_WORKER_URL = "/service-worker.js";
 const PROBE_TIMEOUT_MS = 8_000;
@@ -74,8 +75,7 @@ export type NotificationPlatform =
 
 type DetectedPlatform = NotificationPlatform | "android";
 
-export const IOS_HOME_SCREEN_HINT =
-	"On iPhone and iPad, add Beep to your Home Screen, then open it from there to enable notifications.";
+export const IOS_HOME_SCREEN_HINT = "push.ios_home_screen_hint" as const;
 
 export function notificationPlatform(): NotificationPlatform {
 	if (typeof navigator === "undefined") return "other";
@@ -153,14 +153,14 @@ export function isSubscribedForAccount(
 
 export async function enableWebPush(slug: string) {
 	if (!isWebPushSupported()) {
-		throw new Error("This browser does not support web push.");
+		throw new Error("push.unsupported");
 	}
 
 	const reachability = await probePushServiceReachability();
 	if (reachability.kind === "unreachable") {
-		throw new Error(
-			`Beep couldn't reach the push service (${reachability.host}) from this network — it may be blocked. Try a different network or another browser, then try again.`,
-		);
+		throw new I18nError("push.network_unreachable", {
+			host: reachability.host,
+		});
 	}
 
 	const { vapid_public_key: vapidPublicKey } = await fetchWebPushConfig();
@@ -224,7 +224,7 @@ export async function sendTestPush(slug: string) {
 	const endpoint = await getBrowserPushEndpoint();
 	const id = await subscriptionIdForEndpoint(slug, endpoint);
 	if (!id) {
-		throw new Error("This device is not subscribed.");
+		throw new Error("push.device_not_subscribed");
 	}
 
 	await testPushSubscription(slug, id);
@@ -238,14 +238,12 @@ async function ensureServiceWorker() {
 async function ensureNotificationPermission() {
 	if (Notification.permission === "granted") return;
 	if (Notification.permission === "denied") {
-		throw new Error(
-			"Notifications are blocked. Enable them in your browser or system settings.",
-		);
+		throw new Error("push.permission_denied");
 	}
 
 	const permission = await Notification.requestPermission();
 	if (permission !== "granted") {
-		throw new Error("Notification permission was not granted.");
+		throw new Error("push.permission_not_granted");
 	}
 }
 
@@ -270,8 +268,7 @@ async function timedSubscribe(
 	registration: ServiceWorkerRegistration,
 	applicationServerKey: Uint8Array<ArrayBuffer>,
 ) {
-	const message =
-		"Connecting to the push service timed out. Try a different network or another browser, then try again.";
+	const message = "push.subscribe_timeout";
 	try {
 		return await withTimeout(
 			registration.pushManager.subscribe({
@@ -301,7 +298,7 @@ function pushSubscriptionPayload(subscription: PushSubscription) {
 	const auth = json.keys?.auth;
 
 	if (!endpoint || !p256dh || !auth) {
-		throw new Error("Push subscription is missing endpoint or keys.");
+		throw new Error("push.subscription_missing_keys");
 	}
 
 	return { endpoint, p256dh_key: p256dh, auth_key: auth };

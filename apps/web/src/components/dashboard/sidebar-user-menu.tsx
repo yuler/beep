@@ -21,8 +21,10 @@ import {
 import { ApiError } from "@/lib/api/client";
 import type { MeResponse } from "@/lib/api/session";
 import { destroySession } from "@/lib/api/session";
+import { useTranslation } from "@/lib/i18n";
 
 export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
+	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { isMobile } = useSidebar();
@@ -42,9 +44,7 @@ export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
 			await navigate({ to: "/" });
 		} catch (err) {
 			setSignOutError(
-				err instanceof ApiError
-					? err.message
-					: "Could not sign out. Please try again.",
+				err instanceof ApiError ? err.message : t("auth.sign_out_failed"),
 			);
 		} finally {
 			setSigningOut(false);
@@ -113,14 +113,14 @@ export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
 								onClick={() => setOpen(false)}
 							>
 								<User />
-								Profile Settings
+								{t("my.profile_settings")}
 							</DropdownMenuItem>
 							<DropdownMenuItem
 								render={<Link to="/my/access_tokens" />}
 								onClick={() => setOpen(false)}
 							>
 								<KeyRound />
-								API Tokens
+								{t("nav.api_tokens")}
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 
@@ -135,7 +135,7 @@ export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
 								}}
 							>
 								<LogOut />
-								{signingOut ? "Signing out…" : "Log out"}
+								{signingOut ? t("auth.signing_out") : t("auth.logout")}
 							</DropdownMenuItem>
 							{signOutError ? (
 								<p

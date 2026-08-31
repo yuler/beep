@@ -1,10 +1,14 @@
+import { useTranslation } from "@/lib/i18n";
+
 export function LogoMark({ className }: { className?: string }) {
+	const { t } = useTranslation();
+
 	return (
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
 			viewBox="-2.0 -2.0 104.0 96.834"
 			role="img"
-			aria-label="beep"
+			aria-label={t("term.beep")}
 			className={className}
 		>
 			<path

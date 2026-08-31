@@ -11,6 +11,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({ component: Home });
@@ -18,45 +19,42 @@ export const Route = createFileRoute("/")({ component: Home });
 const features = [
 	{
 		icon: Box,
-		title: "Monolith first",
-		description:
-			"Rails 8.1 core with Solid Queue, Cache, and Cable — one backend, one deploy.",
+		titleKey: "marketing.feature_1_title",
+		descriptionKey: "marketing.feature_1_description",
 	},
 	{
 		icon: Layers,
-		title: "Full stack, one repo",
-		description:
-			"Web, admin, mobile, and desktop apps share types, utilities, and API clients.",
+		titleKey: "marketing.feature_2_title",
+		descriptionKey: "marketing.feature_2_description",
 	},
 	{
 		icon: Rocket,
-		title: "Solo-optimized",
-		description:
-			"Opinionated defaults and minimal ceremony so you can ship without a team.",
+		titleKey: "marketing.feature_3_title",
+		descriptionKey: "marketing.feature_3_description",
 	},
 ] as const;
 
 function Home() {
+	const { t } = useTranslation();
+
 	return (
 		<SiteLayout>
 			<main className="flex-1">
 				<section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
 					<div className="mx-auto flex max-w-2xl flex-col items-center text-center">
 						<Badge variant="secondary" className="mb-4">
-							Monolith + Solo
+							{t("marketing.badge")}
 						</Badge>
 						<h1 className="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-							One repository for your entire product
+							{t("marketing.hero_title")}
 						</h1>
 						<p className="mt-4 text-lg text-muted-foreground text-pretty">
-							beep helps solo developers and one-person companies run a
-							full-stack product from a single codebase — backend, web, and
-							clients together.
+							{t("marketing.hero_description")}
 						</p>
 						<div className="mt-8 flex flex-wrap items-center justify-center gap-3">
 							<SiteAuthButton
-								signInLabel="Get started"
-								dashboardLabel="Open dashboard"
+								signInLabel={t("common.get_started")}
+								dashboardLabel={t("common.open_dashboard")}
 								size="lg"
 							/>
 							<a
@@ -67,7 +65,7 @@ function Home() {
 									buttonVariants({ size: "lg", variant: "outline" }),
 								)}
 							>
-								View docs
+								{t("common.view_docs")}
 							</a>
 						</div>
 					</div>
@@ -77,23 +75,22 @@ function Home() {
 					<div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
 						<div className="mb-10 max-w-xl">
 							<h2 className="font-heading text-2xl font-semibold tracking-tight">
-								Everything in one place
+								{t("marketing.features_title")}
 							</h2>
 							<p className="mt-2 text-muted-foreground">
-								A minimal, modern stack with semantic design tokens and light /
-								dark themes.
+								{t("marketing.features_description")}
 							</p>
 						</div>
 
 						<div className="grid gap-4 sm:grid-cols-3">
-							{features.map(({ icon: Icon, title, description }) => (
-								<Card key={title} size="sm">
+							{features.map(({ icon: Icon, titleKey, descriptionKey }) => (
+								<Card key={titleKey} size="sm">
 									<CardHeader>
 										<div className="mb-2 inline-flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
 											<Icon className="size-4" />
 										</div>
-										<CardTitle>{title}</CardTitle>
-										<CardDescription>{description}</CardDescription>
+										<CardTitle>{t(titleKey)}</CardTitle>
+										<CardDescription>{t(descriptionKey)}</CardDescription>
 									</CardHeader>
 								</Card>
 							))}
@@ -105,20 +102,16 @@ function Home() {
 					<Card className="bg-primary text-primary-foreground ring-primary/20">
 						<CardHeader>
 							<CardTitle className="text-primary-foreground">
-								Ready to build?
+								{t("marketing.cta_title")}
 							</CardTitle>
 							<CardDescription className="text-primary-foreground/80">
-								Run{" "}
-								<code className="rounded bg-primary-foreground/10 px-1.5 py-0.5 text-sm">
-									mise dev
-								</code>{" "}
-								to start the Rails core and this web app together.
+								{t("marketing.cta_description")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
 							<SiteAuthButton
-								signInLabel="Open app"
-								dashboardLabel="Dashboard"
+								signInLabel={t("common.open_app")}
+								dashboardLabel={t("common.dashboard")}
 								variant="secondary"
 							/>
 						</CardContent>

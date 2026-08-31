@@ -5,6 +5,8 @@ import {
 	fetchPushSubscriptions,
 	type PushSubscriptionRecord,
 } from "@/lib/api/push";
+import { useI18n } from "@/lib/i18n";
+import { translateError } from "@/lib/i18n-labels";
 import {
 	disableWebPush,
 	enableWebPush,
@@ -44,9 +46,13 @@ type DeviceIdentity = Pick<
 	"standalone" | "browserName" | "platform"
 >;
 
-function errorMessage(err: unknown) {
-	if (err instanceof ApiError || err instanceof Error) return err.message;
-	return "Something went wrong.";
+function errorMessage(
+	err: unknown,
+	t: ReturnType<typeof useI18n>["t"],
+	dict: ReturnType<typeof useI18n>["dict"],
+) {
+	if (err instanceof ApiError) return err.message;
+	return translateError(dict, t, err);
 }
 
 function pushPermission() {
@@ -60,6 +66,7 @@ export type WebPushReachability =
 	| PushReachability;
 
 export function useWebPush(slug: string) {
+	const { t, dict } = useI18n();
 	const [status, setStatus] = useState<WebPushStatus>(INITIAL_STATUS);
 	const [ready, setReady] = useState(false);
 	const [pending, setPending] = useState(false);
@@ -95,7 +102,7 @@ export function useWebPush(slug: string) {
 			records = response.push_subscriptions;
 			setSubscriptions(records);
 		} catch (err) {
-			setError(errorMessage(err));
+			setError(errorMessage(err, t, dict));
 			setSubscriptions([]);
 		}
 
@@ -136,7 +143,7 @@ export function useWebPush(slug: string) {
 				await action();
 				if (busy.markTestSent) setTestSent(true);
 			} catch (err) {
-				setError(errorMessage(err));
+				setError(errorMessage(err, t, dict));
 			} finally {
 				await refresh();
 				if (busy.pending) setPending(false);

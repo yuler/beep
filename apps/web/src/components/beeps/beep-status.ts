@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import type { Beep } from "@/lib/api/beeps";
+import type { TranslationKey } from "@/lib/i18n";
 
 type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
 
@@ -17,38 +18,38 @@ type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
 export const BEEP_STATUS_META: Record<
 	Beep["status"],
 	{
-		label: string;
+		labelKey: TranslationKey;
 		icon: LucideIcon;
 		colorClass: string;
 		badgeVariant: BadgeVariant;
 	}
 > = {
 	active: {
-		label: "Active",
+		labelKey: "status.beep.active",
 		icon: CheckCircle2,
 		colorClass: "text-emerald-600 dark:text-emerald-400",
 		badgeVariant: "default",
 	},
 	firing: {
-		label: "Firing",
+		labelKey: "status.beep.firing",
 		icon: Flame,
 		colorClass: "text-amber-600 dark:text-amber-400",
 		badgeVariant: "default",
 	},
 	paused: {
-		label: "Paused",
+		labelKey: "status.beep.paused",
 		icon: PauseCircle,
 		colorClass: "text-muted-foreground",
 		badgeVariant: "secondary",
 	},
 	completed: {
-		label: "Completed",
+		labelKey: "status.beep.completed",
 		icon: CheckCircle2,
 		colorClass: "text-muted-foreground",
 		badgeVariant: "outline",
 	},
 	cancelled: {
-		label: "Cancelled",
+		labelKey: "status.beep.cancelled",
 		icon: AlertCircle,
 		colorClass: "text-destructive",
 		badgeVariant: "destructive",

@@ -13,12 +13,13 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import { useTranslation } from "@/lib/i18n";
 
 type ButtonProps = ComponentProps<typeof Button>;
 type Step = "email" | "verify";
 
 export function SignInDialog({
-	label = "Sign in",
+	label,
 	size,
 	variant,
 	className,
@@ -28,6 +29,8 @@ export function SignInDialog({
 	variant?: ButtonProps["variant"];
 	className?: string;
 }) {
+	const { t } = useTranslation();
+	const resolvedLabel = label ?? t("auth.sign_in");
 	const [open, setOpen] = useState(false);
 	const [step, setStep] = useState<Step>("email");
 	const [email, setEmail] = useState("");
@@ -47,19 +50,17 @@ export function SignInDialog({
 			<DialogTrigger
 				render={<Button size={size} variant={variant} className={className} />}
 			>
-				{label}
+				{resolvedLabel}
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
 					<DialogTitle>
-						{step === "email" ? "Sign in" : "Check your email"}
+						{step === "email" ? t("auth.sign_in") : t("auth.check_email")}
 					</DialogTitle>
 					<DialogDescription>
 						{step === "email"
-							? "Enter your email to sign in or create an account."
-							: email
-								? `Enter the code we sent to ${email}.`
-								: "Enter the code we sent to your email."}
+							? t("auth.sign_in_description")
+							: t("auth.verify_description")}
 					</DialogDescription>
 				</DialogHeader>
 				{step === "email" ? (
@@ -87,13 +88,13 @@ export function SignInDialog({
 				)}
 				{step === "email" ? (
 					<p className="text-center text-xs text-muted-foreground">
-						Prefer a full page?{" "}
+						{t("auth.prefer_full_page")}{" "}
 						<Link
 							to="/sign"
 							className="underline underline-offset-4"
 							onClick={() => handleOpenChange(false)}
 						>
-							Open sign-in
+							{t("auth.open_sign_in")}
 						</Link>
 					</p>
 				) : null}

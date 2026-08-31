@@ -21,6 +21,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { type TimezoneSource, updateSettings } from "@/lib/api/settings";
+import { useTranslation } from "@/lib/i18n";
+import { translateError } from "@/lib/i18n-labels";
 import {
 	browserTimezone,
 	type TimezoneOption,
@@ -28,14 +30,18 @@ import {
 	timezoneOptions,
 } from "@/lib/timezone";
 
-function sourceHint(source: TimezoneSource | null, timezone: string | null) {
+function sourceHint(
+	t: ReturnType<typeof useTranslation>["t"],
+	source: TimezoneSource | null,
+	timezone: string | null,
+) {
 	if (!timezone) {
-		return "Not set yet. Opening this workspace detects it from your browser.";
+		return t("settings.timezone_not_set_hint");
 	}
 	if (source === "manual") {
-		return "Set for this workspace. Browser detection will not overwrite it.";
+		return t("settings.timezone_manual");
 	}
-	return "Detected from this browser. Choosing another zone locks it for this workspace.";
+	return t("settings.timezone_detected");
 }
 
 function TimezoneLabel({ option }: { option: TimezoneOption }) {
@@ -65,6 +71,7 @@ export function TimezoneSettings({
 	timezoneSource: TimezoneSource | null;
 	onChanged: () => Promise<void> | void;
 }) {
+	const { t, dict } = useTranslation();
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const items = useMemo(() => {
@@ -85,7 +92,11 @@ export function TimezoneSettings({
 			await updateSettings(slug, { timezone: next });
 			await onChanged();
 		} catch (err) {
-			setError(err instanceof ApiError ? err.message : "Something went wrong.");
+			setError(
+				err instanceof ApiError
+					? err.message
+					: translateError(dict, t, err),
+			);
 		} finally {
 			setPending(false);
 		}
@@ -104,7 +115,11 @@ export function TimezoneSettings({
 			});
 			await onChanged();
 		} catch (err) {
-			setError(err instanceof ApiError ? err.message : "Something went wrong.");
+			setError(
+				err instanceof ApiError
+					? err.message
+					: translateError(dict, t, err),
+			);
 		} finally {
 			setPending(false);
 		}
@@ -113,9 +128,9 @@ export function TimezoneSettings({
 	return (
 		<Card className="max-w-lg">
 			<CardHeader>
-				<CardTitle>Timezone</CardTitle>
+				<CardTitle>{t("settings.timezone_title")}</CardTitle>
 				<CardDescription>
-					{sourceHint(timezoneSource, timezone)}
+					{sourceHint(t, timezoneSource, timezone)}
 				</CardDescription>
 				{timezoneSource ? (
 					<CardAction>
@@ -130,7 +145,9 @@ export function TimezoneSettings({
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3">
 				<div className="flex flex-col gap-1.5">
-					<Label htmlFor="account-timezone">IANA timezone</Label>
+					<Label htmlFor="account-timezone">
+						{t("settings.timezone_iana")}
+					</Label>
 					<Combobox
 						id="account-timezone"
 						items={items}
@@ -149,14 +166,20 @@ export function TimezoneSettings({
 							{selected ? (
 								<TimezoneLabel option={selected} />
 							) : (
-								<span className="text-muted-foreground">Not set</span>
+								<span className="text-muted-foreground">
+									{t("settings.timezone_not_set")}
+								</span>
 							)}
 						</ComboboxTrigger>
 						<ComboboxContent className="flex flex-col">
 							<div className="border-b border-border p-1.5">
-								<ComboboxInput placeholder="Search city, country, or zone" />
+								<ComboboxInput
+									placeholder={t("settings.timezone_search_placeholder")}
+								/>
 							</div>
-							<ComboboxEmpty>No timezone found.</ComboboxEmpty>
+							<ComboboxEmpty>
+								{t("settings.timezone_search_empty")}
+							</ComboboxEmpty>
 							<ComboboxList>
 								{(item: TimezoneOption) => (
 									<ComboboxItem key={item.value} value={item}>
@@ -169,7 +192,9 @@ export function TimezoneSettings({
 				</div>
 				<div className="flex items-center justify-between gap-3">
 					<p className="text-xs text-muted-foreground">
-						Browser timezone: {browserTimezone()}
+						{t("settings.timezone_browser", {
+							timezone: browserTimezone(),
+						})}
 					</p>
 					<Button
 						type="button"
@@ -178,7 +203,7 @@ export function TimezoneSettings({
 						disabled={pending || timezone === browserTimezone()}
 						onClick={() => void onReset()}
 					>
-						Reset to browser
+						{t("settings.timezone_reset")}
 					</Button>
 				</div>
 				{error ? (

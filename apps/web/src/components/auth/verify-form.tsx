@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/api/client";
 import { fetchMe, verifyMagicLink } from "@/lib/api/session";
 import { resolvePostAuthTarget } from "@/lib/auth/account";
 import { navigateForTarget } from "@/lib/auth/guards";
+import { useTranslation } from "@/lib/i18n";
 
 export function VerifyForm({
 	idPrefix = "verify",
@@ -22,6 +23,7 @@ export function VerifyForm({
 	/** Called after verify, session fetch, and post-auth navigation succeed. */
 	onVerified?: () => void;
 }) {
+	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const router = useRouter();
 	const [code, setCode] = useState("");
@@ -57,7 +59,9 @@ export function VerifyForm({
 			onVerified?.();
 		} catch (err) {
 			if (isRedirect(err)) throw err;
-			setError(err instanceof ApiError ? err.message : "Something went wrong.");
+			setError(
+				err instanceof ApiError ? err.message : t("errors.something_went_wrong"),
+			);
 		} finally {
 			setPending(false);
 		}
@@ -68,10 +72,10 @@ export function VerifyForm({
 	return (
 		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
 			<div className="flex flex-col gap-2">
-				<Label htmlFor={codeId}>One-time code</Label>
+				<Label htmlFor={codeId}>{t("auth.one_time_code")}</Label>
 				<InputOTP id={codeId} value={code} onChange={setCode} autoFocus />
 				<p className="text-xs text-muted-foreground">
-					Check your email for a 6-character code.
+					{t("auth.code_hint")}
 				</p>
 			</div>
 			{error ? (
@@ -84,7 +88,7 @@ export function VerifyForm({
 				disabled={pending || code.length < 6}
 				className="w-full"
 			>
-				{pending ? "Verifying…" : "Verify"}
+				{pending ? t("auth.verifying") : t("auth.verify")}
 			</Button>
 			{onBack ? (
 				<Button
@@ -94,7 +98,7 @@ export function VerifyForm({
 					disabled={pending}
 					onClick={onBack}
 				>
-					Use a different email
+					{t("auth.use_different_email")}
 				</Button>
 			) : null}
 		</form>

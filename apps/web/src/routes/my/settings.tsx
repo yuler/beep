@@ -1,5 +1,5 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
-import { ExternalLink, Globe, Mail } from "lucide-react";
+import { Globe, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { fetchMe } from "@/lib/api/session";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { getGravatarUrl } from "@/lib/gravatar";
+import { useTranslation } from "@/lib/i18n";
 
 const myRoute = getRouteApi("/my");
 
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/my/settings")({
 });
 
 function MySettingsPage() {
+	const { t } = useTranslation();
 	const { account } = myRoute.useRouteContext();
 	const me = Route.useLoaderData();
 	const identity = me.identity;
@@ -44,31 +46,33 @@ function MySettingsPage() {
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: "Home",
+						label: t("nav.home"),
 						to: "/$account_slug",
 						params: { account_slug: account.slug },
 					},
-					{ label: "Personal Settings" },
-					{ label: "Profile & Preferences", isCurrentPage: true },
+					{ label: t("my.personal_settings") },
+					{ label: t("my.profile_preferences"), isCurrentPage: true },
 				]}
 			/>
 
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
 				<div>
 					<h1 className="font-heading text-2xl font-semibold tracking-tight">
-						Personal Settings
+						{t("my.personal_settings")}
 					</h1>
 					<p className="mt-1 text-sm text-muted-foreground">
-						Manage your profile, email, and personal preferences.
+						{t("my.profile_subtitle")}
 					</p>
 				</div>
 
 				<div className="grid max-w-2xl gap-6">
 					<Card>
 						<CardHeader>
-							<CardTitle className="text-lg">Profile Information</CardTitle>
+							<CardTitle className="text-lg">
+								{t("my.profile_information")}
+							</CardTitle>
 							<CardDescription>
-								Your public avatar and identity details.
+								{t("my.public_avatar_description")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-6">
@@ -78,7 +82,7 @@ function MySettingsPage() {
 									target="_blank"
 									rel="noreferrer"
 									className="group/avatar-link transition-opacity hover:opacity-85"
-									title="Change avatar on Gravatar"
+									title={t("my.avatar_gravatar_title")}
 								>
 									<Avatar size="lg" className="size-16 border border-border">
 										{avatarUrl ? (
@@ -90,19 +94,9 @@ function MySettingsPage() {
 									</Avatar>
 								</a>
 								<div className="space-y-1">
-									<p className="font-medium leading-none">Avatar</p>
+									<p className="font-medium leading-none">{t("my.avatar")}</p>
 									<p className="text-xs text-muted-foreground">
-										Avatar is automatically fetched from{" "}
-										<a
-											href="https://gravatar.com"
-											target="_blank"
-											rel="noreferrer"
-											className="inline-flex items-center gap-0.5 font-medium text-foreground underline underline-offset-2 hover:text-primary"
-										>
-											Gravatar
-											<ExternalLink className="size-3" />
-										</a>{" "}
-										using your email address.
+										{t("my.avatar_gravatar_hint")}
 									</p>
 								</div>
 							</div>
@@ -110,7 +104,7 @@ function MySettingsPage() {
 							<div className="space-y-2">
 								<Label htmlFor="email" className="flex items-center gap-2">
 									<Mail className="size-4 text-muted-foreground" />
-									Email Address
+									{t("my.email_address")}
 								</Label>
 								<div className="flex items-center gap-2">
 									<div className="flex h-9 flex-1 items-center rounded-md border border-input bg-muted/40 px-3 font-mono text-sm text-foreground select-all">
@@ -118,7 +112,10 @@ function MySettingsPage() {
 									</div>
 								</div>
 								<p className="text-xs text-muted-foreground">
-									This email is associated with your global Beep identity.
+									{t("my.email_identity_hint").replace(
+										"Beep",
+										t("term.beep_capitalized"),
+									)}
 								</p>
 							</div>
 						</CardContent>
@@ -126,9 +123,9 @@ function MySettingsPage() {
 
 					<Card>
 						<CardHeader>
-							<CardTitle className="text-lg">Preferences</CardTitle>
+							<CardTitle className="text-lg">{t("my.preferences")}</CardTitle>
 							<CardDescription>
-								Regional and display preferences for your account.
+								{t("my.preferences_description")}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
@@ -136,10 +133,10 @@ function MySettingsPage() {
 								<div className="flex items-center justify-between">
 									<Label htmlFor="language" className="flex items-center gap-2">
 										<Globe className="size-4 text-muted-foreground" />
-										Language
+										{t("my.language")}
 									</Label>
 									<Badge variant="secondary" className="text-xs font-normal">
-										English only
+										{t("my.english_only")}
 									</Badge>
 								</div>
 								<select
@@ -148,10 +145,10 @@ function MySettingsPage() {
 									className="flex h-9 w-full rounded-md border border-input bg-muted/40 px-3 py-1 text-sm shadow-xs disabled:cursor-not-allowed disabled:opacity-75"
 									value="en"
 								>
-									<option value="en">English (US)</option>
+									<option value="en">{t("my.english_us")}</option>
 								</select>
 								<p className="text-xs text-muted-foreground">
-									Additional languages will be available in future releases.
+									{t("my.languages_future")}
 								</p>
 							</div>
 						</CardContent>

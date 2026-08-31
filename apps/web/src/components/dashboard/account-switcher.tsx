@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 import { rememberLastAccount } from "@/lib/api/session";
 import type { AccountSummary } from "@/lib/auth/account";
+import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export function AccountSwitcher({
@@ -34,6 +35,7 @@ export function AccountSwitcher({
 	accounts: AccountSummary[];
 	slug: string;
 }) {
+	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const { isMobile } = useSidebar();
@@ -52,15 +54,19 @@ export function AccountSwitcher({
 					<SidebarMenuButton
 						size="lg"
 						disabled
-						tooltip="No accounts"
+						tooltip={t("account.no_accounts")}
 						className="group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0!"
 					>
 						<span className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
 							<Building2 className="size-4" />
 						</span>
 						<div className="grid flex-1 text-left text-sm leading-tight">
-							<span className="truncate font-semibold">No accounts</span>
-							<span className="truncate text-xs">Create one to continue</span>
+							<span className="truncate font-semibold">
+								{t("account.no_accounts")}
+							</span>
+							<span className="truncate text-xs">
+								{t("account.create_one_to_continue")}
+							</span>
 						</div>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
@@ -105,7 +111,8 @@ export function AccountSwitcher({
 						<div className="grid flex-1 text-left text-sm leading-tight">
 							<span className="truncate font-semibold">{active.name}</span>
 							<span className="truncate text-xs text-muted-foreground">
-								{active.personal ? "Personal" : "Team"} · /{active.slug}
+								{active.personal ? t("account.personal") : t("account.team")} · /
+								{active.slug}
 							</span>
 						</div>
 						<ChevronsUpDown className="ml-auto size-4" />
@@ -119,7 +126,7 @@ export function AccountSwitcher({
 					>
 						<DropdownMenuGroup>
 							<DropdownMenuLabel className="text-xs text-muted-foreground">
-								Accounts
+								{t("account.accounts")}
 							</DropdownMenuLabel>
 							{accounts.map((account) => {
 								const Icon = account.personal ? UserRound : Building2;
@@ -155,7 +162,7 @@ export function AccountSwitcher({
 								<span className="flex size-6 items-center justify-center rounded-md border border-border bg-transparent">
 									<Users className="size-3.5" />
 								</span>
-								<span className="font-medium">Manage accounts</span>
+								<span className="font-medium">{t("account.manage_accounts")}</span>
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 					</DropdownMenuContent>

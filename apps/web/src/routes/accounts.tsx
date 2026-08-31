@@ -4,6 +4,7 @@ import { AuthCard, AuthLayout, AuthPending } from "@/components/layout";
 import { buttonVariants } from "@/components/ui/button";
 import type { AccountSummary } from "@/lib/auth/account";
 import { requireSession } from "@/lib/auth/guards";
+import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/accounts")({
@@ -26,11 +27,12 @@ export const Route = createFileRoute("/accounts")({
 });
 
 function AccountsPage() {
+	const { t } = useTranslation();
 	const { me } = Route.useRouteContext();
 	const lastSlug = me.last_account_slug;
 	const description = lastSlug
-		? `Last used: ${lastSlug} — pick an account to continue.`
-		: "Pick an account to continue.";
+		? t("account.pick_account_last_used", { slug: lastSlug })
+		: t("account.pick_account");
 
 	return (
 		<AuthLayout>
@@ -56,6 +58,7 @@ function AccountChoice({
 	account: AccountSummary;
 	lastUsed: boolean;
 }) {
+	const { t } = useTranslation();
 	const Icon = account.personal ? UserRound : Building2;
 
 	return (
@@ -75,8 +78,11 @@ function AccountChoice({
 				<span className="flex min-w-0 flex-1 flex-col items-start text-left">
 					<span className="truncate font-medium">{account.name}</span>
 					<span className="truncate text-xs font-normal text-muted-foreground">
-						{account.personal ? "Personal" : "Team"} · /{account.slug}
-						{lastUsed ? " · last used" : ""}
+						{account.personal
+							? t("account.type_personal")
+							: t("account.type_team")}{" "}
+						· /{account.slug}
+						{lastUsed ? t("auth.last_used_suffix") : ""}
 					</span>
 				</span>
 				{lastUsed ? <Check className="size-4 shrink-0 text-primary" /> : null}
