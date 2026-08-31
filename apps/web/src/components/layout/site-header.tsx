@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-
+import { LanguageToggle } from "@/components/language-toggle";
 import { SiteAuthButton } from "@/components/layout/site-auth-button";
 import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -20,6 +20,7 @@ export function SiteHeader() {
 				</Link>
 
 				<div className="flex items-center gap-2">
+					<LanguageToggle />
 					<ThemeToggle />
 					<SiteAuthButton />
 				</div>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { LanguageToggle } from "@/components/language-toggle";
 import { LogoMark } from "@/components/logo-mark";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
 	Card,
 	CardContent,
@@ -38,8 +39,9 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 					{t("common.back")}
 				</Link>
 			</div>
-			<div className="absolute top-6 right-6">
+			<div className="absolute top-6 right-6 flex items-center gap-2">
 				<LanguageToggle />
+				<ThemeToggle />
 			</div>
 			<div className="flex w-full max-w-sm flex-col gap-6">{children}</div>
 		</div>

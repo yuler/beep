@@ -1,39 +1,31 @@
 {
-  "common": {
-    "save": "保存",
-    "cancel": "取消",
-    "delete": "删除",
-    "edit": "编辑",
-    "create": "创建",
-    "search": "搜索",
-    "loading": "加载中...",
-    "confirm": "确认",
-    "back": "返回",
-    "actions": "操作",
-    "status": "状态",
-    "language": "语言",
-    "english": "English",
-    "chinese": "简体中文"
-  },
-  "auth": {
-    "login": "登录",
-    "logout": "退出登录",
-    "signup": "注册",
-    "email": "电子邮箱",
-    "password": "密码",
-    "login_success": "登录成功",
-    "login_failed": "登录失败"
-  },
-  "account": {
-    "accounts": "账号列表",
-    "personal_account": "个人账号",
-    "team_account": "团队账号",
-    "settings": "设置",
-    "members": "成员"
-  },
-  "errors": {
-    "not_found": "页面未找到",
-    "forbidden": "拒绝访问",
-    "server_error": "服务器内部错误"
-  }
+  "common.save": "保存",
+  "common.cancel": "取消",
+  "common.delete": "删除",
+  "common.edit": "编辑",
+  "common.create": "创建",
+  "common.search": "搜索",
+  "common.loading": "加载中...",
+  "common.confirm": "确认",
+  "common.back": "返回",
+  "common.actions": "操作",
+  "common.status": "状态",
+  "common.language": "语言",
+  "common.english": "English",
+  "common.chinese": "简体中文",
+  "auth.login": "登录",
+  "auth.logout": "退出登录",
+  "auth.signup": "注册",
+  "auth.email": "电子邮箱",
+  "auth.password": "密码",
+  "auth.login_success": "登录成功",
+  "auth.login_failed": "登录失败",
+  "account.accounts": "账号列表",
+  "account.personal_account": "个人账号",
+  "account.team_account": "团队账号",
+  "account.settings": "设置",
+  "account.members": "成员",
+  "errors.not_found": "页面未找到",
+  "errors.forbidden": "拒绝访问",
+  "errors.server_error": "服务器内部错误"
 }
