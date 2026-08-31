@@ -6,6 +6,7 @@ class Beeper < ApplicationRecord
   RUNNING_STALE_AFTER = 5.minutes
   EXPIRED_AFTER = 1.hour
   TITLE_MAX_LENGTH = 80
+  BODY_MAX_LENGTH = 2000
 
   belongs_to :account
   belongs_to :beeper_app
@@ -18,8 +19,10 @@ class Beeper < ApplicationRecord
   store_accessor :signal_metadata, :ping_token, :last_ping_at, :consecutive_recoveries
 
   normalizes :title, with: ->(value) { value.strip.presence }
+  normalizes :body, with: ->(value) { value&.strip.presence }
 
   validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }
+  validates :body, length: { maximum: BODY_MAX_LENGTH }, allow_nil: true
   validates :cron, presence: true
   validates :timezone, presence: true
   validates :alert_state, presence: true

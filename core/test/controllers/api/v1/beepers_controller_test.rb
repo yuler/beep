@@ -61,6 +61,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
         params: {
           beeper_app_slug: "site-uptime",
           title: "example.com",
+          body: "Check customer checkout gateway",
           cron: "*/5 * * * *",
           config: { "target_url" => "https://example.com" }
         },
@@ -71,6 +72,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
     body = response.parsed_body
     assert_equal "example.com", body["title"]
+    assert_equal "Check customer checkout gateway", body["body"]
     assert_equal "site-uptime", body["beeper_app"]["slug"]
     assert_nil body["kind"]
   end
@@ -80,19 +82,34 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
       account: @account,
       beeper_app: @beeper_app,
       title: "Old Title",
+      body: "Old Body",
       cron: "*/5 * * * *",
       timezone: "UTC",
       config: { "target_url" => "https://example.com" }
     )
 
     patch "/api/v1/#{@account.slug}/beepers/#{beeper.id}",
-      params: { title: "New Title" },
+      params: {
+        title: "New Title",
+        body: "Updated Body",
+        cron: "*/10 * * * *",
+        config: { "target_url" => "https://new.example.com", "expected_status" => 201 }
+      },
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 
     assert_response :success
-    assert_equal "New Title", response.parsed_body["title"]
-    assert_equal "New Title", beeper.reload.title
+    res_body = response.parsed_body
+    assert_equal "New Title", res_body["title"]
+    assert_equal "Updated Body", res_body["body"]
+    assert_equal "*/10 * * * *", res_body["cron"]
+    assert_equal "https://new.example.com", res_body["config"]["target_url"]
+
+    beeper.reload
+    assert_equal "New Title", beeper.title
+    assert_equal "Updated Body", beeper.body
+    assert_equal "*/10 * * * *", beeper.cron
+    assert_equal "https://new.example.com", beeper.config["target_url"]
   end
 
   test "destroy deletes the beeper" do

@@ -63,6 +63,7 @@ export type BeeperRun = {
 export type Beeper = {
 	id: string;
 	title: string;
+	body?: string | null;
 	cron: string;
 	timezone: string;
 	status: "active" | "paused" | "completed" | "cancelled" | "firing";
@@ -123,6 +124,7 @@ export function createBeeper(
 		beeper_app_id?: string;
 		beeper_app_slug?: string;
 		title: string;
+		body?: string;
 		cron?: string;
 		timezone?: string;
 		config?: Record<string, unknown>;
@@ -131,6 +133,23 @@ export function createBeeper(
 ) {
 	return apiFetch<Beeper>(`/api/v1/${accountSlug}/beepers`, {
 		method: "POST",
+		body,
+	});
+}
+
+export function updateBeeper(
+	accountSlug: string,
+	beeperId: string,
+	body: {
+		title?: string;
+		body?: string | null;
+		cron?: string;
+		config?: Record<string, unknown>;
+		notification_channels?: string[];
+	},
+) {
+	return apiFetch<Beeper>(`/api/v1/${accountSlug}/beepers/${beeperId}`, {
+		method: "PATCH",
 		body,
 	});
 }
