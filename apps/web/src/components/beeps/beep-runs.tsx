@@ -43,10 +43,7 @@ export function BeepRuns({
 						>
 							<div className="flex flex-wrap items-center justify-between gap-2">
 								<span className="tabular-nums text-xs text-muted-foreground">
-									{formatBeepScheduleTime(
-										run.scheduled_for,
-										timezone,
-									)}
+									{formatBeepScheduleTime(run.scheduled_for, timezone)}
 								</span>
 								<div className="flex items-center gap-1.5">
 									<Badge
