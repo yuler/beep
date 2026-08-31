@@ -28,7 +28,9 @@ export function formatBeepScheduleTime(
 ): string {
 	if (!value) return "—";
 
-	const date = new Date(value);
+	const date = value instanceof Date ? value : new Date(value);
+	if (Number.isNaN(date.getTime())) return "—";
+
 	const timeZone = timezone || "UTC";
 	const options = { ...SCHEDULE_FORMAT_OPTIONS[style], timeZone };
 
