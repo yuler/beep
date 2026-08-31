@@ -4,6 +4,7 @@ import {
 	HeadContent,
 	Outlet,
 	Scripts,
+	useLocation,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
@@ -12,7 +13,9 @@ import { VersionUpdateDialog } from "@/components/version-update-dialog";
 import { fetchMeOrNull } from "@/lib/api/session";
 import { logBuildInfo } from "@/lib/build-info";
 import {
+	buildLocalizedUrl,
 	DEFAULT_LOCALE,
+	extractLocaleFromPath,
 	getStoredLocale,
 	I18nContext,
 	type Locale,
@@ -61,14 +64,22 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-	const [locale, setLocaleState] = useState<Locale>(() => getStoredLocale());
+	const location = useLocation();
+	const pathLocale = extractLocaleFromPath(location.pathname).locale;
+
+	const [locale, setLocaleState] = useState<Locale>(
+		() => pathLocale ?? getStoredLocale(),
+	);
 
 	useEffect(() => {
 		logBuildInfo();
-		const current = getStoredLocale();
+	}, []);
+
+	useEffect(() => {
+		const current = pathLocale ?? getStoredLocale();
 		setLocaleState(current);
 		document.documentElement.lang = current;
-	}, []);
+	}, [pathLocale]);
 
 	const dict = useMemo(() => {
 		return getDictionary(locale);
@@ -84,6 +95,8 @@ function RootComponent() {
 				setLocaleState(newLocale);
 				saveLocalePreference(newLocale);
 			},
+			getLocalizedPath: (pathname: string, targetLocale?: Locale) =>
+				buildLocalizedUrl(pathname, targetLocale ?? locale),
 		};
 	}, [locale, dict]);
 

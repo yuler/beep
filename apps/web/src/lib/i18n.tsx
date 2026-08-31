@@ -18,6 +18,65 @@ export interface I18nContextValue {
 	dict: TranslationSchema;
 	t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 	setLocale: (newLocale: Locale) => void;
+	getLocalizedPath: (pathname: string, targetLocale?: Locale) => string;
+}
+
+/**
+ * Extracts a supported locale from pathname if present (e.g. /zh-CN/my-account -> "zh-CN")
+ */
+export function extractLocaleFromPath(pathname: string): {
+	locale: Locale | null;
+	cleanPath: string;
+} {
+	const segments = pathname.split("/").filter(Boolean);
+	const first = segments[0];
+
+	if (first && isSupportedLocale(first)) {
+		const remaining = `/${segments.slice(1).join("/")}`;
+		return {
+			locale: first,
+			cleanPath: remaining === "/" ? "/" : remaining,
+		};
+	}
+
+	return {
+		locale: null,
+		cleanPath: pathname.startsWith("/") ? pathname : `/${pathname}`,
+	};
+}
+
+/**
+ * Builds localized URL based on given or current locale
+ */
+export function buildLocalizedUrl(
+	pathname: string,
+	targetLocale: Locale,
+	search?: string | Record<string, unknown>,
+): string {
+	const { cleanPath } = extractLocaleFromPath(pathname);
+	const prefix = targetLocale === DEFAULT_LOCALE ? "" : `/${targetLocale}`;
+	const formattedPath =
+		`${prefix}${cleanPath === "/" && prefix !== "" ? "" : cleanPath}` || "/";
+
+	if (!search) return formattedPath;
+
+	if (typeof search === "string") {
+		const cleanSearch = search.startsWith("?") ? search : `?${search}`;
+		return `${formattedPath}${cleanSearch}`;
+	}
+
+	const searchEntries = Object.entries(search).filter(
+		([_, v]) => v !== undefined && v !== null,
+	);
+	if (searchEntries.length === 0) {
+		return formattedPath;
+	}
+
+	const searchStr = new URLSearchParams(
+		searchEntries.map(([k, v]) => [k, String(v)]),
+	).toString();
+
+	return searchStr ? `${formattedPath}?${searchStr}` : formattedPath;
 }
 
 export function getStoredLocale(): Locale {
@@ -25,13 +84,21 @@ export function getStoredLocale(): Locale {
 		return DEFAULT_LOCALE;
 	}
 
-	// 1. LocalStorage
+	// 1. URL path priority
+	const { locale: pathLocale } = extractLocaleFromPath(
+		window.location.pathname,
+	);
+	if (pathLocale) {
+		return pathLocale;
+	}
+
+	// 2. LocalStorage
 	const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
 	if (isSupportedLocale(stored)) {
 		return stored;
 	}
 
-	// 2. Cookie
+	// 3. Cookie
 	const match = document.cookie.match(
 		new RegExp(`(?:^|; )${LOCALE_COOKIE_KEY}=([^;]*)`),
 	);
@@ -39,7 +106,7 @@ export function getStoredLocale(): Locale {
 		return decodeURIComponent(match[1]) as Locale;
 	}
 
-	// 3. Browser Navigator Language
+	// 4. Browser Navigator Language
 	const navLang = navigator.language;
 	if (navLang.startsWith("zh")) {
 		return "zh-CN";
@@ -63,6 +130,7 @@ export const I18nContext = createContext<I18nContextValue>({
 	dict: getDictionary(DEFAULT_LOCALE),
 	t: (key, params) => translate(getDictionary(DEFAULT_LOCALE), key, params),
 	setLocale: () => {},
+	getLocalizedPath: (p) => p,
 });
 
 export function useI18n(): I18nContextValue {
@@ -70,8 +138,8 @@ export function useI18n(): I18nContextValue {
 }
 
 export function useTranslation() {
-	const { t, locale, dict, setLocale } = useI18n();
-	return { t, locale, dict, setLocale };
+	const { t, locale, dict, setLocale, getLocalizedPath } = useI18n();
+	return { t, locale, dict, setLocale, getLocalizedPath };
 }
 
 export {
