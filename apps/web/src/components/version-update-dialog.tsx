@@ -15,10 +15,7 @@ export function VersionUpdateDialog() {
 
 	return (
 		<div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 p-4">
-			<div
-				className="pointer-events-auto mx-auto flex max-w-lg flex-col gap-3 rounded-xl border bg-popover p-4 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10"
-				role="status"
-			>
+			<div className="pointer-events-auto mx-auto flex max-w-lg flex-col gap-3 rounded-xl border bg-popover p-4 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10">
 				<div className="flex flex-col gap-1">
 					<p className="font-heading text-base leading-none font-medium">
 						A new version is available
