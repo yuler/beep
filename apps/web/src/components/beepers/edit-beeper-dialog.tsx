@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,14 +40,16 @@ export function EditBeeperDialog({
 
 	const inputs = beeper.beeper_app?.inputs ?? [];
 
+	useEffect(() => {
+		if (!open) return;
+		setEditTitle(beeper.title);
+		setEditBody(beeper.body ?? "");
+		setEditCron(beeper.cron);
+		setEditInputs({ ...(beeper.config ?? {}) });
+		setEditError(null);
+	}, [open, beeper]);
+
 	function handleOpenChange(isOpen: boolean) {
-		if (isOpen) {
-			setEditTitle(beeper.title);
-			setEditBody(beeper.body ?? "");
-			setEditCron(beeper.cron);
-			setEditInputs({ ...(beeper.config ?? {}) });
-			setEditError(null);
-		}
 		if (!savingEdit) {
 			onOpenChange(isOpen);
 		}
@@ -151,10 +153,13 @@ export function EditBeeperDialog({
 											placeholder={input.placeholder}
 											value={String(editInputs[input.name] ?? "")}
 											onChange={(e) => {
+												const raw = e.target.value;
 												const val =
 													input.type === "number"
-														? Number(e.target.value)
-														: e.target.value;
+														? raw === ""
+															? ""
+															: Number(raw)
+														: raw;
 												setEditInputs((curr) => ({
 													...curr,
 													[input.name]: val,

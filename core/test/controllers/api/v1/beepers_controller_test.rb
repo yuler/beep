@@ -112,6 +112,48 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://new.example.com", beeper.config["target_url"]
   end
 
+  test "update clears body when set to null" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "With Body",
+      body: "Old Body",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
+    )
+
+    patch "/api/v1/#{@account.slug}/beepers/#{beeper.id}",
+      params: { body: nil },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_nil response.parsed_body["body"]
+    assert_nil beeper.reload.body
+  end
+
+  test "update clears body when set to empty string" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "With Body",
+      body: "Old Body",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
+    )
+
+    patch "/api/v1/#{@account.slug}/beepers/#{beeper.id}",
+      params: { body: "" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_nil response.parsed_body["body"]
+    assert_nil beeper.reload.body
+  end
+
   test "destroy deletes the beeper" do
     beeper = Beeper.create!(
       account: @account,
