@@ -8,7 +8,7 @@ const settingsPath = path.join(inlangDir, "settings.json");
 const messagesDir = path.join(inlangDir, "messages");
 
 const settings = JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
-const locales = settings.languageTags || ["en", "zh-CN"];
+const locales = settings.languageTags || ["en", "zh"];
 
 console.log("🔍 Checking translation keys across locales:", locales.join(", "));
 

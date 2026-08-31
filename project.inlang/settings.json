@@ -1,11 +1,5 @@
 {
-  "$schema": "https://inlang.com/schema/project-settings",
+  "$schema": "https://inlang.com/owl/project-settings",
   "sourceLanguageTag": "en",
-  "languageTags": ["en", "zh-CN"],
-  "modules": [
-    "https://cdn.jsdelivr.net/npm/@inlang/plugin-message-format@2/dist/index.js"
-  ],
-  "plugin.inlang.messageFormat": {
-    "pathPattern": "./messages/{languageTag}.json"
-  }
+  "languageTags": ["en", "zh"]
 }

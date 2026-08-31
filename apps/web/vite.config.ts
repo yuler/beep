@@ -58,40 +58,6 @@ load it. Use the canonical URL:</p>
 	};
 }
 
-/**
- * URL locale prefix middleware for dev server.
- * When a request comes in as /zh-CN/... (or other supported locales):
- * - Sets the locale cookie
- * - Rewrites req.url to strip the locale prefix so TanStack Start SSR handles it cleanly
- */
-function localeRewritePlugin(): Plugin {
-	const supportedLocales = ["zh-CN"];
-
-	return {
-		name: "locale-rewrite",
-		configureServer(server) {
-			server.middlewares.use((req, res, next) => {
-				if (!req.url) return next();
-
-				for (const loc of supportedLocales) {
-					if (req.url === `/${loc}` || req.url.startsWith(`/${loc}/`)) {
-						// Set cookie for subsequent SSR & API calls
-						res.setHeader(
-							"Set-Cookie",
-							`locale=${loc}; Path=/; Max-Age=31536000; SameSite=Lax`,
-						);
-						// Strip prefix so TanStack Router matches the underlying route
-						const rewritten = req.url.slice(loc.length + 1) || "/";
-						req.url = rewritten;
-						break;
-					}
-				}
-				next();
-			});
-		},
-	};
-}
-
 interface BuildInfoPayload {
 	version: string;
 	gitHash: string;
@@ -200,7 +166,6 @@ export default defineConfig(({ command }) => {
 		},
 		plugins: [
 			...(appHost ? [hostAllowlist(`web.${appHost}`)] : []),
-			localeRewritePlugin(),
 			versionJsonPlugin(buildInfo),
 			tailwindcss(),
 			tanstackStart({

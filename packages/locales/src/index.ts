@@ -1,14 +1,14 @@
 import en from "../../../project.inlang/messages/en.json";
-import zhCN from "../../../project.inlang/messages/zh-CN.json";
+import zh from "../../../project.inlang/messages/zh.json";
 import inlangSettings from "../../../project.inlang/settings.json";
 
 export const DEFAULT_LOCALE = (inlangSettings.sourceLanguageTag || "en") as "en";
-export const SUPPORTED_LOCALES = (inlangSettings.languageTags as unknown as readonly ["en", "zh-CN"]) || (["en", "zh-CN"] as const);
-export type Locale = (typeof SUPPORTED_LOCALES)[number];
+export const SUPPORTED_LOCALES = (inlangSettings.languageTags as readonly string[]) || (["en", "zh"] as const);
+export type Locale = "en" | "zh";
 
 export const dictionaries = {
 	en,
-	"zh-CN": zhCN,
+	zh,
 } as const satisfies Record<Locale, typeof en>;
 
 export type TranslationSchema = typeof en;

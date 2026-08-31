@@ -4,7 +4,7 @@ import { type Locale, useI18n } from "@/lib/i18n";
 export function LanguageToggle() {
 	const { locale, setLocale, getLocalizedPath, t } = useI18n();
 
-	const nextLocale: Locale = locale === "en" ? "zh-CN" : "en";
+	const nextLocale: Locale = locale === "en" ? "zh" : "en";
 	const label = locale === "en" ? "EN" : "中";
 
 	return (

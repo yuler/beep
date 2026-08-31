@@ -22,7 +22,22 @@ export interface I18nContextValue {
 }
 
 /**
- * Extracts a supported locale from pathname if present (e.g. /zh-CN/my-account -> "zh-CN")
+ * Normalizes locale strings (e.g. backward compat for "zh-CN" -> "zh")
+ */
+export function normalizeLocale(
+	value: string | null | undefined,
+): Locale | null {
+	if (!value) return null;
+	const lower = value.toLowerCase();
+	if (lower === "zh-cn" || lower === "zh_cn" || lower === "zh") {
+		return "zh";
+	}
+	return isSupportedLocale(value) ? value : null;
+}
+
+/**
+ * Extracts a supported locale from pathname if present (e.g. /zh/my-account -> "zh")
+ * Also backwards-compatible with /zh-CN/my-account.
  */
 export function extractLocaleFromPath(pathname: string): {
 	locale: Locale | null;
@@ -31,10 +46,11 @@ export function extractLocaleFromPath(pathname: string): {
 	const segments = pathname.split("/").filter(Boolean);
 	const first = segments[0];
 
-	if (first && isSupportedLocale(first)) {
+	const normalized = normalizeLocale(first);
+	if (normalized) {
 		const remaining = `/${segments.slice(1).join("/")}`;
 		return {
-			locale: first,
+			locale: normalized,
 			cleanPath: remaining === "/" ? "/" : remaining,
 		};
 	}
@@ -92,24 +108,29 @@ export function getStoredLocale(): Locale {
 		return pathLocale;
 	}
 
-	// 2. LocalStorage
+	// 2. LocalStorage (with backward compat)
 	const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
-	if (isSupportedLocale(stored)) {
-		return stored;
+	const normalizedStored = normalizeLocale(stored);
+	if (normalizedStored) {
+		return normalizedStored;
 	}
 
-	// 3. Cookie
+	// 3. Cookie (with backward compat)
 	const match = document.cookie.match(
 		new RegExp(`(?:^|; )${LOCALE_COOKIE_KEY}=([^;]*)`),
 	);
-	if (match && isSupportedLocale(decodeURIComponent(match[1]))) {
-		return decodeURIComponent(match[1]) as Locale;
+	if (match) {
+		const cookieVal = decodeURIComponent(match[1]);
+		const normalizedCookie = normalizeLocale(cookieVal);
+		if (normalizedCookie) {
+			return normalizedCookie;
+		}
 	}
 
 	// 4. Browser Navigator Language
 	const navLang = navigator.language;
 	if (navLang.startsWith("zh")) {
-		return "zh-CN";
+		return "zh";
 	}
 
 	return DEFAULT_LOCALE;
