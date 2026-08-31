@@ -1,19 +1,30 @@
 # frozen_string_literal: true
 
-# Custom loader for shared flat JSON locales (e.g. "common.save": "Save").
-# Expands dot-separated keys into nested hashes so Rails `I18n.t("common.save")`
-# works seamlessly.
+# Custom loader for shared flat JSON locales from project.inlang.
+# Reads settings from packages/locales/project.inlang/settings.json and
+# loads messages from packages/locales/project.inlang/messages/*.json.
 
 module JsonLocaleLoader
   def self.load_json_locales
-    locales_dir = Rails.root.join("../packages/locales/src")
-    return unless Dir.exist?(locales_dir)
+    inlang_dir = Rails.root.join("../packages/locales/project.inlang")
+    return unless Dir.exist?(inlang_dir)
 
-    I18n.available_locales = %i[en zh-CN]
-    I18n.default_locale = :en
-    I18n.fallbacks = [ :en ]
+    settings_file = inlang_dir.join("settings.json")
+    if File.exist?(settings_file)
+      begin
+        settings = JSON.parse(File.read(settings_file))
+        I18n.available_locales = settings["languageTags"].map(&:to_sym) if settings["languageTags"]
+        I18n.default_locale = settings["sourceLanguageTag"].to_sym if settings["sourceLanguageTag"]
+        I18n.fallbacks = [I18n.default_locale]
+      rescue StandardError => e
+        Rails.logger.error("[i18n] Failed to parse #{settings_file}: #{e.message}")
+      end
+    end
 
-    Dir.glob("#{locales_dir}/*.json").each do |file|
+    messages_dir = inlang_dir.join("messages")
+    return unless Dir.exist?(messages_dir)
+
+    Dir.glob("#{messages_dir}/*.json").each do |file|
       locale = File.basename(file, ".json").to_sym
       begin
         flat_hash = JSON.parse(File.read(file))

@@ -15,7 +15,9 @@
     "./*": "./*"
   },
   "scripts": {
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit && node scripts/check.js",
+    "locale:check": "node scripts/check.js",
+    "locale:sort": "node scripts/sort.js"
   },
   "devDependencies": {
     "typescript": "^6.0.2"
