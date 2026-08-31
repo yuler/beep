@@ -167,6 +167,29 @@ export function EditBeeperDialog({
 							</div>
 						) : null}
 
+						<div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
+							<p className="font-medium text-foreground mb-1">
+								💡 Impact of changes:
+							</p>
+							<ul className="list-disc pl-4 space-y-0.5">
+								<li>
+									<span className="font-medium text-foreground">
+										Schedule (Cron):
+									</span>{" "}
+									The next execution time (
+									<code className="font-mono text-[11px]">next_run_at</code>)
+									will be immediately recalculated without needing to restart.
+								</li>
+								<li>
+									<span className="font-medium text-foreground">
+										Configuration:
+									</span>{" "}
+									New probe parameters take effect on the next scheduled run.
+									Past run logs remain unchanged.
+								</li>
+							</ul>
+						</div>
+
 						{editError ? (
 							<p className="text-sm text-destructive" role="alert">
 								{editError}
