@@ -45,6 +45,7 @@ export {
 	type Locale,
 	SUPPORTED_LOCALES,
 	type TranslationKey,
+	type TranslationSchema,
 	buildLocalizedPath,
 	extractLocaleFromPath,
 	normalizeLocale,

@@ -16,6 +16,7 @@ import {
 	ItemTitle,
 } from "@/components/ui/item";
 import { useWebPush } from "@/hooks/use-web-push";
+import { useTranslation } from "@/lib/i18n";
 import { IOS_HOME_SCREEN_HINT } from "@/lib/web-push";
 
 function dismissKey(slug: string) {
@@ -46,6 +47,7 @@ export function WebPushSetupBanner() {
 }
 
 function WebPushSetupBannerInner({ slug }: { slug: string }) {
+	const { t } = useTranslation();
 	const { status, ready, pending, enable, error } = useWebPush(slug);
 	const [dismissed, setDismissed] = useState(true);
 	const navigate = useNavigate();
@@ -87,13 +89,13 @@ function WebPushSetupBannerInner({ slug }: { slug: string }) {
 						<Bell />
 					</ItemMedia>
 					<ItemContent>
-						<ItemTitle>Browser notifications are off</ItemTitle>
+						<ItemTitle>{t("push.banner_title")}</ItemTitle>
 						<ItemDescription>
 							{needsIosInstall
-								? IOS_HOME_SCREEN_HINT
+								? t(IOS_HOME_SCREEN_HINT)
 								: denied
-									? "Notifications are blocked. Allow them in the browser or system settings, then enable this device."
-									: "Click to enable this browser and open notification settings."}
+									? t("push.banner_blocked")
+									: t("push.banner_click_enable")}
 						</ItemDescription>
 					</ItemContent>
 				</button>
@@ -102,7 +104,7 @@ function WebPushSetupBannerInner({ slug }: { slug: string }) {
 						type="button"
 						variant="ghost"
 						size="icon-sm"
-						aria-label="Dismiss notification tip"
+						aria-label={t("common.not_now")}
 						onClick={dismiss}
 					>
 						<X />

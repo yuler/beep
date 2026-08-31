@@ -26,6 +26,7 @@ import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import { useTranslation } from "@/lib/i18n";
+import { beepStatusLabel } from "@/lib/i18n-labels";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -167,7 +168,7 @@ function BeepDetailPage() {
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
 						<Badge variant={BEEP_STATUS_META[beep.status].badgeVariant}>
-							{t(BEEP_STATUS_META[beep.status].labelKey)}
+							{beepStatusLabel(t, beep.status)}
 						</Badge>
 						{beep.status === "active" || beep.status === "paused" ? (
 							<Button
@@ -276,7 +277,7 @@ function BeepDetailPage() {
 							}
 						/>
 						<DetailRow
-							label={t("common.create")}
+							label={t("common.created")}
 							value={new Date(beep.created_at).toLocaleString()}
 						/>
 					</CardContent>

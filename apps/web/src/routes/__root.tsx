@@ -15,7 +15,6 @@ import { logBuildInfo } from "@/lib/build-info";
 import {
 	buildLocalizedPath,
 	DEFAULT_LOCALE,
-	extractLocaleFromPath,
 	I18nContext,
 	type Locale,
 	resolveLocaleFromUrl,

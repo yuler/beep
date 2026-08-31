@@ -36,22 +36,38 @@ export function beepStatusLabel(t: Translate, status: Beep["status"]): string {
 	return t(`status.beep.${status}` as TranslationKey);
 }
 
+const RUN_STATUSES = new Set([
+	"pending",
+	"running",
+	"succeeded",
+	"failed",
+	"skipped",
+	"expired",
+]);
+
+const HEALTH_STATUSES = new Set(["ok", "alerting", "broken"]);
+
+const JOB_STATUSES = new Set(["failed", "finished", "pending"]);
+
 export function beepRunStatusLabel(t: Translate, status: string): string {
-	const key = `status.run.${status}`;
-	if (key === "status.run.pending" || key === "status.run.running" || key === "status.run.succeeded" || key === "status.run.failed" || key === "status.run.skipped" || key === "status.run.expired") {
-		return t(key as TranslationKey);
+	if (RUN_STATUSES.has(status)) {
+		return t(`status.run.${status}` as TranslationKey);
 	}
 	return status;
 }
 
 export function healthStatusLabel(t: Translate, status: string): string {
-	const key = `status.health.${status}` as TranslationKey;
-	return t(key);
+	if (HEALTH_STATUSES.has(status)) {
+		return t(`status.health.${status}` as TranslationKey);
+	}
+	return status;
 }
 
 export function jobStatusLabel(t: Translate, status: string): string {
-	const key = `status.job.${status}` as TranslationKey;
-	return t(key);
+	if (JOB_STATUSES.has(status)) {
+		return t(`status.job.${status}` as TranslationKey);
+	}
+	return status;
 }
 
 export function channelLabel(

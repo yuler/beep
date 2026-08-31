@@ -40,6 +40,8 @@ function MySettingsPage() {
 	}, [identity.email]);
 
 	const initials = identity.email.charAt(0).toUpperCase() || "U";
+	const gravatarLabel = t("term.gravatar");
+	const avatarHintParts = t("my.avatar_gravatar_hint").split(gravatarLabel);
 
 	return (
 		<>
@@ -96,7 +98,16 @@ function MySettingsPage() {
 								<div className="space-y-1">
 									<p className="font-medium leading-none">{t("my.avatar")}</p>
 									<p className="text-xs text-muted-foreground">
-										{t("my.avatar_gravatar_hint")}
+										{avatarHintParts[0]}
+										<a
+											href="https://gravatar.com"
+											target="_blank"
+											rel="noreferrer"
+											className="inline-flex items-center gap-0.5 font-medium text-foreground underline underline-offset-2 hover:text-primary"
+										>
+											{gravatarLabel}
+										</a>
+										{avatarHintParts[1] ?? ""}
 									</p>
 								</div>
 							</div>
@@ -112,10 +123,9 @@ function MySettingsPage() {
 									</div>
 								</div>
 								<p className="text-xs text-muted-foreground">
-									{t("my.email_identity_hint").replace(
-										"Beep",
-										t("term.beep_capitalized"),
-									)}
+									{t("my.email_identity_hint", {
+										beep: t("term.beep_capitalized"),
+									})}
 								</p>
 							</div>
 						</CardContent>

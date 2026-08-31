@@ -3,7 +3,6 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { Activity, Clock, Repeat, Search, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { BEEP_STATUS_META } from "@/components/beeps/beep-status";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -18,7 +17,7 @@ import type { Beep } from "@/lib/api/beeps";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import { beepRunAt } from "@/lib/beep-stats";
 import { useTranslation } from "@/lib/i18n";
-import { beepRunStatusLabel } from "@/lib/i18n-labels";
+import { beepRunStatusLabel, beepStatusLabel } from "@/lib/i18n-labels";
 import { runSuccessRate } from "@/lib/run-success-rate";
 import { shortId } from "@/lib/short-id";
 import { cn } from "@/lib/utils";
@@ -167,7 +166,7 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 				),
 				cell: ({ row }) => (
 					<StatusPill
-						label={t(BEEP_STATUS_META[row.original.status].labelKey)}
+						label={beepStatusLabel(t, row.original.status)}
 						tone={beepStatusTone(row.original.status)}
 					/>
 				),

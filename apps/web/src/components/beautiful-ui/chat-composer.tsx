@@ -1,10 +1,6 @@
-import { type HTMLAttributes, useEffect, useRef, useState } from "react";
+import { type HTMLAttributes, useEffect, useMemo, useRef, useState } from "react";
 
-import {
-	mockChatReplies,
-	mockChatTabs,
-	mockStarterMessage,
-} from "@/lib/mock/ai-chat";
+import { useTranslation } from "@/lib/i18n";
 
 type Phase = "idle" | "sent" | "reply1" | "reply2" | "done";
 
@@ -50,10 +46,35 @@ export function ChatComposer({
 	onCollapse?: () => void;
 	dragHandleProps?: HTMLAttributes<HTMLButtonElement>;
 } = {}) {
+	const { t } = useTranslation();
+	const mockChatReplies = useMemo(
+		() => [
+			{
+				label: t("dev.mock_reply_1_label"),
+				sub: t("dev.mock_reply_1_sub"),
+				time: t("dev.mock_reply_1_time"),
+				body: t("dev.mock_reply_1_body"),
+			},
+			{
+				label: t("dev.mock_reply_2_label"),
+				sub: t("dev.mock_reply_2_sub"),
+				time: t("dev.mock_reply_2_time"),
+				body: t("dev.mock_reply_2_body"),
+			},
+		],
+		[t],
+	);
 	const [phase, setPhase] = useState<Phase>("done");
 	const [draft, setDraft] = useState("");
-	const [submitted, setSubmitted] = useState(mockStarterMessage);
-	const [tab, setTab] = useState<(typeof mockChatTabs)[number]>("Beeps");
+	const [submitted, setSubmitted] = useState(() => t("dev.mock_starter_message"));
+	const [tab, setTab] = useState<"beeps" | "history">("beeps");
+	const chatTabs = useMemo(
+		() => [
+			{ id: "beeps" as const, label: t("dev.chat_tab_beeps") },
+			{ id: "history" as const, label: t("dev.chat_tab_history") },
+		],
+		[t],
+	);
 	const inputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
@@ -107,15 +128,15 @@ export function ChatComposer({
 						</button>
 					) : null}
 					<div className="flex items-center">
-						{mockChatTabs.map((item) => (
+						{chatTabs.map((item) => (
 							<button
-								key={item}
+								key={item.id}
 								type="button"
-								aria-pressed={tab === item}
-								onClick={() => setTab(item)}
-								className={`rounded-[6px] px-2 py-[3px] text-[13px] text-ink transition-[background-color,opacity] duration-100 ${tab === item ? "bg-field" : "opacity-50 hover:opacity-75"}`}
+								aria-pressed={tab === item.id}
+								onClick={() => setTab(item.id)}
+								className={`rounded-[6px] px-2 py-[3px] text-[13px] text-ink transition-[background-color,opacity] duration-100 ${tab === item.id ? "bg-field" : "opacity-50 hover:opacity-75"}`}
 							>
-								{item}
+								{item.label}
 							</button>
 						))}
 					</div>
@@ -145,10 +166,10 @@ export function ChatComposer({
 					) : null}
 					{(
 						[
-							{ key: "add", label: "Add", icon: <path d="M12 5v14M5 12h14" /> },
+							{ key: "add", label: t("common.add"), icon: <path d="M12 5v14M5 12h14" /> },
 							{
 								key: "history",
-								label: "History",
+								label: t("common.history"),
 								icon: (
 									<g>
 										<circle cx="12" cy="12" r="9" />
@@ -158,7 +179,7 @@ export function ChatComposer({
 							},
 							{
 								key: "menu",
-								label: "More",
+								label: t("common.more"),
 								icon: (
 									<g fill="currentColor" stroke="none">
 										<circle cx="5" cy="12" r="1.8" />
@@ -228,8 +249,8 @@ export function ChatComposer({
 						onKeyDown={(event) => {
 							if (event.key === "Enter") send();
 						}}
-						placeholder="Ask about beeps or set a reminder…"
-						aria-label="Chat prompt"
+						placeholder={t("dev.chat_placeholder")}
+						aria-label={t("dev.chat_placeholder")}
 						className="min-h-4.5 bg-transparent text-[13px] leading-[1.4] text-ink outline-none placeholder:text-ink-3"
 					/>
 					<div className="flex items-center justify-end">

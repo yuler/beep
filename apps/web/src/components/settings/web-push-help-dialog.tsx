@@ -10,40 +10,33 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import { useTranslation } from "@/lib/i18n";
+import { browserLabel, pushPlatformLabel } from "@/lib/i18n-labels";
 import {
 	IOS_HOME_SCREEN_HINT,
 	type NotificationPlatform,
 } from "@/lib/web-push";
 
-const OS_STEP: Record<
-	NotificationPlatform,
-	{ title: string; body: (browserName: string) => string }
-> = {
-	macos: {
-		title: "Mac",
-		body: (browserName) =>
-			`System Settings → Notifications → ${browserName}. Turn notifications on and set the style to Banners or Alerts.`,
-	},
-	windows: {
-		title: "Windows",
-		body: (browserName) =>
-			`Settings → System → Notifications. Turn notifications on, then enable ${browserName} in the app list. Banners must be allowed.`,
-	},
-	linux: {
-		title: "Linux",
-		body: (browserName) =>
-			`GNOME: Settings → Notifications → ${browserName}. KDE: System Settings → Notifications. Allow ${browserName} and turn off Do Not Disturb.`,
-	},
-	ios: {
-		title: "iPhone and iPad",
-		body: () => IOS_HOME_SCREEN_HINT,
-	},
-	other: {
-		title: "System",
-		body: (browserName) =>
-			`Allow notifications for ${browserName} in this device’s system notification settings.`,
-	},
-};
+function osStepBody(
+	t: ReturnType<typeof useTranslation>["t"],
+	platform: NotificationPlatform,
+	browserName: string,
+) {
+	const browser = browserLabel(t, browserName);
+
+	switch (platform) {
+		case "macos":
+			return t("push.help_macos_body", { browser });
+		case "windows":
+			return t("push.help_windows_body", { browser });
+		case "linux":
+			return t("push.help_linux_body", { browser });
+		case "ios":
+			return t(IOS_HOME_SCREEN_HINT);
+		default:
+			return t("push.help_other_body", { browser });
+	}
+}
 
 export function WebPushHelpDialog({
 	browserName,
@@ -52,7 +45,9 @@ export function WebPushHelpDialog({
 	browserName: string;
 	platform: NotificationPlatform;
 }) {
-	const osStep = OS_STEP[platform];
+	const { t } = useTranslation();
+	const browser = browserLabel(t, browserName);
+	const platformLabel = pushPlatformLabel(t, platform);
 
 	return (
 		<Dialog>
@@ -62,35 +57,34 @@ export function WebPushHelpDialog({
 				}
 			>
 				<CircleHelp data-icon="inline-start" />
-				Tips
+				{t("common.tips")}
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle>Get notifications on this device</DialogTitle>
+					<DialogTitle>{t("push.help_title")}</DialogTitle>
 					<DialogDescription>
-						Allow this site in the browser, then allow {browserName} in system
-						settings. Click Test when both are on.
+						{t("push.help_description", { browser })}
 					</DialogDescription>
 				</DialogHeader>
 				<ol className="flex list-decimal flex-col gap-4 pl-4 text-sm">
 					<li>
-						<span className="font-medium">Browser.</span>{" "}
+						<span className="font-medium">{t("push.help_step_browser")}</span>{" "}
 						<span className="text-muted-foreground">
-							Click Enable notifications and allow the prompt for this site.
+							{t("push.help_browser_step")}
 						</span>
 					</li>
 					<li>
-						<span className="font-medium">{osStep.title}.</span>{" "}
+						<span className="font-medium">
+							{t("push.help_step_os", { platform: platformLabel })}
+						</span>{" "}
 						<span className="text-muted-foreground">
-							{osStep.body(browserName)}
+							{osStepBody(t, platform, browserName)}
 						</span>
 					</li>
 					<li>
-						<span className="font-medium">Test.</span>{" "}
+						<span className="font-medium">{t("push.help_step_test")}</span>{" "}
 						<span className="text-muted-foreground">
-							Click Test. You should see a system banner. A number on the app
-							icon only appears after Beep is installed, not on a regular
-							browser tab.
+							{t("push.help_step_test_body")}
 						</span>
 					</li>
 				</ol>
