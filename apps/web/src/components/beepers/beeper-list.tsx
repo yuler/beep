@@ -2,10 +2,10 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useMemo } from "react";
 
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	DataTable,
 	type dataTableFeatures,
+	makeSelectColumn,
 	SortableHeader,
 } from "@/components/ui/data-table";
 import { ProgressBar, StatusPill } from "@/components/ui/status-pill";
@@ -15,6 +15,7 @@ import {
 	beeperHealthIsDestructive,
 	beeperHealthLabel,
 } from "@/lib/beeper-health";
+import { runSuccessRate } from "@/lib/run-success-rate";
 import { shortId } from "@/lib/short-id";
 
 const columnHelper = createColumnHelper<typeof dataTableFeatures, Beeper>();
@@ -39,44 +40,11 @@ function healthTone(beeper: Beeper) {
 	return "amber" as const;
 }
 
-function runSuccessRate(beeper: Beeper) {
-	const runs = beeper.runs ?? [];
-	if (runs.length === 0) return 0;
-	const succeeded = runs.filter((run) => run.status === "succeeded").length;
-	return Math.round((succeeded / runs.length) * 100);
-}
-
 function useBeeperColumns(slug: string) {
 	return useMemo(
 		() =>
 			columnHelper.columns([
-				columnHelper.display({
-					id: "select",
-					header: ({ table }) => (
-						<Checkbox
-							checked={
-								table.getIsAllPageRowsSelected()
-									? true
-									: table.getIsSomePageRowsSelected()
-										? "indeterminate"
-										: false
-							}
-							onCheckedChange={(value) =>
-								table.toggleAllPageRowsSelected(value === true)
-							}
-							aria-label="Select all"
-						/>
-					),
-					cell: ({ row }) => (
-						<Checkbox
-							checked={row.getIsSelected()}
-							onCheckedChange={(value) => row.toggleSelected(value === true)}
-							aria-label="Select row"
-							data-no-row-nav
-						/>
-					),
-					enableSorting: false,
-				}),
+				makeSelectColumn(columnHelper),
 				columnHelper.accessor("title", {
 					id: "title",
 					header: ({ column }) => (
@@ -158,13 +126,13 @@ function useBeeperColumns(slug: string) {
 						</span>
 					),
 				}),
-				columnHelper.accessor((row) => runSuccessRate(row), {
-					id: "progress",
+				columnHelper.accessor((row) => runSuccessRate(row.runs ?? []), {
+					id: "run_success",
 					header: ({ column }) => (
-						<SortableHeader column={column} label="Progress" />
+						<SortableHeader column={column} label="Run success" />
 					),
 					cell: ({ row }) => (
-						<ProgressBar value={runSuccessRate(row.original)} />
+						<ProgressBar value={runSuccessRate(row.original.runs ?? [])} />
 					),
 				}),
 				columnHelper.accessor((row) => row.runs?.length ?? 0, {

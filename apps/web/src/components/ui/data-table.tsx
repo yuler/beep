@@ -1,8 +1,13 @@
 import {
 	type Column,
+	type createColumnHelper,
 	createSortedRowModel,
+	type RowData,
+	type RowSelectionState,
 	rowSelectionFeature,
 	rowSortingFeature,
+	type SortingState,
+	type TableOptions,
 	tableFeatures,
 	useTable,
 } from "@tanstack/react-table";
@@ -10,6 +15,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Table,
 	TableBody,
@@ -28,11 +34,44 @@ export const dataTableFeatures = tableFeatures({
 
 export type DataTableFeatures = typeof dataTableFeatures;
 
-export function SortableHeader<TData>({
+type ColumnHelperFor<TData extends RowData> = ReturnType<
+	typeof createColumnHelper<typeof dataTableFeatures, TData>
+>;
+
+export function makeSelectColumn<TData extends RowData>(
+	columnHelper: ColumnHelperFor<TData>,
+) {
+	return columnHelper.display({
+		id: "select",
+		header: ({ table }) => (
+			<Checkbox
+				checked={table.getIsAllPageRowsSelected()}
+				indeterminate={
+					table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()
+				}
+				onCheckedChange={(value) =>
+					table.toggleAllPageRowsSelected(value === true)
+				}
+				aria-label="Select all"
+			/>
+		),
+		cell: ({ row }) => (
+			<Checkbox
+				checked={row.getIsSelected()}
+				onCheckedChange={(value) => row.toggleSelected(value === true)}
+				aria-label="Select row"
+				data-no-row-nav
+			/>
+		),
+		enableSorting: false,
+	});
+}
+
+export function SortableHeader<TData extends RowData, TValue>({
 	column,
 	label,
 }: {
-	column: Column<TData, unknown>;
+	column: Column<typeof dataTableFeatures, TData, TValue>;
 	label: string;
 }) {
 	const sorted = column.getIsSorted();
@@ -56,16 +95,16 @@ export function SortableHeader<TData>({
 	);
 }
 
-type DataTableProps<TData> = {
+type DataTableProps<TData extends RowData> = {
 	data: TData[];
-	columns: ReadonlyArray<unknown>;
-	getRowId?: (row: TData) => string;
+	columns: TableOptions<typeof dataTableFeatures, TData>["columns"];
+	getRowId?: TableOptions<typeof dataTableFeatures, TData>["getRowId"];
 	className?: string;
 	emptyMessage?: string;
 	onRowClick?: (row: TData) => void;
 };
 
-export function DataTable<TData>({
+export function DataTable<TData extends RowData>({
 	data,
 	columns,
 	getRowId,
@@ -73,12 +112,10 @@ export function DataTable<TData>({
 	emptyMessage = "No rows to display.",
 	onRowClick,
 }: DataTableProps<TData>) {
-	const [sorting, setSorting] = useState<Array<{ id: string; desc: boolean }>>(
-		[],
-	);
-	const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+	const [sorting, setSorting] = useState<SortingState>([]);
+	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-	const table = useTable({
+	const table = useTable<typeof dataTableFeatures, TData>({
 		features: dataTableFeatures,
 		data,
 		columns,
@@ -89,6 +126,7 @@ export function DataTable<TData>({
 	});
 
 	const rows = table.getRowModel().rows;
+	const columnCount = table.getAllColumns().length;
 
 	return (
 		<div
@@ -121,7 +159,7 @@ export function DataTable<TData>({
 					{rows.length === 0 ? (
 						<TableRow className="hover:bg-transparent">
 							<TableCell
-								colSpan={columns.length}
+								colSpan={columnCount}
 								className="h-24 px-3 text-center text-sm text-muted-foreground"
 							>
 								{emptyMessage}
@@ -136,6 +174,8 @@ export function DataTable<TData>({
 									"border-b border-border/60",
 									onRowClick && "cursor-pointer",
 								)}
+								tabIndex={onRowClick ? 0 : undefined}
+								role={onRowClick ? "button" : undefined}
 								onClick={
 									onRowClick
 										? (event) => {
@@ -147,6 +187,17 @@ export function DataTable<TData>({
 												) {
 													return;
 												}
+												onRowClick(row.original);
+											}
+										: undefined
+								}
+								onKeyDown={
+									onRowClick
+										? (event) => {
+												if (event.key !== "Enter" && event.key !== " ") {
+													return;
+												}
+												event.preventDefault();
 												onRowClick(row.original);
 											}
 										: undefined

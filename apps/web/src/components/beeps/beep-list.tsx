@@ -6,10 +6,10 @@ import { useMemo, useState } from "react";
 import { BEEP_STATUS_META } from "@/components/beeps/beep-status";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	DataTable,
 	type dataTableFeatures,
+	makeSelectColumn,
 	SortableHeader,
 } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { ProgressBar, StatusPill } from "@/components/ui/status-pill";
 import type { Beep } from "@/lib/api/beeps";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import { beepRunAt } from "@/lib/beep-stats";
+import { runSuccessRate } from "@/lib/run-success-rate";
 import { shortId } from "@/lib/short-id";
 import { cn } from "@/lib/utils";
 
@@ -37,14 +38,6 @@ function beepStatusTone(status: Beep["status"]) {
 	}
 }
 
-function runSuccessRate(beep: Beep) {
-	if (beep.runs.length === 0) return 0;
-	const succeeded = beep.runs.filter(
-		(run) => run.status === "succeeded",
-	).length;
-	return Math.round((succeeded / beep.runs.length) * 100);
-}
-
 function formatScheduleLabel(beep: Beep) {
 	if (beep.status === "completed") return "Completed";
 	if (beep.kind === "recurring") return beep.cron ?? "Scheduled";
@@ -55,34 +48,49 @@ function formatScheduleLabel(beep: Beep) {
 
 function useBeepColumns(slug: string, variant: "compact" | "full") {
 	return useMemo(() => {
-		const columns = [
-			columnHelper.display({
-				id: "select",
-				header: ({ table }) => (
-					<Checkbox
-						checked={
-							table.getIsAllPageRowsSelected()
-								? true
-								: table.getIsSomePageRowsSelected()
-									? "indeterminate"
-									: false
-						}
-						onCheckedChange={(value) =>
-							table.toggleAllPageRowsSelected(value === true)
-						}
-						aria-label="Select all"
-					/>
-				),
-				cell: ({ row }) => (
-					<Checkbox
-						checked={row.getIsSelected()}
-						onCheckedChange={(value) => row.toggleSelected(value === true)}
-						aria-label="Select row"
-						data-no-row-nav
-					/>
-				),
-				enableSorting: false,
-			}),
+		const fullColumns =
+			variant === "full"
+				? [
+						columnHelper.accessor((row) => runSuccessRate(row.runs), {
+							id: "run_success",
+							header: ({ column }) => (
+								<SortableHeader column={column} label="Run success" />
+							),
+							cell: ({ row }) => (
+								<ProgressBar value={runSuccessRate(row.original.runs)} />
+							),
+						}),
+						columnHelper.accessor((row) => row.runs.length, {
+							id: "runs",
+							header: ({ column }) => (
+								<SortableHeader column={column} label="Runs" />
+							),
+							cell: ({ row }) => {
+								const beep = row.original;
+								const lastRun = beep.runs[beep.runs.length - 1];
+								return (
+									<div className="flex flex-col gap-0.5 text-sm">
+										<span className="tabular-nums text-foreground">
+											{beep.runs.length}
+										</span>
+										{lastRun ? (
+											<span className="text-[11px] text-muted-foreground capitalize">
+												Last: {lastRun.status}
+											</span>
+										) : (
+											<span className="text-[11px] text-muted-foreground">
+												—
+											</span>
+										)}
+									</div>
+								);
+							},
+						}),
+					]
+				: [];
+
+		return columnHelper.columns([
+			makeSelectColumn(columnHelper),
 			columnHelper.accessor("title", {
 				id: "title",
 				header: ({ column }) => <SortableHeader column={column} label="Beep" />,
@@ -172,47 +180,8 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 					);
 				},
 			}),
-		];
-
-		if (variant === "full") {
-			columns.push(
-				columnHelper.accessor((row) => runSuccessRate(row), {
-					id: "progress",
-					header: ({ column }) => (
-						<SortableHeader column={column} label="Progress" />
-					),
-					cell: ({ row }) => (
-						<ProgressBar value={runSuccessRate(row.original)} />
-					),
-				}),
-				columnHelper.accessor((row) => row.runs.length, {
-					id: "runs",
-					header: ({ column }) => (
-						<SortableHeader column={column} label="Runs" />
-					),
-					cell: ({ row }) => {
-						const beep = row.original;
-						const lastRun = beep.runs[beep.runs.length - 1];
-						return (
-							<div className="flex flex-col gap-0.5 text-sm">
-								<span className="tabular-nums text-foreground">
-									{beep.runs.length}
-								</span>
-								{lastRun ? (
-									<span className="text-[11px] text-muted-foreground capitalize">
-										Last: {lastRun.status}
-									</span>
-								) : (
-									<span className="text-[11px] text-muted-foreground">—</span>
-								)}
-							</div>
-						);
-					},
-				}),
-			);
-		}
-
-		return columnHelper.columns(columns);
+			...fullColumns,
+		]);
 	}, [slug, variant]);
 }
 
