@@ -95,6 +95,4 @@ jobs:
         run: pnpm --filter web build
 
       - name: Assert version.json shipped
-        run: |
-          test -f apps/web/.output/public/version.json
-          python3 -c "import json,sys; v=json.load(open('apps/web/.output/public/version.json')); sys.exit(0 if v.get('version') and v.get('gitHash') else 1)"
+        run: bash scripts/assert-web-version-json.sh

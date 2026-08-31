@@ -6,8 +6,8 @@ import { type BuildInfo, buildInfo } from "@/lib/build-info";
 /** How often to check for a new deploy. */
 export const VERSION_POLL_MS = 5 * 60 * 1000;
 
-/** After the user declines, wait this long before prompting again. */
-export const VERSION_DECLINE_MS = 30 * 60 * 1000;
+/** After the user declines, wait this long before prompting again (1 day). */
+export const VERSION_DECLINE_MS = 24 * 60 * 60 * 1000;
 
 const DISMISS_KEY = "beep:version-update-dismissed";
 
