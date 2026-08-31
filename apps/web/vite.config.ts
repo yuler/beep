@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
@@ -58,35 +58,66 @@ load it. Use the canonical URL:</p>
 	};
 }
 
+interface BuildInfoPayload {
+	version: string;
+	gitHash: string;
+	buildTime: string;
+}
+
 // Build metadata inlined into the client/SSR bundles (see build-info.ts).
 // Docker/CI builds pass APP_VERSION + GIT_REVISION build args; local dev falls
 // back to the repo-root VERSION file and the live git HEAD.
-const buildInfo = Object.freeze({
-	version: (() => {
-		if (process.env.APP_VERSION) return process.env.APP_VERSION;
-		try {
-			return readFileSync(
-				fileURLToPath(new URL("../../VERSION", import.meta.url)),
-				"utf8",
-			).trim();
-		} catch {
-			return "dev";
-		}
-	})(),
-	gitHash: (() => {
-		if (process.env.GIT_REVISION) return process.env.GIT_REVISION;
-		try {
-			return execSync("git rev-parse HEAD", {
-				stdio: ["ignore", "pipe", "ignore"],
-			})
-				.toString()
-				.trim();
-		} catch {
-			return "unknown";
-		}
-	})(),
-	buildTime: new Date().toISOString(),
-});
+function getBuildInfo(): BuildInfoPayload {
+	return {
+		version: (() => {
+			if (process.env.APP_VERSION) return process.env.APP_VERSION;
+			try {
+				return readFileSync(
+					fileURLToPath(new URL("../../VERSION", import.meta.url)),
+					"utf8",
+				).trim();
+			} catch {
+				return "dev";
+			}
+		})(),
+		gitHash: (() => {
+			if (process.env.GIT_REVISION) return process.env.GIT_REVISION;
+			try {
+				return execSync("git rev-parse HEAD", {
+					stdio: ["ignore", "pipe", "ignore"],
+				})
+					.toString()
+					.trim();
+			} catch {
+				return "unknown";
+			}
+		})(),
+		buildTime: new Date().toISOString(),
+	};
+}
+
+/** Lightweight /version.json for deployed-version polling (issue #26). */
+function versionJsonPlugin(): Plugin {
+	const publicDir = fileURLToPath(new URL("public", import.meta.url));
+
+	return {
+		name: "version-json",
+		configureServer(server) {
+			server.middlewares.use((req, res, next) => {
+				if (req.url?.split("?")[0] !== "/version.json") return next();
+				res.setHeader("Content-Type", "application/json; charset=utf-8");
+				res.setHeader("Cache-Control", "no-cache");
+				res.end(JSON.stringify(getBuildInfo()));
+			});
+		},
+		closeBundle() {
+			writeFileSync(
+				path.join(publicDir, "version.json"),
+				`${JSON.stringify(getBuildInfo())}\n`,
+			);
+		},
+	};
+}
 
 export default defineConfig(({ command }) => {
 	// Dev server must run under mise (`_.file` loads `.env` / `.env.local`
@@ -110,6 +141,8 @@ export default defineConfig(({ command }) => {
 	const appHost = isDevServer ? requireEnv("APP_HOST") : undefined;
 	const webPort = isDevServer ? Number(requireEnv("WEB_PORT")) : undefined;
 
+	const buildInfo = Object.freeze(getBuildInfo());
+
 	return {
 		define: {
 			__BUILD_INFO__: JSON.stringify(buildInfo),
@@ -128,6 +161,7 @@ export default defineConfig(({ command }) => {
 		},
 		plugins: [
 			...(appHost ? [hostAllowlist(`web.${appHost}`)] : []),
+			versionJsonPlugin(),
 			tailwindcss(),
 			tanstackStart({
 				srcDirectory: "src",
@@ -147,6 +181,11 @@ export default defineConfig(({ command }) => {
 						headers: {
 							"Cache-Control": "no-cache",
 							"Service-Worker-Allowed": "/",
+						},
+					},
+					"/version.json": {
+						headers: {
+							"Cache-Control": "no-cache",
 						},
 					},
 				},
