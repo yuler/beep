@@ -1,26 +1,220 @@
-import { Link } from "@tanstack/react-router";
-import {
-	Activity,
-	ArrowUpRight,
-	Clock,
-	Repeat,
-	Search,
-	Sparkles,
-} from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { createColumnHelper } from "@tanstack/react-table";
+import { Activity, Clock, Repeat, Search, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { BEEP_STATUS_META } from "@/components/beeps/beep-status";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+	DataTable,
+	type dataTableFeatures,
+	SortableHeader,
+} from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
+import { ProgressBar, StatusPill } from "@/components/ui/status-pill";
 import type { Beep } from "@/lib/api/beeps";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import { beepRunAt } from "@/lib/beep-stats";
+import { shortId } from "@/lib/short-id";
 import { cn } from "@/lib/utils";
 
 type FilterStatus = "all" | "active" | "firing" | "recurring" | "completed";
+
+const columnHelper = createColumnHelper<typeof dataTableFeatures, Beep>();
+
+function beepStatusTone(status: Beep["status"]) {
+	switch (status) {
+		case "active":
+			return "emerald" as const;
+		case "firing":
+			return "amber" as const;
+		case "cancelled":
+			return "rose" as const;
+		default:
+			return "muted" as const;
+	}
+}
+
+function runSuccessRate(beep: Beep) {
+	if (beep.runs.length === 0) return 0;
+	const succeeded = beep.runs.filter(
+		(run) => run.status === "succeeded",
+	).length;
+	return Math.round((succeeded / beep.runs.length) * 100);
+}
+
+function formatScheduleLabel(beep: Beep) {
+	if (beep.status === "completed") return "Completed";
+	if (beep.kind === "recurring") return beep.cron ?? "Scheduled";
+	const nextRun = beepRunAt(beep);
+	if (!nextRun) return "—";
+	return formatBeepScheduleTime(nextRun, beep.timezone, "short");
+}
+
+function useBeepColumns(slug: string, variant: "compact" | "full") {
+	return useMemo(() => {
+		const columns = [
+			columnHelper.display({
+				id: "select",
+				header: ({ table }) => (
+					<Checkbox
+						checked={
+							table.getIsAllPageRowsSelected()
+								? true
+								: table.getIsSomePageRowsSelected()
+									? "indeterminate"
+									: false
+						}
+						onCheckedChange={(value) =>
+							table.toggleAllPageRowsSelected(value === true)
+						}
+						aria-label="Select all"
+					/>
+				),
+				cell: ({ row }) => (
+					<Checkbox
+						checked={row.getIsSelected()}
+						onCheckedChange={(value) => row.toggleSelected(value === true)}
+						aria-label="Select row"
+						data-no-row-nav
+					/>
+				),
+				enableSorting: false,
+			}),
+			columnHelper.accessor("title", {
+				id: "title",
+				header: ({ column }) => <SortableHeader column={column} label="Beep" />,
+				cell: ({ row }) => {
+					const beep = row.original;
+					return (
+						<div className="flex min-w-48 flex-col gap-0.5">
+							<span className="font-mono text-[11px] text-muted-foreground">
+								#{shortId(beep.id)}
+							</span>
+							<Link
+								to="/$account_slug/beeps/$beepId"
+								params={{
+									account_slug: slug,
+									beepId: beep.id,
+								}}
+								className="font-medium text-foreground hover:text-primary"
+								onClick={(event) => event.stopPropagation()}
+								data-no-row-nav
+							>
+								{beep.title}
+							</Link>
+						</div>
+					);
+				},
+			}),
+			columnHelper.accessor((row) => row.beeper?.name ?? row.kind, {
+				id: "source",
+				header: "Source",
+				cell: ({ row }) => {
+					const beep = row.original;
+					if (beep.beeper) {
+						return (
+							<span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+								<Activity className="size-3.5 text-primary" />
+								{beep.beeper.name}
+							</span>
+						);
+					}
+					return (
+						<span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+							{beep.kind === "recurring" ? (
+								<>
+									<Repeat className="size-3.5" />
+									Recurring
+								</>
+							) : (
+								<>
+									<Clock className="size-3.5" />
+									Once
+								</>
+							)}
+						</span>
+					);
+				},
+			}),
+			columnHelper.accessor("status", {
+				id: "status",
+				header: ({ column }) => (
+					<SortableHeader column={column} label="Status" />
+				),
+				cell: ({ row }) => (
+					<StatusPill
+						label={BEEP_STATUS_META[row.original.status].label}
+						tone={beepStatusTone(row.original.status)}
+					/>
+				),
+			}),
+			columnHelper.accessor((row) => beepRunAt(row)?.toString() ?? "", {
+				id: "schedule",
+				header: ({ column }) => (
+					<SortableHeader column={column} label="Schedule" />
+				),
+				cell: ({ row }) => {
+					const beep = row.original;
+					return (
+						<div className="flex flex-col gap-0.5 text-sm">
+							<span className="tabular-nums text-foreground">
+								{formatScheduleLabel(beep)}
+							</span>
+							{variant === "full" ? (
+								<span className="text-[11px] text-muted-foreground">
+									{beep.timezone}
+								</span>
+							) : null}
+						</div>
+					);
+				},
+			}),
+		];
+
+		if (variant === "full") {
+			columns.push(
+				columnHelper.accessor((row) => runSuccessRate(row), {
+					id: "progress",
+					header: ({ column }) => (
+						<SortableHeader column={column} label="Progress" />
+					),
+					cell: ({ row }) => (
+						<ProgressBar value={runSuccessRate(row.original)} />
+					),
+				}),
+				columnHelper.accessor((row) => row.runs.length, {
+					id: "runs",
+					header: ({ column }) => (
+						<SortableHeader column={column} label="Runs" />
+					),
+					cell: ({ row }) => {
+						const beep = row.original;
+						const lastRun = beep.runs[beep.runs.length - 1];
+						return (
+							<div className="flex flex-col gap-0.5 text-sm">
+								<span className="tabular-nums text-foreground">
+									{beep.runs.length}
+								</span>
+								{lastRun ? (
+									<span className="text-[11px] text-muted-foreground capitalize">
+										Last: {lastRun.status}
+									</span>
+								) : (
+									<span className="text-[11px] text-muted-foreground">—</span>
+								)}
+							</div>
+						);
+					},
+				}),
+			);
+		}
+
+		return columnHelper.columns(columns);
+	}, [slug, variant]);
+}
 
 export function BeepList({
 	beeps,
@@ -31,12 +225,13 @@ export function BeepList({
 	slug: string;
 	variant?: "compact" | "full";
 }) {
+	const navigate = useNavigate();
 	const [search, setSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
+	const columns = useBeepColumns(slug, variant);
 
 	const filteredBeeps = useMemo(() => {
 		return beeps.filter((beep) => {
-			// Status / Kind filter
 			if (statusFilter === "active" && beep.status !== "active") return false;
 			if (statusFilter === "firing" && beep.status !== "firing") return false;
 			if (statusFilter === "completed" && beep.status !== "completed")
@@ -44,7 +239,6 @@ export function BeepList({
 			if (statusFilter === "recurring" && beep.kind !== "recurring")
 				return false;
 
-			// Text search
 			if (search.trim()) {
 				const query = search.toLowerCase();
 				const matchTitle = beep.title.toLowerCase().includes(query);
@@ -87,7 +281,6 @@ export function BeepList({
 		<div className="flex flex-col gap-4">
 			{variant === "full" ? (
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					{/* Status filter tabs */}
 					<div className="flex flex-nowrap items-center gap-1 overflow-x-auto rounded-lg border border-input bg-muted/30 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 						{(
 							[
@@ -134,7 +327,6 @@ export function BeepList({
 						))}
 					</div>
 
-					{/* Search input */}
 					<div className="relative w-full sm:w-64">
 						<Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
@@ -166,171 +358,19 @@ export function BeepList({
 					</Button>
 				</Card>
 			) : (
-				<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-					{filteredBeeps.map((beep) => (
-						<BeepListCard
-							key={beep.id}
-							beep={beep}
-							slug={slug}
-							variant={variant}
-						/>
-					))}
-				</div>
+				<DataTable
+					data={filteredBeeps}
+					columns={columns}
+					getRowId={(beep) => beep.id}
+					emptyMessage="No beeps match your filter."
+					onRowClick={(beep) =>
+						navigate({
+							to: "/$account_slug/beeps/$beepId",
+							params: { account_slug: slug, beepId: beep.id },
+						})
+					}
+				/>
 			)}
 		</div>
-	);
-}
-
-function StatusIndicator({ status }: { status: Beep["status"] }) {
-	const meta = BEEP_STATUS_META[status];
-	const Icon = meta.icon;
-	return (
-		<span
-			className={cn(
-				"inline-flex items-center gap-1 text-[11px] font-medium",
-				meta.colorClass,
-			)}
-		>
-			<Icon className={cn("size-3", status === "firing" && "animate-pulse")} />
-			{meta.label}
-		</span>
-	);
-}
-
-function formatSchedule(beep: Beep) {
-	if (beep.status === "completed") {
-		return { label: "Completed", isRecurring: false };
-	}
-
-	if (beep.kind === "recurring") {
-		return {
-			label: `Cron: ${beep.cron ?? "Scheduled"}`,
-			isRecurring: true,
-		};
-	}
-
-	const nextRun = beepRunAt(beep);
-	if (!nextRun) return null;
-
-	return {
-		label: formatBeepScheduleTime(nextRun, beep.timezone, "short"),
-		isRecurring: false,
-	};
-}
-
-function BeepListCard({
-	beep,
-	slug,
-	variant,
-}: {
-	beep: Beep;
-	slug: string;
-	variant: "compact" | "full";
-}) {
-	const schedule = formatSchedule(beep);
-	const lastRun = beep.runs[beep.runs.length - 1];
-
-	return (
-		<Card
-			size="sm"
-			className="group relative overflow-hidden transition-all duration-150 hover:border-primary/40 hover:shadow-xs"
-		>
-			<Link
-				to="/$account_slug/beeps/$beepId"
-				params={{
-					account_slug: slug,
-					beepId: beep.id,
-				}}
-				className="block p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-			>
-				{/* Top metadata row */}
-				<div className="flex flex-wrap items-center justify-between gap-2">
-					<div className="flex flex-wrap items-center gap-1.5">
-						<StatusIndicator status={beep.status} />
-						{beep.beeper ? (
-							<Badge
-								variant="secondary"
-								className="gap-1 text-[10px] font-normal bg-primary/10 text-primary dark:bg-primary/20"
-							>
-								<Activity className="size-2.5" />
-								from {beep.beeper.name}
-							</Badge>
-						) : (
-							<Badge
-								variant="secondary"
-								className="gap-1 text-[11px] font-normal"
-							>
-								{beep.kind === "recurring" ? (
-									<>
-										<Repeat className="size-2.5" />
-										Recurring
-									</>
-								) : (
-									<>
-										<Clock className="size-2.5" />
-										Once
-									</>
-								)}
-							</Badge>
-						)}
-					</div>
-
-					{schedule ? (
-						<div className="flex items-center gap-1 text-xs text-muted-foreground">
-							<span className="tabular-nums font-medium text-foreground">
-								{schedule.label}
-							</span>
-							<span className="text-[11px]">({beep.timezone})</span>
-						</div>
-					) : null}
-				</div>
-
-				{/* Title and details */}
-				<div className="mt-2.5 flex items-start justify-between gap-3">
-					<h3 className="font-heading text-base font-semibold text-foreground transition-colors group-hover:text-primary">
-						{beep.title}
-					</h3>
-					<ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-primary" />
-				</div>
-
-				{/* Markdown Preview if body present */}
-				{variant === "full" && beep.body ? (
-					<div className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-						<BeepMarkdown source={beep.body} />
-					</div>
-				) : null}
-
-				{/* Bottom runs summary */}
-				{variant === "full" ? (
-					<div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2.5 text-xs text-muted-foreground">
-						<div className="flex items-center gap-2">
-							<span className="tabular-nums">
-								{beep.runs.length} {beep.runs.length === 1 ? "run" : "runs"}
-							</span>
-							{lastRun ? (
-								<span className="inline-flex items-center gap-1 text-[11px]">
-									· Last:{" "}
-									<span
-										className={cn(
-											"font-medium",
-											lastRun.status === "succeeded" &&
-												"text-emerald-600 dark:text-emerald-400",
-											lastRun.status === "failed" && "text-destructive",
-											lastRun.status === "running" && "text-primary",
-										)}
-									>
-										{lastRun.status}
-									</span>
-								</span>
-							) : null}
-						</div>
-
-						<span className="text-[11px] font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-							View details →
-						</span>
-					</div>
-				) : null}
-			</Link>
-		</Card>
 	);
 }

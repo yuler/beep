@@ -1,22 +1,20 @@
 import {
 	createFileRoute,
 	getRouteApi,
-	Link,
 	useRouter,
 } from "@tanstack/react-router";
 import {
 	Activity,
 	ArrowRight,
-	ArrowUpRight,
 	Clock,
 	Globe,
 	Radio,
-	ShieldAlert,
 	ShieldCheck,
 	Webhook,
 } from "lucide-react";
 import { useState } from "react";
 
+import { BeeperList } from "@/components/beepers/beeper-list";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +37,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-	type Beeper,
 	type BeeperApp,
 	createBeeper,
 	fetchBeeperApps,
@@ -47,11 +44,6 @@ import {
 } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import {
-	beeperHealthIsDestructive,
-	beeperHealthLabel,
-	isBeeperProbeBroken,
-} from "@/lib/beeper-health";
 import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
@@ -295,78 +287,10 @@ function BeepersPage() {
 					</div>
 				</div>
 
-				{/* 2. Installed Beepers on Bottom */}
 				{beepers.length > 0 ? (
 					<div className="flex flex-col gap-3">
 						<h2 className="font-heading text-lg font-semibold">Your Beepers</h2>
-						<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-							{beepers.map((beeper: Beeper) => (
-								<Card
-									key={beeper.id}
-									size="sm"
-									className="group relative overflow-hidden transition-all duration-150 hover:border-primary/40 hover:shadow-xs"
-								>
-									<Link
-										to="/$account_slug/beepers/$beeperId"
-										params={{
-											account_slug: slug,
-											beeperId: beeper.id,
-										}}
-										className="block p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-									>
-										<div className="flex items-center justify-between gap-2">
-											<div className="flex items-center gap-1.5">
-												<Badge
-													variant={
-														beeper.status === "active"
-															? "default"
-															: beeper.status === "paused"
-																? "secondary"
-																: "outline"
-													}
-												>
-													{beeper.status}
-												</Badge>
-												<Badge
-													variant={
-														beeperHealthIsDestructive(beeper)
-															? "destructive"
-															: "outline"
-													}
-													className="gap-1 text-[10px] font-medium"
-												>
-													{beeperHealthLabel(beeper) === "alerting" ||
-													isBeeperProbeBroken(beeper.runs) ? (
-														<ShieldAlert className="size-2.5" />
-													) : (
-														<ShieldCheck className="size-2.5 text-emerald-600 dark:text-emerald-400" />
-													)}
-													{beeperHealthLabel(beeper).toUpperCase()}
-												</Badge>
-											</div>
-											<span className="font-mono text-xs text-muted-foreground">
-												{beeper.cron}
-											</span>
-										</div>
-
-										<div className="mt-2.5 flex items-start justify-between gap-3">
-											<h3 className="font-heading text-base font-semibold text-foreground transition-colors group-hover:text-primary">
-												{beeper.title}
-											</h3>
-											<ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-primary" />
-										</div>
-
-										<div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-											<span>{beeper.beeper_app?.name}</span>
-											<span className="font-mono text-[11px]">
-												{beeper.runs?.length ?? 0}{" "}
-												{beeper.runs?.length === 1 ? "run" : "runs"}
-											</span>
-										</div>
-									</Link>
-								</Card>
-							))}
-						</div>
+						<BeeperList beepers={beepers} slug={slug} />
 					</div>
 				) : null}
 
