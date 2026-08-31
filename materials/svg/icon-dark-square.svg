@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="beep app icon">
+  <rect width="512" height="512" rx="112" fill="#111111" />
+  <path
+    d="M256 116 C214 116 181 148 181 190 L181 226 C181 252 170 274 151 294 C143 303 149 318 162 318 L350 318 C363 318 369 303 361 294 C342 274 331 252 331 226 L331 190 C331 148 298 116 256 116 Z"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="20"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M232 318 C232 337 242 348 256 348 C270 348 280 337 280 318"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="20"
+    stroke-linecap="round"
+  />
+  <path
+    d="M225 202 L225 232 M287 202 L287 232"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="20"
+    stroke-linecap="round"
+  />
+  <path
+    d="M365 151 C386 166 398 188 398 214"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="18"
+    stroke-linecap="round"
+  />
+  <path
+    d="M390 119 C424 141 444 174 444 214"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="18"
+    stroke-linecap="round"
+  />
+  <path
+    d="M226 388 L286 388"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="20"
+    stroke-linecap="round"
+  />
+</svg>
