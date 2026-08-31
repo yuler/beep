@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-# Custom loader for shared flat JSON locales from project.inlang.
-# Reads settings from packages/locales/project.inlang/settings.json and
-# loads messages from packages/locales/project.inlang/messages/*.json.
+# Custom loader for shared flat JSON locales from monorepo root project.inlang.
+# Reads settings from project.inlang/settings.json and
+# loads messages from project.inlang/messages/*.json.
 
 module JsonLocaleLoader
   def self.load_json_locales
-    inlang_dir = Rails.root.join("../packages/locales/project.inlang")
+    inlang_dir = Rails.root.join("../project.inlang")
     return unless Dir.exist?(inlang_dir)
 
     settings_file = inlang_dir.join("settings.json")

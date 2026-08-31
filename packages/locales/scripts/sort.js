@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const messagesDir = path.resolve(__dirname, "../project.inlang/messages");
+const messagesDir = path.resolve(__dirname, "../../../project.inlang/messages");
 
 const files = fs.readdirSync(messagesDir).filter((f) => f.endsWith(".json"));
 

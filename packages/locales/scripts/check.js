@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const inlangDir = path.resolve(__dirname, "../project.inlang");
+const inlangDir = path.resolve(__dirname, "../../../project.inlang");
 const settingsPath = path.join(inlangDir, "settings.json");
 const messagesDir = path.join(inlangDir, "messages");
 

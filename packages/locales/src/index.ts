@@ -1,6 +1,6 @@
-import en from "../project.inlang/messages/en.json";
-import zhCN from "../project.inlang/messages/zh-CN.json";
-import inlangSettings from "../project.inlang/settings.json";
+import en from "../../../project.inlang/messages/en.json";
+import zhCN from "../../../project.inlang/messages/zh-CN.json";
+import inlangSettings from "../../../project.inlang/settings.json";
 
 export const DEFAULT_LOCALE = (inlangSettings.sourceLanguageTag || "en") as "en";
 export const SUPPORTED_LOCALES = (inlangSettings.languageTags as unknown as readonly ["en", "zh-CN"]) || (["en", "zh-CN"] as const);
