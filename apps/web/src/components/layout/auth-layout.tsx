@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { LanguageToggle } from "@/components/language-toggle";
 import { LogoMark } from "@/components/logo-mark";
 import {
 	Card,
@@ -9,6 +10,7 @@ import {
 	CardDescription,
 	CardHeader,
 } from "@/components/ui/card";
+import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /** Shown while client-only auth routes probe `session_id` on Core. */
@@ -24,14 +26,21 @@ export function AuthPending() {
 }
 
 export function AuthLayout({ children }: { children: ReactNode }) {
+	const { t } = useTranslation();
+
 	return (
 		<div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
-			<Link
-				to="/"
-				className="absolute top-6 left-6 text-sm text-muted-foreground hover:text-foreground"
-			>
-				Back
-			</Link>
+			<div className="absolute top-6 left-6 flex items-center gap-4">
+				<Link
+					to="/"
+					className="text-sm text-muted-foreground hover:text-foreground"
+				>
+					{t("common.back")}
+				</Link>
+			</div>
+			<div className="absolute top-6 right-6">
+				<LanguageToggle />
+			</div>
 			<div className="flex w-full max-w-sm flex-col gap-6">{children}</div>
 		</div>
 	);

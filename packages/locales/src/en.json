@@ -1,0 +1,39 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "confirm": "Confirm",
+    "back": "Back",
+    "actions": "Actions",
+    "status": "Status",
+    "language": "Language",
+    "english": "English",
+    "chinese": "Simplified Chinese"
+  },
+  "auth": {
+    "login": "Sign In",
+    "logout": "Sign Out",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "login_success": "Signed in successfully",
+    "login_failed": "Failed to sign in"
+  },
+  "account": {
+    "accounts": "Accounts",
+    "personal_account": "Personal Account",
+    "team_account": "Team Account",
+    "settings": "Settings",
+    "members": "Members"
+  },
+  "errors": {
+    "not_found": "Page not found",
+    "forbidden": "Access denied",
+    "server_error": "Something went wrong"
+  }
+}
