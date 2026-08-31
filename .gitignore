@@ -51,6 +51,7 @@ apps/web/.output
 apps/web/.vinxi
 apps/web/__unconfig*
 apps/web/todos.json
+apps/web/public/version.json
 
 # Gemini / Antigravity (shared configs)
 !.gemini/

@@ -93,3 +93,6 @@ jobs:
         env:
           CORE_INTERNAL_URL: http://core:80
         run: pnpm --filter web build
+
+      - name: Assert version.json shipped
+        run: bash scripts/assert-web-version-json.sh
