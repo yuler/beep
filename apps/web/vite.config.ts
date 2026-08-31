@@ -97,8 +97,9 @@ function getBuildInfo(): BuildInfoPayload {
 }
 
 /** Lightweight /version.json for deployed-version polling (issue #26). */
-function versionJsonPlugin(): Plugin {
+function versionJsonPlugin(prodInfo: BuildInfoPayload): Plugin {
 	const publicDir = fileURLToPath(new URL("public", import.meta.url));
+	const payload = `${JSON.stringify(prodInfo)}\n`;
 
 	return {
 		name: "version-json",
@@ -110,11 +111,15 @@ function versionJsonPlugin(): Plugin {
 				res.end(JSON.stringify(getBuildInfo()));
 			});
 		},
+		generateBundle() {
+			this.emitFile({
+				type: "asset",
+				fileName: "version.json",
+				source: payload,
+			});
+		},
 		closeBundle() {
-			writeFileSync(
-				path.join(publicDir, "version.json"),
-				`${JSON.stringify(getBuildInfo())}\n`,
-			);
+			writeFileSync(path.join(publicDir, "version.json"), payload);
 		},
 	};
 }
@@ -161,7 +166,7 @@ export default defineConfig(({ command }) => {
 		},
 		plugins: [
 			...(appHost ? [hostAllowlist(`web.${appHost}`)] : []),
-			versionJsonPlugin(),
+			versionJsonPlugin(buildInfo),
 			tailwindcss(),
 			tanstackStart({
 				srcDirectory: "src",

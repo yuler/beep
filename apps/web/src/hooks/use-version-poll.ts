@@ -63,7 +63,7 @@ export function useVersionPoll(): {
 				setDeployed(latest);
 				setUpdateAvailable(true);
 			} catch {
-				// Network blip — retry on the next interval.
+				// Network blip or junk JSON — retry on the next interval.
 			}
 		}
 
