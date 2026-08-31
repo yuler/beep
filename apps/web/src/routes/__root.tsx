@@ -4,19 +4,19 @@ import {
 	HeadContent,
 	Outlet,
 	Scripts,
-	useLocation,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { type ReactNode, useEffect, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { NotFound } from "@/components/not-found";
 import { VersionUpdateDialog } from "@/components/version-update-dialog";
 import { fetchMeOrNull } from "@/lib/api/session";
 import { logBuildInfo } from "@/lib/build-info";
 import {
 	DEFAULT_LOCALE,
+	getStoredLocale,
 	I18nContext,
-	isSupportedLocale,
 	type Locale,
+	saveLocalePreference,
 	type TranslationKey,
 } from "@/lib/i18n";
 
@@ -60,70 +60,32 @@ export const Route = createRootRoute({
 	component: RootComponent,
 });
 
-function getLocaleFromPath(pathname: string): Locale {
-	const segments = pathname.split("/").filter(Boolean);
-	const first = segments[0];
-	if (isSupportedLocale(first)) {
-		return first;
-	}
-	return DEFAULT_LOCALE;
-}
-
-function buildSetLocaleUrl(
-	pathname: string,
-	searchParams: Record<string, unknown>,
-	newLocale: Locale,
-): string {
-	const segments = pathname.split("/").filter(Boolean);
-	const first = segments[0];
-	if (isSupportedLocale(first)) {
-		segments.shift();
-	}
-	const cleanPath = `/${segments.join("/")}`;
-	const prefix = newLocale === DEFAULT_LOCALE ? "" : `/${newLocale}`;
-	const path =
-		`${prefix}${cleanPath === "/" && prefix !== "" ? "" : cleanPath}` || "/";
-	const searchEntries = Object.entries(searchParams).filter(
-		([_, v]) => v !== undefined && v !== null,
-	);
-	if (searchEntries.length === 0) {
-		return path;
-	}
-	const searchStr = new URLSearchParams(
-		searchEntries.map(([k, v]) => [k, String(v)]),
-	).toString();
-	return searchStr ? `${path}?${searchStr}` : path;
-}
-
 function RootComponent() {
-	const location = useLocation();
+	const [locale, setLocaleState] = useState<Locale>(() => getStoredLocale());
 
 	useEffect(() => {
 		logBuildInfo();
+		const current = getStoredLocale();
+		setLocaleState(current);
+		document.documentElement.lang = current;
 	}, []);
 
-	const currentLocale = useMemo(() => {
-		return getLocaleFromPath(location.pathname);
-	}, [location.pathname]);
-
 	const dict = useMemo(() => {
-		return getDictionary(currentLocale);
-	}, [currentLocale]);
+		return getDictionary(locale);
+	}, [locale]);
 
 	const i18nValue = useMemo(() => {
 		return {
-			locale: currentLocale,
+			locale,
 			dict,
 			t: (key: TranslationKey, params?: Record<string, string | number>) =>
 				translate(dict, key, params),
-			setLocaleUrl: (newLocale: Locale) =>
-				buildSetLocaleUrl(
-					location.pathname,
-					location.search as Record<string, unknown>,
-					newLocale,
-				),
+			setLocale: (newLocale: Locale) => {
+				setLocaleState(newLocale);
+				saveLocalePreference(newLocale);
+			},
 		};
-	}, [currentLocale, dict, location.pathname, location.search]);
+	}, [locale, dict]);
 
 	return (
 		<I18nContext.Provider value={i18nValue}>
@@ -136,7 +98,7 @@ function RootComponent() {
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 	return (
 		// Theme boot script / browser extensions may mutate <html>/<body> attrs before hydrate.
-		<html lang="en" suppressHydrationWarning>
+		<html lang={DEFAULT_LOCALE} suppressHydrationWarning>
 			<head>
 				<HeadContent />
 			</head>
