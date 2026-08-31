@@ -24,6 +24,7 @@ import {
 } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
+import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -40,11 +41,6 @@ export const Route = createFileRoute("/$account_slug/beeps_/$beepId")({
 	}),
 	component: BeepDetailPage,
 });
-
-function formatWhen(value: string | null) {
-	if (!value) return "—";
-	return new Date(value).toLocaleString();
-}
 
 function BeepDetailPage() {
 	const { account_slug: slug } = accountRoute.useParams();
@@ -242,12 +238,21 @@ function BeepDetailPage() {
 					</CardHeader>
 					<CardContent className="flex flex-col gap-3 text-sm">
 						{beep.kind === "once" ? (
-							<DetailRow label="Run at" value={formatWhen(beep.run_at)} />
+							<DetailRow
+								label="Run at"
+								value={formatBeepScheduleTime(beep.run_at, beep.timezone)}
+							/>
 						) : (
 							<DetailRow label="Cron" value={beep.cron ?? "—"} />
 						)}
-						<DetailRow label="Next" value={formatWhen(beep.next_run_at)} />
-						<DetailRow label="Last" value={formatWhen(beep.last_run_at)} />
+						<DetailRow
+							label="Next"
+							value={formatBeepScheduleTime(beep.next_run_at, beep.timezone)}
+						/>
+						<DetailRow
+							label="Last"
+							value={formatBeepScheduleTime(beep.last_run_at, beep.timezone)}
+						/>
 						<DetailRow
 							label="Channels"
 							value={
@@ -256,12 +261,15 @@ function BeepDetailPage() {
 									: "None"
 							}
 						/>
-						<DetailRow label="Created" value={formatWhen(beep.created_at)} />
+						<DetailRow
+							label="Created"
+							value={new Date(beep.created_at).toLocaleString()}
+						/>
 					</CardContent>
 				</Card>
 
 				<div className="max-w-lg">
-					<BeepRuns runs={beep.runs} />
+					<BeepRuns runs={beep.runs} timezone={beep.timezone} />
 				</div>
 			</div>
 		</>

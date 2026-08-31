@@ -36,6 +36,7 @@ import {
 } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
+import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import {
 	beeperHealthIsDestructive,
 	beeperHealthLabel,
@@ -334,11 +335,17 @@ function BeeperDetailPage() {
 							<DetailRow label="Cron" value={beeper.cron} />
 							<DetailRow
 								label="Next run"
-								value={formatWhen(beeper.next_run_at)}
+								value={formatBeepScheduleTime(
+									beeper.next_run_at,
+									beeper.timezone,
+								)}
 							/>
 							<DetailRow
 								label="Last run"
-								value={formatWhen(beeper.last_run_at)}
+								value={formatBeepScheduleTime(
+									beeper.last_run_at,
+									beeper.timezone,
+								)}
 							/>
 							<DetailRow
 								label="Consecutive failures"
@@ -434,7 +441,10 @@ function BeeperDetailPage() {
 									>
 										<div className="flex flex-wrap items-center justify-between gap-2">
 											<span className="tabular-nums text-xs text-muted-foreground">
-												{formatWhen(run.scheduled_for)}
+												{formatBeepScheduleTime(
+													run.scheduled_for,
+													beeper.timezone,
+												)}
 											</span>
 											<div className="flex items-center gap-1.5">
 												{run.signal_status ? (

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { Beep } from "@/lib/api/beeps";
+import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import { beepRunAt } from "@/lib/beep-stats";
 import { cn } from "@/lib/utils";
 
@@ -211,14 +212,8 @@ function formatSchedule(beep: Beep) {
 	const nextRun = beepRunAt(beep);
 	if (!nextRun) return null;
 
-	const date = new Date(nextRun);
 	return {
-		label: date.toLocaleString(undefined, {
-			month: "short",
-			day: "numeric",
-			hour: "numeric",
-			minute: "2-digit",
-		}),
+		label: formatBeepScheduleTime(nextRun, beep.timezone, "short"),
 		isRecurring: false,
 	};
 }
