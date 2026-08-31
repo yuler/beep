@@ -171,10 +171,7 @@ export function WebPushSettings({ slug }: { slug: string }) {
 							<ul className="flex flex-col gap-2">
 								{subscriptions.map((record) => {
 									const current = record.endpoint === currentEndpoint;
-									const deviceLabel = localizedPushDevice(
-										t,
-										record.user_agent,
-									);
+									const deviceLabel = localizedPushDevice(t, record.user_agent);
 									return (
 										<li
 											key={record.id}
@@ -193,9 +190,7 @@ export function WebPushSettings({ slug }: { slug: string }) {
 												</div>
 												<p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
 													{t("push.device_added", {
-														date: new Date(
-															record.created_at,
-														).toLocaleString(),
+														date: new Date(record.created_at).toLocaleString(),
 													})}
 												</p>
 											</div>

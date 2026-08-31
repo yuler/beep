@@ -1,4 +1,10 @@
-import { type HTMLAttributes, useEffect, useMemo, useRef, useState } from "react";
+import {
+	type HTMLAttributes,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 
 import { useTranslation } from "@/lib/i18n";
 
@@ -66,7 +72,9 @@ export function ChatComposer({
 	);
 	const [phase, setPhase] = useState<Phase>("done");
 	const [draft, setDraft] = useState("");
-	const [submitted, setSubmitted] = useState(() => t("dev.mock_starter_message"));
+	const [submitted, setSubmitted] = useState(() =>
+		t("dev.mock_starter_message"),
+	);
 	const [tab, setTab] = useState<"beeps" | "history">("beeps");
 	const chatTabs = useMemo(
 		() => [
@@ -166,7 +174,11 @@ export function ChatComposer({
 					) : null}
 					{(
 						[
-							{ key: "add", label: t("common.add"), icon: <path d="M12 5v14M5 12h14" /> },
+							{
+								key: "add",
+								label: t("common.add"),
+								icon: <path d="M12 5v14M5 12h14" />,
+							},
 							{
 								key: "history",
 								label: t("common.history"),

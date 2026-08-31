@@ -51,7 +51,9 @@ export function SignInForm({
 			}
 		} catch (err) {
 			setError(
-				err instanceof ApiError ? err.message : t("errors.something_went_wrong"),
+				err instanceof ApiError
+					? err.message
+					: t("errors.something_went_wrong"),
 			);
 		} finally {
 			setPending(false);

@@ -44,7 +44,7 @@ import {
 } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import { useTranslation, type TranslationKey } from "@/lib/i18n";
+import { type TranslationKey, useTranslation } from "@/lib/i18n";
 import { translateError } from "@/lib/i18n-labels";
 import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
@@ -170,9 +170,7 @@ function BeeperAppCard({
 					{metricCount > 0 ? (
 						<span>
 							{metricCount}{" "}
-							{metricCount === 1
-								? t("beepers.metric")
-								: t("beepers.metrics")}
+							{metricCount === 1 ? t("beepers.metric") : t("beepers.metrics")}
 						</span>
 					) : null}
 					{beeperApp.webhook_ping ? (
@@ -396,8 +394,7 @@ function BeepersPage() {
 										/>
 										<p className="text-[11px] text-muted-foreground">
 											{t("beepers.cron_default", {
-												cron:
-													selectedBeeperApp.default_cron || "*/5 * * * *",
+												cron: selectedBeeperApp.default_cron || "*/5 * * * *",
 											})}
 										</p>
 									</div>

@@ -126,9 +126,7 @@ export function BeepQuickCreate({
 			setProposeMessage(t("beeps.prompt_filled"));
 		} catch (err) {
 			setError(
-				err instanceof ApiError
-					? err.message
-					: translateError(dict, t, err),
+				err instanceof ApiError ? err.message : translateError(dict, t, err),
 			);
 		} finally {
 			setProposing(false);
@@ -164,9 +162,7 @@ export function BeepQuickCreate({
 			await onCreated();
 		} catch (err) {
 			setError(
-				err instanceof ApiError
-					? err.message
-					: translateError(dict, t, err),
+				err instanceof ApiError ? err.message : translateError(dict, t, err),
 			);
 		} finally {
 			setSubmitting(false);

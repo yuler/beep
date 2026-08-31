@@ -111,8 +111,8 @@ export function AccountSwitcher({
 						<div className="grid flex-1 text-left text-sm leading-tight">
 							<span className="truncate font-semibold">{active.name}</span>
 							<span className="truncate text-xs text-muted-foreground">
-								{active.personal ? t("account.personal") : t("account.team")} · /
-								{active.slug}
+								{active.personal ? t("account.personal") : t("account.team")} ·
+								/{active.slug}
 							</span>
 						</div>
 						<ChevronsUpDown className="ml-auto size-4" />
@@ -162,7 +162,9 @@ export function AccountSwitcher({
 								<span className="flex size-6 items-center justify-center rounded-md border border-border bg-transparent">
 									<Users className="size-3.5" />
 								</span>
-								<span className="font-medium">{t("account.manage_accounts")}</span>
+								<span className="font-medium">
+									{t("account.manage_accounts")}
+								</span>
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 					</DropdownMenuContent>

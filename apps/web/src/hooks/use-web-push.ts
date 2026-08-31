@@ -112,7 +112,7 @@ export function useWebPush(slug: string) {
 			permission: pushPermission(),
 			subscribed: isSubscribedForAccount(endpoint, records),
 		});
-	}, [deviceIdentity, slug]);
+	}, [deviceIdentity, slug, t, dict]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -151,7 +151,7 @@ export function useWebPush(slug: string) {
 				if (busy.removingId) setRemovingId(null);
 			}
 		},
-		[refresh],
+		[refresh, t, dict],
 	);
 
 	const probe = useCallback(async (): Promise<PushReachability> => {

@@ -136,11 +136,13 @@ function LettersPage() {
 				) : (
 					<ul className="flex flex-col gap-3">
 						{letters.map((letter) => {
-							const subjectLabel =
-								letter.subject ?? t("common.no_subject");
+							const subjectLabel = letter.subject ?? t("common.no_subject");
 							return (
 								<li key={letter.id}>
-									<Card size="sm" className="transition-colors hover:bg-muted/30">
+									<Card
+										size="sm"
+										className="transition-colors hover:bg-muted/30"
+									>
 										<CardHeader className="border-b">
 											<CardTitle className="truncate">{subjectLabel}</CardTitle>
 											<CardDescription className="truncate">

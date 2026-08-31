@@ -87,9 +87,7 @@ function AccessTokensPage() {
 			await router.invalidate();
 		} catch (err) {
 			setCreateError(
-				err instanceof ApiError
-					? err.message
-					: t("errors.create_token_failed"),
+				err instanceof ApiError ? err.message : t("errors.create_token_failed"),
 			);
 		} finally {
 			setIsCreating(false);

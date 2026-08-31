@@ -40,9 +40,7 @@ export function NotificationChannelSettings({
 			await onChanged();
 		} catch (err) {
 			setError(
-				err instanceof ApiError
-					? err.message
-					: translateError(dict, t, err),
+				err instanceof ApiError ? err.message : translateError(dict, t, err),
 			);
 		} finally {
 			setPending(false);

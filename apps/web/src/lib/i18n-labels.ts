@@ -1,7 +1,7 @@
 import type { Beep } from "@/lib/api/beeps";
-import { I18nError } from "@/lib/notification-channels";
 import type { TranslationKey, TranslationSchema } from "@/lib/i18n";
 import type { NotificationChannel } from "@/lib/notification-channels";
+import { I18nError } from "@/lib/notification-channels";
 
 type Translate = (
 	key: TranslationKey,

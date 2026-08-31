@@ -52,6 +52,7 @@ apps/web/.vinxi
 apps/web/__unconfig*
 apps/web/todos.json
 apps/web/public/version.json
+apps/web/src/locale/paraglide
 
 # Gemini / Antigravity (shared configs)
 !.gemini/

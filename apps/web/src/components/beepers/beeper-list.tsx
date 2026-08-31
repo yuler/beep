@@ -220,9 +220,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 				}),
 				columnHelper.display({
 					id: "actions",
-					header: () => (
-						<span className="sr-only">{t("common.actions")}</span>
-					),
+					header: () => <span className="sr-only">{t("common.actions")}</span>,
 					cell: ({ row }) => {
 						const beeper = row.original;
 						return (

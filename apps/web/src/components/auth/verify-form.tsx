@@ -60,7 +60,9 @@ export function VerifyForm({
 		} catch (err) {
 			if (isRedirect(err)) throw err;
 			setError(
-				err instanceof ApiError ? err.message : t("errors.something_went_wrong"),
+				err instanceof ApiError
+					? err.message
+					: t("errors.something_went_wrong"),
 			);
 		} finally {
 			setPending(false);
@@ -74,9 +76,7 @@ export function VerifyForm({
 			<div className="flex flex-col gap-2">
 				<Label htmlFor={codeId}>{t("auth.one_time_code")}</Label>
 				<InputOTP id={codeId} value={code} onChange={setCode} autoFocus />
-				<p className="text-xs text-muted-foreground">
-					{t("auth.code_hint")}
-				</p>
+				<p className="text-xs text-muted-foreground">{t("auth.code_hint")}</p>
 			</div>
 			{error ? (
 				<p className="text-sm text-destructive" role="alert">

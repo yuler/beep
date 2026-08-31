@@ -51,7 +51,10 @@ function StatsPage() {
 				</div>
 
 				<section className="grid gap-4 sm:grid-cols-3">
-					<StatCard label={t("admin.accounts_total")} value={data.accounts.total} />
+					<StatCard
+						label={t("admin.accounts_total")}
+						value={data.accounts.total}
+					/>
 					<StatCard
 						label={t("admin.accounts_7d")}
 						value={data.accounts.last_7_days}

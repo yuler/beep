@@ -74,10 +74,7 @@ export const Route = createFileRoute("/$account_slug/beepers_/$beeperId")({
 	component: BeeperDetailPage,
 });
 
-function formatWhen(
-	value: string | null | undefined,
-	fallback: string,
-) {
+function formatWhen(value: string | null | undefined, fallback: string) {
 	if (!value) return fallback;
 	return new Date(value).toLocaleString();
 }
@@ -165,11 +162,7 @@ function BeeperDetailPage() {
 	}
 
 	async function handleDelete() {
-		if (
-			!window.confirm(
-				t("beepers.delete_confirm", { title: beeper.title }),
-			)
-		) {
+		if (!window.confirm(t("beepers.delete_confirm", { title: beeper.title }))) {
 			return;
 		}
 
@@ -279,9 +272,7 @@ function BeeperDetailPage() {
 								) : (
 									<>
 										<Pause data-icon="inline-start" />
-										{togglingStatus
-											? t("beepers.pausing")
-											: t("beepers.pause")}
+										{togglingStatus ? t("beepers.pausing") : t("beepers.pause")}
 									</>
 								)}
 							</Button>
@@ -421,10 +412,7 @@ function BeeperDetailPage() {
 							{beeper.last_ping_at ? (
 								<DetailRow
 									label={t("beepers.last_ping")}
-									value={formatWhen(
-										beeper.last_ping_at,
-										t("common.em_dash"),
-									)}
+									value={formatWhen(beeper.last_ping_at, t("common.em_dash"))}
 								/>
 							) : null}
 							<div className="flex justify-between items-center gap-4">
@@ -528,9 +516,7 @@ function BeeperDetailPage() {
 					<details className="group/runs rounded-lg border bg-muted/20 text-sm">
 						<summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
 							<ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open/runs:rotate-90" />
-							<span className="font-medium">
-								{t("beepers.execution_runs")}
-							</span>
+							<span className="font-medium">{t("beepers.execution_runs")}</span>
 							<span className="text-muted-foreground">{runs.length}</span>
 						</summary>
 						{runs.length === 0 ? (

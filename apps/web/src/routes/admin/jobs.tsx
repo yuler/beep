@@ -87,18 +87,30 @@ function JobsPage() {
 					</Card>
 					{data.counts ? (
 						<>
-							<StatCard label={t("admin.queue_pending")} value={data.counts.pending} />
-							<StatCard label={t("admin.queue_ready")} value={data.counts.ready} />
+							<StatCard
+								label={t("admin.queue_pending")}
+								value={data.counts.pending}
+							/>
+							<StatCard
+								label={t("admin.queue_ready")}
+								value={data.counts.ready}
+							/>
 							<StatCard
 								label={t("admin.queue_scheduled")}
 								value={data.counts.scheduled}
 							/>
-							<StatCard label={t("admin.queue_failed")} value={data.counts.failed} />
+							<StatCard
+								label={t("admin.queue_failed")}
+								value={data.counts.failed}
+							/>
 							<StatCard
 								label={t("admin.queue_finished")}
 								value={data.counts.finished}
 							/>
-							<StatCard label={t("admin.queue_total")} value={data.counts.total} />
+							<StatCard
+								label={t("admin.queue_total")}
+								value={data.counts.total}
+							/>
 						</>
 					) : (
 						<Card size="sm" className="sm:col-span-2">
@@ -121,7 +133,9 @@ function JobsPage() {
 				<Card>
 					<CardHeader>
 						<CardTitle>{t("admin.jobs_recent_title")}</CardTitle>
-						<CardDescription>{t("admin.jobs_recent_description")}</CardDescription>
+						<CardDescription>
+							{t("admin.jobs_recent_description")}
+						</CardDescription>
 					</CardHeader>
 					<CardContent>
 						{data.recent.length === 0 ? (
@@ -157,9 +171,7 @@ function JobsPage() {
 													{job.class_name}
 												</td>
 												<td className="px-2 py-2">{job.queue_name}</td>
-												<td className="px-2 py-2">
-													{jobStatusLabel(t, job)}
-												</td>
+												<td className="px-2 py-2">{jobStatusLabel(t, job)}</td>
 												<td className="px-2 py-2 text-muted-foreground">
 													{new Date(job.created_at).toLocaleString()}
 												</td>
