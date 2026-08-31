@@ -1,7 +1,11 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { Edit } from "lucide-react";
+import { useMemo, useState } from "react";
 
+import { EditBeeperDialog } from "@/components/beepers/edit-beeper-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
 	DataTable,
 	type dataTableFeatures,
@@ -15,6 +19,10 @@ import {
 	beeperHealthIsDestructive,
 	beeperHealthLabel,
 } from "@/lib/beeper-health";
+import {
+	CHANNEL_LABELS,
+	type NotificationChannel,
+} from "@/lib/notification-channels";
 import { runSuccessRate } from "@/lib/run-success-rate";
 import { shortId } from "@/lib/short-id";
 
@@ -40,7 +48,7 @@ function healthTone(beeper: Beeper) {
 	return "amber" as const;
 }
 
-function useBeeperColumns(slug: string) {
+function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 	return useMemo(
 		() =>
 			columnHelper.columns([
@@ -126,6 +134,36 @@ function useBeeperColumns(slug: string) {
 						</span>
 					),
 				}),
+				columnHelper.accessor(
+					(row) => row.notification_channels?.join(",") ?? "",
+					{
+						id: "channels",
+						header: "Channels",
+						cell: ({ row }) => {
+							const channels = row.original.notification_channels ?? [];
+							if (channels.length === 0) {
+								return (
+									<span className="text-sm text-muted-foreground">Default</span>
+								);
+							}
+							return (
+								<div className="flex flex-wrap gap-1">
+									{channels.map((channel) => (
+										<Badge
+											key={channel}
+											variant="outline"
+											className="text-[11px] font-normal"
+										>
+											{CHANNEL_LABELS[channel as NotificationChannel] ??
+												channel}
+										</Badge>
+									))}
+								</div>
+							);
+						},
+						enableSorting: false,
+					},
+				),
 				columnHelper.accessor((row) => runSuccessRate(row.runs ?? []), {
 					id: "run_success",
 					header: ({ column }) => (
@@ -167,8 +205,35 @@ function useBeeperColumns(slug: string) {
 						);
 					},
 				}),
+				columnHelper.display({
+					id: "actions",
+					header: () => <span className="sr-only">Actions</span>,
+					cell: ({ row }) => {
+						const beeper = row.original;
+						return (
+							<div className="flex items-center justify-end">
+								<Button
+									type="button"
+									variant="ghost"
+									size="xs"
+									className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+									aria-label={`Edit beeper ${beeper.title}`}
+									onClick={(e) => {
+										e.stopPropagation();
+										onEdit(beeper);
+									}}
+									data-no-row-nav
+								>
+									<Edit className="size-3.5" data-icon="inline-start" />
+									Edit
+								</Button>
+							</div>
+						);
+					},
+					enableSorting: false,
+				}),
 			]),
-		[slug],
+		[slug, onEdit],
 	);
 }
 
@@ -180,20 +245,43 @@ export function BeeperList({
 	slug: string;
 }) {
 	const navigate = useNavigate();
-	const columns = useBeeperColumns(slug);
+	const router = useRouter();
+	const [editingBeeper, setEditingBeeper] = useState<Beeper | null>(null);
+
+	const columns = useBeeperColumns(slug, (beeper) => {
+		setEditingBeeper(beeper);
+	});
 
 	return (
-		<DataTable
-			data={beepers}
-			columns={columns}
-			getRowId={(beeper) => beeper.id}
-			emptyMessage="No beepers installed yet."
-			onRowClick={(beeper) =>
-				navigate({
-					to: "/$account_slug/beepers/$beeperId",
-					params: { account_slug: slug, beeperId: beeper.id },
-				})
-			}
-		/>
+		<>
+			<DataTable
+				data={beepers}
+				columns={columns}
+				getRowId={(beeper) => beeper.id}
+				emptyMessage="No beepers installed yet."
+				onRowClick={(beeper) =>
+					navigate({
+						to: "/$account_slug/beepers/$beeperId",
+						params: { account_slug: slug, beeperId: beeper.id },
+					})
+				}
+			/>
+
+			{editingBeeper ? (
+				<EditBeeperDialog
+					beeper={editingBeeper}
+					slug={slug}
+					open={editingBeeper !== null}
+					onOpenChange={(open) => {
+						if (!open) {
+							setEditingBeeper(null);
+						}
+					}}
+					onSuccess={async () => {
+						await router.invalidate();
+					}}
+				/>
+			) : null}
+		</>
 	);
 }

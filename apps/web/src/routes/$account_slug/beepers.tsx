@@ -201,6 +201,7 @@ function BeepersPage() {
 		null,
 	);
 	const [formTitle, setFormTitle] = useState("");
+	const [formBody, setFormBody] = useState("");
 	const [formCron, setFormCron] = useState("");
 	const [formInputs, setFormInputs] = useState<Record<string, unknown>>({});
 	const [submitting, setSubmitting] = useState(false);
@@ -209,6 +210,7 @@ function BeepersPage() {
 	function handleSelectBeeperApp(beeperApp: BeeperApp) {
 		setSelectedBeeperApp(beeperApp);
 		setFormTitle(`${beeperApp.name}`);
+		setFormBody("");
 		setFormCron(beeperApp.default_cron || "*/5 * * * *");
 		const initialInputs: Record<string, unknown> = {};
 		for (const input of beeperApp.inputs) {
@@ -229,6 +231,7 @@ function BeepersPage() {
 		try {
 			const newBeeper = await createBeeper(slug, {
 				title: formTitle.trim(),
+				body: formBody.trim() || undefined,
 				cron: formCron.trim(),
 				timezone: browserTimezone(),
 				beeper_app_id: selectedBeeperApp.id,
@@ -343,6 +346,24 @@ function BeepersPage() {
 											value={formTitle}
 											onChange={(e) => setFormTitle(e.target.value)}
 											disabled={submitting}
+										/>
+									</div>
+
+									<div className="flex flex-col gap-2">
+										<div className="flex items-center justify-between">
+											<Label htmlFor="beeper-body">Body / Remark</Label>
+											<span className="text-[11px] text-muted-foreground">
+												Optional
+											</span>
+										</div>
+										<textarea
+											id="beeper-body"
+											rows={3}
+											placeholder="Add notes, runbook links, or alert context..."
+											value={formBody}
+											onChange={(e) => setFormBody(e.target.value)}
+											disabled={submitting}
+											className="w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 dark:bg-input/30"
 										/>
 									</div>
 

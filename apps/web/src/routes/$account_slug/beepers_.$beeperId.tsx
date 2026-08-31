@@ -8,13 +8,16 @@ import {
 	Check,
 	ChevronRight,
 	Copy,
+	Edit,
 	Pause,
 	Play,
+	SlidersHorizontal,
 	Trash2,
 	Webhook,
 } from "lucide-react";
 import { useState } from "react";
-
+import { EditBeeperDialog } from "@/components/beepers/edit-beeper-dialog";
+import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +45,10 @@ import {
 	beeperHealthLabel,
 	isBeeperProbeBroken,
 } from "@/lib/beeper-health";
+import {
+	CHANNEL_LABELS,
+	type NotificationChannel,
+} from "@/lib/notification-channels";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -96,6 +103,7 @@ function BeeperDetailPage() {
 	const [triggering, setTriggering] = useState(false);
 	const [togglingStatus, setTogglingStatus] = useState(false);
 	const [hasCopiedPing, setHasCopiedPing] = useState(false);
+	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const pingUrl = beeper.ping_token
@@ -227,6 +235,16 @@ function BeeperDetailPage() {
 						>
 							{beeper.status}
 						</Badge>
+						<Button
+							variant="outline"
+							size="sm"
+							disabled={deleting || triggering || togglingStatus}
+							aria-label={`Edit beeper ${beeper.title}`}
+							onClick={() => setIsEditDialogOpen(true)}
+						>
+							<Edit data-icon="inline-start" />
+							Edit
+						</Button>
 						{beeper.status === "active" || beeper.status === "paused" ? (
 							<Button
 								variant="outline"
@@ -326,10 +344,30 @@ function BeeperDetailPage() {
 					</Card>
 				) : null}
 
+				{beeper.body ? (
+					<Card>
+						<CardHeader className="pb-2">
+							<CardTitle className="text-base">Body / Remarks</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<BeepMarkdown source={beeper.body} />
+						</CardContent>
+					</Card>
+				) : null}
+
 				<div className="grid gap-6 md:grid-cols-2">
 					<Card>
-						<CardHeader>
+						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
 							<CardTitle>Schedule & Status</CardTitle>
+							<Button
+								variant="ghost"
+								size="sm"
+								className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+								onClick={() => setIsEditDialogOpen(true)}
+							>
+								<Edit className="size-3.5" />
+								Edit
+							</Button>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-3 text-sm">
 							<DetailRow label="Cron" value={beeper.cron} />
@@ -360,14 +398,27 @@ function BeeperDetailPage() {
 									value={formatWhen(beeper.last_ping_at)}
 								/>
 							) : null}
-							<DetailRow
-								label="Channels"
-								value={
-									beeper.notification_channels?.length > 0
-										? beeper.notification_channels.join(", ")
-										: "Default"
-								}
-							/>
+							<div className="flex justify-between items-center gap-4">
+								<span className="text-muted-foreground">Channels</span>
+								<span className="text-right">
+									{beeper.notification_channels?.length > 0 ? (
+										<span className="flex flex-wrap justify-end gap-1">
+											{beeper.notification_channels.map((channel) => (
+												<Badge
+													key={channel}
+													variant="outline"
+													className="text-[11px] font-normal"
+												>
+													{CHANNEL_LABELS[channel as NotificationChannel] ??
+														channel}
+												</Badge>
+											))}
+										</span>
+									) : (
+										<span className="text-muted-foreground">Default</span>
+									)}
+								</span>
+							</div>
 							<DetailRow
 								label="Created"
 								value={formatWhen(beeper.created_at)}
@@ -376,8 +427,17 @@ function BeeperDetailPage() {
 					</Card>
 
 					<Card>
-						<CardHeader>
+						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
 							<CardTitle>Configuration</CardTitle>
+							<Button
+								variant="ghost"
+								size="sm"
+								className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+								onClick={() => setIsEditDialogOpen(true)}
+							>
+								<SlidersHorizontal className="size-3.5" />
+								Edit Config
+							</Button>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-3 text-sm">
 							{configEntries.length === 0 ? (
@@ -420,6 +480,17 @@ function BeeperDetailPage() {
 						</CardContent>
 					</Card>
 				</div>
+
+				{/* Edit Beeper Dialog */}
+				<EditBeeperDialog
+					beeper={beeper}
+					slug={slug}
+					open={isEditDialogOpen}
+					onOpenChange={setIsEditDialogOpen}
+					onSuccess={async () => {
+						await router.invalidate();
+					}}
+				/>
 
 				<div>
 					<details className="group/runs rounded-lg border bg-muted/20 text-sm">

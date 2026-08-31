@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_08_28_100000) do
+ActiveRecord::Schema[8.2].define(version: 2026_08_31_063555) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "subscription_id"
@@ -213,6 +213,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_08_28_100000) do
     t.json "notification_channels", default: [], null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "body"
     t.index "(json_extract(signal_metadata, '$.ping_token'))", name: "index_beepers_on_ping_token", unique: true
     t.index ["account_id", "status", "next_run_at"], name: "index_beepers_on_due"
     t.index ["account_id"], name: "index_beepers_on_account_id"
