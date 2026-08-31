@@ -11,7 +11,7 @@ module JsonLocaleLoader
 
     I18n.available_locales = %i[en zh-CN]
     I18n.default_locale = :en
-    I18n.fallbacks = [:en]
+    I18n.fallbacks = [ :en ]
 
     Dir.glob("#{locales_dir}/*.json").each do |file|
       locale = File.basename(file, ".json").to_sym
