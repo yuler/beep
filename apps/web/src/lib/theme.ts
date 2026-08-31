@@ -22,9 +22,19 @@ export function getResolvedTheme(): Theme {
 	return getStoredTheme() ?? getSystemTheme();
 }
 
+function syncFavicon(theme: Theme) {
+	const link = document.getElementById(
+		"favicon-theme",
+	) as HTMLLinkElement | null;
+	if (link) {
+		link.href = theme === "dark" ? "/icon-dark.svg" : "/icon-light.svg";
+	}
+}
+
 export function applyTheme(theme: Theme) {
 	document.documentElement.classList.toggle("dark", theme === "dark");
 	document.documentElement.dataset.theme = theme;
+	syncFavicon(theme);
 }
 
 export function setTheme(theme: Theme) {

@@ -24,6 +24,8 @@ const themeBootScript = `(() => {
   } else {
     document.documentElement.dataset.theme = "light";
   }
+  var link = document.getElementById("favicon-theme");
+  if (link) link.href = dark ? "/icon-dark.svg" : "/icon-light.svg";
 })();`;
 
 export const Route = createRootRoute({
@@ -43,7 +45,15 @@ export const Route = createRootRoute({
 			{ name: "viewport", content: "width=device-width, initial-scale=1" },
 			{ title: "beep" },
 		],
-		links: [{ rel: "stylesheet", href: appCss }],
+		links: [
+			{ rel: "stylesheet", href: appCss },
+			{
+				id: "favicon-theme",
+				rel: "icon",
+				href: "/icon-light.svg",
+				type: "image/svg+xml",
+			},
+		],
 		scripts: [{ children: themeBootScript }],
 	}),
 	notFoundComponent: NotFound,
