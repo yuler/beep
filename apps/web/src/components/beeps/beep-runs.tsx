@@ -2,6 +2,7 @@ import { ChevronRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import type { BeepRun } from "@/lib/api/beeps";
+import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 
 const RUN_STATUS_VARIANT: Record<
 	string,
@@ -15,11 +16,13 @@ const RUN_STATUS_VARIANT: Record<
 	expired: "destructive",
 };
 
-function formatWhen(value: string) {
-	return new Date(value).toLocaleString();
-}
-
-export function BeepRuns({ runs }: { runs: BeepRun[] }) {
+export function BeepRuns({
+	runs,
+	timezone,
+}: {
+	runs: BeepRun[];
+	timezone: string;
+}) {
 	return (
 		<details className="group/runs rounded-lg border bg-muted/20 text-sm">
 			<summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
@@ -40,7 +43,10 @@ export function BeepRuns({ runs }: { runs: BeepRun[] }) {
 						>
 							<div className="flex flex-wrap items-center justify-between gap-2">
 								<span className="tabular-nums text-xs text-muted-foreground">
-									{formatWhen(run.scheduled_for)}
+									{formatBeepScheduleTime(
+										run.scheduled_for,
+										timezone,
+									)}
 								</span>
 								<div className="flex items-center gap-1.5">
 									<Badge
