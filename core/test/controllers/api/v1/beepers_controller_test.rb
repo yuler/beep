@@ -77,7 +77,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_nil body["kind"]
   end
 
-  test "update modifies beeper properties" do
+  test "update modifies beeper properties including notification_channels" do
     beeper = Beeper.create!(
       account: @account,
       beeper_app: @beeper_app,
@@ -85,6 +85,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
       body: "Old Body",
       cron: "*/5 * * * *",
       timezone: "UTC",
+      notification_channels: [ "email" ],
       config: { "target_url" => "https://example.com" }
     )
 
@@ -93,6 +94,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
         title: "New Title",
         body: "Updated Body",
         cron: "*/10 * * * *",
+        notification_channels: [ "email", "web_push" ],
         config: { "target_url" => "https://new.example.com", "expected_status" => 201 }
       },
       headers: { "Authorization" => "Bearer #{@token}" },
@@ -103,12 +105,14 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "New Title", res_body["title"]
     assert_equal "Updated Body", res_body["body"]
     assert_equal "*/10 * * * *", res_body["cron"]
+    assert_equal [ "email", "web_push" ], res_body["notification_channels"]
     assert_equal "https://new.example.com", res_body["config"]["target_url"]
 
     beeper.reload
     assert_equal "New Title", beeper.title
     assert_equal "Updated Body", beeper.body
     assert_equal "*/10 * * * *", beeper.cron
+    assert_equal [ "email", "web_push" ], beeper.notification_channels
     assert_equal "https://new.example.com", beeper.config["target_url"]
   end
 

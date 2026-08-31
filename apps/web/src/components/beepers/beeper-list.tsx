@@ -4,6 +4,7 @@ import { Edit } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { EditBeeperDialog } from "@/components/beepers/edit-beeper-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	DataTable,
@@ -18,6 +19,10 @@ import {
 	beeperHealthIsDestructive,
 	beeperHealthLabel,
 } from "@/lib/beeper-health";
+import {
+	CHANNEL_LABELS,
+	type NotificationChannel,
+} from "@/lib/notification-channels";
 import { runSuccessRate } from "@/lib/run-success-rate";
 import { shortId } from "@/lib/short-id";
 
@@ -129,6 +134,36 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 						</span>
 					),
 				}),
+				columnHelper.accessor(
+					(row) => row.notification_channels?.join(",") ?? "",
+					{
+						id: "channels",
+						header: "Channels",
+						cell: ({ row }) => {
+							const channels = row.original.notification_channels ?? [];
+							if (channels.length === 0) {
+								return (
+									<span className="text-sm text-muted-foreground">Default</span>
+								);
+							}
+							return (
+								<div className="flex flex-wrap gap-1">
+									{channels.map((channel) => (
+										<Badge
+											key={channel}
+											variant="outline"
+											className="text-[11px] font-normal"
+										>
+											{CHANNEL_LABELS[channel as NotificationChannel] ??
+												channel}
+										</Badge>
+									))}
+								</div>
+							);
+						},
+						enableSorting: false,
+					},
+				),
 				columnHelper.accessor((row) => runSuccessRate(row.runs ?? []), {
 					id: "run_success",
 					header: ({ column }) => (

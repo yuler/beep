@@ -13,6 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type Beeper, updateBeeper } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
+import {
+	CHANNEL_LABELS,
+	NOTIFICATION_CHANNELS,
+	type NotificationChannel,
+	toggleChannel,
+} from "@/lib/notification-channels";
 
 interface EditBeeperDialogProps {
 	beeper: Beeper;
@@ -32,6 +38,9 @@ export function EditBeeperDialog({
 	const [editTitle, setEditTitle] = useState(beeper.title);
 	const [editBody, setEditBody] = useState(beeper.body ?? "");
 	const [editCron, setEditCron] = useState(beeper.cron);
+	const [editChannels, setEditChannels] = useState<NotificationChannel[]>(
+		(beeper.notification_channels ?? []) as NotificationChannel[],
+	);
 	const [editInputs, setEditInputs] = useState<Record<string, unknown>>(
 		beeper.config ?? {},
 	);
@@ -45,6 +54,9 @@ export function EditBeeperDialog({
 		setEditTitle(beeper.title);
 		setEditBody(beeper.body ?? "");
 		setEditCron(beeper.cron);
+		setEditChannels(
+			(beeper.notification_channels ?? []) as NotificationChannel[],
+		);
 		setEditInputs({ ...(beeper.config ?? {}) });
 		setEditError(null);
 	}, [open, beeper]);
@@ -64,6 +76,7 @@ export function EditBeeperDialog({
 				title: editTitle.trim(),
 				body: editBody.trim() || null,
 				cron: editCron.trim(),
+				notification_channels: editChannels,
 				config: editInputs,
 			});
 			onOpenChange(false);
@@ -129,6 +142,35 @@ export function EditBeeperDialog({
 								disabled={savingEdit}
 								className="font-mono text-sm"
 							/>
+						</div>
+
+						<div className="flex flex-col gap-2">
+							<Label>Notification Channels</Label>
+							<div className="flex flex-col gap-2 rounded-lg border border-input p-3 dark:bg-input/20">
+								{NOTIFICATION_CHANNELS.map((channel) => (
+									<Label
+										key={channel}
+										className="flex items-center gap-2 font-normal cursor-pointer text-sm"
+									>
+										<input
+											type="checkbox"
+											className="size-4 accent-primary rounded"
+											checked={editChannels.includes(channel)}
+											disabled={savingEdit}
+											onChange={(e) =>
+												setEditChannels((curr) =>
+													toggleChannel(curr, channel, e.target.checked),
+												)
+											}
+										/>
+										{CHANNEL_LABELS[channel]}
+									</Label>
+								))}
+							</div>
+							<p className="text-[11px] text-muted-foreground">
+								Select which notification channels receive alerts when this
+								beeper fails or triggers.
+							</p>
 						</div>
 
 						{inputs.length > 0 ? (

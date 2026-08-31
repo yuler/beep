@@ -45,6 +45,10 @@ import {
 	beeperHealthLabel,
 	isBeeperProbeBroken,
 } from "@/lib/beeper-health";
+import {
+	CHANNEL_LABELS,
+	type NotificationChannel,
+} from "@/lib/notification-channels";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -394,14 +398,27 @@ function BeeperDetailPage() {
 									value={formatWhen(beeper.last_ping_at)}
 								/>
 							) : null}
-							<DetailRow
-								label="Channels"
-								value={
-									beeper.notification_channels?.length > 0
-										? beeper.notification_channels.join(", ")
-										: "Default"
-								}
-							/>
+							<div className="flex justify-between items-center gap-4">
+								<span className="text-muted-foreground">Channels</span>
+								<span className="text-right">
+									{beeper.notification_channels?.length > 0 ? (
+										<span className="flex flex-wrap justify-end gap-1">
+											{beeper.notification_channels.map((channel) => (
+												<Badge
+													key={channel}
+													variant="outline"
+													className="text-[11px] font-normal"
+												>
+													{CHANNEL_LABELS[channel as NotificationChannel] ??
+														channel}
+												</Badge>
+											))}
+										</span>
+									) : (
+										<span className="text-muted-foreground">Default</span>
+									)}
+								</span>
+							</div>
 							<DetailRow
 								label="Created"
 								value={formatWhen(beeper.created_at)}

@@ -10,14 +10,11 @@ import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { updateSettings } from "@/lib/api/settings";
 import {
+	CHANNEL_LABELS,
+	NOTIFICATION_CHANNELS,
 	type NotificationChannel,
 	toggleChannel,
 } from "@/lib/notification-channels";
-
-const CHANNEL_LABELS: Record<NotificationChannel, string> = {
-	email: "Email",
-	web_push: "Browser notifications",
-};
 
 export function NotificationChannelSettings({
 	slug,
@@ -58,7 +55,7 @@ export function NotificationChannelSettings({
 			<CardContent className="flex flex-col gap-3">
 				<fieldset className="flex flex-col gap-2" disabled={pending}>
 					<legend className="sr-only">Channels</legend>
-					{(["email", "web_push"] as const).map((channel) => (
+					{NOTIFICATION_CHANNELS.map((channel) => (
 						<Label key={channel} className="font-normal">
 							<input
 								type="checkbox"

@@ -2,6 +2,11 @@ export const NOTIFICATION_CHANNELS = ["email", "web_push"] as const;
 
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
+export const CHANNEL_LABELS: Record<NotificationChannel, string> = {
+	email: "Email",
+	web_push: "Browser notifications",
+};
+
 export function toggleChannel(
 	channels: NotificationChannel[],
 	channel: NotificationChannel,

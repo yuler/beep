@@ -145,6 +145,7 @@ export function updateBeeper(
 		body?: string | null;
 		cron?: string;
 		config?: Record<string, unknown>;
+		notification_channels?: string[];
 	},
 ) {
 	return apiFetch<Beeper>(`/api/v1/${accountSlug}/beepers/${beeperId}`, {
