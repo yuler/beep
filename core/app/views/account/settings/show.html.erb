@@ -1,15 +1,15 @@
-<% @page_title = "Account Settings" %>
+<% @page_title = t(:account_settings, default: "Account Settings") %>
 
 <div class="page page--md">
   <div class="prose">
-    <h1>Account Settings</h1>
+    <h1><%= t(:account_settings, default: "Account Settings") %></h1>
     <p class="lead">
       <% if @account.personal? %>
-        Your username is the URL slug for your personal account.
+        <%= t(:account_settings_personal_lead, default: "Your username is the URL slug for your personal account.") %>
       <% else %>
-        The account slug appears in every URL for this team.
+        <%= t(:account_settings_team_lead, default: "The account slug appears in every URL for this team.") %>
       <% end %>
-      Changing it frees the old URL immediately (no redirect). The old slug stays reserved for 30 days so others cannot claim it.
+      <%= t(:account_settings_slug_change_warning, default: "Changing it frees the old URL immediately (no redirect). The old slug stays reserved for 30 days so others cannot claim it.") %>
     </p>
   </div>
 
@@ -18,24 +18,24 @@
 
     <div class="field">
       <%= form.label :name, class: "field__label" do %>
-        <span>Name</span>
+        <span><%= t(:account_name, default: "Name") %></span>
       <% end %>
       <%= form.text_field :name, class: "input", required: true %>
     </div>
 
     <div class="field">
-      <%= form.label :slug, (@account.personal? ? "Username" : "Slug"), class: "field__label" %>
+      <%= form.label :slug, (@account.personal? ? t(:account_username, default: "Username") : t(:account_slug, default: "Slug")), class: "field__label" %>
       <%= form.text_field :slug, class: "input", required: true, pattern: "[a-zA-Z0-9_\\-]{4,16}", maxlength: 16 %>
-      <p class="field__hint">4–16 characters: letters, numbers, hyphens, underscores. Old slug is held for 30 days and is not redirected.</p>
+      <p class="field__hint"><%= t(:account_settings_slug_hint, default: "4–16 characters: letters, numbers, hyphens, underscores. Old slug is held for 30 days and is not redirected.") %></p>
     </div>
 
     <div class="field">
       <%= form.label :description, class: "field__label" do %>
-        <span>Description</span>
+        <span><%= t(:account_description, default: "Description") %></span>
       <% end %>
       <%= form.text_field :description, class: "input" %>
     </div>
 
-    <%= form.submit "Save", class: "btn btn--primary" %>
+    <%= form.submit t(:common_save, default: "Save"), class: "btn btn--primary" %>
   <% end %>
 </div>

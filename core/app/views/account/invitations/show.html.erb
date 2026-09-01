@@ -1,43 +1,40 @@
-<% @page_title = "Join #{@account_invitation.account.name}" %>
+<% @page_title = t(:account_join_title, name: @account_invitation.account.name, default: "Join %{name}") %>
 
 <div class="stage">
   <div class="page page--sm">
     <div class="card card--raised">
       <div class="card__body text-center">
-        <h2 class="card__title">Join <%= @account_invitation.account.name %></h2>
+        <h2 class="card__title"><%= t(:account_join_title, name: @account_invitation.account.name, default: "Join %{name}") %></h2>
 
         <% if @account_invitation.account.description.present? %>
           <p class="txt-muted"><%= @account_invitation.account.description %></p>
         <% end %>
 
         <p class="txt-muted">
-          <strong><%= @account_invitation.invited_by.name %></strong>
-          invited <strong><%= @account_invitation.email %></strong>
+          <%= t(:account_invite_intro, invited_by: @account_invitation.invited_by.name, email: @account_invitation.email, default: "%{invited_by} invited %{email}") %>
         </p>
 
         <% email_matches = authenticated? && Current.identity.email == @account_invitation.email %>
 
         <% if email_matches %>
-          <div class="divider">Signed in as <%= Current.identity.email %></div>
+          <div class="divider"><%= t(:account_invite_signed_in_as, email: Current.identity.email, default: "Signed in as %{email}") %></div>
 
           <% if @account_invitation.accepted? %>
             <p class="txt-muted">
-              You joined <strong><%= @account_invitation.account.name %></strong>
-              on <%= l(@account_invitation.acceptance.created_at, format: :long) %>.
+              <%= t(:account_invite_already_joined, account: @account_invitation.account.name, date: l(@account_invitation.acceptance.created_at, format: :long), default: "You joined %{account} on %{date}.") %>
             </p>
           <% elsif @account_invitation.declined? %>
             <p class="txt-muted">
-              You declined the invitation to <strong><%= @account_invitation.account.name %></strong>
-              on <%= l(@account_invitation.decline.created_at, format: :long) %>.
+              <%= t(:account_invite_declined, account: @account_invitation.account.name, date: l(@account_invitation.decline.created_at, format: :long), default: "You declined the invitation to %{account} on %{date}.") %>
             </p>
           <% else %>
             <div class="flex gap items-center justify-center">
-              <%= button_to "Accept invitation",
+              <%= button_to t(:account_invite_accept, default: "Accept invitation"),
                     account_invitation_acceptance_path(@account_invitation.token),
                     method: :post,
                     class: "btn btn--primary" %>
 
-              <%= button_to "Decline",
+              <%= button_to t(:account_invite_decline, default: "Decline"),
                     account_invitation_decline_path(@account_invitation.token),
                     method: :post,
                     class: "btn btn--ghost" %>
@@ -45,14 +42,13 @@
           <% end %>
         <% else %>
           <% if authenticated? %>
-            <div class="divider">Signed in as <%= Current.identity.email %></div>
+            <div class="divider"><%= t(:account_invite_signed_in_as, email: Current.identity.email, default: "Signed in as %{email}") %></div>
 
             <p class="txt-muted">
-              This invitation was sent to <strong><%= @account_invitation.email %></strong>.
-              Log in with that email to accept or decline.
+              <%= t(:account_invite_sent_to, email: @account_invitation.email, default: "This invitation was sent to %{email}. Log in with that email to accept or decline.") %>
             </p>
 
-            <%= button_to "Login",
+            <%= button_to t(:common_login, default: "Login"),
                   session_path(script_name: nil),
                   method: :delete,
                   params: {
@@ -64,13 +60,13 @@
                   },
                   class: "btn btn--primary" %>
           <% else %>
-            <div class="divider">Login required</div>
+            <div class="divider"><%= t(:account_invite_login_required, default: "Login required") %></div>
 
             <p class="txt-muted">
-              Log in as <strong><%= @account_invitation.email %></strong> to accept or decline this invitation.
+              <%= t(:account_invite_login_as, email: @account_invitation.email, default: "Log in as %{email} to accept or decline this invitation.") %>
             </p>
 
-            <%= link_to "Login",
+            <%= link_to t(:common_login, default: "Login"),
                   new_session_path(script_name: nil, email: @account_invitation.email),
                   class: "btn btn--primary" %>
           <% end %>

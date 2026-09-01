@@ -2,6 +2,6 @@
 
 <div class="page page--lg">
   <div class="prose">
-    <p>Account name: <%= Current.account.name %></p>
+    <p><%= t(:account_current_name, name: Current.account.name, default: "Account name: %{name}") %></p>
   </div>
 </div>

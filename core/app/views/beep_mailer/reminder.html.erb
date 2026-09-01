@@ -5,9 +5,9 @@
 <% end %>
 
 <p>
-  <%= link_to "Open beep", @beep.web_url %>
+  <%= link_to t(:mailer_open_beep, default: "Open beep"), @beep.web_url %>
 </p>
 
 <p class="footer">
-  <%= link_to "Turn off email reminders", @unsubscribe_url %>
+  <%= link_to t(:email_reminders_turn_off, default: "Turn off email reminders"), @unsubscribe_url %>
 </p>

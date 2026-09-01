@@ -1,14 +1,14 @@
-<% @page_title = "Join Code Inactive" %>
+<% @page_title = t(:account_join_code_inactive_title, default: "Join Code Inactive") %>
 
 <div class="stage">
   <div class="page page--sm">
     <div class="card card--raised">
       <div class="card__body text-center">
-        <h2 class="card__title">Join Code Inactive</h2>
+        <h2 class="card__title"><%= t(:account_join_code_inactive_title, default: "Join Code Inactive") %></h2>
 
-        <p class="txt-muted">Ask someone from <%= @join_code.account.name %> to send you a new link or increase the limit.</p>
+        <p class="txt-muted"><%= t(:account_join_code_inactive_body, name: @join_code.account.name, default: "Ask someone from %{name} to send you a new link or increase the limit.") %></p>
 
-        <%= link_to "Back to Home", root_path, class: "btn btn--primary btn--block" %>
+        <%= link_to t(:account_back_to_home, default: "Back to Home"), root_path, class: "btn btn--primary btn--block" %>
       </div>
     </div>
   </div>

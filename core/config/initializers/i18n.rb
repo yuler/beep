@@ -37,13 +37,15 @@ module JsonLocaleLoader
       locale = File.basename(file, ".json").to_sym
       begin
         flat_hash = JSON.parse(File.read(file))
-        I18n.backend.store_translations(locale, flat_hash.transform_keys(&:to_sym))
+        converted = flat_hash.transform_values do |val|
+          val.is_a?(String) ? val.gsub(/\{([a-zA-Z0-9_]+)\}/, '%{\1}') : val
+        end
+        I18n.backend.store_translations(locale, converted.transform_keys(&:to_sym))
       rescue StandardError => e
         Rails.logger.error("[i18n] Failed to load #{file}: #{e.message}")
       end
     end
   end
-
 end
 
 Rails.application.config.after_initialize do
