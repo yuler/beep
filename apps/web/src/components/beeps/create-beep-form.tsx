@@ -128,7 +128,7 @@ export function CreateBeepForm({
 					maxLength={TITLE_MAX_LENGTH}
 					value={title}
 					onChange={(event) => setTitle(event.target.value)}
-					placeholder={m.beeps_body_placeholder()}
+					placeholder={m.beeps_title_placeholder()}
 					disabled={pending}
 				/>
 			</div>
@@ -159,7 +159,7 @@ export function CreateBeepForm({
 					</div>
 				</div>
 				{preview ? (
-					<div className="min-h-24 rounded-lg border border-input px-2.5 py-1.5 dark:bg-input/30">
+					<div className="min-h-32 rounded-lg border border-input px-2.5 py-1.5 dark:bg-input/30">
 						{body.trim() ? (
 							<BeepMarkdown source={body} />
 						) : (
@@ -181,9 +181,9 @@ export function CreateBeepForm({
 						}}
 						placeholder={m.beeps_body_markdown_placeholder()}
 						disabled={pending}
-						rows={4}
+						rows={6}
 						className={cn(
-							"w-full min-w-0 resize-none overflow-hidden rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30",
+							"w-full min-w-0 min-h-32 resize-none overflow-hidden rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30",
 						)}
 					/>
 				)}
