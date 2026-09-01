@@ -184,6 +184,7 @@ export default defineConfig(({ command }) => {
 			}),
 			tanstackStart({
 				srcDirectory: "src",
+				server: { entry: "./server.ts" },
 				importProtection: {
 					// lib/api/client.ts dynamically imports @tanstack/react-start/server
 					// to forward cookies only during SSR (guarded by import.meta.env.SSR).
