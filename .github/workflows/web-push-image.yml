@@ -19,6 +19,7 @@ on:
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - 'VERSION'
       - '.dockerignore'
       - '.github/workflows/web-push-image.yml'
 
