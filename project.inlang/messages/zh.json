@@ -151,7 +151,7 @@
   "beepers_your_beepers": "您的 Beepers",
   "beeps_active": "活跃",
   "beeps_body": "正文",
-  "beeps_body_markdown_placeholder": "**粗体**\\n_斜体_\\n[链接](https://…)\\n- 列表\\n换行\\n# 暂不支持标题",
+  "beeps_body_markdown_placeholder": "**粗体**\n_斜体_\n[链接](https://…)\n- 列表\n换行\n# 暂不支持标题",
   "beeps_body_placeholder": "添加 Markdown 详情、链接或备注…",
   "beeps_channels": "通知渠道",
   "beeps_channels_none": "无",
