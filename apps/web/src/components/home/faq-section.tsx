@@ -78,14 +78,13 @@ export function FaqSection() {
 									/>
 								</button>
 								{isOpen && (
-									<div
+									<section
 										id={answerId}
-										role="region"
 										aria-labelledby={questionId}
 										className="px-5 pb-5 pt-1 text-sm leading-relaxed text-muted-foreground"
 									>
 										{a()}
-									</div>
+									</section>
 								)}
 							</div>
 						);
