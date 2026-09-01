@@ -21,9 +21,10 @@ module SetLocale
       return loc if loc && I18n.available_locales.include?(loc)
     end
 
-    # 2. From cookies[:locale]
-    if cookies[:locale].present?
-      loc = normalize_locale(cookies[:locale])
+    # 2. From cookies (PARAGLIDE_LOCALE or locale)
+    raw_cookie = cookies[:PARAGLIDE_LOCALE] || cookies[:locale]
+    if raw_cookie.present?
+      loc = normalize_locale(raw_cookie)
       return loc if loc && I18n.available_locales.include?(loc)
     end
 
@@ -32,11 +33,8 @@ module SetLocale
   end
 
   def normalize_locale(locale_str)
-    str = locale_str.to_s.strip
+    str = locale_str.to_s.strip.downcase
     return nil if str.blank?
-
-    # Backward compatibility: map zh-CN / zh_CN / zh-* to :zh
-    return :zh if str.casecmp?("zh-CN") || str.casecmp?("zh_CN") || str.casecmp?("zh")
 
     str.to_sym
   end
@@ -45,16 +43,10 @@ module SetLocale
     header = request.env["HTTP_ACCEPT_LANGUAGE"]
     return nil if header.blank?
 
-    header.scan(/[a-z]{2}(?:-[A-Z]{2})?/i).each do |loc|
-      normalized = loc.tr("_", "-")
-
-      # Special handling for Chinese variations
-      if normalized.downcase.start_with?("zh") && I18n.available_locales.include?(:zh)
-        return :zh
-      end
-
-      matched = I18n.available_locales.find { |l| l.to_s.casecmp?(normalized) }
-      return matched if matched
+    header.scan(/[a-z]{2}(?:-[A-Za-z]{2,})?/i).each do |loc|
+      # Match primary language subtag (e.g. "zh-CN" -> :zh, "en-US" -> :en)
+      primary = loc.split(/[-_]/).first&.downcase&.to_sym
+      return primary if primary && I18n.available_locales.include?(primary)
     end
 
     nil

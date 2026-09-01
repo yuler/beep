@@ -13,8 +13,10 @@ module JsonLocaleLoader
     if File.exist?(settings_file)
       begin
         settings = JSON.parse(File.read(settings_file))
-        I18n.available_locales = settings["languageTags"].map(&:to_sym) if settings["languageTags"]
-        I18n.default_locale = settings["sourceLanguageTag"].to_sym if settings["sourceLanguageTag"]
+        locales = settings["locales"] || settings["languageTags"]
+        base = settings["baseLocale"] || settings["sourceLanguageTag"]
+        I18n.available_locales = locales.map(&:to_sym) if locales
+        I18n.default_locale = base.to_sym if base
         I18n.fallbacks = [ I18n.default_locale ]
       rescue StandardError => e
         Rails.logger.error("[i18n] Failed to parse #{settings_file}: #{e.message}")
