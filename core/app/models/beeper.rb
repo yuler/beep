@@ -10,6 +10,7 @@ class Beeper < ApplicationRecord
 
   belongs_to :account
   belongs_to :beeper_app
+  belongs_to :runner, optional: true
   has_many :runs, class_name: "BeeperRun", dependent: :destroy
   has_many :beeps, dependent: :nullify
 
@@ -68,7 +69,7 @@ class Beeper < ApplicationRecord
     rescue ActiveRecord::RecordNotUnique
       runs.find_by!(scheduled_for: scheduled_for)
     end
-    run.deliver_later
+    run.deliver_later unless requires_runner?
     run
   end
 
@@ -112,7 +113,7 @@ class Beeper < ApplicationRecord
         finish_firing(last_run_at: run.scheduled_for)
       else
         touch
-        run.deliver_later
+        run.deliver_later unless requires_runner?
       end
     elsif run.running?
       if run.updated_at < RUNNING_STALE_AFTER.ago
@@ -208,6 +209,10 @@ class Beeper < ApplicationRecord
     )
   end
 
+  def requires_runner?
+    runner_id.present? || runner_tag.present?
+  end
+
   private
 
   def claim_run(scheduled_for)
@@ -217,11 +222,11 @@ class Beeper < ApplicationRecord
     else
       run = runs.create!(scheduled_for: scheduled_for, status: :pending)
       touch
-      run.deliver_later
+      run.deliver_later unless requires_runner?
     end
   rescue ActiveRecord::RecordNotUnique
     run = runs.find_by!(scheduled_for: scheduled_for)
-    run.deliver_later if run.pending?
+    run.deliver_later if run.pending? && !requires_runner?
     run
   end
 

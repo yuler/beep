@@ -2,6 +2,7 @@
 ruby = "3.4.7"
 node = "24.17.0"
 pnpm = "10.14.0"
+go = "1.25.0"
 gum = "0.17.0"
 overmind = "2.5.1"
 tmux = "3.7b"
@@ -44,6 +45,16 @@ run = "pnpm run dev -- --port ${WEB_PORT}"
 description = "Build the web app for production"
 dir = "apps/web"
 run = "pnpm run build"
+
+[tasks."runner:build"]
+description = "Build the Go runner binary"
+dir = "apps/runner"
+run = "go build -ldflags=\"-s -w -X beep-runner/internal/version.Version=$(cat ../../VERSION)\" -o ../../bin/beep-runner ."
+
+[tasks."runner:test"]
+description = "Run Go runner unit tests"
+dir = "apps/runner"
+run = "go test -v ./..."
 
 [tasks."locale:sort"]
 description = "Sort message keys alphabetically in all locale JSON files"

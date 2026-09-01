@@ -86,6 +86,17 @@ Rails.application.routes.draw do
           resources :runs, only: :create
         end
       end
+      resources :runners, only: %i[ index show create update destroy ] do
+        post :regenerate_token, on: :member
+      end
+
+      namespace :runner do
+        resource :ping, only: %i[ create ]
+        resources :tasks, only: [] do
+          post :poll, on: :collection
+          post :result, on: :member
+        end
+      end
       resources :beep_proposals, only: :create
       resources :beeps, only: %i[ index show create update destroy ] do
         scope module: :beeps do

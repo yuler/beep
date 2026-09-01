@@ -193,8 +193,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_02_112000) do
     t.json "signal_result"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "runner_id"
+    t.datetime "claimed_at"
     t.index ["beeper_id", "scheduled_for"], name: "index_beeper_runs_on_beeper_id_and_scheduled_for", unique: true
     t.index ["beeper_id"], name: "index_beeper_runs_on_beeper_id"
+    t.index ["runner_id"], name: "index_beeper_runs_on_runner_id"
   end
 
   create_table "beepers", id: :uuid, force: :cascade do |t|
@@ -214,10 +217,14 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_02_112000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.text "body"
+    t.uuid "runner_id"
+    t.string "runner_tag"
     t.index "(json_extract(signal_metadata, '$.ping_token'))", name: "index_beepers_on_ping_token", unique: true
     t.index ["account_id", "status", "next_run_at"], name: "index_beepers_on_due"
     t.index ["account_id"], name: "index_beepers_on_account_id"
     t.index ["beeper_app_id"], name: "index_beepers_on_beeper_app_id"
+    t.index ["runner_id"], name: "index_beepers_on_runner_id"
+    t.index ["runner_tag"], name: "index_beepers_on_runner_tag"
   end
 
   create_table "beeps", id: :uuid, force: :cascade do |t|
@@ -293,6 +300,27 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_02_112000) do
     t.index ["user_id", "endpoint"], name: "index_push_subscriptions_on_user_id_and_endpoint", unique: true
   end
 
+  create_table "runners", id: :uuid, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.string "name", null: false
+    t.string "token_digest", null: false
+    t.string "token_prefix", null: false
+    t.string "status", default: "offline", null: false
+    t.json "tags", default: [], null: false
+    t.boolean "allow_exec", default: false, null: false
+    t.string "version"
+    t.string "os"
+    t.string "arch"
+    t.string "hostname"
+    t.string "ip_address"
+    t.datetime "last_seen_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_runners_on_account_id_and_status"
+    t.index ["account_id"], name: "index_runners_on_account_id"
+    t.index ["token_digest"], name: "index_runners_on_token_digest", unique: true
+  end
+
   create_table "sessions", id: :uuid, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.uuid "identity_id", null: false
@@ -328,11 +356,14 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_02_112000) do
   add_foreign_key "beep_runs", "beeps"
   add_foreign_key "beeper_apps", "accounts"
   add_foreign_key "beeper_runs", "beepers"
+  add_foreign_key "beeper_runs", "runners"
   add_foreign_key "beepers", "accounts"
   add_foreign_key "beepers", "beeper_apps"
+  add_foreign_key "beepers", "runners"
   add_foreign_key "beeps", "accounts"
   add_foreign_key "beeps", "beepers"
   add_foreign_key "identity_access_tokens", "identities"
   add_foreign_key "push_subscriptions", "accounts"
   add_foreign_key "push_subscriptions", "users"
+  add_foreign_key "runners", "accounts"
 end

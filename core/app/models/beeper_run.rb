@@ -4,6 +4,7 @@ class BeeperRun < ApplicationRecord
   SIGNAL_RESULT_MAX_BYTES = 8.kilobytes
 
   belongs_to :beeper
+  belongs_to :runner, optional: true
 
   enum :status, %w[ pending running succeeded failed skipped expired ].index_by(&:itself)
   enum :signal_status, %w[ ok alerting error ].index_by(&:itself)
@@ -22,15 +23,28 @@ class BeeperRun < ApplicationRecord
     end
 
     signal = beeper.beeper_app.produce_signal(config: beeper.effective_config)
-    sanitized_result = sanitize_signal_result(signal.to_h)
+    record_signal_result!(signal)
+  rescue StandardError => e
+    update!(
+      signal_status: "error",
+      signal_result: { "status" => "error", "message" => e.message },
+      status: :failed
+    )
+    beeper.finish_firing(last_run_at: scheduled_for)
+  end
 
+  def record_signal_result!(signal, runner: nil)
+    sanitized_result = sanitize_signal_result(signal.to_h)
     decision = Beeper::AlertPolicy.for(beeper).evaluate(signal: signal)
 
     ApplicationRecord.transaction do
-      update!(
+      update_attrs = {
         signal_status: signal.status.to_s,
-        signal_result: sanitized_result
-      )
+        signal_result: sanitized_result,
+        status: :succeeded
+      }
+      update_attrs[:runner_id] = runner.id if runner.present?
+      update!(update_attrs)
 
       beeper.update!(
         alert_state: decision.next_alert_state,
@@ -41,14 +55,6 @@ class BeeperRun < ApplicationRecord
       beeper.notify_from!(signal) if decision.should_notify
     end
 
-    update!(status: :succeeded)
-    beeper.finish_firing(last_run_at: scheduled_for)
-  rescue StandardError => e
-    update!(
-      signal_status: "error",
-      signal_result: { "status" => "error", "message" => e.message },
-      status: :failed
-    )
     beeper.finish_firing(last_run_at: scheduled_for)
   end
 
