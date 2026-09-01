@@ -18,3 +18,6 @@ application.register("button-loading", ButtonLoadingController)
 
 import ThemeController from "controllers/theme_controller"
 application.register("theme", ThemeController)
+
+import LocaleController from "controllers/locale_controller"
+application.register("locale", LocaleController)
