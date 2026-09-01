@@ -73,11 +73,10 @@ export function AuthCard({
 				<Link
 					to="/"
 					aria-label={m.term_beep()}
-					className="mb-1 text-foreground transition-transform hover:scale-105"
+					className="mb-1 inline-flex items-center gap-2 font-semibold tracking-tight text-foreground"
 				>
-					<span className="inline-flex size-12 items-center justify-center rounded-2xl border border-border bg-muted/60 p-2 text-primary shadow-xs">
-						<LogoMark className="size-7" />
-					</span>
+					<LogoMark className="size-6" />
+					<span>{m.term_beep()}</span>
 				</Link>
 				<CardDescription>{description}</CardDescription>
 			</CardHeader>
