@@ -14,9 +14,7 @@ export function SiteHeader() {
 					aria-label={m.term_beep()}
 					className="inline-flex items-center gap-2 font-semibold tracking-tight text-foreground"
 				>
-					<span className="inline-flex size-8 items-center justify-center rounded-lg bg-foreground text-background dark:bg-foreground dark:text-background">
-						<LogoMark className="size-5" />
-					</span>
+					<LogoMark className="size-6" />
 					<span>{m.term_beep()}</span>
 				</Link>
 
