@@ -5,19 +5,12 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { type ReactNode, useEffect, useMemo } from "react";
+import { type ReactNode, useEffect } from "react";
 import { NotFound } from "@/components/not-found";
 import { VersionUpdateDialog } from "@/components/version-update-dialog";
 import { fetchMeOrNull } from "@/lib/api/session";
 import { logBuildInfo } from "@/lib/build-info";
-import {
-	buildLocalizedPath,
-	DEFAULT_LOCALE,
-	I18nContext,
-	type Locale,
-} from "@/lib/i18n";
-import * as m from "@/locale/paraglide/messages";
-import { getLocale } from "@/locale/paraglide/runtime";
+import { getLocale, localeConfig, locales, m } from "@/lib/locale";
 
 import appCss from "../styles.css?url";
 
@@ -45,17 +38,30 @@ export const Route = createRootRoute({
 		const me = await fetchMeOrNull();
 		return { me };
 	},
-	head: () => ({
-		meta: [
-			{ charSet: "utf-8" },
-			{ name: "viewport", content: "width=device-width, initial-scale=1" },
-			{
-				title: m.term_beep(),
-			},
-		],
-		links: [{ rel: "stylesheet", href: appCss }],
-		scripts: [{ children: themeBootScript }],
-	}),
+	head: () => {
+		const currentLocale = getLocale();
+		const ogLocale = localeConfig[currentLocale].hreflang.replace("-", "_");
+		const alternateOgLocales = locales
+			.filter((l) => l !== currentLocale)
+			.map((l) => localeConfig[l].hreflang.replace("-", "_"));
+
+		return {
+			meta: [
+				{ charSet: "utf-8" },
+				{ name: "viewport", content: "width=device-width, initial-scale=1" },
+				{
+					title: m.term_beep(),
+				},
+				{ property: "og:locale", content: ogLocale },
+				...alternateOgLocales.map((loc) => ({
+					property: "og:locale:alternate",
+					content: loc,
+				})),
+			],
+			links: [{ rel: "stylesheet", href: appCss }],
+			scripts: [{ children: themeBootScript }],
+		};
+	},
 	notFoundComponent: NotFound,
 	shellComponent: RootDocument,
 	component: RootComponent,
@@ -66,32 +72,18 @@ function RootComponent() {
 		logBuildInfo();
 	}, []);
 
-	const currentLocale = getLocale() as Locale;
-
-	useEffect(() => {
-		document.documentElement.lang = currentLocale;
-	}, [currentLocale]);
-
-	const i18nValue = useMemo(() => {
-		return {
-			locale: currentLocale,
-			getLocalizedPath: (pathname: string, targetLocale?: Locale) =>
-				buildLocalizedPath(pathname, targetLocale ?? currentLocale),
-		};
-	}, [currentLocale]);
-
 	return (
-		<I18nContext.Provider value={i18nValue}>
+		<>
 			<Outlet />
 			<VersionUpdateDialog />
-		</I18nContext.Provider>
+		</>
 	);
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 	return (
 		// Theme boot script / browser extensions may mutate <html>/<body> attrs before hydrate.
-		<html lang={DEFAULT_LOCALE} suppressHydrationWarning>
+		<html lang={localeConfig[getLocale()].hreflang} suppressHydrationWarning>
 			<head>
 				<HeadContent />
 			</head>

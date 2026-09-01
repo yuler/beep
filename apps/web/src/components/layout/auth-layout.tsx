@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { LanguageToggle } from "@/components/language-toggle";
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -11,7 +11,7 @@ import {
 	CardHeader,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 /** Shown while client-only auth routes probe `session_id` on Core. */
 export function AuthPending() {
@@ -37,7 +37,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 				</Link>
 			</div>
 			<div className="absolute top-6 right-6 flex items-center gap-2">
-				<LanguageToggle />
+				<LocaleSwitcher />
 				<ThemeToggle />
 			</div>
 			<div className="flex w-full max-w-sm flex-col gap-6">{children}</div>

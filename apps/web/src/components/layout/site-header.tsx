@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { LanguageToggle } from "@/components/language-toggle";
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { SiteAuthButton } from "@/components/layout/site-auth-button";
 import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 export function SiteHeader() {
 	return (
@@ -21,7 +21,7 @@ export function SiteHeader() {
 				</Link>
 
 				<div className="flex items-center gap-2">
-					<LanguageToggle />
+					<LocaleSwitcher />
 					<ThemeToggle />
 					<SiteAuthButton />
 				</div>
