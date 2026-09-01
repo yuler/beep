@@ -2,7 +2,7 @@ import { createRouter } from "@tanstack/react-router";
 
 import { NotFound } from "@/components/not-found";
 import { ME_STALE_MS } from "@/lib/api/session";
-import { deLocalizeUrl, localizeUrl } from "@/locale/middleware";
+import { deLocalizeUrl, localizeUrl } from "@/locale/paraglide/runtime";
 
 import { routeTree } from "./routeTree.gen";
 

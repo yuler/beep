@@ -4,7 +4,6 @@ import {
 	HeadContent,
 	Outlet,
 	Scripts,
-	useLocation,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { type ReactNode, useEffect, useMemo } from "react";
@@ -17,9 +16,9 @@ import {
 	DEFAULT_LOCALE,
 	I18nContext,
 	type Locale,
-	resolveLocaleFromUrl,
 	type TranslationKey,
 } from "@/lib/i18n";
+import { getLocale } from "@/locale/paraglide/runtime";
 
 import appCss from "../styles.css?url";
 
@@ -64,15 +63,11 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-	const location = useLocation();
-
 	useEffect(() => {
 		logBuildInfo();
 	}, []);
 
-	const currentLocale: Locale = useMemo(() => {
-		return resolveLocaleFromUrl(location.pathname);
-	}, [location.pathname]);
+	const currentLocale = getLocale() as Locale;
 
 	useEffect(() => {
 		document.documentElement.lang = currentLocale;
