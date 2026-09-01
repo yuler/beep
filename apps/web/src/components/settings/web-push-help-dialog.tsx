@@ -69,7 +69,7 @@ export function WebPushHelpDialog({
 							{m.push_help_step_os({ platform: platformLabel })}
 						</span>{" "}
 						<span className="text-muted-foreground">
-							{osStepBody(t, platform, browserName)}
+							{osStepBody(platform, browserName)}
 						</span>
 					</li>
 					<li>

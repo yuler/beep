@@ -164,7 +164,7 @@ export function WebPushSettings({ slug }: { slug: string }) {
 							<ul className="flex flex-col gap-2">
 								{subscriptions.map((record) => {
 									const current = record.endpoint === currentEndpoint;
-									const deviceLabel = localizedPushDevice(t, record.user_agent);
+									const deviceLabel = localizedPushDevice(record.user_agent);
 									return (
 										<li
 											key={record.id}

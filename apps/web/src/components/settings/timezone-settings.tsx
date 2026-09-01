@@ -117,7 +117,7 @@ export function TimezoneSettings({
 			<CardHeader>
 				<CardTitle>{m.settings_timezone_title()}</CardTitle>
 				<CardDescription>
-					{sourceHint(t, timezoneSource, timezone)}
+					{sourceHint(timezoneSource, timezone)}
 				</CardDescription>
 				{timezoneSource ? (
 					<CardAction>
