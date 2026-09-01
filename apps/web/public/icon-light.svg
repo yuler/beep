@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="beep symbol">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="beep app icon">
+  <rect width="512" height="512" rx="112" fill="#ffffff" />
   <path
     d="M256 116 C214 116 181 148 181 190 L181 226 C181 252 170 274 151 294 C143 303 149 318 162 318 L350 318 C363 318 369 303 361 294 C342 274 331 252 331 226 L331 190 C331 148 298 116 256 116 Z"
     fill="none"

@@ -55,8 +55,9 @@ rsvg-convert -w 64 -h 64 -b '#111111' "$MAT/svg/icon-dark.svg" -o "$MAT/png/icon
 rsvg-convert -w 64 -h 64 "$MAT/svg/icon-light-square.svg" -o "$MAT/png/icons/icon-light-square-64.png"
 rsvg-convert -w 64 -h 64 "$MAT/svg/icon-dark-square.svg" -o "$MAT/png/icons/icon-dark-square-64.png"
 cp "$MAT/png/icons/icon-light-square-64.png" "$MAT/app/icon-64.png"
-rsvg-convert -w 16 -h 16 "$MAT/svg/icon-light.svg" -o "$MAT/favicon/favicon-16.png"
-rsvg-convert -w 32 -h 32 "$MAT/svg/icon-light.svg" -o "$MAT/favicon/favicon-32.png"
+rsvg-convert -w 16 -h 16 "$MAT/svg/icon-light-square.svg" -o "$MAT/favicon/favicon-16.png"
+rsvg-convert -w 32 -h 32 "$MAT/svg/icon-light-square.svg" -o "$MAT/favicon/favicon-32.png"
 rsvg-convert -w 192 -h 192 "$MAT/svg/icon-light-square.svg" -o "$MAT/favicon/icon-192.png"
 rsvg-convert -w 512 -h 512 "$MAT/svg/icon-light-square.svg" -o "$MAT/favicon/icon-512.png"
+magick "$MAT/favicon/favicon-16.png" "$MAT/favicon/favicon-32.png" "$MAT/favicon/favicon.ico"
 ```

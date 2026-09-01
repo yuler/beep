@@ -30,28 +30,12 @@
     color: var(--color-ink);
     display: inline-flex;
     justify-content: center;
-    transition:
-      background-color 0.25s ease,
-      color 0.25s ease;
+    transition: color 0.25s ease;
 
     svg {
       block-size: 2rem;
       inline-size: 2rem;
       display: block;
-    }
-  }
-
-  html[data-theme="dark"] .header__logo-mark {
-    background-color: var(--color-black);
-    border-radius: var(--radius);
-    color: var(--color-white);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    html:not([data-theme]) .header__logo-mark {
-      background-color: var(--color-black);
-      border-radius: var(--radius);
-      color: var(--color-white);
     }
   }
 
