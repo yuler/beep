@@ -7,7 +7,7 @@ import { ApiError } from "@/lib/api/client";
 import { fetchMe, verifyMagicLink } from "@/lib/api/session";
 import { resolvePostAuthTarget } from "@/lib/auth/account";
 import { navigateForTarget } from "@/lib/auth/guards";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 export function VerifyForm({
 	idPrefix = "verify",

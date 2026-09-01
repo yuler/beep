@@ -11,7 +11,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 export const Route = createFileRoute("/")({ component: Home });
 

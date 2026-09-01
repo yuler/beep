@@ -25,7 +25,7 @@ import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import { beepStatusLabel } from "@/lib/i18n-labels";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 

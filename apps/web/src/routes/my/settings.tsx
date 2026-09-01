@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { fetchMe } from "@/lib/api/session";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { getGravatarUrl } from "@/lib/gravatar";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const myRoute = getRouteApi("/my");
 

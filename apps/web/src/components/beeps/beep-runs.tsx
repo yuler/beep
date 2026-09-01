@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import type { BeepRun } from "@/lib/api/beeps";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import { beepRunStatusLabel } from "@/lib/i18n-labels";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const RUN_STATUS_VARIANT: Record<
 	string,

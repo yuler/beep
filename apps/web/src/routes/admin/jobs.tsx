@@ -14,7 +14,7 @@ import { coreAppUrl } from "@/config";
 import { fetchAdminJobs } from "@/lib/api/admin";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { cn } from "@/lib/utils";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const adminRoute = getRouteApi("/admin");
 

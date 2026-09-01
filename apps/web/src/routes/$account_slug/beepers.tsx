@@ -46,7 +46,7 @@ import { withAuthRedirects } from "@/lib/auth/guards";
 import { translateError } from "@/lib/i18n-labels";
 import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 

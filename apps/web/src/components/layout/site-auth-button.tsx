@@ -6,7 +6,7 @@ import { resolveDashboardTarget } from "@/lib/auth/account";
 import { navigateForTarget } from "@/lib/auth/guards";
 import { useMe } from "@/lib/auth/use-me";
 import { cn } from "@/lib/utils";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 type ButtonProps = ComponentProps<typeof Button>;
 

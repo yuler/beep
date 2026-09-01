@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { fetchAdminStats } from "@/lib/api/admin";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const adminRoute = getRouteApi("/admin");
 

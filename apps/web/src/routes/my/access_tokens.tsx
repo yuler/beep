@@ -44,7 +44,7 @@ import {
 } from "@/lib/api/access-tokens";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const myRoute = getRouteApi("/my");
 

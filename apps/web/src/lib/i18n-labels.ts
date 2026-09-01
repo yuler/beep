@@ -1,7 +1,7 @@
 import type { Beep } from "@/lib/api/beeps";
 import type { NotificationChannel } from "@/lib/notification-channels";
 import { I18nError } from "@/lib/notification-channels";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const PUSH_ERROR_MESSAGES: Record<string, () => string> = {
 	"push.unsupported": () => m.push_unsupported(),

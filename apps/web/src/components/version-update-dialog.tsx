@@ -2,7 +2,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useVersionPoll } from "@/hooks/use-version-poll";
 import { buildInfo } from "@/lib/build-info";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const shortHash = (hash: string) =>
 	hash === "unknown" ? hash : hash.slice(0, 7);

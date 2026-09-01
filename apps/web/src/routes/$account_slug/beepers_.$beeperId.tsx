@@ -53,7 +53,7 @@ import {
 	translateError,
 } from "@/lib/i18n-labels";
 import type { NotificationChannel } from "@/lib/notification-channels";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 

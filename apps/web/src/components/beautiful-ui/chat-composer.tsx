@@ -5,7 +5,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 type Phase = "idle" | "sent" | "reply1" | "reply2" | "done";
 

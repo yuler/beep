@@ -28,7 +28,7 @@ import {
 	timezoneOption,
 	timezoneOptions,
 } from "@/lib/timezone";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 function sourceHint(source: TimezoneSource | null, timezone: string | null) {
 	if (!timezone) {

@@ -5,7 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import type { AccountSummary } from "@/lib/auth/account";
 import { requireSession } from "@/lib/auth/guards";
 import { cn } from "@/lib/utils";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 export const Route = createFileRoute("/accounts")({
 	ssr: false,

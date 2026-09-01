@@ -18,7 +18,7 @@ import {
 	type NotificationChannel,
 	toggleChannel,
 } from "@/lib/notification-channels";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 interface EditBeeperDialogProps {
 	beeper: Beeper;

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { AuthCard } from "@/components/layout";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 export const Route = createFileRoute("/sign/")({
 	component: SignPage,

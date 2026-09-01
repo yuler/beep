@@ -2,7 +2,7 @@ import { Activity, Calendar, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Beep } from "@/lib/api/beeps";
 import { beepStats } from "@/lib/beep-stats";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 export function BeepStats({ beeps }: { beeps: Beep[] }) {
 	const stats = beepStats(beeps);

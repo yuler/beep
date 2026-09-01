@@ -10,7 +10,7 @@ import { BeepStats } from "@/components/beeps/beep-stats";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { fetchBeeps } from "@/lib/api/beeps";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 

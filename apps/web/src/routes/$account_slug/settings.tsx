@@ -10,7 +10,7 @@ import { TimezoneSettings } from "@/components/settings/timezone-settings";
 import { WebPushSettings } from "@/components/settings/web-push-settings";
 import { fetchSettings } from "@/lib/api/settings";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 

@@ -20,7 +20,7 @@ import {
 import { ApiError } from "@/lib/api/client";
 import type { MeResponse } from "@/lib/api/session";
 import { destroySession } from "@/lib/api/session";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
 	const navigate = useNavigate();

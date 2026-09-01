@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/layout";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 export function NotFound() {
 	return (

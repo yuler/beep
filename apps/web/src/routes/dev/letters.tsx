@@ -24,7 +24,7 @@ import {
 } from "@/lib/api/dev";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { cn } from "@/lib/utils";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const devRoute = getRouteApi("/dev");
 

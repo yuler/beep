@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { startSession } from "@/lib/api/session";
 import { safeReturnTo } from "@/lib/auth/return-to";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 export function SignInForm({
 	idPrefix = "sign",

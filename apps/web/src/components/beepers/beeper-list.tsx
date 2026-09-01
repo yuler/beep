@@ -26,7 +26,7 @@ import {
 import type { NotificationChannel } from "@/lib/notification-channels";
 import { runSuccessRate } from "@/lib/run-success-rate";
 import { shortId } from "@/lib/short-id";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const columnHelper = createColumnHelper<typeof dataTableFeatures, Beeper>();
 
@@ -116,7 +116,6 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 						return (
 							<StatusPill
 								label={healthStatusLabel(
-									t,
 									beeperHealthLabel(beeper),
 								).toUpperCase()}
 								tone={

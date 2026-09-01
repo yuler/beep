@@ -13,7 +13,7 @@ import {
 import { useWebPush } from "@/hooks/use-web-push";
 import { browserLabel, osLabel } from "@/lib/i18n-labels";
 import { describePushDevice, iosHomeScreenHint } from "@/lib/web-push";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 function localizedPushDevice(userAgent: string | null) {
 	const raw = describePushDevice(userAgent);

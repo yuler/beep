@@ -6,7 +6,7 @@ import {
 	testPushSubscription,
 } from "@/lib/api/push";
 import { I18nError } from "@/lib/notification-channels";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const SERVICE_WORKER_URL = "/service-worker.js";
 const PROBE_TIMEOUT_MS = 8_000;

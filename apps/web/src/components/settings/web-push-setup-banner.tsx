@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/item";
 import { useWebPush } from "@/hooks/use-web-push";
 import { iosHomeScreenHint } from "@/lib/web-push";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 function dismissKey(slug: string) {
 	return `beep:web-push-banner:${slug}`;

@@ -15,7 +15,7 @@ import { ApiError } from "@/lib/api/client";
 import { translateError } from "@/lib/i18n-labels";
 import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 const TITLE_MAX_LENGTH = 80;
 const BODY_MAX_LENGTH = 2000;

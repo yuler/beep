@@ -19,7 +19,7 @@ import { beepRunStatusLabel, beepStatusLabel } from "@/lib/i18n-labels";
 import { runSuccessRate } from "@/lib/run-success-rate";
 import { shortId } from "@/lib/short-id";
 import { cn } from "@/lib/utils";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 type FilterStatus = "all" | "active" | "firing" | "recurring" | "completed";
 

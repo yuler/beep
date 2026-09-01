@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { VerifyForm } from "@/components/auth/verify-form";
 import { AuthCard } from "@/components/layout";
 import { safeReturnTo } from "@/lib/auth/return-to";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 export const Route = createFileRoute("/sign/verify")({
 	component: VerifyPage,

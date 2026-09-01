@@ -26,7 +26,7 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import type { MeResponse } from "@/lib/api/session";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 type DashboardSidebarProps = React.ComponentProps<typeof Sidebar> & {
 	user: MeResponse["identity"] | null;

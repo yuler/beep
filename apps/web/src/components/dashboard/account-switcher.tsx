@@ -25,7 +25,7 @@ import {
 import { rememberLastAccount } from "@/lib/api/session";
 import type { AccountSummary } from "@/lib/auth/account";
 import { cn } from "@/lib/utils";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 export function AccountSwitcher({
 	accounts,

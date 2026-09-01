@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { browserLabel, pushPlatformLabel } from "@/lib/i18n-labels";
 import { iosHomeScreenHint, type NotificationPlatform } from "@/lib/web-push";
-import * as m from "@/locale/paraglide/messages";
+import { m } from "@/locale/paraglide/messages";
 
 function osStepBody(platform: NotificationPlatform, browserName: string) {
 	const browser = browserLabel(browserName);
