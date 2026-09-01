@@ -5,7 +5,7 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
     BeeperApp.seed_official
     @account = accounts(:john_account)
     @beeper_app = BeeperApp.find_by!(slug: "site-uptime")
-    @runner = @account.runners.create!(name: "Test-Runner", tags: ["intranet"])
+    @runner = @account.runners.create!(name: "Test-Runner", tags: [ "intranet" ])
     @runner_token = @runner.raw_token
   end
 

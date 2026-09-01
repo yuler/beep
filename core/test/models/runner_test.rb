@@ -28,16 +28,16 @@ class RunnerTest < ActiveSupport::TestCase
   test "normalizes and cleans tags" do
     runner = @account.runners.create!(
       name: "HQ-Server",
-      tags: [" intranet ", "db", "intranet", ""]
+      tags: [ " intranet ", "db", "intranet", "" ]
     )
 
-    assert_equal ["intranet", "db"], runner.tags
+    assert_equal [ "intranet", "db" ], runner.tags
   end
 
   test "matches tags correctly" do
     runner = @account.runners.create!(
       name: "HQ-Server",
-      tags: ["intranet", "internal-api"]
+      tags: [ "intranet", "internal-api" ]
     )
 
     assert runner.matches_tag?("intranet")

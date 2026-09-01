@@ -19,7 +19,7 @@ class CreateRunnersAndAddRunnerToBeepers < ActiveRecord::Migration[8.2]
     end
 
     add_index :runners, :token_digest, unique: true
-    add_index :runners, [:account_id, :status]
+    add_index :runners, [ :account_id, :status ]
 
     add_reference :beepers, :runner, type: :uuid, foreign_key: true, null: true
     add_column :beepers, :runner_tag, :string, null: true

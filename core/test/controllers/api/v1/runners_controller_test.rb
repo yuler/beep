@@ -9,7 +9,7 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index returns account runners" do
-    runner = @account.runners.create!(name: "Nas-01", tags: ["intranet"])
+    runner = @account.runners.create!(name: "Nas-01", tags: [ "intranet" ])
 
     get "/api/v1/#{@account.slug}/runners",
       headers: { "Authorization" => "Bearer #{@token}" },
@@ -20,11 +20,11 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, runners.size
     assert_equal runner.id, runners.first["id"]
     assert_equal "Nas-01", runners.first["name"]
-    assert_equal ["intranet"], runners.first["tags"]
+    assert_equal [ "intranet" ], runners.first["tags"]
   end
 
   test "show returns runner details" do
-    runner = @account.runners.create!(name: "Nas-01", tags: ["intranet"])
+    runner = @account.runners.create!(name: "Nas-01", tags: [ "intranet" ])
 
     get "/api/v1/#{@account.slug}/runners/#{runner.id}",
       headers: { "Authorization" => "Bearer #{@token}" },
@@ -42,7 +42,7 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
         params: {
           runner: {
             name: "Office-Gateway",
-            tags: ["office", "intranet"],
+            tags: [ "office", "intranet" ],
             allow_exec: true
           }
         },
@@ -52,7 +52,7 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
       assert_response :created
       body = response.parsed_body["runner"]
       assert_equal "Office-Gateway", body["name"]
-      assert_equal ["office", "intranet"], body["tags"]
+      assert_equal [ "office", "intranet" ], body["tags"]
       assert_equal true, body["allow_exec"]
       assert body["token"].start_with?("beep_rt_")
     end
@@ -65,7 +65,7 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
       params: {
         runner: {
           name: "New-Name",
-          tags: ["production"],
+          tags: [ "production" ],
           allow_exec: true
         }
       },
@@ -75,7 +75,7 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     runner.reload
     assert_equal "New-Name", runner.name
-    assert_equal ["production"], runner.tags
+    assert_equal [ "production" ], runner.tags
     assert_equal true, runner.allow_exec
   end
 
