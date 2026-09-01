@@ -4,6 +4,6 @@
 <%= @beep.body_text %>
 
 <% end -%>
-Open beep: <%= @beep.web_url %>
+<%= t(:mailer_open_beep, default: "Open beep") %>: <%= @beep.web_url %>
 
-Turn off email reminders: <%= @unsubscribe_url %>
+<%= t(:email_reminders_turn_off, default: "Turn off email reminders") %>: <%= @unsubscribe_url %>

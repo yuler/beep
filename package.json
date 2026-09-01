@@ -1,6 +1,7 @@
 {
   "name": "beep",
   "private": true,
+  "type": "module",
   "description": "Monorepo for the beep project.",
   "scripts": {
     "setup": "mise run setup",
@@ -8,7 +9,10 @@
     "dev": "mise run dev",
     "core": "mise run core",
     "web:dev": "mise run web:dev",
-    "web:build": "mise run web:build"
+    "web:build": "mise run web:build",
+    "locale:sort": "node scripts/locale-sort-keys.ts",
+    "locale:check": "node scripts/locale-check-keys.ts",
+    "locale:compile": "pnpm --filter web locale:compile"
   },
   "packageManager": "pnpm@10.14.0",
   "pnpm": {

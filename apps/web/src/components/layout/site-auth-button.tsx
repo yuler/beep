@@ -1,18 +1,18 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ComponentProps } from "react";
-
 import { SignInDialog } from "@/components/auth/sign-in-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { resolveDashboardTarget } from "@/lib/auth/account";
 import { navigateForTarget } from "@/lib/auth/guards";
 import { useMe } from "@/lib/auth/use-me";
 import { cn } from "@/lib/utils";
+import { m } from "@/locale/paraglide/messages";
 
 type ButtonProps = ComponentProps<typeof Button>;
 
 export function SiteAuthButton({
-	signInLabel = "Sign in",
-	dashboardLabel = "Dashboard",
+	signInLabel,
+	dashboardLabel,
 	size,
 	variant,
 	className,
@@ -25,13 +25,15 @@ export function SiteAuthButton({
 }) {
 	const navigate = useNavigate();
 	const { me } = useMe();
+	const resolvedSignInLabel = signInLabel ?? m.auth_sign_in();
+	const resolvedDashboardLabel = dashboardLabel ?? m.common_dashboard();
 	const target =
 		me && me.accounts.length > 0 ? resolveDashboardTarget(me.accounts) : null;
 
 	if (!target || target.kind === "sign") {
 		return (
 			<SignInDialog
-				label={signInLabel}
+				label={resolvedSignInLabel}
 				size={size}
 				variant={variant}
 				className={className}
@@ -46,7 +48,7 @@ export function SiteAuthButton({
 				params={{ account_slug: target.slug }}
 				className={cn(buttonVariants({ size, variant }), className)}
 			>
-				{dashboardLabel}
+				{resolvedDashboardLabel}
 			</Link>
 		);
 	}
@@ -57,7 +59,7 @@ export function SiteAuthButton({
 				to="/accounts"
 				className={cn(buttonVariants({ size, variant }), className)}
 			>
-				{dashboardLabel}
+				{resolvedDashboardLabel}
 			</Link>
 		);
 	}
@@ -71,7 +73,7 @@ export function SiteAuthButton({
 				void navigateForTarget(navigate, target);
 			}}
 		>
-			{dashboardLabel}
+			{resolvedDashboardLabel}
 		</Button>
 	);
 }

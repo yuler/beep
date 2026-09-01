@@ -10,6 +10,7 @@ import { NotFound } from "@/components/not-found";
 import { VersionUpdateDialog } from "@/components/version-update-dialog";
 import { fetchMeOrNull } from "@/lib/api/session";
 import { logBuildInfo } from "@/lib/build-info";
+import { getLocale, localeConfig, locales, m } from "@/lib/locale";
 
 import appCss from "../styles.css?url";
 
@@ -39,23 +40,38 @@ export const Route = createRootRoute({
 		const me = await fetchMeOrNull();
 		return { me };
 	},
-	head: () => ({
-		meta: [
-			{ charSet: "utf-8" },
-			{ name: "viewport", content: "width=device-width, initial-scale=1" },
-			{ title: "beep" },
-		],
-		links: [
-			{ rel: "stylesheet", href: appCss },
-			{
-				id: "favicon-theme",
-				rel: "icon",
-				href: "/icon-light.svg",
-				type: "image/svg+xml",
-			},
-		],
-		scripts: [{ children: themeBootScript }],
-	}),
+	head: () => {
+		const currentLocale = getLocale();
+		const ogLocale = localeConfig[currentLocale].hreflang.replace("-", "_");
+		const alternateOgLocales = locales
+			.filter((l) => l !== currentLocale)
+			.map((l) => localeConfig[l].hreflang.replace("-", "_"));
+
+		return {
+			meta: [
+				{ charSet: "utf-8" },
+				{ name: "viewport", content: "width=device-width, initial-scale=1" },
+				{
+					title: m.term_beep(),
+				},
+				{ property: "og:locale", content: ogLocale },
+				...alternateOgLocales.map((loc) => ({
+					property: "og:locale:alternate",
+					content: loc,
+				})),
+			],
+			links: [
+				{ rel: "stylesheet", href: appCss },
+				{
+					id: "favicon-theme",
+					rel: "icon",
+					href: "/icon-light.svg",
+					type: "image/svg+xml",
+				},
+			],
+			scripts: [{ children: themeBootScript }],
+		};
+	},
 	notFoundComponent: NotFound,
 	shellComponent: RootDocument,
 	component: RootComponent,
@@ -77,7 +93,7 @@ function RootComponent() {
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 	return (
 		// Theme boot script / browser extensions may mutate <html>/<body> attrs before hydrate.
-		<html lang="en" suppressHydrationWarning>
+		<html lang={localeConfig[getLocale()].hreflang} suppressHydrationWarning>
 			<head>
 				<HeadContent />
 			</head>

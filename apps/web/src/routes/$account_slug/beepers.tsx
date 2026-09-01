@@ -13,7 +13,6 @@ import {
 	Webhook,
 } from "lucide-react";
 import { useState } from "react";
-
 import { BeeperList } from "@/components/beepers/beeper-list";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
@@ -44,8 +43,10 @@ import {
 } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
+import { translateError } from "@/lib/i18n-labels";
 import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
+import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -66,7 +67,7 @@ function getBeeperAppMeta(slug: string) {
 		case "site-uptime":
 			return {
 				icon: Globe,
-				tag: "Availability",
+				tag: m.beepers_tag_availability,
 				accent: "text-sky-500",
 				well: "bg-sky-500/12 text-sky-500",
 				band: "from-sky-500/18 via-sky-500/6 to-transparent",
@@ -74,7 +75,7 @@ function getBeeperAppMeta(slug: string) {
 		case "ssl-expiry":
 			return {
 				icon: ShieldCheck,
-				tag: "Security",
+				tag: m.beepers_tag_security,
 				accent: "text-amber-500",
 				well: "bg-amber-500/12 text-amber-500",
 				band: "from-amber-500/18 via-amber-500/6 to-transparent",
@@ -82,7 +83,7 @@ function getBeeperAppMeta(slug: string) {
 		case "heartbeat":
 			return {
 				icon: Radio,
-				tag: "Cron & Worker",
+				tag: m.beepers_tag_cron_worker,
 				accent: "text-emerald-500",
 				well: "bg-emerald-500/12 text-emerald-500",
 				band: "from-emerald-500/18 via-emerald-500/6 to-transparent",
@@ -90,7 +91,7 @@ function getBeeperAppMeta(slug: string) {
 		default:
 			return {
 				icon: Activity,
-				tag: "Probe",
+				tag: m.beepers_tag_probe,
 				accent: "text-primary",
 				well: "bg-primary/12 text-primary",
 				band: "from-primary/18 via-primary/6 to-transparent",
@@ -123,7 +124,7 @@ function BeeperAppCard({
 					<div className="absolute right-3.5 top-2.5">
 						<span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2 py-0.5 text-[10px] font-medium tracking-tight text-muted-foreground backdrop-blur-xs">
 							<span className="size-1.5 rounded-full bg-emerald-500" />
-							Built-in
+							{m.beepers_built_in()}
 						</span>
 					</div>
 				) : null}
@@ -138,7 +139,7 @@ function BeeperAppCard({
 				</div>
 				<div className="flex flex-wrap items-center justify-end gap-1.5">
 					<Badge variant="secondary" className="font-normal text-[11px]">
-						{meta.tag}
+						{meta.tag()}
 					</Badge>
 					<Badge
 						variant="outline"
@@ -166,13 +167,14 @@ function BeeperAppCard({
 					</span>
 					{metricCount > 0 ? (
 						<span>
-							{metricCount} {metricCount === 1 ? "metric" : "metrics"}
+							{metricCount}{" "}
+							{metricCount === 1 ? m.beepers_metric() : m.beepers_metrics()}
 						</span>
 					) : null}
 					{beeperApp.webhook_ping ? (
 						<span className="inline-flex items-center gap-1">
 							<Webhook className="size-3.5" />
-							Ping
+							{m.beepers_ping()}
 						</span>
 					) : null}
 				</div>
@@ -185,7 +187,7 @@ function BeeperAppCard({
 					className="w-full"
 					onClick={onSelect}
 				>
-					Configure & Install
+					{m.beepers_configure_install()}
 					<ArrowRight data-icon="inline-end" />
 				</Button>
 			</CardFooter>
@@ -246,7 +248,9 @@ function BeepersPage() {
 			});
 		} catch (err) {
 			setError(
-				err instanceof ApiError ? err.message : "Failed to install beeper.",
+				err instanceof ApiError
+					? err.message
+					: translateError(err) || m.beepers_install_failed(),
 			);
 			setSubmitting(false);
 		}
@@ -257,28 +261,29 @@ function BeepersPage() {
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: "Home",
+						label: m.nav_home(),
 						to: "/$account_slug",
 						params: { account_slug: slug },
 					},
-					{ label: "Beepers", isCurrentPage: true },
+					{ label: m.nav_beepers(), isCurrentPage: true },
 				]}
 			/>
 
 			<div className="flex flex-1 flex-col gap-8 p-4 md:p-6">
 				<div className="flex flex-col gap-1">
 					<h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
-						Beeper Apps Gallery
+						{m.beepers_gallery_title()}
 					</h1>
 					<p className="text-sm text-muted-foreground">
-						Install monitoring probes and automated signal receivers to watch
-						your services and send notifications when issues arise.
+						{m.beepers_gallery_description()}
 					</p>
 				</div>
 
 				{/* 1. Catalog / Apps Gallery on Top */}
 				<div className="flex flex-col gap-3">
-					<h2 className="font-heading text-lg font-semibold">Catalog</h2>
+					<h2 className="font-heading text-lg font-semibold">
+						{m.beepers_catalog()}
+					</h2>
 					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 						{beeperApps.map((beeperApp) => (
 							<BeeperAppCard
@@ -292,7 +297,9 @@ function BeepersPage() {
 
 				{beepers.length > 0 ? (
 					<div className="flex flex-col gap-3">
-						<h2 className="font-heading text-lg font-semibold">Your Beepers</h2>
+						<h2 className="font-heading text-lg font-semibold">
+							{m.beepers_your_beepers()}
+						</h2>
 						<BeeperList beepers={beepers} slug={slug} />
 					</div>
 				) : null}
@@ -327,11 +334,12 @@ function BeepersPage() {
 										})()}
 										<div>
 											<DialogTitle className="text-lg">
-												Install {selectedBeeperApp.name}
+												{m.beepers_install_title({
+													name: selectedBeeperApp.name,
+												})}
 											</DialogTitle>
 											<DialogDescription>
-												Fill in the parameters below to install this beeper into
-												your account.
+												{m.beepers_install_description()}
 											</DialogDescription>
 										</div>
 									</div>
@@ -339,7 +347,7 @@ function BeepersPage() {
 
 								<div className="flex flex-col gap-4 py-2">
 									<div className="flex flex-col gap-2">
-										<Label htmlFor="beeper-title">Beeper Title</Label>
+										<Label htmlFor="beeper-title">{m.beepers_title()}</Label>
 										<Input
 											id="beeper-title"
 											required
@@ -351,15 +359,17 @@ function BeepersPage() {
 
 									<div className="flex flex-col gap-2">
 										<div className="flex items-center justify-between">
-											<Label htmlFor="beeper-body">Body / Remark</Label>
+											<Label htmlFor="beeper-body">
+												{m.beepers_body_remark()}
+											</Label>
 											<span className="text-[11px] text-muted-foreground">
-												Optional
+												{m.common_optional()}
 											</span>
 										</div>
 										<textarea
 											id="beeper-body"
 											rows={3}
-											placeholder="Add notes, runbook links, or alert context..."
+											placeholder={m.beepers_body_placeholder()}
 											value={formBody}
 											onChange={(e) => setFormBody(e.target.value)}
 											disabled={submitting}
@@ -368,7 +378,9 @@ function BeepersPage() {
 									</div>
 
 									<div className="flex flex-col gap-2">
-										<Label htmlFor="beeper-cron">Cron Schedule</Label>
+										<Label htmlFor="beeper-cron">
+											{m.beepers_cron_schedule()}
+										</Label>
 										<Input
 											id="beeper-cron"
 											required
@@ -378,7 +390,9 @@ function BeepersPage() {
 											className="font-mono text-sm"
 										/>
 										<p className="text-[11px] text-muted-foreground">
-											Default: {selectedBeeperApp.default_cron || "*/5 * * * *"}
+											{m.beepers_cron_default({
+												cron: selectedBeeperApp.default_cron || "*/5 * * * *",
+											})}
 										</p>
 									</div>
 
@@ -428,14 +442,14 @@ function BeepersPage() {
 										onClick={() => setSelectedBeeperApp(null)}
 										disabled={submitting}
 									>
-										Cancel
+										{m.common_cancel()}
 									</Button>
 									<Button
 										type="submit"
 										size="sm"
 										disabled={submitting || !formTitle.trim()}
 									>
-										{submitting ? "Installing…" : "Install Beeper"}
+										{submitting ? m.beepers_installing() : m.beepers_install()}
 									</Button>
 								</DialogFooter>
 							</form>

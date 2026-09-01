@@ -26,6 +26,7 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import type { MeResponse } from "@/lib/api/session";
+import { m } from "@/locale/paraglide/messages";
 
 type DashboardSidebarProps = React.ComponentProps<typeof Sidebar> & {
 	user: MeResponse["identity"] | null;
@@ -71,16 +72,18 @@ export function DashboardSidebar({
 										onClick={closeMobileSidebar}
 									/>
 								}
-								tooltip="Back to Workspace"
+								tooltip={m.nav_back_to_workspace()}
 								className="group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0!"
 							>
 								<span className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
 									<LogoMark className="size-4" />
 								</span>
 								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-semibold">Beep</span>
+									<span className="truncate font-semibold">
+										{m.term_beep_capitalized()}
+									</span>
 									<span className="truncate text-xs text-muted-foreground">
-										Personal Settings
+										{m.nav_personal_settings()}
 									</span>
 								</div>
 							</SidebarMenuButton>
@@ -94,7 +97,7 @@ export function DashboardSidebar({
 			<SidebarContent>
 				{isMy ? (
 					<SidebarGroup>
-						<SidebarGroupLabel>Personal Settings</SidebarGroupLabel>
+						<SidebarGroupLabel>{m.nav_personal_settings()}</SidebarGroupLabel>
 						<SidebarGroupContent>
 							<SidebarMenu>
 								<SidebarMenuItem>
@@ -103,13 +106,13 @@ export function DashboardSidebar({
 											pathname === mySettingsPath ||
 											pathname.startsWith(`${mySettingsPath}/`)
 										}
-										tooltip="Profile & Preferences"
+										tooltip={m.nav_profile_preferences()}
 										render={
 											<Link to="/my/settings" onClick={closeMobileSidebar} />
 										}
 									>
 										<User />
-										<span>Settings</span>
+										<span>{m.nav_settings()}</span>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 								<SidebarMenuItem>
@@ -118,7 +121,7 @@ export function DashboardSidebar({
 											pathname === accessTokensPath ||
 											pathname.startsWith(`${accessTokensPath}/`)
 										}
-										tooltip="API Access Tokens"
+										tooltip={m.nav_api_access_tokens()}
 										render={
 											<Link
 												to="/my/access_tokens"
@@ -127,7 +130,7 @@ export function DashboardSidebar({
 										}
 									>
 										<KeyRound />
-										<span>API Tokens</span>
+										<span>{m.nav_api_tokens()}</span>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 							</SidebarMenu>
@@ -143,7 +146,7 @@ export function DashboardSidebar({
 											isActive={
 												pathname === homePath || pathname === `${homePath}/`
 											}
-											tooltip="Home"
+											tooltip={m.nav_home()}
 											render={
 												<Link
 													to="/$account_slug"
@@ -153,7 +156,7 @@ export function DashboardSidebar({
 											}
 										>
 											<LayoutDashboard />
-											<span>Home</span>
+											<span>{m.nav_home()}</span>
 										</SidebarMenuButton>
 									</SidebarMenuItem>
 								</SidebarMenu>
@@ -161,7 +164,7 @@ export function DashboardSidebar({
 						</SidebarGroup>
 
 						<SidebarGroup>
-							<SidebarGroupLabel>Workspace</SidebarGroupLabel>
+							<SidebarGroupLabel>{m.nav_workspace()}</SidebarGroupLabel>
 							<SidebarGroupContent>
 								<SidebarMenu>
 									<SidebarMenuItem>
@@ -170,7 +173,7 @@ export function DashboardSidebar({
 												pathname === beepsPath ||
 												pathname.startsWith(`${beepsPath}/`)
 											}
-											tooltip="Beeps"
+											tooltip={m.nav_beeps()}
 											render={
 												<Link
 													to="/$account_slug/beeps"
@@ -180,7 +183,7 @@ export function DashboardSidebar({
 											}
 										>
 											<Bell />
-											<span>Beeps</span>
+											<span>{m.nav_beeps()}</span>
 										</SidebarMenuButton>
 									</SidebarMenuItem>
 									<SidebarMenuItem>
@@ -189,7 +192,7 @@ export function DashboardSidebar({
 												pathname === `/${slug}/beepers` ||
 												pathname.startsWith(`/${slug}/beepers/`)
 											}
-											tooltip="Beepers"
+											tooltip={m.nav_beepers()}
 											render={
 												<Link
 													to="/$account_slug/beepers"
@@ -199,7 +202,7 @@ export function DashboardSidebar({
 											}
 										>
 											<Activity />
-											<span>Beepers</span>
+											<span>{m.nav_beepers()}</span>
 										</SidebarMenuButton>
 									</SidebarMenuItem>
 									<SidebarMenuItem>
@@ -208,7 +211,7 @@ export function DashboardSidebar({
 												pathname === settingsPath ||
 												pathname.startsWith(`${settingsPath}/`)
 											}
-											tooltip="Settings"
+											tooltip={m.nav_settings()}
 											render={
 												<Link
 													to="/$account_slug/settings"
@@ -218,7 +221,7 @@ export function DashboardSidebar({
 											}
 										>
 											<Settings />
-											<span>Settings</span>
+											<span>{m.nav_settings()}</span>
 										</SidebarMenuButton>
 									</SidebarMenuItem>
 								</SidebarMenu>
@@ -227,7 +230,7 @@ export function DashboardSidebar({
 
 						{import.meta.env.DEV ? (
 							<SidebarGroup>
-								<SidebarGroupLabel>Dev</SidebarGroupLabel>
+								<SidebarGroupLabel>{m.nav_dev()}</SidebarGroupLabel>
 								<SidebarGroupContent>
 									<SidebarMenu>
 										<SidebarMenuItem>
@@ -236,7 +239,7 @@ export function DashboardSidebar({
 													pathname === lettersPath ||
 													pathname.startsWith(`${lettersPath}/`)
 												}
-												tooltip="Letters"
+												tooltip={m.nav_letters()}
 												render={
 													<Link
 														to="/dev/letters"
@@ -246,7 +249,7 @@ export function DashboardSidebar({
 												}
 											>
 												<Mail />
-												<span>Letters</span>
+												<span>{m.nav_letters()}</span>
 											</SidebarMenuButton>
 										</SidebarMenuItem>
 									</SidebarMenu>
@@ -256,7 +259,7 @@ export function DashboardSidebar({
 
 						{user?.staff ? (
 							<SidebarGroup>
-								<SidebarGroupLabel>Admin</SidebarGroupLabel>
+								<SidebarGroupLabel>{m.nav_admin()}</SidebarGroupLabel>
 								<SidebarGroupContent>
 									<SidebarMenu>
 										<SidebarMenuItem>
@@ -265,7 +268,7 @@ export function DashboardSidebar({
 													pathname === jobsPath ||
 													pathname.startsWith(`${jobsPath}/`)
 												}
-												tooltip="Jobs"
+												tooltip={m.nav_jobs()}
 												render={
 													<Link
 														to="/admin/jobs"
@@ -275,7 +278,7 @@ export function DashboardSidebar({
 												}
 											>
 												<BriefcaseBusiness />
-												<span>Jobs</span>
+												<span>{m.nav_jobs()}</span>
 											</SidebarMenuButton>
 										</SidebarMenuItem>
 										<SidebarMenuItem>
@@ -284,7 +287,7 @@ export function DashboardSidebar({
 													pathname === statsPath ||
 													pathname.startsWith(`${statsPath}/`)
 												}
-												tooltip="Stats"
+												tooltip={m.nav_stats()}
 												render={
 													<Link
 														to="/admin/stats"
@@ -294,7 +297,7 @@ export function DashboardSidebar({
 												}
 											>
 												<Activity />
-												<span>Stats</span>
+												<span>{m.nav_stats()}</span>
 											</SidebarMenuButton>
 										</SidebarMenuItem>
 									</SidebarMenu>

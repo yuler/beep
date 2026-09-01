@@ -10,6 +10,7 @@ import { TimezoneSettings } from "@/components/settings/timezone-settings";
 import { WebPushSettings } from "@/components/settings/web-push-settings";
 import { fetchSettings } from "@/lib/api/settings";
 import { withAuthRedirects } from "@/lib/auth/guards";
+import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -30,21 +31,21 @@ function SettingsPage() {
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: "Home",
+						label: m.nav_home(),
 						to: "/$account_slug",
 						params: { account_slug: slug },
 					},
-					{ label: "Settings", isCurrentPage: true },
+					{ label: m.nav_settings(), isCurrentPage: true },
 				]}
 			/>
 
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
 				<div>
 					<h1 className="font-heading text-2xl font-semibold tracking-tight">
-						Settings
+						{m.settings_title()}
 					</h1>
 					<p className="mt-1 text-sm text-muted-foreground">
-						Notifications, timezone, and device preferences for this workspace.
+						{m.settings_description()}
 					</p>
 				</div>
 

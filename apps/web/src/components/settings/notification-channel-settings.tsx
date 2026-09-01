@@ -9,12 +9,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { updateSettings } from "@/lib/api/settings";
+import { channelLabel, translateError } from "@/lib/i18n-labels";
 import {
-	CHANNEL_LABELS,
 	NOTIFICATION_CHANNELS,
 	type NotificationChannel,
 	toggleChannel,
 } from "@/lib/notification-channels";
+import { m } from "@/locale/paraglide/messages";
 
 export function NotificationChannelSettings({
 	slug,
@@ -37,7 +38,7 @@ export function NotificationChannelSettings({
 			});
 			await onChanged();
 		} catch (err) {
-			setError(err instanceof ApiError ? err.message : "Something went wrong.");
+			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
 			setPending(false);
 		}
@@ -46,15 +47,14 @@ export function NotificationChannelSettings({
 	return (
 		<Card className="max-w-lg">
 			<CardHeader>
-				<CardTitle>Notifications</CardTitle>
+				<CardTitle>{m.settings_notifications_title()}</CardTitle>
 				<CardDescription>
-					How you receive due beeps in this workspace. You can turn email off
-					from the link in each reminder.
+					{m.settings_notifications_description()}
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3">
 				<fieldset className="flex flex-col gap-2" disabled={pending}>
-					<legend className="sr-only">Channels</legend>
+					<legend className="sr-only">{m.beeps_channels()}</legend>
 					{NOTIFICATION_CHANNELS.map((channel) => (
 						<Label key={channel} className="font-normal">
 							<input
@@ -66,7 +66,7 @@ export function NotificationChannelSettings({
 									void setChannel(channel, event.target.checked)
 								}
 							/>
-							{CHANNEL_LABELS[channel]}
+							{channelLabel(channel)}
 						</Label>
 					))}
 				</fieldset>

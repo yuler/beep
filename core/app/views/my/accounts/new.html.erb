@@ -1,8 +1,8 @@
-<% @page_title = "Create a New Account" %>
+<% @page_title = t(:account_create_new_account, default: "Create a New Account") %>
 
 <div class="page page--lg">
   <div class="prose">
-    <h1>Create a New Account</h1>
+    <h1><%= t(:account_create_new_account, default: "Create a New Account") %></h1>
   </div>
 
   <%= form_with model: @account, url: my_accounts_path, class: "form" do |form| %>
@@ -10,18 +10,18 @@
 
     <div class="field">
       <%= form.label :name, class: "field__label" do %>
-        <span>Account Name</span>
+        <span><%= t(:account_name_label, default: "Account Name") %></span>
       <% end %>
-      <%= form.text_field :name, placeholder: "Account Name", class: "input" %>
+      <%= form.text_field :name, placeholder: t(:account_name_label, default: "Account Name"), class: "input" %>
     </div>
 
     <div class="field">
       <%= form.label :description, class: "field__label" do %>
-        <span>Account Description</span>
+        <span><%= t(:account_description_label, default: "Account Description") %></span>
       <% end %>
-      <%= form.text_area :description, placeholder: "Account Description", class: "textarea" %>
+      <%= form.text_area :description, placeholder: t(:account_description_label, default: "Account Description"), class: "textarea" %>
     </div>
 
-    <%= form.submit "Create Account", class: "btn btn--primary" %>
+    <%= form.submit t(:account_create_account_button, default: "Create Account"), class: "btn btn--primary" %>
   <% end %>
 </div>

@@ -1,4 +1,4 @@
-<% @page_title = "Sign in" %>
+<% @page_title = t(:auth_sign_in, default: "Sign in") %>
 <% @hide_footer = true %>
 
 <section class="auth-stage" aria-labelledby="auth-title">
@@ -10,9 +10,9 @@
       </div>
 
       <div class="auth-story__copy">
-        <p class="auth-eyebrow">Passwordless access</p>
-        <h1 id="auth-title">Sign in to your workspace.</h1>
-        <p>Enter your email and we will send a one-time verification code.</p>
+        <p class="auth-eyebrow"><%= t(:auth_passwordless_access, default: "Passwordless access") %></p>
+        <h1 id="auth-title"><%= t(:auth_sign_in_workspace, default: "Sign in to your workspace.") %></h1>
+        <p><%= t(:auth_enter_email_code, default: "Enter your email and we will send a one-time verification code.") %></p>
       </div>
 
       <div class="auth-preview" aria-hidden="true">
@@ -36,13 +36,13 @@
 
     <div class="auth-panel">
       <div class="auth-panel__header">
-        <h2>Welcome back</h2>
-        <p>Use the email connected to your account.</p>
+        <h2><%= t(:auth_welcome_back, default: "Welcome back") %></h2>
+        <p><%= t(:auth_use_connected_email, default: "Use the email connected to your account.") %></p>
       </div>
 
       <%= form_with url: session_path, class: "form auth-form" do |form| %>
         <div class="field field--with-icon">
-          <%= form.label :email, "Email address", class: "field__label" %>
+          <%= form.label :email, t(:auth_email_address, default: "Email address"), class: "field__label" %>
           <div class="field__control">
             <span class="field__icon"><%= icon_tag "email" %></span>
             <%= form.email_field :email,
@@ -55,11 +55,11 @@
           </div>
         </div>
 
-        <%= form.submit "Continue", class: "btn btn--primary btn--large btn--block auth-submit" %>
+        <%= form.submit t(:auth_continue, default: "Continue"), class: "btn btn--primary btn--large btn--block auth-submit" %>
       <% end %>
 
       <p class="auth-terms">
-        By continuing, you agree to our <%= link_to "Terms of Service", "#", class: "txt-link" %>.
+        <%= t(:auth_terms_agreement, default: "By continuing, you agree to our") %> <%= link_to t(:auth_terms_of_service, default: "Terms of Service"), "#", class: "txt-link" %>.
       </p>
     </div>
   </div>

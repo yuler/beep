@@ -5,6 +5,7 @@ import {
 	fetchPushSubscriptions,
 	type PushSubscriptionRecord,
 } from "@/lib/api/push";
+import { translateError } from "@/lib/i18n-labels";
 import {
 	disableWebPush,
 	enableWebPush,
@@ -45,8 +46,8 @@ type DeviceIdentity = Pick<
 >;
 
 function errorMessage(err: unknown) {
-	if (err instanceof ApiError || err instanceof Error) return err.message;
-	return "Something went wrong.";
+	if (err instanceof ApiError) return err.message;
+	return translateError(err);
 }
 
 function pushPermission() {

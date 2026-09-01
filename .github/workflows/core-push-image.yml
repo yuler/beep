@@ -95,7 +95,7 @@ jobs:
         id: build
         uses: docker/build-push-action@v7.3.0
         with:
-          context: ./core
+          context: .
           file: core/Dockerfile
           build-args: |
             OCI_SOURCE=${{ env.SOURCE_URL }}

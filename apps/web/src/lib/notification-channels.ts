@@ -1,11 +1,13 @@
+export class I18nError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "I18nError";
+	}
+}
+
 export const NOTIFICATION_CHANNELS = ["email", "web_push"] as const;
 
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
-
-export const CHANNEL_LABELS: Record<NotificationChannel, string> = {
-	email: "Email",
-	web_push: "Browser notifications",
-};
 
 export function toggleChannel(
 	channels: NotificationChannel[],

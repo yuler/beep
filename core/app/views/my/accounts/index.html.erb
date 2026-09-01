@@ -1,12 +1,12 @@
-<% @page_title = "Choose Your Account" %>
+<% @page_title = t(:account_choose_account, default: "Choose Your Account") %>
 
 <div class="page page--lg">
   <div class="prose">
-    <h1>Choose Your Account</h1>
+    <h1><%= t(:account_choose_account, default: "Choose Your Account") %></h1>
     <% if @last_account_slug.present? %>
-      <p>Last used: <strong><%= @last_account_slug %></strong> — pick an account to continue.</p>
+      <p><%= t(:account_pick_account_last_used, slug: @last_account_slug, default: "Last used: %{slug} — pick an account to continue.") %></p>
     <% else %>
-      <p>Pick an account to continue.</p>
+      <p><%= t(:account_pick_account, default: "Pick an account to continue.") %></p>
     <% end %>
   </div>
 
@@ -14,28 +14,28 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Slug</th>
-          <th>Description</th>
-          <th>Settings</th>
-          <th>Invitations</th>
-          <th>Created At</th>
+          <th><%= t(:account_name, default: "Name") %></th>
+          <th><%= t(:account_slug, default: "Slug") %></th>
+          <th><%= t(:account_description, default: "Description") %></th>
+          <th><%= t(:account_settings, default: "Settings") %></th>
+          <th><%= t(:account_invitations, default: "Invitations") %></th>
+          <th><%= t(:account_created_at, default: "Created At") %></th>
         </tr>
       </thead>
       <tbody>
         <% @accounts.each do |account| %>
           <tr class="<%= "is-last-used" if account.slug == @last_account_slug %>">
-            <td><%= link_to account.name, root_path(script_name: account.slug_path) %><%= " (last used)" if account.slug == @last_account_slug %></td>
+            <td><%= link_to account.name, root_path(script_name: account.slug_path) %><%= " #{t(:account_last_used_tag, default: '(last used)')}" if account.slug == @last_account_slug %></td>
             <td><%= account.slug %></td>
             <td><%= account.description %></td>
             <td>
               <% if @admin_account_ids.include?(account.id) %>
-                <%= link_to "Settings", account_settings_path(script_name: account.slug_path), class: "txt-link" %>
+                <%= link_to t(:account_settings, default: "Settings"), account_settings_path(script_name: account.slug_path), class: "txt-link" %>
               <% end %>
             </td>
             <td>
               <% if @admin_account_ids.include?(account.id) %>
-                <%= link_to "Invitations", account_invitations_path(script_name: account.slug_path), class: "txt-link" %>
+                <%= link_to t(:account_invitations, default: "Invitations"), account_invitations_path(script_name: account.slug_path), class: "txt-link" %>
               <% end %>
             </td>
             <td><%= account.created_at %></td>
@@ -45,5 +45,5 @@
     </table>
   </div>
 
-  <%= link_to "Create a New Account", new_my_account_path, class: "btn btn--primary" %>
+  <%= link_to t(:account_create_new_account, default: "Create a New Account"), new_my_account_path, class: "btn btn--primary" %>
 </div>

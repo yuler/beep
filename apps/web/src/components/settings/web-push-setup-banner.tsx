@@ -5,7 +5,6 @@ import {
 } from "@tanstack/react-router";
 import { Bell, X } from "lucide-react";
 import { useEffect, useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import {
 	Item,
@@ -16,7 +15,8 @@ import {
 	ItemTitle,
 } from "@/components/ui/item";
 import { useWebPush } from "@/hooks/use-web-push";
-import { IOS_HOME_SCREEN_HINT } from "@/lib/web-push";
+import { iosHomeScreenHint } from "@/lib/web-push";
+import { m } from "@/locale/paraglide/messages";
 
 function dismissKey(slug: string) {
 	return `beep:web-push-banner:${slug}`;
@@ -87,13 +87,13 @@ function WebPushSetupBannerInner({ slug }: { slug: string }) {
 						<Bell />
 					</ItemMedia>
 					<ItemContent>
-						<ItemTitle>Browser notifications are off</ItemTitle>
+						<ItemTitle>{m.push_banner_title()}</ItemTitle>
 						<ItemDescription>
 							{needsIosInstall
-								? IOS_HOME_SCREEN_HINT
+								? iosHomeScreenHint()
 								: denied
-									? "Notifications are blocked. Allow them in the browser or system settings, then enable this device."
-									: "Click to enable this browser and open notification settings."}
+									? m.push_banner_blocked()
+									: m.push_banner_click_enable()}
 						</ItemDescription>
 					</ItemContent>
 				</button>
@@ -102,7 +102,7 @@ function WebPushSetupBannerInner({ slug }: { slug: string }) {
 						type="button"
 						variant="ghost"
 						size="icon-sm"
-						aria-label="Dismiss notification tip"
+						aria-label={m.common_not_now()}
 						onClick={dismiss}
 					>
 						<X />

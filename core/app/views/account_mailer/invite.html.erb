@@ -1,14 +1,13 @@
-<h1>You're invited to join <%= @account.name %></h1>
+<h1><%= t(:mailer_invite_title, account: @account.name, default: "You're invited to join %{account}") %></h1>
 
 <p>
-  <strong><%= @invited_by.name %></strong> invited you to join
-  <strong><%= @account.name %></strong> on <strong><%= ENV.fetch("SITE_NAME") %></strong>.
+  <%= t(:mailer_invite_body, invited_by: @invited_by.name, account: @account.name, site: ENV.fetch("SITE_NAME"), default: "%{invited_by} invited you to join %{account} on %{site}.") %>
 </p>
 
 <p>
-  Open the invitation to accept or decline.
+  <%= t(:mailer_invite_instruction, default: "Open the invitation to accept or decline.") %>
 </p>
 
 <p>
-  <%= link_to "View invitation", @invitation.accept_url %>
+  <%= link_to t(:mailer_invite_view_button, default: "View invitation"), @invitation.accept_url %>
 </p>

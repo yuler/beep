@@ -2,6 +2,7 @@ class ApplicationController < ActionController::Base
   include Authentication
   include Authorization
   include CurrentRequest # TODO: others: CurrentTimezone, SetPlatform
+  include SetLocale
   include RequestForgeryProtection
 
   include AccountUrlHelper

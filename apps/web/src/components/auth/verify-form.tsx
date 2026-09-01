@@ -1,6 +1,5 @@
 import { isRedirect, useNavigate, useRouter } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import { InputOTP } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
@@ -8,6 +7,7 @@ import { ApiError } from "@/lib/api/client";
 import { fetchMe, verifyMagicLink } from "@/lib/api/session";
 import { resolvePostAuthTarget } from "@/lib/auth/account";
 import { navigateForTarget } from "@/lib/auth/guards";
+import { m } from "@/locale/paraglide/messages";
 
 export function VerifyForm({
 	idPrefix = "verify",
@@ -43,6 +43,7 @@ export function VerifyForm({
 
 		try {
 			await verifyMagicLink(code.trim());
+			sessionStorage.removeItem("beep.sign_in_email");
 			if (import.meta.env.DEV) {
 				sessionStorage.removeItem("beep.dev_magic_link_code");
 			}
@@ -57,7 +58,9 @@ export function VerifyForm({
 			onVerified?.();
 		} catch (err) {
 			if (isRedirect(err)) throw err;
-			setError(err instanceof ApiError ? err.message : "Something went wrong.");
+			setError(
+				err instanceof ApiError ? err.message : m.errors_something_went_wrong(),
+			);
 		} finally {
 			setPending(false);
 		}
@@ -68,11 +71,9 @@ export function VerifyForm({
 	return (
 		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
 			<div className="flex flex-col gap-2">
-				<Label htmlFor={codeId}>One-time code</Label>
+				<Label htmlFor={codeId}>{m.auth_one_time_code()}</Label>
 				<InputOTP id={codeId} value={code} onChange={setCode} autoFocus />
-				<p className="text-xs text-muted-foreground">
-					Check your email for a 6-character code.
-				</p>
+				<p className="text-xs text-muted-foreground">{m.auth_code_hint()}</p>
 			</div>
 			{error ? (
 				<p className="text-sm text-destructive" role="alert">
@@ -84,7 +85,7 @@ export function VerifyForm({
 				disabled={pending || code.length < 6}
 				className="w-full"
 			>
-				{pending ? "Verifying…" : "Verify"}
+				{pending ? m.auth_verifying() : m.auth_verify()}
 			</Button>
 			{onBack ? (
 				<Button
@@ -94,7 +95,7 @@ export function VerifyForm({
 					disabled={pending}
 					onClick={onBack}
 				>
-					Use a different email
+					{m.auth_use_different_email()}
 				</Button>
 			) : null}
 		</form>

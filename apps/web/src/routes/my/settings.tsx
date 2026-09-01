@@ -1,10 +1,9 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
-import { ExternalLink, Globe, Mail } from "lucide-react";
+import { Globe, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
-
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { useLocaleSwitcher } from "@/components/layout/locale-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
 	Card,
 	CardContent,
@@ -16,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { fetchMe } from "@/lib/api/session";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { getGravatarUrl } from "@/lib/gravatar";
+import { type Locale, localeConfig, locales, m } from "@/lib/locale";
 
 const myRoute = getRouteApi("/my");
 
@@ -37,38 +37,43 @@ function MySettingsPage() {
 		}
 	}, [identity.email]);
 
+	const { currentLocale, switchLocale } = useLocaleSwitcher();
 	const initials = identity.email.charAt(0).toUpperCase() || "U";
+	const gravatarLabel = m.term_gravatar();
+	const avatarHintParts = m.my_avatar_gravatar_hint().split(gravatarLabel);
 
 	return (
 		<>
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: "Home",
+						label: m.nav_home(),
 						to: "/$account_slug",
 						params: { account_slug: account.slug },
 					},
-					{ label: "Personal Settings" },
-					{ label: "Profile & Preferences", isCurrentPage: true },
+					{ label: m.my_personal_settings() },
+					{ label: m.my_profile_preferences(), isCurrentPage: true },
 				]}
 			/>
 
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
 				<div>
 					<h1 className="font-heading text-2xl font-semibold tracking-tight">
-						Personal Settings
+						{m.my_personal_settings()}
 					</h1>
 					<p className="mt-1 text-sm text-muted-foreground">
-						Manage your profile, email, and personal preferences.
+						{m.my_profile_subtitle()}
 					</p>
 				</div>
 
 				<div className="grid max-w-2xl gap-6">
 					<Card>
 						<CardHeader>
-							<CardTitle className="text-lg">Profile Information</CardTitle>
+							<CardTitle className="text-lg">
+								{m.my_profile_information()}
+							</CardTitle>
 							<CardDescription>
-								Your public avatar and identity details.
+								{m.my_public_avatar_description()}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-6">
@@ -78,7 +83,7 @@ function MySettingsPage() {
 									target="_blank"
 									rel="noreferrer"
 									className="group/avatar-link transition-opacity hover:opacity-85"
-									title="Change avatar on Gravatar"
+									title={m.my_avatar_gravatar_title()}
 								>
 									<Avatar size="lg" className="size-16 border border-border">
 										{avatarUrl ? (
@@ -90,19 +95,18 @@ function MySettingsPage() {
 									</Avatar>
 								</a>
 								<div className="space-y-1">
-									<p className="font-medium leading-none">Avatar</p>
+									<p className="font-medium leading-none">{m.my_avatar()}</p>
 									<p className="text-xs text-muted-foreground">
-										Avatar is automatically fetched from{" "}
+										{avatarHintParts[0]}
 										<a
 											href="https://gravatar.com"
 											target="_blank"
 											rel="noreferrer"
 											className="inline-flex items-center gap-0.5 font-medium text-foreground underline underline-offset-2 hover:text-primary"
 										>
-											Gravatar
-											<ExternalLink className="size-3" />
-										</a>{" "}
-										using your email address.
+											{gravatarLabel}
+										</a>
+										{avatarHintParts[1] ?? ""}
 									</p>
 								</div>
 							</div>
@@ -110,7 +114,7 @@ function MySettingsPage() {
 							<div className="space-y-2">
 								<Label htmlFor="email" className="flex items-center gap-2">
 									<Mail className="size-4 text-muted-foreground" />
-									Email Address
+									{m.my_email_address()}
 								</Label>
 								<div className="flex items-center gap-2">
 									<div className="flex h-9 flex-1 items-center rounded-md border border-input bg-muted/40 px-3 font-mono text-sm text-foreground select-all">
@@ -118,7 +122,9 @@ function MySettingsPage() {
 									</div>
 								</div>
 								<p className="text-xs text-muted-foreground">
-									This email is associated with your global Beep identity.
+									{m.my_email_identity_hint({
+										beep: m.term_beep_capitalized(),
+									})}
 								</p>
 							</div>
 						</CardContent>
@@ -126,33 +132,29 @@ function MySettingsPage() {
 
 					<Card>
 						<CardHeader>
-							<CardTitle className="text-lg">Preferences</CardTitle>
+							<CardTitle className="text-lg">{m.my_preferences()}</CardTitle>
 							<CardDescription>
-								Regional and display preferences for your account.
+								{m.my_preferences_description()}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="space-y-2">
-								<div className="flex items-center justify-between">
-									<Label htmlFor="language" className="flex items-center gap-2">
-										<Globe className="size-4 text-muted-foreground" />
-										Language
-									</Label>
-									<Badge variant="secondary" className="text-xs font-normal">
-										English only
-									</Badge>
-								</div>
+								<Label htmlFor="language" className="flex items-center gap-2">
+									<Globe className="size-4 text-muted-foreground" />
+									{m.my_language()}
+								</Label>
 								<select
 									id="language"
-									disabled
-									className="flex h-9 w-full rounded-md border border-input bg-muted/40 px-3 py-1 text-sm shadow-xs disabled:cursor-not-allowed disabled:opacity-75"
-									value="en"
+									className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+									value={currentLocale}
+									onChange={(e) => switchLocale(e.target.value as Locale)}
 								>
-									<option value="en">English (US)</option>
+									{locales.map((loc) => (
+										<option key={loc} value={loc}>
+											{localeConfig[loc].name}
+										</option>
+									))}
 								</select>
-								<p className="text-xs text-muted-foreground">
-									Additional languages will be available in future releases.
-								</p>
 							</div>
 						</CardContent>
 					</Card>

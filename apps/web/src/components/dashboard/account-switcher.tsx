@@ -7,7 +7,6 @@ import {
 	Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -26,6 +25,7 @@ import {
 import { rememberLastAccount } from "@/lib/api/session";
 import type { AccountSummary } from "@/lib/auth/account";
 import { cn } from "@/lib/utils";
+import { m } from "@/locale/paraglide/messages";
 
 export function AccountSwitcher({
 	accounts,
@@ -52,15 +52,19 @@ export function AccountSwitcher({
 					<SidebarMenuButton
 						size="lg"
 						disabled
-						tooltip="No accounts"
+						tooltip={m.account_no_accounts()}
 						className="group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0!"
 					>
 						<span className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
 							<Building2 className="size-4" />
 						</span>
 						<div className="grid flex-1 text-left text-sm leading-tight">
-							<span className="truncate font-semibold">No accounts</span>
-							<span className="truncate text-xs">Create one to continue</span>
+							<span className="truncate font-semibold">
+								{m.account_no_accounts()}
+							</span>
+							<span className="truncate text-xs">
+								{m.account_create_one_to_continue()}
+							</span>
 						</div>
 					</SidebarMenuButton>
 				</SidebarMenuItem>
@@ -105,7 +109,8 @@ export function AccountSwitcher({
 						<div className="grid flex-1 text-left text-sm leading-tight">
 							<span className="truncate font-semibold">{active.name}</span>
 							<span className="truncate text-xs text-muted-foreground">
-								{active.personal ? "Personal" : "Team"} · /{active.slug}
+								{active.personal ? m.account_personal() : m.account_team()} · /
+								{active.slug}
 							</span>
 						</div>
 						<ChevronsUpDown className="ml-auto size-4" />
@@ -119,7 +124,7 @@ export function AccountSwitcher({
 					>
 						<DropdownMenuGroup>
 							<DropdownMenuLabel className="text-xs text-muted-foreground">
-								Accounts
+								{m.account_accounts()}
 							</DropdownMenuLabel>
 							{accounts.map((account) => {
 								const Icon = account.personal ? UserRound : Building2;
@@ -155,7 +160,9 @@ export function AccountSwitcher({
 								<span className="flex size-6 items-center justify-center rounded-md border border-border bg-transparent">
 									<Users className="size-3.5" />
 								</span>
-								<span className="font-medium">Manage accounts</span>
+								<span className="font-medium">
+									{m.account_manage_accounts()}
+								</span>
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 					</DropdownMenuContent>

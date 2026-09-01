@@ -1,6 +1,6 @@
-You're invited to join <%= @account.name %>
+<%= t(:mailer_invite_title, account: @account.name, default: "You're invited to join %{account}") %>
 
-<%= @invited_by.name %> invited you to join <%= @account.name %> on <%= ENV.fetch("SITE_NAME") %>.
+<%= t(:mailer_invite_body, invited_by: @invited_by.name, account: @account.name, site: ENV.fetch("SITE_NAME"), default: "%{invited_by} invited you to join %{account} on %{site}.") %>
 
-Open the invitation to accept or decline:
+<%= t(:mailer_invite_instruction, default: "Open the invitation to accept or decline.") %>
 <%= @invitation.accept_url %>

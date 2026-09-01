@@ -2,12 +2,18 @@ import { createRouter } from "@tanstack/react-router";
 
 import { NotFound } from "@/components/not-found";
 import { ME_STALE_MS } from "@/lib/api/session";
+import { deLocalizeUrl, localizeUrl } from "@/locale/paraglide/runtime";
 
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
 	const router = createRouter({
 		routeTree,
+		// URL Localization via Router Rewrite
+		rewrite: {
+			input: ({ url }) => deLocalizeUrl(url),
+			output: ({ url }) => localizeUrl(url),
+		},
 		defaultPreload: "intent",
 		// Reuse preloaded beforeLoad/loader data briefly so hover→click is not a second fetch.
 		defaultPreloadStaleTime: ME_STALE_MS,
