@@ -5,9 +5,16 @@
 # loads messages from project.inlang/messages/*.json.
 
 module JsonLocaleLoader
+  def self.inlang_dir
+    [
+      Rails.root.join("project.inlang"),
+      Rails.root.join("../project.inlang")
+    ].find { |path| Dir.exist?(path) }
+  end
+
   def self.load_json_locales
-    inlang_dir = Rails.root.join("../project.inlang")
-    return unless Dir.exist?(inlang_dir)
+    inlang_dir = self.inlang_dir
+    return unless inlang_dir
 
     settings_file = inlang_dir.join("settings.json")
     if File.exist?(settings_file)
@@ -30,27 +37,13 @@ module JsonLocaleLoader
       locale = File.basename(file, ".json").to_sym
       begin
         flat_hash = JSON.parse(File.read(file))
-        nested_hash = unflatten_hash(flat_hash)
-        I18n.backend.store_translations(locale, nested_hash)
+        I18n.backend.store_translations(locale, flat_hash.transform_keys(&:to_sym))
       rescue StandardError => e
         Rails.logger.error("[i18n] Failed to load #{file}: #{e.message}")
       end
     end
   end
 
-  def self.unflatten_hash(flat)
-    result = {}
-    flat.each do |key, value|
-      parts = key.to_s.split(".").map(&:to_sym)
-      curr = result
-      parts[0...-1].each do |part|
-        curr[part] ||= {}
-        curr = curr[part]
-      end
-      curr[parts.last] = value
-    end
-    result
-  end
 end
 
 Rails.application.config.after_initialize do

@@ -58,7 +58,9 @@ export function SignInDialog({
 					<DialogDescription>
 						{step === "email"
 							? m.auth_sign_in_description()
-							: m.auth_verify_description()}
+							: email
+								? m.auth_verify_description_email({ email })
+								: m.auth_verify_description()}
 					</DialogDescription>
 				</DialogHeader>
 				{step === "email" ? (

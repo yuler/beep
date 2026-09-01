@@ -43,6 +43,7 @@ export function VerifyForm({
 
 		try {
 			await verifyMagicLink(code.trim());
+			sessionStorage.removeItem("beep.sign_in_email");
 			if (import.meta.env.DEV) {
 				sessionStorage.removeItem("beep.dev_magic_link_code");
 			}

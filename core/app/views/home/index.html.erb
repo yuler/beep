@@ -1,10 +1,10 @@
 <div class="stage">
   <div class="text-center">
-    <h1 class="txt-xx-large font-weight-bold margin-block-end">Welcome</h1>
-    <p class="txt-large txt-muted margin-block-end">Your new Rails application is ready. Start building something amazing.</p>
+    <h1 class="txt-xx-large font-weight-bold margin-block-end"><%= t(:home_welcome, default: "Welcome") %></h1>
+    <p class="txt-large txt-muted margin-block-end"><%= t(:home_welcome_description, default: "Your new Rails application is ready. Start building something amazing.") %></p>
     <div class="flex gap justify-center flex-wrap">
-      <%= link_to "Get Started", sign_in_path, class: "btn btn--primary btn--large" %>
-      <a href="https://github.com" target="_blank" class="btn btn--outline btn--large">View on GitHub</a>
+      <%= link_to t(:common_get_started, default: "Get Started"), sign_in_path, class: "btn btn--primary btn--large" %>
+      <a href="https://github.com" target="_blank" class="btn btn--outline btn--large"><%= t(:home_view_on_github, default: "View on GitHub") %></a>
     </div>
   </div>
 </div>

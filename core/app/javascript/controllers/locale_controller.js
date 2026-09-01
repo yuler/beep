@@ -3,6 +3,10 @@ import { Controller } from "@hotwired/stimulus"
 // Handles switching the user's preferred language between en and zh.
 // Sets the shared PARAGLIDE_LOCALE cookie across the application.
 export default class extends Controller {
+  static values = {
+    cookieDomain: String,
+  }
+
   connect() {
     this.closeOnOutsideClick = this.closeOnOutsideClick.bind(this)
     document.addEventListener("click", this.closeOnOutsideClick)
@@ -24,7 +28,22 @@ export default class extends Controller {
     if (!locale) return
 
     const maxAge = 34560000
-    document.cookie = `PARAGLIDE_LOCALE=${locale}; path=/; max-age=${maxAge}; SameSite=Lax`
+    const parts = [
+      `PARAGLIDE_LOCALE=${encodeURIComponent(locale)}`,
+      "path=/",
+      `max-age=${maxAge}`,
+      "SameSite=Lax",
+    ]
+
+    if (window.location.protocol === "https:") {
+      parts.push("Secure")
+    }
+
+    if (this.hasCookieDomainValue && this.cookieDomainValue) {
+      parts.push(`Domain=${this.cookieDomainValue}`)
+    }
+
+    document.cookie = parts.join("; ")
 
     const url = new URL(window.location.href)
     url.searchParams.delete("locale")

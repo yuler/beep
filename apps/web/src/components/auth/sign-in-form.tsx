@@ -41,6 +41,7 @@ export function SignInForm({
 			}
 			onSuccess?.({ email: trimmed });
 			if (!stayInPlace) {
+				sessionStorage.setItem("beep.sign_in_email", trimmed);
 				const safe = safeReturnTo(returnTo);
 				await navigate({
 					to: "/sign/verify",

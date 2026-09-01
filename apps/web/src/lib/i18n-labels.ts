@@ -5,7 +5,8 @@ import { m } from "@/locale/paraglide/messages";
 
 const PUSH_ERROR_MESSAGES: Record<string, () => string> = {
 	"push.unsupported": () => m.push_unsupported(),
-	"push.network_unreachable": () => m.push_network_unreachable({ host: "" }),
+	"push.network_unreachable": () =>
+		m.push_network_unreachable({ host: m.push_service_fallback() }),
 	"push.device_not_subscribed": () => m.push_device_not_subscribed(),
 	"push.permission_denied": () => m.push_permission_denied(),
 	"push.permission_not_granted": () => m.push_permission_not_granted(),
