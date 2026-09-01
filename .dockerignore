@@ -1,5 +1,6 @@
-# Docker build context is the monorepo root (`docker build -f apps/web/Dockerfile .`).
-# Keep the context small while still sending pnpm workspace files + apps/web.
+# Docker build context is the monorepo root (`docker build -f core/Dockerfile .`
+# or `docker build -f apps/web/Dockerfile .`).
+# Keep context small while sending necessary files for both core and web.
 
 .git
 .github
@@ -13,15 +14,28 @@
 docs
 materials
 scripts
-core
 packages
 apps/www
 apps/admin
 apps/mobile
 apps/desktop
+
+# Web build artifacts & dependencies
 apps/web/dist
+apps/web/dist-ssr
+apps/web/.output
+apps/web/.nitro
+apps/web/.tanstack
 apps/web/node_modules
 node_modules
+
+# Core build artifacts & secrets
+core/.bundle
+core/config/*.key
+core/config/credentials/*.key
+core/vendor/bundle
+
+# Global ignores
 **/.env*
 **/tmp
 **/log
@@ -31,4 +45,4 @@ node_modules
 compose*.yml
 Procfile.dev
 .rubocop.yml
-.ruby-version
+core/.rubocop*.yml
