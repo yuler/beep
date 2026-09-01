@@ -18,7 +18,10 @@ module SetLocale
     # 1. From params[:locale]
     if params[:locale].present?
       loc = normalize_locale(params[:locale])
-      return loc if loc && I18n.available_locales.include?(loc)
+      if loc && I18n.available_locales.include?(loc)
+        set_locale_cookie(loc)
+        return loc
+      end
     end
 
     # 2. From cookies (PARAGLIDE_LOCALE or locale)
@@ -30,6 +33,18 @@ module SetLocale
 
     # 3. From Accept-Language header
     extract_locale_from_accept_language_header
+  end
+
+  def set_locale_cookie(locale)
+    cookie_opts = {
+      value: locale.to_s,
+      path: "/",
+      expires: 1.year.from_now,
+      same_site: :lax
+    }
+    cookie_opts[:domain] = ENV["SESSION_COOKIE_DOMAIN"].presence if ENV["SESSION_COOKIE_DOMAIN"].present?
+    cookie_opts[:secure] = !Rails.env.local?
+    cookies[:PARAGLIDE_LOCALE] = cookie_opts
   end
 
   def normalize_locale(locale_str)
