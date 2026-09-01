@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
@@ -168,8 +169,22 @@ export default defineConfig(({ command }) => {
 			...(appHost ? [hostAllowlist(`web.${appHost}`)] : []),
 			versionJsonPlugin(buildInfo),
 			tailwindcss(),
+			paraglideVitePlugin({
+				project: "../../project.inlang",
+				outdir: "./src/locale/paraglide",
+				strategy: ["url", "cookie", "baseLocale"],
+				routeStrategies: [
+					{ match: "/api/:path(.*)?", exclude: true },
+					{ match: "/up", exclude: true },
+					{ match: "/version.json", exclude: true },
+					{ match: "/service-worker.js", exclude: true },
+				],
+				emitTsDeclarations: true,
+				isServer: "import.meta.env?.SSR === true",
+			}),
 			tanstackStart({
 				srcDirectory: "src",
+				server: { entry: "./server.ts" },
 				importProtection: {
 					// lib/api/client.ts dynamically imports @tanstack/react-start/server
 					// to forward cookies only during SSR (guarded by import.meta.env.SSR).

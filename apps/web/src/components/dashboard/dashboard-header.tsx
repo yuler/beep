@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Fragment, type ReactNode } from "react";
-
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { WebPushSetupBanner } from "@/components/settings/web-push-setup-banner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -79,6 +79,7 @@ export function DashboardHeader({
 
 					<div className="ml-auto flex shrink-0 items-center gap-2 pl-4">
 						{actions}
+						<LocaleSwitcher />
 						<ThemeToggle />
 					</div>
 				</div>

@@ -1,5 +1,5 @@
-Please enter this 6-character verification code on the sign-in page:
+<%= t(:mailer_magic_link_subtitle, default: "Please enter this 6-character verification code on the sign-in page:") %>
 
 <%= @magic_link.code %>
 
-This code will work for <%= distance_of_time_in_words(MagicLink::EXPIRATION_TIME) %>.
+<%= t(:mailer_magic_link_expiration, time: distance_of_time_in_words(MagicLink::EXPIRATION_TIME), default: "This code will work for %{time}.") %>

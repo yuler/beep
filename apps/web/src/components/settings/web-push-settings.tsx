@@ -1,5 +1,4 @@
 import { Bell, BellOff, BellRing, Trash2 } from "lucide-react";
-
 import { WebPushHelpDialog } from "@/components/settings/web-push-help-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,22 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { useWebPush } from "@/hooks/use-web-push";
-import { describePushDevice, IOS_HOME_SCREEN_HINT } from "@/lib/web-push";
+import { browserLabel, osLabel } from "@/lib/i18n-labels";
+import { describePushDevice, iosHomeScreenHint } from "@/lib/web-push";
+import { m } from "@/locale/paraglide/messages";
+
+function localizedPushDevice(userAgent: string | null) {
+	const raw = describePushDevice(userAgent);
+	if (!userAgent || raw === "Unknown device" || raw === "curl") return raw;
+
+	const onIndex = raw.lastIndexOf(" on ");
+	if (onIndex === -1) return browserLabel(raw);
+
+	return m.push_device_description({
+		browser: browserLabel(raw.slice(0, onIndex)),
+		os: osLabel(raw.slice(onIndex + 4)),
+	});
+}
 
 export function WebPushSettings({ slug }: { slug: string }) {
 	const {
@@ -38,6 +52,7 @@ export function WebPushSettings({ slug }: { slug: string }) {
 	const probing = reachability.kind === "probing";
 	const blocked = reachability.kind === "unreachable";
 	const busy = pending || testing || probing || removingId !== null;
+	const localizedBrowser = browserLabel(status.browserName);
 
 	async function handleEnable() {
 		const result = await probe();
@@ -47,10 +62,8 @@ export function WebPushSettings({ slug }: { slug: string }) {
 	return (
 		<Card className="max-w-lg">
 			<CardHeader>
-				<CardTitle>Browser notifications</CardTitle>
-				<CardDescription>
-					Devices that can receive a system notification when a beep is due.
-				</CardDescription>
+				<CardTitle>{m.push_settings_title()}</CardTitle>
+				<CardDescription>{m.push_settings_description()}</CardDescription>
 				<CardAction>
 					<WebPushHelpDialog
 						browserName={status.browserName}
@@ -61,37 +74,32 @@ export function WebPushSettings({ slug }: { slug: string }) {
 			<CardContent className="flex flex-col gap-4">
 				{!ready ? (
 					<p className="text-sm text-muted-foreground">
-						Checking this browser…
+						{m.push_checking_browser()}
 					</p>
 				) : !status.supported ? (
 					<p className="text-sm text-muted-foreground">
-						This browser does not support web push.
+						{m.push_unsupported()}
 					</p>
 				) : needsIosInstall ? (
-					<p className="text-sm text-muted-foreground">
-						{IOS_HOME_SCREEN_HINT}
-					</p>
+					<p className="text-sm text-muted-foreground">{iosHomeScreenHint()}</p>
 				) : denied ? (
 					<p className="text-sm text-muted-foreground">
-						Notifications are blocked. Enable them in your browser or system
-						settings, then try again.
+						{m.push_permission_denied_retry()}
 					</p>
 				) : (
 					<>
 						<p className="text-sm text-muted-foreground">
 							{status.subscribed
-								? "This browser is subscribed for this workspace."
-								: "Enable on each device you want to notify."}
+								? m.push_subscribed()
+								: m.push_enable_each_device()}
 						</p>
 						{probing ? (
 							<p className="text-sm text-muted-foreground">
-								Checking if this network can reach the push service…
+								{m.push_checking_network()}
 							</p>
 						) : blocked ? (
 							<p className="text-sm text-destructive" role="alert">
-								Beep couldn't reach the push service for {status.browserName}{" "}
-								from this network — it may be blocked. Try a different network,
-								then try again, or open Tips.
+								{m.push_network_blocked({ browser: localizedBrowser })}
 							</p>
 						) : null}
 						<div className="flex flex-wrap gap-2">
@@ -115,13 +123,13 @@ export function WebPushSettings({ slug }: { slug: string }) {
 								)}
 								{pending
 									? status.subscribed
-										? "Turning off…"
-										: "Enabling…"
+										? m.push_turning_off()
+										: m.push_enabling()
 									: probing
-										? "Checking…"
+										? m.push_checking_browser()
 										: status.subscribed
-											? "Turn off this browser"
-											: "Enable this browser"}
+											? m.push_turn_off_browser()
+											: m.push_enable_browser()}
 							</Button>
 							{status.subscribed ? (
 								<Button
@@ -133,13 +141,13 @@ export function WebPushSettings({ slug }: { slug: string }) {
 									}}
 								>
 									<BellRing data-icon="inline-start" />
-									{testing ? "Sending…" : "Test"}
+									{testing ? m.beeps_sending() : m.common_test()}
 								</Button>
 							) : null}
 						</div>
 						{testSent ? (
 							<output className="text-sm text-muted-foreground">
-								Test sent. If nothing appeared, open Tips.
+								{m.push_test_sent()}
 							</output>
 						) : null}
 					</>
@@ -147,15 +155,16 @@ export function WebPushSettings({ slug }: { slug: string }) {
 
 				{ready ? (
 					<div className="flex flex-col gap-2">
-						<p className="text-sm font-medium">Devices</p>
+						<p className="text-sm font-medium">{m.push_devices()}</p>
 						{subscriptions.length === 0 ? (
 							<p className="text-sm text-muted-foreground">
-								No devices subscribed yet.
+								{m.push_devices_empty()}
 							</p>
 						) : (
 							<ul className="flex flex-col gap-2">
 								{subscriptions.map((record) => {
 									const current = record.endpoint === currentEndpoint;
+									const deviceLabel = localizedPushDevice(record.user_agent);
 									return (
 										<li
 											key={record.id}
@@ -164,14 +173,18 @@ export function WebPushSettings({ slug }: { slug: string }) {
 											<div className="min-w-0">
 												<div className="flex flex-wrap items-center gap-2">
 													<p className="truncate text-sm font-medium">
-														{describePushDevice(record.user_agent)}
+														{deviceLabel}
 													</p>
 													{current ? (
-														<Badge variant="secondary">This browser</Badge>
+														<Badge variant="secondary">
+															{m.push_this_browser()}
+														</Badge>
 													) : null}
 												</div>
 												<p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-													Added {new Date(record.created_at).toLocaleString()}
+													{m.push_device_added({
+														date: new Date(record.created_at).toLocaleString(),
+													})}
 												</p>
 											</div>
 											<Button
@@ -179,7 +192,7 @@ export function WebPushSettings({ slug }: { slug: string }) {
 												variant="ghost"
 												size="icon-sm"
 												disabled={busy}
-												aria-label={`Remove ${describePushDevice(record.user_agent)}`}
+												aria-label={`${m.common_delete()} ${deviceLabel}`}
 												onClick={() => {
 													void remove(record);
 												}}

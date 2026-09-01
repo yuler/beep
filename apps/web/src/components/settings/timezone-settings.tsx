@@ -21,21 +21,23 @@ import {
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { type TimezoneSource, updateSettings } from "@/lib/api/settings";
+import { translateError } from "@/lib/i18n-labels";
 import {
 	browserTimezone,
 	type TimezoneOption,
 	timezoneOption,
 	timezoneOptions,
 } from "@/lib/timezone";
+import { m } from "@/locale/paraglide/messages";
 
 function sourceHint(source: TimezoneSource | null, timezone: string | null) {
 	if (!timezone) {
-		return "Not set yet. Opening this workspace detects it from your browser.";
+		return m.settings_timezone_not_set_hint();
 	}
 	if (source === "manual") {
-		return "Set for this workspace. Browser detection will not overwrite it.";
+		return m.settings_timezone_manual();
 	}
-	return "Detected from this browser. Choosing another zone locks it for this workspace.";
+	return m.settings_timezone_detected();
 }
 
 function TimezoneLabel({ option }: { option: TimezoneOption }) {
@@ -85,7 +87,7 @@ export function TimezoneSettings({
 			await updateSettings(slug, { timezone: next });
 			await onChanged();
 		} catch (err) {
-			setError(err instanceof ApiError ? err.message : "Something went wrong.");
+			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
 			setPending(false);
 		}
@@ -104,7 +106,7 @@ export function TimezoneSettings({
 			});
 			await onChanged();
 		} catch (err) {
-			setError(err instanceof ApiError ? err.message : "Something went wrong.");
+			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
 			setPending(false);
 		}
@@ -113,7 +115,7 @@ export function TimezoneSettings({
 	return (
 		<Card className="max-w-lg">
 			<CardHeader>
-				<CardTitle>Timezone</CardTitle>
+				<CardTitle>{m.settings_timezone_title()}</CardTitle>
 				<CardDescription>
 					{sourceHint(timezoneSource, timezone)}
 				</CardDescription>
@@ -130,7 +132,7 @@ export function TimezoneSettings({
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3">
 				<div className="flex flex-col gap-1.5">
-					<Label htmlFor="account-timezone">IANA timezone</Label>
+					<Label htmlFor="account-timezone">{m.settings_timezone_iana()}</Label>
 					<Combobox
 						id="account-timezone"
 						items={items}
@@ -149,14 +151,20 @@ export function TimezoneSettings({
 							{selected ? (
 								<TimezoneLabel option={selected} />
 							) : (
-								<span className="text-muted-foreground">Not set</span>
+								<span className="text-muted-foreground">
+									{m.settings_timezone_not_set()}
+								</span>
 							)}
 						</ComboboxTrigger>
 						<ComboboxContent className="flex flex-col">
 							<div className="border-b border-border p-1.5">
-								<ComboboxInput placeholder="Search city, country, or zone" />
+								<ComboboxInput
+									placeholder={m.settings_timezone_search_placeholder()}
+								/>
 							</div>
-							<ComboboxEmpty>No timezone found.</ComboboxEmpty>
+							<ComboboxEmpty>
+								{m.settings_timezone_search_empty()}
+							</ComboboxEmpty>
 							<ComboboxList>
 								{(item: TimezoneOption) => (
 									<ComboboxItem key={item.value} value={item}>
@@ -169,7 +177,9 @@ export function TimezoneSettings({
 				</div>
 				<div className="flex items-center justify-between gap-3">
 					<p className="text-xs text-muted-foreground">
-						Browser timezone: {browserTimezone()}
+						{m.settings_timezone_browser({
+							timezone: browserTimezone(),
+						})}
 					</p>
 					<Button
 						type="button"
@@ -178,7 +188,7 @@ export function TimezoneSettings({
 						disabled={pending || timezone === browserTimezone()}
 						onClick={() => void onReset()}
 					>
-						Reset to browser
+						{m.settings_timezone_reset()}
 					</Button>
 				</div>
 				{error ? (

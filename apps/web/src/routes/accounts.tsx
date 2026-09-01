@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import type { AccountSummary } from "@/lib/auth/account";
 import { requireSession } from "@/lib/auth/guards";
 import { cn } from "@/lib/utils";
+import { m } from "@/locale/paraglide/messages";
 
 export const Route = createFileRoute("/accounts")({
 	ssr: false,
@@ -29,8 +30,8 @@ function AccountsPage() {
 	const { me } = Route.useRouteContext();
 	const lastSlug = me.last_account_slug;
 	const description = lastSlug
-		? `Last used: ${lastSlug} — pick an account to continue.`
-		: "Pick an account to continue.";
+		? m.account_pick_account_last_used({ slug: lastSlug })
+		: m.account_pick_account();
 
 	return (
 		<AuthLayout>
@@ -75,8 +76,11 @@ function AccountChoice({
 				<span className="flex min-w-0 flex-1 flex-col items-start text-left">
 					<span className="truncate font-medium">{account.name}</span>
 					<span className="truncate text-xs font-normal text-muted-foreground">
-						{account.personal ? "Personal" : "Team"} · /{account.slug}
-						{lastUsed ? " · last used" : ""}
+						{account.personal
+							? m.account_type_personal()
+							: m.account_type_team()}{" "}
+						· /{account.slug}
+						{lastUsed ? m.auth_last_used_suffix() : ""}
 					</span>
 				</span>
 				{lastUsed ? <Check className="size-4 shrink-0 text-primary" /> : null}

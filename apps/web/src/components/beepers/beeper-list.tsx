@@ -2,7 +2,6 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { Edit } from "lucide-react";
 import { useMemo, useState } from "react";
-
 import { EditBeeperDialog } from "@/components/beepers/edit-beeper-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,11 +19,14 @@ import {
 	beeperHealthLabel,
 } from "@/lib/beeper-health";
 import {
-	CHANNEL_LABELS,
-	type NotificationChannel,
-} from "@/lib/notification-channels";
+	beepStatusLabel,
+	channelLabel,
+	healthStatusLabel,
+} from "@/lib/i18n-labels";
+import type { NotificationChannel } from "@/lib/notification-channels";
 import { runSuccessRate } from "@/lib/run-success-rate";
 import { shortId } from "@/lib/short-id";
+import { m } from "@/locale/paraglide/messages";
 
 const columnHelper = createColumnHelper<typeof dataTableFeatures, Beeper>();
 
@@ -56,7 +58,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 				columnHelper.accessor("title", {
 					id: "title",
 					header: ({ column }) => (
-						<SortableHeader column={column} label="Beeper" />
+						<SortableHeader column={column} label={m.term_beeper()} />
 					),
 					cell: ({ row }) => {
 						const beeper = row.original;
@@ -84,22 +86,22 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 				columnHelper.accessor((row) => row.beeper_app?.name ?? "—", {
 					id: "app",
 					header: ({ column }) => (
-						<SortableHeader column={column} label="App" />
+						<SortableHeader column={column} label={m.beepers_app()} />
 					),
 					cell: ({ row }) => (
 						<span className="text-sm text-muted-foreground">
-							{row.original.beeper_app?.name ?? "—"}
+							{row.original.beeper_app?.name ?? m.common_em_dash()}
 						</span>
 					),
 				}),
 				columnHelper.accessor("status", {
 					id: "status",
 					header: ({ column }) => (
-						<SortableHeader column={column} label="Status" />
+						<SortableHeader column={column} label={m.common_status()} />
 					),
 					cell: ({ row }) => (
 						<StatusPill
-							label={row.original.status}
+							label={beepStatusLabel(row.original.status)}
 							tone={beeperStatusTone(row.original.status)}
 						/>
 					),
@@ -107,13 +109,15 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 				columnHelper.accessor((row) => beeperHealthLabel(row), {
 					id: "health",
 					header: ({ column }) => (
-						<SortableHeader column={column} label="Health" />
+						<SortableHeader column={column} label={m.beepers_health()} />
 					),
 					cell: ({ row }) => {
 						const beeper = row.original;
 						return (
 							<StatusPill
-								label={beeperHealthLabel(beeper).toUpperCase()}
+								label={healthStatusLabel(
+									beeperHealthLabel(beeper),
+								).toUpperCase()}
 								tone={
 									beeperHealthIsDestructive(beeper)
 										? "rose"
@@ -126,7 +130,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 				columnHelper.accessor("cron", {
 					id: "cron",
 					header: ({ column }) => (
-						<SortableHeader column={column} label="Schedule" />
+						<SortableHeader column={column} label={m.beeps_schedule()} />
 					),
 					cell: ({ row }) => (
 						<span className="font-mono text-xs text-muted-foreground">
@@ -138,12 +142,14 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 					(row) => row.notification_channels?.join(",") ?? "",
 					{
 						id: "channels",
-						header: "Channels",
+						header: m.beeps_channels(),
 						cell: ({ row }) => {
 							const channels = row.original.notification_channels ?? [];
 							if (channels.length === 0) {
 								return (
-									<span className="text-sm text-muted-foreground">Default</span>
+									<span className="text-sm text-muted-foreground">
+										{m.beepers_default_channels()}
+									</span>
 								);
 							}
 							return (
@@ -154,8 +160,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 											variant="outline"
 											className="text-[11px] font-normal"
 										>
-											{CHANNEL_LABELS[channel as NotificationChannel] ??
-												channel}
+											{channelLabel(channel as NotificationChannel)}
 										</Badge>
 									))}
 								</div>
@@ -167,7 +172,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 				columnHelper.accessor((row) => runSuccessRate(row.runs ?? []), {
 					id: "run_success",
 					header: ({ column }) => (
-						<SortableHeader column={column} label="Run success" />
+						<SortableHeader column={column} label={m.beepers_run_success()} />
 					),
 					cell: ({ row }) => (
 						<ProgressBar value={runSuccessRate(row.original.runs ?? [])} />
@@ -176,7 +181,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 				columnHelper.accessor((row) => row.runs?.length ?? 0, {
 					id: "runs",
 					header: ({ column }) => (
-						<SortableHeader column={column} label="Runs" />
+						<SortableHeader column={column} label={m.beepers_runs()} />
 					),
 					cell: ({ row }) => (
 						<span className="tabular-nums text-sm">
@@ -187,12 +192,16 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 				columnHelper.accessor((row) => row.next_run_at ?? "", {
 					id: "next_run",
 					header: ({ column }) => (
-						<SortableHeader column={column} label="Next run" />
+						<SortableHeader column={column} label={m.beepers_next_run()} />
 					),
 					cell: ({ row }) => {
 						const beeper = row.original;
 						if (!beeper.next_run_at) {
-							return <span className="text-sm text-muted-foreground">—</span>;
+							return (
+								<span className="text-sm text-muted-foreground">
+									{m.common_em_dash()}
+								</span>
+							);
 						}
 						return (
 							<span className="text-sm tabular-nums text-foreground">
@@ -207,7 +216,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 				}),
 				columnHelper.display({
 					id: "actions",
-					header: () => <span className="sr-only">Actions</span>,
+					header: () => <span className="sr-only">{m.common_actions()}</span>,
 					cell: ({ row }) => {
 						const beeper = row.original;
 						return (
@@ -225,7 +234,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 									data-no-row-nav
 								>
 									<Edit className="size-3.5" data-icon="inline-start" />
-									Edit
+									{m.beepers_edit()}
 								</Button>
 							</div>
 						);
@@ -258,7 +267,7 @@ export function BeeperList({
 				data={beepers}
 				columns={columns}
 				getRowId={(beeper) => beeper.id}
-				emptyMessage="No beepers installed yet."
+				emptyMessage={m.beepers_empty_no_beepers()}
 				onRowClick={(beeper) =>
 					navigate({
 						to: "/$account_slug/beepers/$beeperId",

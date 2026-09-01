@@ -72,7 +72,7 @@
     }
   }
 
-  /* Theme toggle */
+  /* Theme toggle & locale trigger */
   .theme-toggle {
     align-items: center;
     aspect-ratio: 1;
@@ -81,13 +81,19 @@
     border-radius: 99rem;
     block-size: 2.25rem;
     color: var(--color-ink-dark);
+    cursor: pointer;
     display: inline-flex;
     inline-size: 2.25rem;
     justify-content: center;
+    list-style: none;
 
     @media (any-hover: hover) {
       &:hover { background-color: var(--color-shade); color: var(--color-ink); }
     }
+  }
+
+  .locale-menu .menu__content {
+    min-inline-size: 9rem;
   }
 
   /* Dropdown menu (avatar / nav) */

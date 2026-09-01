@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -13,12 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type Beeper, updateBeeper } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
+import { channelLabel, translateError } from "@/lib/i18n-labels";
 import {
-	CHANNEL_LABELS,
 	NOTIFICATION_CHANNELS,
 	type NotificationChannel,
 	toggleChannel,
 } from "@/lib/notification-channels";
+import { m } from "@/locale/paraglide/messages";
 
 interface EditBeeperDialogProps {
 	beeper: Beeper;
@@ -83,7 +83,9 @@ export function EditBeeperDialog({
 			onSuccess?.(updated);
 		} catch (err) {
 			setEditError(
-				err instanceof ApiError ? err.message : "Failed to update beeper.",
+				err instanceof ApiError
+					? err.message
+					: translateError(err) || m.beepers_update_failed(),
 			);
 		} finally {
 			setSavingEdit(false);
@@ -95,16 +97,17 @@ export function EditBeeperDialog({
 			<DialogContent className="sm:max-w-lg">
 				<form onSubmit={handleSave} className="flex flex-col gap-4">
 					<DialogHeader>
-						<DialogTitle className="text-lg">Edit Beeper</DialogTitle>
+						<DialogTitle className="text-lg">
+							{m.beepers_edit_beeper()}
+						</DialogTitle>
 						<DialogDescription>
-							Update the title, remarks, schedule, or configuration parameters
-							for this beeper.
+							{m.beepers_edit_description()}
 						</DialogDescription>
 					</DialogHeader>
 
 					<div className="flex flex-col gap-4 py-2">
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="edit-beeper-title">Beeper Title</Label>
+							<Label htmlFor="edit-beeper-title">{m.beepers_title()}</Label>
 							<Input
 								id="edit-beeper-title"
 								required
@@ -116,15 +119,17 @@ export function EditBeeperDialog({
 
 						<div className="flex flex-col gap-2">
 							<div className="flex items-center justify-between">
-								<Label htmlFor="edit-beeper-body">Body / Remark</Label>
+								<Label htmlFor="edit-beeper-body">
+									{m.beepers_body_remark()}
+								</Label>
 								<span className="text-[11px] text-muted-foreground">
-									Optional
+									{m.common_optional()}
 								</span>
 							</div>
 							<textarea
 								id="edit-beeper-body"
 								rows={3}
-								placeholder="Add notes, runbook links, or alert context..."
+								placeholder={m.beepers_body_placeholder()}
 								value={editBody}
 								onChange={(e) => setEditBody(e.target.value)}
 								disabled={savingEdit}
@@ -133,7 +138,9 @@ export function EditBeeperDialog({
 						</div>
 
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="edit-beeper-cron">Cron Schedule</Label>
+							<Label htmlFor="edit-beeper-cron">
+								{m.beepers_cron_schedule()}
+							</Label>
 							<Input
 								id="edit-beeper-cron"
 								required
@@ -145,7 +152,7 @@ export function EditBeeperDialog({
 						</div>
 
 						<div className="flex flex-col gap-2">
-							<Label>Notification Channels</Label>
+							<Label>{m.beepers_notification_channels()}</Label>
 							<div className="flex flex-col gap-2 rounded-lg border border-input p-3 dark:bg-input/20">
 								{NOTIFICATION_CHANNELS.map((channel) => (
 									<Label
@@ -163,20 +170,19 @@ export function EditBeeperDialog({
 												)
 											}
 										/>
-										{CHANNEL_LABELS[channel]}
+										{channelLabel(channel)}
 									</Label>
 								))}
 							</div>
 							<p className="text-[11px] text-muted-foreground">
-								Select which notification channels receive alerts when this
-								beeper fails or triggers.
+								{m.beepers_notification_channels_hint()}
 							</p>
 						</div>
 
 						{inputs.length > 0 ? (
 							<div className="flex flex-col gap-3 pt-2">
 								<h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-									Configuration Parameters
+									{m.beepers_configuration_parameters()}
 								</h3>
 								{inputs.map((input) => (
 									<div key={input.name} className="flex flex-col gap-2">
@@ -216,23 +222,22 @@ export function EditBeeperDialog({
 
 						<div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
 							<p className="font-medium text-foreground mb-1">
-								💡 Impact of changes:
+								{m.beepers_edit_impact_title()}
 							</p>
 							<ul className="list-disc pl-4 space-y-0.5">
 								<li>
 									<span className="font-medium text-foreground">
-										Schedule (Cron):
+										{m.beepers_edit_impact_schedule_title()}
 									</span>{" "}
-									The next execution time (
-									<code className="font-mono text-[11px]">next_run_at</code>)
-									will be immediately recalculated without needing to restart.
+									{m.beepers_edit_impact_schedule_body({
+										field: "next_run_at",
+									})}
 								</li>
 								<li>
 									<span className="font-medium text-foreground">
-										Configuration:
+										{m.beepers_edit_impact_config_title()}
 									</span>{" "}
-									New probe parameters take effect on the next scheduled run.
-									Past run logs remain unchanged.
+									{m.beepers_edit_impact_config_body()}
 								</li>
 							</ul>
 						</div>
@@ -252,14 +257,14 @@ export function EditBeeperDialog({
 							onClick={() => onOpenChange(false)}
 							disabled={savingEdit}
 						>
-							Cancel
+							{m.common_cancel()}
 						</Button>
 						<Button
 							type="submit"
 							size="sm"
 							disabled={savingEdit || !editTitle.trim() || !editCron.trim()}
 						>
-							{savingEdit ? "Saving…" : "Save Changes"}
+							{savingEdit ? m.common_saving() : m.beepers_save_changes()}
 						</Button>
 					</DialogFooter>
 				</form>

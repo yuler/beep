@@ -1,18 +1,18 @@
-<% @page_title = "Accounts" %>
+<% @page_title = t(:account_accounts, default: "Accounts") %>
 
 <div class="page page--lg">
   <div class="prose">
-    <h1>Accounts</h1>
+    <h1><%= t(:account_accounts, default: "Accounts") %></h1>
   </div>
 
   <div class="table-scroll margin-block">
     <table class="table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Description</th>
-          <th>Created At</th>
-          <th>Updated At</th>
+          <th><%= t(:account_name, default: "Name") %></th>
+          <th><%= t(:account_description, default: "Description") %></th>
+          <th><%= t(:account_created_at, default: "Created At") %></th>
+          <th><%= t(:account_updated_at, default: "Updated At") %></th>
         </tr>
       </thead>
       <tbody>
@@ -28,5 +28,5 @@
     </table>
   </div>
 
-  <%= link_to "New Account", new_account_path, class: "btn btn--primary" %>
+  <%= link_to t(:account_new_account, default: "New Account"), new_account_path, class: "btn btn--primary" %>
 </div>

@@ -7,7 +7,6 @@ import {
 } from "@tanstack/react-router";
 import { Activity, Pause, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
-
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { BeepRuns } from "@/components/beeps/beep-runs";
 import { BEEP_STATUS_META } from "@/components/beeps/beep-status";
@@ -25,6 +24,9 @@ import {
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
+import { beepStatusLabel, channelLabel } from "@/lib/i18n-labels";
+import type { NotificationChannel } from "@/lib/notification-channels";
+import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -59,7 +61,7 @@ function BeepDetailPage() {
 			await router.invalidate();
 		} catch (err) {
 			setError(
-				err instanceof ApiError ? err.message : "Failed to trigger beep run.",
+				err instanceof ApiError ? err.message : m.beeps_trigger_failed(),
 			);
 		} finally {
 			setTriggering(false);
@@ -78,7 +80,7 @@ function BeepDetailPage() {
 			await router.invalidate();
 		} catch (err) {
 			setError(
-				err instanceof ApiError ? err.message : "Failed to update beep status.",
+				err instanceof ApiError ? err.message : m.beeps_status_update_failed(),
 			);
 		} finally {
 			setTogglingStatus(false);
@@ -86,7 +88,7 @@ function BeepDetailPage() {
 	}
 
 	async function handleDelete() {
-		if (!window.confirm(`Delete "${beep.title}"? This cannot be undone.`)) {
+		if (!window.confirm(m.beeps_delete_confirm({ title: beep.title }))) {
 			return;
 		}
 
@@ -101,23 +103,24 @@ function BeepDetailPage() {
 			await router.invalidate();
 		} catch (err) {
 			setDeleting(false);
-			setError(
-				err instanceof ApiError ? err.message : "Failed to delete beep.",
-			);
+			setError(err instanceof ApiError ? err.message : m.beeps_delete_failed());
 		}
 	}
+
+	const kindLabel =
+		beep.kind === "recurring" ? m.beeps_kind_recurring() : m.beeps_kind_once();
 
 	return (
 		<>
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: "Home",
+						label: m.nav_home(),
 						to: "/$account_slug",
 						params: { account_slug: slug },
 					},
 					{
-						label: "Beeps",
+						label: m.nav_beeps(),
 						to: "/$account_slug/beeps",
 						params: { account_slug: slug },
 					},
@@ -155,30 +158,32 @@ function BeepDetailPage() {
 							) : null}
 						</div>
 						<p className="mt-1 text-sm text-muted-foreground">
-							{beep.kind} · {beep.timezone}
+							{kindLabel} · {beep.timezone}
 						</p>
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
 						<Badge variant={BEEP_STATUS_META[beep.status].badgeVariant}>
-							{beep.status}
+							{beepStatusLabel(beep.status)}
 						</Badge>
 						{beep.status === "active" || beep.status === "paused" ? (
 							<Button
 								variant="outline"
 								size="sm"
 								disabled={togglingStatus || deleting || triggering}
-								aria-label={`${beep.status === "paused" ? "Resume" : "Pause"} beep ${beep.title}`}
+								aria-label={
+									beep.status === "paused" ? m.beeps_resume() : m.beeps_pause()
+								}
 								onClick={() => void handleToggleStatus()}
 							>
 								{beep.status === "paused" ? (
 									<>
 										<Play data-icon="inline-start" />
-										{togglingStatus ? "Resuming…" : "Resume"}
+										{togglingStatus ? m.beeps_resuming() : m.beeps_resume()}
 									</>
 								) : (
 									<>
 										<Pause data-icon="inline-start" />
-										{togglingStatus ? "Pausing…" : "Pause"}
+										{togglingStatus ? m.beeps_pausing() : m.beeps_pause()}
 									</>
 								)}
 							</Button>
@@ -192,25 +197,25 @@ function BeepDetailPage() {
 								togglingStatus ||
 								beep.status === "firing"
 							}
-							aria-label={`Trigger run for beep ${beep.title}`}
+							aria-label={m.beeps_trigger_run()}
 							onClick={() => void handleTrigger()}
 						>
 							<Play data-icon="inline-start" />
 							{triggering
-								? "Triggering…"
+								? m.beeps_triggering()
 								: beep.status === "firing"
-									? "Firing…"
-									: "Trigger run"}
+									? m.beeps_firing_action()
+									: m.beeps_trigger_run()}
 						</Button>
 						<Button
 							variant="destructive"
 							size="sm"
 							disabled={deleting || triggering || togglingStatus}
-							aria-label={`Delete beep ${beep.title}`}
+							aria-label={m.common_delete()}
 							onClick={() => void handleDelete()}
 						>
 							<Trash2 data-icon="inline-start" />
-							{deleting ? "Deleting…" : "Delete"}
+							{deleting ? m.beeps_deleting() : m.common_delete()}
 						</Button>
 					</div>
 				</div>
@@ -224,7 +229,7 @@ function BeepDetailPage() {
 				{beep.body ? (
 					<Card className="max-w-lg">
 						<CardHeader>
-							<CardTitle>Body</CardTitle>
+							<CardTitle>{m.beeps_body()}</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<BeepMarkdown source={beep.body} />
@@ -234,35 +239,42 @@ function BeepDetailPage() {
 
 				<Card className="max-w-lg">
 					<CardHeader>
-						<CardTitle>Details & Channels</CardTitle>
+						<CardTitle>{m.beeps_details_channels()}</CardTitle>
 					</CardHeader>
 					<CardContent className="flex flex-col gap-3 text-sm">
 						{beep.kind === "once" ? (
 							<DetailRow
-								label="Run at"
+								label={m.beeps_run_at()}
 								value={formatBeepScheduleTime(beep.run_at, beep.timezone)}
 							/>
 						) : (
-							<DetailRow label="Cron" value={beep.cron ?? "—"} />
+							<DetailRow
+								label={m.beeps_cron()}
+								value={beep.cron ?? m.common_em_dash()}
+							/>
 						)}
 						<DetailRow
-							label="Next"
+							label={m.beeps_next()}
 							value={formatBeepScheduleTime(beep.next_run_at, beep.timezone)}
 						/>
 						<DetailRow
-							label="Last"
+							label={m.beeps_last()}
 							value={formatBeepScheduleTime(beep.last_run_at, beep.timezone)}
 						/>
 						<DetailRow
-							label="Channels"
+							label={m.beeps_channels()}
 							value={
 								beep.notification_channels?.length > 0
-									? beep.notification_channels.join(", ")
-									: "None"
+									? beep.notification_channels
+											.map((channel) =>
+												channelLabel(channel as NotificationChannel),
+											)
+											.join(", ")
+									: m.beeps_channels_none()
 							}
 						/>
 						<DetailRow
-							label="Created"
+							label={m.common_created()}
 							value={new Date(beep.created_at).toLocaleString()}
 						/>
 					</CardContent>

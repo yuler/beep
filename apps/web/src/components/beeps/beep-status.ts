@@ -17,38 +17,32 @@ type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
 export const BEEP_STATUS_META: Record<
 	Beep["status"],
 	{
-		label: string;
 		icon: LucideIcon;
 		colorClass: string;
 		badgeVariant: BadgeVariant;
 	}
 > = {
 	active: {
-		label: "Active",
 		icon: CheckCircle2,
 		colorClass: "text-emerald-600 dark:text-emerald-400",
 		badgeVariant: "default",
 	},
 	firing: {
-		label: "Firing",
 		icon: Flame,
 		colorClass: "text-amber-600 dark:text-amber-400",
 		badgeVariant: "default",
 	},
 	paused: {
-		label: "Paused",
 		icon: PauseCircle,
 		colorClass: "text-muted-foreground",
 		badgeVariant: "secondary",
 	},
 	completed: {
-		label: "Completed",
 		icon: CheckCircle2,
 		colorClass: "text-muted-foreground",
 		badgeVariant: "outline",
 	},
 	cancelled: {
-		label: "Cancelled",
 		icon: AlertCircle,
 		colorClass: "text-destructive",
 		badgeVariant: "destructive",

@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ComponentProps } from "react";
 import { useState } from "react";
-
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { VerifyForm } from "@/components/auth/verify-form";
 import { Button } from "@/components/ui/button";
@@ -13,12 +12,13 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import { m } from "@/locale/paraglide/messages";
 
 type ButtonProps = ComponentProps<typeof Button>;
 type Step = "email" | "verify";
 
 export function SignInDialog({
-	label = "Sign in",
+	label,
 	size,
 	variant,
 	className,
@@ -28,6 +28,7 @@ export function SignInDialog({
 	variant?: ButtonProps["variant"];
 	className?: string;
 }) {
+	const resolvedLabel = label ?? m.auth_sign_in();
 	const [open, setOpen] = useState(false);
 	const [step, setStep] = useState<Step>("email");
 	const [email, setEmail] = useState("");
@@ -47,19 +48,19 @@ export function SignInDialog({
 			<DialogTrigger
 				render={<Button size={size} variant={variant} className={className} />}
 			>
-				{label}
+				{resolvedLabel}
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
 					<DialogTitle>
-						{step === "email" ? "Sign in" : "Check your email"}
+						{step === "email" ? m.auth_sign_in() : m.auth_check_email()}
 					</DialogTitle>
 					<DialogDescription>
 						{step === "email"
-							? "Enter your email to sign in or create an account."
+							? m.auth_sign_in_description()
 							: email
-								? `Enter the code we sent to ${email}.`
-								: "Enter the code we sent to your email."}
+								? m.auth_verify_description_email({ email })
+								: m.auth_verify_description()}
 					</DialogDescription>
 				</DialogHeader>
 				{step === "email" ? (
@@ -87,13 +88,13 @@ export function SignInDialog({
 				)}
 				{step === "email" ? (
 					<p className="text-center text-xs text-muted-foreground">
-						Prefer a full page?{" "}
+						{m.auth_prefer_full_page()}{" "}
 						<Link
 							to="/sign"
 							className="underline underline-offset-4"
 							onClick={() => handleOpenChange(false)}
 						>
-							Open sign-in
+							{m.auth_open_sign_in()}
 						</Link>
 					</p>
 				) : null}

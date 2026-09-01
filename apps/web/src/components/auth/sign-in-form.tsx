@@ -1,12 +1,12 @@
 import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { startSession } from "@/lib/api/session";
 import { safeReturnTo } from "@/lib/auth/return-to";
+import { m } from "@/locale/paraglide/messages";
 
 export function SignInForm({
 	idPrefix = "sign",
@@ -41,6 +41,7 @@ export function SignInForm({
 			}
 			onSuccess?.({ email: trimmed });
 			if (!stayInPlace) {
+				sessionStorage.setItem("beep.sign_in_email", trimmed);
 				const safe = safeReturnTo(returnTo);
 				await navigate({
 					to: "/sign/verify",
@@ -48,7 +49,9 @@ export function SignInForm({
 				});
 			}
 		} catch (err) {
-			setError(err instanceof ApiError ? err.message : "Something went wrong.");
+			setError(
+				err instanceof ApiError ? err.message : m.errors_something_went_wrong(),
+			);
 		} finally {
 			setPending(false);
 		}
@@ -59,7 +62,7 @@ export function SignInForm({
 	return (
 		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
 			<div className="flex flex-col gap-2">
-				<Label htmlFor={emailId}>Email</Label>
+				<Label htmlFor={emailId}>{m.auth_email()}</Label>
 				<Input
 					id={emailId}
 					name="email"
@@ -68,7 +71,7 @@ export function SignInForm({
 					required
 					value={email}
 					onChange={(event) => setEmail(event.target.value)}
-					placeholder="you@example.com"
+					placeholder={m.auth_email_placeholder()}
 				/>
 			</div>
 			{error ? (
@@ -77,7 +80,7 @@ export function SignInForm({
 				</p>
 			) : null}
 			<Button type="submit" disabled={pending} className="w-full">
-				{pending ? "Sending…" : "Continue"}
+				{pending ? m.auth_sending() : m.auth_continue()}
 			</Button>
 		</form>
 	);

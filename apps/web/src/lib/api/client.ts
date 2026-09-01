@@ -56,13 +56,21 @@ async function request(
 	// Mode A (split): CORE_URL is absolute origin. Mode B (proxy): browser uses
 	// same-origin relative `/api/v1/...`; SSR uses CORE_INTERNAL_URL.
 	const url = `${resolveApiOrigin()}${path}`;
-	const response = await fetch(url, {
-		...init,
-		method,
-		credentials: "include",
-		headers: requestHeaders,
-		body: body === undefined ? undefined : JSON.stringify(body),
-	});
+	let response: Response;
+	try {
+		response = await fetch(url, {
+			...init,
+			method,
+			credentials: "include",
+			headers: requestHeaders,
+			body: body === undefined ? undefined : JSON.stringify(body),
+		});
+	} catch (error) {
+		throw new ApiError(
+			503,
+			error instanceof Error ? error.message : "Network error",
+		);
+	}
 
 	if (!response.ok) {
 		let message = response.statusText || "Request failed";

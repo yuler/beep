@@ -1,8 +1,8 @@
-<% @page_title = "Invitations" %>
+<% @page_title = t(:account_invitations, default: "Invitations") %>
 
 <div class="page page--lg">
   <div class="prose">
-    <h1>Invitations</h1>
+    <h1><%= t(:account_invitations, default: "Invitations") %></h1>
   </div>
 
   <%= render "form", model: @account_invitation %>
@@ -11,10 +11,10 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Email</th>
-          <th>Status</th>
-          <th>Invited By</th>
-          <th>Created At</th>
+          <th><%= t(:auth_email, default: "Email") %></th>
+          <th><%= t(:common_status, default: "Status") %></th>
+          <th><%= t(:account_invited_by, default: "Invited By") %></th>
+          <th><%= t(:account_created_at, default: "Created At") %></th>
         </tr>
       </thead>
       <tbody>

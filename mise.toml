@@ -45,6 +45,18 @@ description = "Build the web app for production"
 dir = "apps/web"
 run = "pnpm run build"
 
+[tasks."locale:sort"]
+description = "Sort message keys alphabetically in all locale JSON files"
+run = "node scripts/locale-sort-keys.ts"
+
+[tasks."locale:check"]
+description = "Verify en/zh key parity and message values"
+run = "node scripts/locale-check-keys.ts"
+
+[tasks."locale:compile"]
+description = "Compile Paraglide runtime for web"
+run = "pnpm --filter web locale:compile"
+
 [tasks.dev]
 description = "Start core and web development servers"
 run = "bash scripts/dev.sh"

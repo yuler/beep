@@ -1,28 +1,28 @@
-<% @page_title = "Home" %>
+<% @page_title = t(:nav_home, default: "Home") %>
 
 <div class="page page--lg">
   <div class="prose">
-    <h1>Landing page</h1>
-    <p class="txt-muted">This is the landing page, <code>landings_controller#show</code> and <code>landings/show.html.erb</code>.</p>
+    <h1><%= t(:landing_title, default: "Landing page") %></h1>
+    <p class="txt-muted"><%= t(:landing_description, controller: "landings_controller#show", template: "landings/show.html.erb", default: "This is the landing page, landings_controller#show and landings/show.html.erb.") %></p>
 
     <div class="flex gap items-center margin-block">
-      <span class="txt-large font-weight-bold">You are signed in as <code><%= Current.identity.email %></code>.</span>
-      <%= button_to "Sign Out", session_path(script_name: nil), class: "btn btn--negative btn--small", method: :delete %>
+      <span class="txt-large font-weight-bold"><%= t(:landing_signed_in_as, email: Current.identity.email, default: "You are signed in as %{email}.") %></span>
+      <%= button_to t(:auth_logout, default: "Sign Out"), session_path(script_name: nil), class: "btn btn--negative btn--small", method: :delete %>
     </div>
 
     <div class="card margin-block">
       <div class="card__body">
-        <h2 class="card__title">Current User:</h2>
+        <h2 class="card__title"><%= t(:landing_current_user, default: "Current User:") %></h2>
         <%= debug Current.identity.inspect %>
       </div>
     </div>
 
     <div class="card margin-block">
       <div class="card__body">
-        <h2 class="card__title">Current Account:</h2>
+        <h2 class="card__title"><%= t(:landing_current_account, default: "Current Account:") %></h2>
         <%= debug Current.account.inspect %>
         <div class="flex gap items-center">
-          <span class="txt-large font-weight-bold">Switch to other account:</span>
+          <span class="txt-large font-weight-bold"><%= t(:landing_switch_account, default: "Switch to other account:") %></span>
           <% Current.identity.accounts.each do |account| %>
             <%= link_to account.name, root_path(script_name: account.slug_path), class: "btn btn--outline btn--small", disabled: Current.account&.id == account.id %>
           <% end %>
@@ -33,12 +33,12 @@
     <% url = account_join_url(Current.account.join_code.code, script_name: Current.account.slug_path) %>
     <div class="card margin-block">
       <div class="card__body">
-        <h2 class="card__title">Join Url:</h2>
+        <h2 class="card__title"><%= t(:landing_join_url, default: "Join Url:") %></h2>
         <div class="flex gap items-center">
           <code class="txt-mono"><%= url %></code>
           <button class="btn btn--outline btn--small position-relative" data-controller="copy-to-clipboard" data-action="copy-to-clipboard#copy" data-copy-to-clipboard-content-value="<%= url %>" data-copy-to-clipboard-success-class="btn-copied">
             <span class="copy-icon"><%= icon_tag "copy" %></span>
-            <span class="copied-text">Copied!</span>
+            <span class="copied-text"><%= t(:common_copied, default: "Copied!") %></span>
           </button>
         </div>
       </div>
@@ -46,12 +46,12 @@
 
     <div class="card margin-block">
       <div class="card__body">
-        <h2 class="card__title">Payments:</h2>
+        <h2 class="card__title"><%= t(:landing_payments, default: "Payments:") %></h2>
         <%= button_to account_payment_path(plan_key: "first"), class: "btn btn--primary btn--small", data: { turbo: false, controller: "button-loading" } do %>
-          <span data-button-loading-target="text">Create Payment</span>
+          <span data-button-loading-target="text"><%= t(:landing_create_payment, default: "Create Payment") %></span>
           <span data-button-loading-target="loading" hidden>
             <span class="spinner" aria-hidden="true"></span>
-            Processing...
+            <%= t(:landing_processing, default: "Processing...") %>
           </span>
         <% end %>
       </div>

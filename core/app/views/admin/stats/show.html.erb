@@ -1,34 +1,34 @@
-<% @page_title = "Account Statistics" %>
+<% @page_title = t(:admin_stats_title, default: "Account Statistics") %>
 
 <div class="page page--xl">
-  <h1 class="txt-x-large font-weight-bold margin-block">Account Statistics</h1>
+  <h1 class="txt-x-large font-weight-bold margin-block"><%= t(:admin_stats_title, default: "Account Statistics") %></h1>
 
   <div class="stats margin-block">
     <div class="stat">
-      <div class="stat__title">Accounts Created - Total</div>
+      <div class="stat__title"><%= t(:admin_stats_accounts_created_total, default: "Accounts Created - Total") %></div>
       <div class="stat__value txt-accent"><%= @accounts_total %></div>
     </div>
     <div class="stat">
-      <div class="stat__title">Accounts Created - 7 days</div>
+      <div class="stat__title"><%= t(:admin_stats_accounts_created_7d, default: "Accounts Created - 7 days") %></div>
       <div class="stat__value"><%= @accounts_last_7_days %></div>
     </div>
     <div class="stat">
-      <div class="stat__title">Accounts Created - 24 hours</div>
+      <div class="stat__title"><%= t(:admin_stats_accounts_created_24h, default: "Accounts Created - 24 hours") %></div>
       <div class="stat__value"><%= @accounts_last_24_hours %></div>
     </div>
   </div>
 
   <div class="stats margin-block">
     <div class="stat">
-      <div class="stat__title">Identities Created - Total</div>
+      <div class="stat__title"><%= t(:admin_stats_identities_created_total, default: "Identities Created - Total") %></div>
       <div class="stat__value txt-accent"><%= @identities_total %></div>
     </div>
     <div class="stat">
-      <div class="stat__title">Identities Created - 7 days</div>
+      <div class="stat__title"><%= t(:admin_stats_identities_created_7d, default: "Identities Created - 7 days") %></div>
       <div class="stat__value"><%= @identities_last_7_days %></div>
     </div>
     <div class="stat">
-      <div class="stat__title">Identities Created - 24 hours</div>
+      <div class="stat__title"><%= t(:admin_stats_identities_created_24h, default: "Identities Created - 24 hours") %></div>
       <div class="stat__value"><%= @identities_last_24_hours %></div>
     </div>
   </div>
@@ -36,14 +36,14 @@
   <% if @recent_accounts.any? %>
     <div class="card margin-block">
       <div class="card__body">
-        <h2 class="card__title">Recent Accounts</h2>
+        <h2 class="card__title"><%= t(:admin_stats_recent_accounts, default: "Recent Accounts") %></h2>
         <div class="table-scroll">
           <table class="table table--zebra">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Slug</th>
-                <th>Created At</th>
+                <th><%= t(:account_name, default: "Name") %></th>
+                <th><%= t(:account_slug, default: "Slug") %></th>
+                <th><%= t(:account_created_at, default: "Created At") %></th>
               </tr>
             </thead>
             <tbody>

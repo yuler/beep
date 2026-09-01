@@ -1,11 +1,11 @@
-<% @page_title = "Thank you" %>
+<% @page_title = t(:payment_thank_you, default: "Thank you") %>
 
 <% if @charge.present? && @charge.status == "succeeded" %>
   <div class="page page--lg">
     <div class="prose">
-      <h1>Thank you</h1>
-      <p class="txt-muted">Your payment was successful. You’re now on the <strong><%= @charge.plan_key %></strong> plan.</p>
-      <%= link_to "Done", root_path, class: "btn btn--primary" %>
+      <h1><%= t(:payment_thank_you, default: "Thank you") %></h1>
+      <p class="txt-muted"><%= t(:payment_success_message, plan: @charge.plan_key, default: "Your payment was successful. You’re now on the %{plan} plan.") %></p>
+      <%= link_to t(:common_done, default: "Done"), root_path, class: "btn btn--primary" %>
     </div>
   </div>
 <% end %>
