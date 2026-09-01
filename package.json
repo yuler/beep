@@ -10,8 +10,8 @@
     "core": "mise run core",
     "web:dev": "mise run web:dev",
     "web:build": "mise run web:build",
-    "locale:sort": "node scripts/sort-locale-keys.ts",
-    "locale:check": "node scripts/check-locale-keys.ts",
+    "locale:sort": "node scripts/locale-sort-keys.ts",
+    "locale:check": "node scripts/locale-check-keys.ts",
     "locale:compile": "pnpm --filter web locale:compile"
   },
   "packageManager": "pnpm@10.14.0",

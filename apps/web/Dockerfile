@@ -23,6 +23,7 @@ RUN pnpm install --filter web... --frozen-lockfile
 # Vite environment picks up extra candidates and the hashed CSS URL 404s.
 COPY .gitignore ./
 COPY VERSION ./
+COPY project.inlang ./project.inlang
 COPY apps/web ./apps/web
 
 # Empty string → same-origin `/api/v1` (Mode B). Do not omit the ARG or Vite

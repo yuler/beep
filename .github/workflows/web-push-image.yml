@@ -15,6 +15,7 @@ on:
       - main
     paths:
       - 'apps/web/**'
+      - 'project.inlang/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'

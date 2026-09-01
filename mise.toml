@@ -47,11 +47,11 @@ run = "pnpm run build"
 
 [tasks."locale:sort"]
 description = "Sort message keys alphabetically in all locale JSON files"
-run = "node scripts/sort-locale-keys.ts"
+run = "node scripts/locale-sort-keys.ts"
 
 [tasks."locale:check"]
 description = "Verify en/zh key parity and message values"
-run = "node scripts/check-locale-keys.ts"
+run = "node scripts/locale-check-keys.ts"
 
 [tasks."locale:compile"]
 description = "Compile Paraglide runtime for web"
