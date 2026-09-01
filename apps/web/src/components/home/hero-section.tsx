@@ -139,7 +139,7 @@ export function HeroSection() {
 											</div>
 											<div>
 												<div className="font-heading text-sm font-semibold text-foreground">
-													Telegram & Webhooks
+													{m.marketing_hero_channels_title()}
 												</div>
 												<div className="text-xs text-muted-foreground">
 													{m.marketing_hero_dispatch_status()}
