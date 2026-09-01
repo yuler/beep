@@ -437,7 +437,7 @@ function BeeperDetailPage() {
 								</span>
 							</div>
 							<DetailRow
-								label={m.admin_jobs_created()}
+								label={m.common_created()}
 								value={formatWhen(beeper.created_at, m.common_em_dash())}
 							/>
 						</CardContent>

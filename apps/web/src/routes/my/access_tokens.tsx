@@ -325,7 +325,7 @@ function AccessTokensPage() {
 												</Badge>
 											</div>
 											<div className="text-xs text-muted-foreground">
-												{m.admin_jobs_created()}{" "}
+												{m.common_created()}{" "}
 												{new Date(token.created_at).toLocaleDateString()} ·{" "}
 												{token.last_used_at
 													? m.common_last_used({

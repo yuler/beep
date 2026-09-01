@@ -192,7 +192,7 @@ export function WebPushSettings({ slug }: { slug: string }) {
 												variant="ghost"
 												size="icon-sm"
 												disabled={busy}
-												aria-label={deviceLabel}
+												aria-label={`${m.common_delete()} ${deviceLabel}`}
 												onClick={() => {
 													void remove(record);
 												}}

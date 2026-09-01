@@ -24,7 +24,8 @@ import {
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
-import { beepStatusLabel } from "@/lib/i18n-labels";
+import { beepStatusLabel, channelLabel } from "@/lib/i18n-labels";
+import type { NotificationChannel } from "@/lib/notification-channels";
 import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
@@ -264,7 +265,11 @@ function BeepDetailPage() {
 							label={m.beeps_channels()}
 							value={
 								beep.notification_channels?.length > 0
-									? beep.notification_channels.join(", ")
+									? beep.notification_channels
+											.map((channel) =>
+												channelLabel(channel as NotificationChannel),
+											)
+											.join(", ")
 									: m.beeps_channels_none()
 							}
 						/>

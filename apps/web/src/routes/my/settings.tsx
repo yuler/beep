@@ -2,8 +2,8 @@ import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { Globe, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { useLocaleSwitcher } from "@/components/layout/locale-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
 	Card,
 	CardContent,
@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { fetchMe } from "@/lib/api/session";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { getGravatarUrl } from "@/lib/gravatar";
-import { m } from "@/locale/paraglide/messages";
+import { type Locale, localeConfig, locales, m } from "@/lib/locale";
 
 const myRoute = getRouteApi("/my");
 
@@ -37,6 +37,7 @@ function MySettingsPage() {
 		}
 	}, [identity.email]);
 
+	const { currentLocale, switchLocale } = useLocaleSwitcher();
 	const initials = identity.email.charAt(0).toUpperCase() || "U";
 	const gravatarLabel = m.term_gravatar();
 	const avatarHintParts = m.my_avatar_gravatar_hint().split(gravatarLabel);
@@ -138,26 +139,22 @@ function MySettingsPage() {
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="space-y-2">
-								<div className="flex items-center justify-between">
-									<Label htmlFor="language" className="flex items-center gap-2">
-										<Globe className="size-4 text-muted-foreground" />
-										{m.my_language()}
-									</Label>
-									<Badge variant="secondary" className="text-xs font-normal">
-										{m.my_english_only()}
-									</Badge>
-								</div>
+								<Label htmlFor="language" className="flex items-center gap-2">
+									<Globe className="size-4 text-muted-foreground" />
+									{m.my_language()}
+								</Label>
 								<select
 									id="language"
-									disabled
-									className="flex h-9 w-full rounded-md border border-input bg-muted/40 px-3 py-1 text-sm shadow-xs disabled:cursor-not-allowed disabled:opacity-75"
-									value="en"
+									className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+									value={currentLocale}
+									onChange={(e) => switchLocale(e.target.value as Locale)}
 								>
-									<option value="en">{m.my_english_us()}</option>
+									{locales.map((loc) => (
+										<option key={loc} value={loc}>
+											{localeConfig[loc].name}
+										</option>
+									))}
 								</select>
-								<p className="text-xs text-muted-foreground">
-									{m.my_languages_future()}
-								</p>
 							</div>
 						</CardContent>
 					</Card>
