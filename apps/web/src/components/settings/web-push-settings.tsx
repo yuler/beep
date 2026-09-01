@@ -1,5 +1,4 @@
 import { Bell, BellOff, BellRing, Trash2 } from "lucide-react";
-
 import { WebPushHelpDialog } from "@/components/settings/web-push-help-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,28 +11,24 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { useWebPush } from "@/hooks/use-web-push";
-import { useTranslation } from "@/lib/i18n";
 import { browserLabel, osLabel } from "@/lib/i18n-labels";
-import { describePushDevice, IOS_HOME_SCREEN_HINT } from "@/lib/web-push";
+import { describePushDevice, iosHomeScreenHint } from "@/lib/web-push";
+import * as m from "@/locale/paraglide/messages";
 
-function localizedPushDevice(
-	t: ReturnType<typeof useTranslation>["t"],
-	userAgent: string | null,
-) {
+function localizedPushDevice(userAgent: string | null) {
 	const raw = describePushDevice(userAgent);
 	if (!userAgent || raw === "Unknown device" || raw === "curl") return raw;
 
 	const onIndex = raw.lastIndexOf(" on ");
-	if (onIndex === -1) return browserLabel(t, raw);
+	if (onIndex === -1) return browserLabel(raw);
 
-	return t("push.device_description", {
-		browser: browserLabel(t, raw.slice(0, onIndex)),
-		os: osLabel(t, raw.slice(onIndex + 4)),
+	return m.push_device_description({
+		browser: browserLabel(raw.slice(0, onIndex)),
+		os: osLabel(raw.slice(onIndex + 4)),
 	});
 }
 
 export function WebPushSettings({ slug }: { slug: string }) {
-	const { t } = useTranslation();
 	const {
 		status,
 		ready,
@@ -57,7 +52,7 @@ export function WebPushSettings({ slug }: { slug: string }) {
 	const probing = reachability.kind === "probing";
 	const blocked = reachability.kind === "unreachable";
 	const busy = pending || testing || probing || removingId !== null;
-	const localizedBrowser = browserLabel(t, status.browserName);
+	const localizedBrowser = browserLabel(status.browserName);
 
 	async function handleEnable() {
 		const result = await probe();
@@ -67,8 +62,8 @@ export function WebPushSettings({ slug }: { slug: string }) {
 	return (
 		<Card className="max-w-lg">
 			<CardHeader>
-				<CardTitle>{t("push.settings_title")}</CardTitle>
-				<CardDescription>{t("push.settings_description")}</CardDescription>
+				<CardTitle>{m.push_settings_title()}</CardTitle>
+				<CardDescription>{m.push_settings_description()}</CardDescription>
 				<CardAction>
 					<WebPushHelpDialog
 						browserName={status.browserName}
@@ -79,34 +74,32 @@ export function WebPushSettings({ slug }: { slug: string }) {
 			<CardContent className="flex flex-col gap-4">
 				{!ready ? (
 					<p className="text-sm text-muted-foreground">
-						{t("push.checking_browser")}
+						{m.push_checking_browser()}
 					</p>
 				) : !status.supported ? (
 					<p className="text-sm text-muted-foreground">
-						{t("push.unsupported")}
+						{m.push_unsupported()}
 					</p>
 				) : needsIosInstall ? (
-					<p className="text-sm text-muted-foreground">
-						{t(IOS_HOME_SCREEN_HINT)}
-					</p>
+					<p className="text-sm text-muted-foreground">{iosHomeScreenHint()}</p>
 				) : denied ? (
 					<p className="text-sm text-muted-foreground">
-						{t("push.permission_denied_retry")}
+						{m.push_permission_denied_retry()}
 					</p>
 				) : (
 					<>
 						<p className="text-sm text-muted-foreground">
 							{status.subscribed
-								? t("push.subscribed")
-								: t("push.enable_each_device")}
+								? m.push_subscribed()
+								: m.push_enable_each_device()}
 						</p>
 						{probing ? (
 							<p className="text-sm text-muted-foreground">
-								{t("push.checking_network")}
+								{m.push_checking_network()}
 							</p>
 						) : blocked ? (
 							<p className="text-sm text-destructive" role="alert">
-								{t("push.network_blocked", { browser: localizedBrowser })}
+								{m.push_network_blocked({ browser: localizedBrowser })}
 							</p>
 						) : null}
 						<div className="flex flex-wrap gap-2">
@@ -130,13 +123,13 @@ export function WebPushSettings({ slug }: { slug: string }) {
 								)}
 								{pending
 									? status.subscribed
-										? t("push.turning_off")
-										: t("push.enabling")
+										? m.push_turning_off()
+										: m.push_enabling()
 									: probing
-										? t("push.checking_browser")
+										? m.push_checking_browser()
 										: status.subscribed
-											? t("push.turn_off_browser")
-											: t("push.enable_browser")}
+											? m.push_turn_off_browser()
+											: m.push_enable_browser()}
 							</Button>
 							{status.subscribed ? (
 								<Button
@@ -148,13 +141,13 @@ export function WebPushSettings({ slug }: { slug: string }) {
 									}}
 								>
 									<BellRing data-icon="inline-start" />
-									{testing ? t("beeps.sending") : t("common.test")}
+									{testing ? m.beeps_sending() : m.common_test()}
 								</Button>
 							) : null}
 						</div>
 						{testSent ? (
 							<output className="text-sm text-muted-foreground">
-								{t("push.test_sent")}
+								{m.push_test_sent()}
 							</output>
 						) : null}
 					</>
@@ -162,10 +155,10 @@ export function WebPushSettings({ slug }: { slug: string }) {
 
 				{ready ? (
 					<div className="flex flex-col gap-2">
-						<p className="text-sm font-medium">{t("push.devices")}</p>
+						<p className="text-sm font-medium">{m.push_devices()}</p>
 						{subscriptions.length === 0 ? (
 							<p className="text-sm text-muted-foreground">
-								{t("push.devices_empty")}
+								{m.push_devices_empty()}
 							</p>
 						) : (
 							<ul className="flex flex-col gap-2">
@@ -184,12 +177,12 @@ export function WebPushSettings({ slug }: { slug: string }) {
 													</p>
 													{current ? (
 														<Badge variant="secondary">
-															{t("push.this_browser")}
+															{m.push_this_browser()}
 														</Badge>
 													) : null}
 												</div>
 												<p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-													{t("push.device_added", {
+													{m.push_device_added({
 														date: new Date(record.created_at).toLocaleString(),
 													})}
 												</p>

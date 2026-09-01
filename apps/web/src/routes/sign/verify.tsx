@@ -1,22 +1,20 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-
 import { VerifyForm } from "@/components/auth/verify-form";
 import { AuthCard } from "@/components/layout";
 import { safeReturnTo } from "@/lib/auth/return-to";
-import { useTranslation } from "@/lib/i18n";
+import * as m from "@/locale/paraglide/messages";
 
 export const Route = createFileRoute("/sign/verify")({
 	component: VerifyPage,
 });
 
 function VerifyPage() {
-	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const { return_to: returnTo } = Route.useSearch();
 	const safe = safeReturnTo(returnTo);
 
 	return (
-		<AuthCard description={t("auth.verify_description")}>
+		<AuthCard description={m.auth_verify_description()}>
 			<VerifyForm
 				idPrefix="page-verify"
 				returnTo={returnTo}

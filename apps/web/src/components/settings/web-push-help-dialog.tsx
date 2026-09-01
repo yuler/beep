@@ -1,5 +1,4 @@
 import { CircleHelp } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -10,31 +9,24 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { useTranslation } from "@/lib/i18n";
 import { browserLabel, pushPlatformLabel } from "@/lib/i18n-labels";
-import {
-	IOS_HOME_SCREEN_HINT,
-	type NotificationPlatform,
-} from "@/lib/web-push";
+import { iosHomeScreenHint, type NotificationPlatform } from "@/lib/web-push";
+import * as m from "@/locale/paraglide/messages";
 
-function osStepBody(
-	t: ReturnType<typeof useTranslation>["t"],
-	platform: NotificationPlatform,
-	browserName: string,
-) {
-	const browser = browserLabel(t, browserName);
+function osStepBody(platform: NotificationPlatform, browserName: string) {
+	const browser = browserLabel(browserName);
 
 	switch (platform) {
 		case "macos":
-			return t("push.help_macos_body", { browser });
+			return m.push_help_macos_body({ browser });
 		case "windows":
-			return t("push.help_windows_body", { browser });
+			return m.push_help_windows_body({ browser });
 		case "linux":
-			return t("push.help_linux_body", { browser });
+			return m.push_help_linux_body({ browser });
 		case "ios":
-			return t(IOS_HOME_SCREEN_HINT);
+			return iosHomeScreenHint();
 		default:
-			return t("push.help_other_body", { browser });
+			return m.push_help_other_body({ browser });
 	}
 }
 
@@ -45,9 +37,8 @@ export function WebPushHelpDialog({
 	browserName: string;
 	platform: NotificationPlatform;
 }) {
-	const { t } = useTranslation();
-	const browser = browserLabel(t, browserName);
-	const platformLabel = pushPlatformLabel(t, platform);
+	const browser = browserLabel(browserName);
+	const platformLabel = pushPlatformLabel(platform);
 
 	return (
 		<Dialog>
@@ -57,34 +48,34 @@ export function WebPushHelpDialog({
 				}
 			>
 				<CircleHelp data-icon="inline-start" />
-				{t("common.tips")}
+				{m.common_tips()}
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle>{t("push.help_title")}</DialogTitle>
+					<DialogTitle>{m.push_help_title()}</DialogTitle>
 					<DialogDescription>
-						{t("push.help_description", { browser })}
+						{m.push_help_description({ browser })}
 					</DialogDescription>
 				</DialogHeader>
 				<ol className="flex list-decimal flex-col gap-4 pl-4 text-sm">
 					<li>
-						<span className="font-medium">{t("push.help_step_browser")}</span>{" "}
+						<span className="font-medium">{m.push_help_step_browser()}</span>{" "}
 						<span className="text-muted-foreground">
-							{t("push.help_browser_step")}
+							{m.push_help_browser_step()}
 						</span>
 					</li>
 					<li>
 						<span className="font-medium">
-							{t("push.help_step_os", { platform: platformLabel })}
+							{m.push_help_step_os({ platform: platformLabel })}
 						</span>{" "}
 						<span className="text-muted-foreground">
 							{osStepBody(t, platform, browserName)}
 						</span>
 					</li>
 					<li>
-						<span className="font-medium">{t("push.help_step_test")}</span>{" "}
+						<span className="font-medium">{m.push_help_step_test()}</span>{" "}
 						<span className="text-muted-foreground">
-							{t("push.help_step_test_body")}
+							{m.push_help_step_test_body()}
 						</span>
 					</li>
 				</ol>

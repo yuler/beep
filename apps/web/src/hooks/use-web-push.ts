@@ -5,7 +5,6 @@ import {
 	fetchPushSubscriptions,
 	type PushSubscriptionRecord,
 } from "@/lib/api/push";
-import { useI18n } from "@/lib/i18n";
 import { translateError } from "@/lib/i18n-labels";
 import {
 	disableWebPush,
@@ -46,13 +45,9 @@ type DeviceIdentity = Pick<
 	"standalone" | "browserName" | "platform"
 >;
 
-function errorMessage(
-	err: unknown,
-	t: ReturnType<typeof useI18n>["t"],
-	dict: ReturnType<typeof useI18n>["dict"],
-) {
+function errorMessage(err: unknown) {
 	if (err instanceof ApiError) return err.message;
-	return translateError(dict, t, err);
+	return translateError(err);
 }
 
 function pushPermission() {
@@ -66,7 +61,6 @@ export type WebPushReachability =
 	| PushReachability;
 
 export function useWebPush(slug: string) {
-	const { t, dict } = useI18n();
 	const [status, setStatus] = useState<WebPushStatus>(INITIAL_STATUS);
 	const [ready, setReady] = useState(false);
 	const [pending, setPending] = useState(false);
@@ -102,7 +96,7 @@ export function useWebPush(slug: string) {
 			records = response.push_subscriptions;
 			setSubscriptions(records);
 		} catch (err) {
-			setError(errorMessage(err, t, dict));
+			setError(errorMessage(err));
 			setSubscriptions([]);
 		}
 
@@ -112,7 +106,7 @@ export function useWebPush(slug: string) {
 			permission: pushPermission(),
 			subscribed: isSubscribedForAccount(endpoint, records),
 		});
-	}, [deviceIdentity, slug, t, dict]);
+	}, [deviceIdentity, slug]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -143,7 +137,7 @@ export function useWebPush(slug: string) {
 				await action();
 				if (busy.markTestSent) setTestSent(true);
 			} catch (err) {
-				setError(errorMessage(err, t, dict));
+				setError(errorMessage(err));
 			} finally {
 				await refresh();
 				if (busy.pending) setPending(false);
@@ -151,7 +145,7 @@ export function useWebPush(slug: string) {
 				if (busy.removingId) setRemovingId(null);
 			}
 		},
-		[refresh, t, dict],
+		[refresh],
 	);
 
 	const probe = useCallback(async (): Promise<PushReachability> => {

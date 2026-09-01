@@ -45,7 +45,6 @@ import {
 	beeperHealthLabel,
 	isBeeperProbeBroken,
 } from "@/lib/beeper-health";
-import { useTranslation } from "@/lib/i18n";
 import {
 	beepRunStatusLabel,
 	beepStatusLabel,
@@ -54,6 +53,7 @@ import {
 	translateError,
 } from "@/lib/i18n-labels";
 import type { NotificationChannel } from "@/lib/notification-channels";
+import * as m from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -101,7 +101,6 @@ const SIGNAL_STATUS_VARIANT: Record<
 };
 
 function BeeperDetailPage() {
-	const { t, dict } = useTranslation();
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
 	const beeper = Route.useLoaderData();
@@ -133,7 +132,7 @@ function BeeperDetailPage() {
 			setError(
 				err instanceof ApiError
 					? err.message
-					: translateError(dict, t, err) || t("beepers.trigger_failed"),
+					: translateError(err) || m.beepers_trigger_failed(),
 			);
 		} finally {
 			setTriggering(false);
@@ -154,7 +153,7 @@ function BeeperDetailPage() {
 			setError(
 				err instanceof ApiError
 					? err.message
-					: translateError(dict, t, err) || t("beepers.status_update_failed"),
+					: translateError(err) || m.beepers_status_update_failed(),
 			);
 		} finally {
 			setTogglingStatus(false);
@@ -162,7 +161,7 @@ function BeeperDetailPage() {
 	}
 
 	async function handleDelete() {
-		if (!window.confirm(t("beepers.delete_confirm", { title: beeper.title }))) {
+		if (!window.confirm(m.beepers_delete_confirm({ title: beeper.title }))) {
 			return;
 		}
 
@@ -180,7 +179,7 @@ function BeeperDetailPage() {
 			setError(
 				err instanceof ApiError
 					? err.message
-					: translateError(dict, t, err) || t("beepers.delete_failed"),
+					: translateError(err) || m.beepers_delete_failed(),
 			);
 		}
 	}
@@ -194,12 +193,12 @@ function BeeperDetailPage() {
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: t("nav.home"),
+						label: m.nav_home(),
 						to: "/$account_slug",
 						params: { account_slug: slug },
 					},
 					{
-						label: t("nav.beepers"),
+						label: m.nav_beepers(),
 						to: "/$account_slug/beepers",
 						params: { account_slug: slug },
 					},
@@ -219,11 +218,11 @@ function BeeperDetailPage() {
 									beeperHealthIsDestructive(beeper) ? "destructive" : "outline"
 								}
 							>
-								{healthStatusLabel(t, beeperHealthLabel(beeper))}
+								{healthStatusLabel(beeperHealthLabel(beeper))}
 							</Badge>
 							{isBeeperProbeBroken(beeper.runs) ? (
 								<p className="text-sm text-muted-foreground">
-									{t("beepers.probe_broken")}
+									{m.beepers_probe_broken()}
 								</p>
 							) : null}
 						</div>
@@ -242,7 +241,7 @@ function BeeperDetailPage() {
 										: "outline"
 							}
 						>
-							{beepStatusLabel(t, beeper.status)}
+							{beepStatusLabel(beeper.status)}
 						</Badge>
 						<Button
 							variant="outline"
@@ -252,7 +251,7 @@ function BeeperDetailPage() {
 							onClick={() => setIsEditDialogOpen(true)}
 						>
 							<Edit data-icon="inline-start" />
-							{t("beepers.edit")}
+							{m.beepers_edit()}
 						</Button>
 						{beeper.status === "active" || beeper.status === "paused" ? (
 							<Button
@@ -265,14 +264,12 @@ function BeeperDetailPage() {
 								{beeper.status === "paused" ? (
 									<>
 										<Play data-icon="inline-start" />
-										{togglingStatus
-											? t("beepers.resuming")
-											: t("beepers.resume")}
+										{togglingStatus ? m.beepers_resuming() : m.beepers_resume()}
 									</>
 								) : (
 									<>
 										<Pause data-icon="inline-start" />
-										{togglingStatus ? t("beepers.pausing") : t("beepers.pause")}
+										{togglingStatus ? m.beepers_pausing() : m.beepers_pause()}
 									</>
 								)}
 							</Button>
@@ -291,10 +288,10 @@ function BeeperDetailPage() {
 						>
 							<Play data-icon="inline-start" />
 							{triggering
-								? t("beepers.triggering")
+								? m.beepers_triggering()
 								: beeper.status === "firing"
-									? t("beeps.firing_action")
-									: t("beepers.trigger_run")}
+									? m.beeps_firing_action()
+									: m.beepers_trigger_run()}
 						</Button>
 						<Button
 							variant="destructive"
@@ -304,7 +301,7 @@ function BeeperDetailPage() {
 							onClick={() => void handleDelete()}
 						>
 							<Trash2 data-icon="inline-start" />
-							{deleting ? t("beepers.deleting") : t("common.delete")}
+							{deleting ? m.beepers_deleting() : m.common_delete()}
 						</Button>
 					</div>
 				</div>
@@ -322,7 +319,7 @@ function BeeperDetailPage() {
 								<div className="flex items-center gap-2">
 									<Webhook className="size-4 text-primary" />
 									<CardTitle className="text-base">
-										{t("beepers.webhook_ping_url")}
+										{m.beepers_webhook_ping_url()}
 									</CardTitle>
 								</div>
 								<Button
@@ -334,18 +331,18 @@ function BeeperDetailPage() {
 									{hasCopiedPing ? (
 										<>
 											<Check className="size-3.5 text-green-500" />
-											<span>{t("beepers.copied")}</span>
+											<span>{m.beepers_copied()}</span>
 										</>
 									) : (
 										<>
 											<Copy className="size-3.5" />
-											<span>{t("beepers.copy_url")}</span>
+											<span>{m.beepers_copy_url()}</span>
 										</>
 									)}
 								</Button>
 							</div>
 							<CardDescription className="text-xs">
-								{t("beepers.webhook_description")}
+								{m.beepers_webhook_description()}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="pt-0">
@@ -360,7 +357,7 @@ function BeeperDetailPage() {
 					<Card>
 						<CardHeader className="pb-2">
 							<CardTitle className="text-base">
-								{t("beepers.body_remark_title")}
+								{m.beepers_body_remark_title()}
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
@@ -372,7 +369,7 @@ function BeeperDetailPage() {
 				<div className="grid gap-6 md:grid-cols-2">
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-							<CardTitle>{t("beepers.schedule_status")}</CardTitle>
+							<CardTitle>{m.beepers_schedule_status()}</CardTitle>
 							<Button
 								variant="ghost"
 								size="sm"
@@ -380,44 +377,44 @@ function BeeperDetailPage() {
 								onClick={() => setIsEditDialogOpen(true)}
 							>
 								<Edit className="size-3.5" />
-								{t("beepers.edit")}
+								{m.beepers_edit()}
 							</Button>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-3 text-sm">
-							<DetailRow label={t("beeps.cron")} value={beeper.cron} />
+							<DetailRow label={m.beeps_cron()} value={beeper.cron} />
 							<DetailRow
-								label={t("beepers.next_run")}
+								label={m.beepers_next_run()}
 								value={formatBeepScheduleTime(
 									beeper.next_run_at,
 									beeper.timezone,
 								)}
 							/>
 							<DetailRow
-								label={t("beepers.last_run")}
+								label={m.beepers_last_run()}
 								value={formatBeepScheduleTime(
 									beeper.last_run_at,
 									beeper.timezone,
 								)}
 							/>
 							<DetailRow
-								label={t("beepers.consecutive_failures")}
+								label={m.beepers_consecutive_failures()}
 								value={String(beeper.consecutive_failures)}
 							/>
 							{beeper.ping_token ? (
 								<DetailRow
-									label={t("beepers.ping_token")}
+									label={m.beepers_ping_token()}
 									value={beeper.ping_token}
 								/>
 							) : null}
 							{beeper.last_ping_at ? (
 								<DetailRow
-									label={t("beepers.last_ping")}
-									value={formatWhen(beeper.last_ping_at, t("common.em_dash"))}
+									label={m.beepers_last_ping()}
+									value={formatWhen(beeper.last_ping_at, m.common_em_dash())}
 								/>
 							) : null}
 							<div className="flex justify-between items-center gap-4">
 								<span className="text-muted-foreground">
-									{t("beeps.channels")}
+									{m.beeps_channels()}
 								</span>
 								<span className="text-right">
 									{beeper.notification_channels?.length > 0 ? (
@@ -428,27 +425,27 @@ function BeeperDetailPage() {
 													variant="outline"
 													className="text-[11px] font-normal"
 												>
-													{channelLabel(t, channel as NotificationChannel)}
+													{channelLabel(channel as NotificationChannel)}
 												</Badge>
 											))}
 										</span>
 									) : (
 										<span className="text-muted-foreground">
-											{t("beepers.default_channels")}
+											{m.beepers_default_channels()}
 										</span>
 									)}
 								</span>
 							</div>
 							<DetailRow
-								label={t("admin.jobs_created")}
-								value={formatWhen(beeper.created_at, t("common.em_dash"))}
+								label={m.admin_jobs_created()}
+								value={formatWhen(beeper.created_at, m.common_em_dash())}
 							/>
 						</CardContent>
 					</Card>
 
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-							<CardTitle>{t("beepers.configuration")}</CardTitle>
+							<CardTitle>{m.beepers_configuration()}</CardTitle>
 							<Button
 								variant="ghost"
 								size="sm"
@@ -456,13 +453,13 @@ function BeeperDetailPage() {
 								onClick={() => setIsEditDialogOpen(true)}
 							>
 								<SlidersHorizontal className="size-3.5" />
-								{t("beepers.edit_config")}
+								{m.beepers_edit_config()}
 							</Button>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-3 text-sm">
 							{configEntries.length === 0 ? (
 								<p className="text-sm text-muted-foreground">
-									{t("beepers.configuration_empty")}
+									{m.beepers_configuration_empty()}
 								</p>
 							) : (
 								configEntries.map(([key, val]) => {
@@ -470,7 +467,7 @@ function BeeperDetailPage() {
 									const label = inputDef?.label || key;
 									const displayVal =
 										val === null || val === undefined
-											? t("common.em_dash")
+											? m.common_em_dash()
 											: typeof val === "boolean"
 												? val
 													? "true"
@@ -516,12 +513,12 @@ function BeeperDetailPage() {
 					<details className="group/runs rounded-lg border bg-muted/20 text-sm">
 						<summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
 							<ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open/runs:rotate-90" />
-							<span className="font-medium">{t("beepers.execution_runs")}</span>
+							<span className="font-medium">{m.beepers_execution_runs()}</span>
 							<span className="text-muted-foreground">{runs.length}</span>
 						</summary>
 						{runs.length === 0 ? (
 							<p className="border-t px-3 py-2 text-xs text-muted-foreground">
-								{t("beepers.no_runs")}
+								{m.beepers_no_runs()}
 							</p>
 						) : (
 							<ul className="flex flex-col gap-2 border-t px-3 py-2">
@@ -545,7 +542,7 @@ function BeeperDetailPage() {
 															"secondary"
 														}
 													>
-														{t("beepers.signal_status", {
+														{m.beepers_signal_status({
 															status: run.signal_status.toUpperCase(),
 														})}
 													</Badge>
@@ -555,7 +552,7 @@ function BeeperDetailPage() {
 														RUN_STATUS_VARIANT[run.status] ?? "secondary"
 													}
 												>
-													{beepRunStatusLabel(t, run.status)}
+													{beepRunStatusLabel(run.status)}
 												</Badge>
 											</div>
 										</div>

@@ -1,14 +1,12 @@
-import { useTranslation } from "@/lib/i18n";
+import * as m from "@/locale/paraglide/messages";
 
 export function LogoMark({ className }: { className?: string }) {
-	const { t } = useTranslation();
-
 	return (
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
 			viewBox="-2.0 -2.0 104.0 96.834"
 			role="img"
-			aria-label={t("term.beep")}
+			aria-label={m.term_beep()}
 			className={className}
 		>
 			<path

@@ -1,6 +1,5 @@
 import { HelpCircle, Sparkles } from "lucide-react";
 import { type FormEvent, useState } from "react";
-
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,25 +13,25 @@ import {
 } from "@/components/ui/tooltip";
 import { createBeep, createBeepProposal } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
-import { useTranslation } from "@/lib/i18n";
 import { translateError } from "@/lib/i18n-labels";
 import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
+import * as m from "@/locale/paraglide/messages";
 
 const TITLE_MAX_LENGTH = 80;
 const BODY_MAX_LENGTH = 2000;
 
 const PROMPT_SUGGESTIONS = [
-	"beeps.prompt_example_1",
-	"beeps.prompt_example_2",
-	"beeps.prompt_example_3",
+	{ id: "example-1", label: m.beeps_prompt_example_1 },
+	{ id: "example-2", label: m.beeps_prompt_example_2 },
+	{ id: "example-3", label: m.beeps_prompt_example_3 },
 ] as const;
 
 const CRON_PRESETS = [
-	{ labelKey: "beeps.cron_preset_daily_9", value: "0 9 * * *" },
-	{ labelKey: "beeps.cron_preset_weekdays_9", value: "0 9 * * 1-5" },
-	{ labelKey: "beeps.cron_preset_monday_9", value: "0 9 * * 1" },
-	{ labelKey: "beeps.cron_preset_hourly", value: "0 * * * *" },
+	{ label: m.beeps_cron_preset_daily_9, value: "0 9 * * *" },
+	{ label: m.beeps_cron_preset_weekdays_9, value: "0 9 * * 1-5" },
+	{ label: m.beeps_cron_preset_monday_9, value: "0 9 * * 1" },
+	{ label: m.beeps_cron_preset_hourly, value: "0 * * * *" },
 ] as const;
 
 function defaultRunAt() {
@@ -53,7 +52,6 @@ export function BeepQuickCreate({
 	slug: string;
 	onCreated: () => Promise<void> | void;
 }) {
-	const { t, dict } = useTranslation();
 	const [prompt, setPrompt] = useState("");
 	const [kind, setKind] = useState<"once" | "recurring">("once");
 	const [sendNow, setSendNow] = useState(true);
@@ -88,9 +86,7 @@ export function BeepQuickCreate({
 			);
 			if (proposal.intent === "other") {
 				setFieldErrors({});
-				setProposeMessage(
-					proposal.message ?? t("beeps.prompt_autofill_failed"),
-				);
+				setProposeMessage(proposal.message ?? m.beeps_prompt_autofill_failed());
 				return;
 			}
 
@@ -120,14 +116,12 @@ export function BeepQuickCreate({
 					(proposal.kind !== "recurring" &&
 					nextRunAt &&
 					nextRunAt.getTime() <= Date.now() + 60 * 1000
-						? t("beeps.run_at_future_error")
+						? m.beeps_run_at_future_error()
 						: undefined),
 			});
-			setProposeMessage(t("beeps.prompt_filled"));
+			setProposeMessage(m.beeps_prompt_filled());
 		} catch (err) {
-			setError(
-				err instanceof ApiError ? err.message : translateError(dict, t, err),
-			);
+			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
 			setProposing(false);
 		}
@@ -161,9 +155,7 @@ export function BeepQuickCreate({
 			setFieldErrors({});
 			await onCreated();
 		} catch (err) {
-			setError(
-				err instanceof ApiError ? err.message : translateError(dict, t, err),
-			);
+			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
 			setSubmitting(false);
 		}
@@ -175,7 +167,7 @@ export function BeepQuickCreate({
 		<Card className="w-full shadow-xs">
 			<CardHeader className="pb-4">
 				<CardTitle className="flex items-center gap-2 text-base font-semibold">
-					<span>{t("beeps.create_new_beep")}</span>
+					<span>{m.beeps_create_new_beep()}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-5">
@@ -190,7 +182,7 @@ export function BeepQuickCreate({
 								className="flex items-center gap-1.5 text-xs font-semibold text-primary"
 							>
 								<Sparkles className="size-3.5" />
-								{t("beeps.prompt_ai_assistant")}
+								{m.beeps_prompt_ai_assistant()}
 							</Label>
 							<span className="flex items-center gap-1 text-[11px] text-muted-foreground">
 								<kbd className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded border border-border bg-muted/80 px-1 font-mono text-[10px] font-medium text-foreground shadow-2xs">
@@ -200,7 +192,7 @@ export function BeepQuickCreate({
 								<kbd className="inline-flex h-4.5 items-center justify-center rounded border border-border bg-muted/80 px-1 font-mono text-[10px] font-medium text-foreground shadow-2xs">
 									Enter
 								</kbd>
-								<span>{t("beeps.prompt_shortcut")}</span>
+								<span>{m.beeps_prompt_shortcut()}</span>
 							</span>
 						</div>
 						<textarea
@@ -220,7 +212,7 @@ export function BeepQuickCreate({
 									}
 								}
 							}}
-							placeholder={t("beeps.prompt_placeholder")}
+							placeholder={m.beeps_prompt_placeholder()}
 							disabled={isPending}
 							rows={2}
 							className={cn(
@@ -229,15 +221,15 @@ export function BeepQuickCreate({
 						/>
 
 						<div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-							{PROMPT_SUGGESTIONS.map((key) => (
+							{PROMPT_SUGGESTIONS.map(({ id, label }) => (
 								<button
-									key={key}
+									key={id}
 									type="button"
 									disabled={isPending}
-									onClick={() => setPrompt(t(key))}
+									onClick={() => setPrompt(label())}
 									className="rounded-md border border-input/60 bg-background/60 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:bg-background hover:text-foreground dark:bg-input/10"
 								>
-									{t(key)}
+									{label()}
 								</button>
 							))}
 						</div>
@@ -248,11 +240,11 @@ export function BeepQuickCreate({
 								variant="secondary"
 								size="xs"
 								disabled={isPending || prompt.trim().length === 0}
-								aria-label={t("beeps.prompt_autofill")}
+								aria-label={m.beeps_prompt_autofill()}
 								className="font-medium"
 							>
 								<Sparkles data-icon="inline-start" />
-								{proposing ? t("beeps.parsing") : t("beeps.prompt_autofill")}
+								{proposing ? m.beeps_parsing() : m.beeps_prompt_autofill()}
 							</Button>
 						</div>
 					</div>
@@ -267,7 +259,7 @@ export function BeepQuickCreate({
 					onSubmit={onSubmit}
 				>
 					<div className="flex flex-col gap-2">
-						<Label>{t("beeps.type")}</Label>
+						<Label>{m.beeps_type()}</Label>
 						<div className="flex rounded-lg border border-input bg-muted/30 p-1">
 							<Button
 								type="button"
@@ -282,7 +274,7 @@ export function BeepQuickCreate({
 								disabled={isPending}
 								onClick={() => setKind("once")}
 							>
-								{t("beeps.kind_once")}
+								{m.beeps_kind_once()}
 							</Button>
 							<Button
 								type="button"
@@ -297,13 +289,13 @@ export function BeepQuickCreate({
 								disabled={isPending}
 								onClick={() => setKind("recurring")}
 							>
-								{t("beeps.kind_recurring")}
+								{m.beeps_kind_recurring()}
 							</Button>
 						</div>
 					</div>
 
 					<div className="flex flex-col gap-2">
-						<Label htmlFor={`beep-title-${slug}`}>{t("beeps.title")}</Label>
+						<Label htmlFor={`beep-title-${slug}`}>{m.beeps_title()}</Label>
 						<Input
 							id={`beep-title-${slug}`}
 							name="title"
@@ -314,7 +306,7 @@ export function BeepQuickCreate({
 								setTitle(event.target.value);
 								setFieldErrors((curr) => ({ ...curr, title: undefined }));
 							}}
-							placeholder={t("beeps.body_placeholder")}
+							placeholder={m.beeps_body_placeholder()}
 							disabled={isPending}
 							aria-invalid={Boolean(fieldErrors.title)}
 						/>
@@ -327,7 +319,7 @@ export function BeepQuickCreate({
 
 					<div className="flex flex-col gap-2">
 						<div className="flex items-center justify-between gap-2">
-							<Label htmlFor={`beep-body-${slug}`}>{t("beeps.body")}</Label>
+							<Label htmlFor={`beep-body-${slug}`}>{m.beeps_body()}</Label>
 							<div className="flex gap-1">
 								<Button
 									type="button"
@@ -337,7 +329,7 @@ export function BeepQuickCreate({
 									onClick={() => setPreview(false)}
 									disabled={isPending}
 								>
-									{t("beeps.write")}
+									{m.beeps_write()}
 								</Button>
 								<Button
 									type="button"
@@ -347,7 +339,7 @@ export function BeepQuickCreate({
 									onClick={() => setPreview(true)}
 									disabled={isPending}
 								>
-									{t("beeps.preview")}
+									{m.beeps_preview()}
 								</Button>
 							</div>
 						</div>
@@ -357,7 +349,7 @@ export function BeepQuickCreate({
 									<BeepMarkdown source={body} />
 								) : (
 									<p className="text-sm text-muted-foreground">
-										{t("beeps.nothing_to_preview")}
+										{m.beeps_nothing_to_preview()}
 									</p>
 								)}
 							</div>
@@ -372,7 +364,7 @@ export function BeepQuickCreate({
 									event.currentTarget.style.height = "auto";
 									event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
 								}}
-								placeholder={t("beeps.body_markdown_placeholder")}
+								placeholder={m.beeps_body_markdown_placeholder()}
 								disabled={isPending}
 								rows={3}
 								className={cn(
@@ -386,18 +378,18 @@ export function BeepQuickCreate({
 						<div className="flex flex-col gap-2">
 							<div className="flex items-center justify-between gap-2">
 								<Label htmlFor={`beep-run-at-${slug}`}>
-									{t("beeps.run_at")}
+									{m.beeps_run_at()}
 								</Label>
 								<Tooltip>
 									<TooltipTrigger
 										type="button"
 										className="text-muted-foreground hover:text-foreground"
-										aria-label={t("beeps.run_at")}
+										aria-label={m.beeps_run_at()}
 									>
 										<HelpCircle className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent side="top" className="max-w-xs text-xs">
-										{t("beeps.run_at_tooltip")}
+										{m.beeps_run_at_tooltip()}
 									</TooltipContent>
 								</Tooltip>
 							</div>
@@ -416,7 +408,7 @@ export function BeepQuickCreate({
 									htmlFor={`beep-send-now-${slug}`}
 									className="cursor-pointer text-sm font-normal"
 								>
-									{t("beeps.send_immediately")}
+									{m.beeps_send_immediately()}
 								</Label>
 							</div>
 
@@ -431,7 +423,7 @@ export function BeepQuickCreate({
 												...curr,
 												run_at:
 													val.getTime() <= Date.now() + 60 * 1000
-														? t("beeps.run_at_future_error")
+														? m.beeps_run_at_future_error()
 														: undefined,
 											}));
 										}}
@@ -443,13 +435,13 @@ export function BeepQuickCreate({
 										</p>
 									) : (
 										<p className="text-xs text-muted-foreground">
-											{t("beeps.run_at_future_hint")}
+											{m.beeps_run_at_future_hint()}
 										</p>
 									)}
 								</div>
 							) : (
 								<p className="text-xs text-muted-foreground">
-									{t("beeps.send_immediately_hint")}
+									{m.beeps_send_immediately_hint()}
 								</p>
 							)}
 						</div>
@@ -459,18 +451,18 @@ export function BeepQuickCreate({
 						<div className="flex flex-col gap-2.5">
 							<div className="flex items-center justify-between gap-2">
 								<Label htmlFor={`beep-cron-${slug}`}>
-									{t("beeps.cron_schedule")}
+									{m.beeps_cron_schedule()}
 								</Label>
 								<Tooltip>
 									<TooltipTrigger
 										type="button"
 										className="text-muted-foreground hover:text-foreground"
-										aria-label={t("beeps.cron_schedule")}
+										aria-label={m.beeps_cron_schedule()}
 									>
 										<HelpCircle className="size-4" />
 									</TooltipTrigger>
 									<TooltipContent side="top" className="max-w-xs text-xs">
-										{t("beeps.cron_tooltip")}
+										{m.beeps_cron_tooltip()}
 									</TooltipContent>
 								</Tooltip>
 							</div>
@@ -486,7 +478,7 @@ export function BeepQuickCreate({
 										disabled={isPending}
 										onClick={() => setCron(preset.value)}
 									>
-										{t(preset.labelKey)}
+										{preset.label()}
 									</Button>
 								))}
 							</div>
@@ -511,9 +503,9 @@ export function BeepQuickCreate({
 								</p>
 							) : (
 								<p className="text-xs text-muted-foreground">
-									{t("beeps.cron_format")}{" "}
+									{m.beeps_cron_format()}{" "}
 									<code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
-										{t("beeps.cron_format_parts")}
+										{m.beeps_cron_format_parts()}
 									</code>
 								</p>
 							)}
@@ -541,11 +533,11 @@ export function BeepQuickCreate({
 					>
 						{submitting
 							? kind === "once" && sendNow
-								? t("beeps.sending")
-								: t("beeps.creating")
+								? m.beeps_sending()
+								: m.beeps_creating()
 							: kind === "once" && sendNow
-								? t("beeps.send_beep_now")
-								: t("beeps.create_beep")}
+								? m.beeps_send_beep_now()
+								: m.beeps_create_beep()}
 					</Button>
 				</form>
 			</CardContent>

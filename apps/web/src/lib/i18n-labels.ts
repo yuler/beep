@@ -1,125 +1,120 @@
 import type { Beep } from "@/lib/api/beeps";
-import type { TranslationKey, TranslationSchema } from "@/lib/i18n";
 import type { NotificationChannel } from "@/lib/notification-channels";
 import { I18nError } from "@/lib/notification-channels";
+import * as m from "@/locale/paraglide/messages";
 
-type Translate = (
-	key: TranslationKey,
-	params?: Record<string, string | number>,
-) => string;
+const PUSH_ERROR_MESSAGES: Record<string, () => string> = {
+	"push.unsupported": () => m.push_unsupported(),
+	"push.network_unreachable": () => m.push_network_unreachable({ host: "" }),
+	"push.device_not_subscribed": () => m.push_device_not_subscribed(),
+	"push.permission_denied": () => m.push_permission_denied(),
+	"push.permission_not_granted": () => m.push_permission_not_granted(),
+	"push.subscription_missing_keys": () => m.push_subscription_missing_keys(),
+	"push.subscribe_timeout": () => m.push_subscribe_timeout(),
+};
 
-export function isTranslationKey(
-	dict: TranslationSchema,
-	key: string,
-): key is TranslationKey {
-	return key in dict;
-}
+const BEEP_STATUS_MESSAGES: Record<Beep["status"], () => string> = {
+	active: () => m.status_beep_active(),
+	firing: () => m.status_beep_firing(),
+	paused: () => m.status_beep_paused(),
+	completed: () => m.status_beep_completed(),
+	cancelled: () => m.status_beep_cancelled(),
+};
 
-export function translateError(
-	dict: TranslationSchema,
-	t: Translate,
-	err: unknown,
-): string {
+const RUN_STATUS_MESSAGES: Record<string, () => string> = {
+	pending: () => m.status_run_pending(),
+	running: () => m.status_run_running(),
+	succeeded: () => m.status_run_succeeded(),
+	failed: () => m.status_run_failed(),
+	skipped: () => m.status_run_skipped(),
+	expired: () => m.status_run_expired(),
+};
+
+const HEALTH_STATUS_MESSAGES: Record<string, () => string> = {
+	ok: () => m.status_health_ok(),
+	alerting: () => m.status_health_alerting(),
+	broken: () => m.status_health_broken(),
+};
+
+const JOB_STATUS_MESSAGES: Record<string, () => string> = {
+	failed: () => m.status_job_failed(),
+	finished: () => m.status_job_finished(),
+	pending: () => m.status_job_pending(),
+};
+
+const BROWSER_MESSAGES: Record<string, () => string> = {
+	"Google Chrome": () => m.push_browser_chrome(),
+	"Microsoft Edge": () => m.push_browser_edge(),
+	Firefox: () => m.push_browser_firefox(),
+	Opera: () => m.push_browser_opera(),
+	Safari: () => m.push_browser_safari(),
+	"this browser": () => m.push_browser_this(),
+};
+
+const OS_MESSAGES: Record<string, () => string> = {
+	iOS: () => m.push_os_ios(),
+	Mac: () => m.push_os_macos(),
+	Windows: () => m.push_os_windows(),
+	Linux: () => m.push_os_linux(),
+	Android: () => m.push_os_android(),
+};
+
+export function translateError(err: unknown): string {
 	if (err instanceof I18nError) {
-		return t(err.key, err.params);
+		return err.message;
 	}
-	if (err instanceof Error && isTranslationKey(dict, err.message)) {
-		return t(err.message);
+	if (err instanceof Error && err.message in PUSH_ERROR_MESSAGES) {
+		return PUSH_ERROR_MESSAGES[err.message]();
 	}
 	if (err instanceof Error && err.message) {
 		return err.message;
 	}
-	return t("errors.something_went_wrong");
+	return m.errors_something_went_wrong();
 }
 
-export function beepStatusLabel(t: Translate, status: Beep["status"]): string {
-	return t(`status.beep.${status}` as TranslationKey);
+export function beepStatusLabel(status: Beep["status"]): string {
+	return BEEP_STATUS_MESSAGES[status]();
 }
 
-const RUN_STATUSES = new Set([
-	"pending",
-	"running",
-	"succeeded",
-	"failed",
-	"skipped",
-	"expired",
-]);
-
-const HEALTH_STATUSES = new Set(["ok", "alerting", "broken"]);
-
-const JOB_STATUSES = new Set(["failed", "finished", "pending"]);
-
-export function beepRunStatusLabel(t: Translate, status: string): string {
-	if (RUN_STATUSES.has(status)) {
-		return t(`status.run.${status}` as TranslationKey);
-	}
-	return status;
+export function beepRunStatusLabel(status: string): string {
+	return RUN_STATUS_MESSAGES[status]?.() ?? status;
 }
 
-export function healthStatusLabel(t: Translate, status: string): string {
-	if (HEALTH_STATUSES.has(status)) {
-		return t(`status.health.${status}` as TranslationKey);
-	}
-	return status;
+export function healthStatusLabel(status: string): string {
+	return HEALTH_STATUS_MESSAGES[status]?.() ?? status;
 }
 
-export function jobStatusLabel(t: Translate, status: string): string {
-	if (JOB_STATUSES.has(status)) {
-		return t(`status.job.${status}` as TranslationKey);
-	}
-	return status;
+export function jobStatusLabel(status: string): string {
+	return JOB_STATUS_MESSAGES[status]?.() ?? status;
 }
 
-export function channelLabel(
-	t: Translate,
-	channel: NotificationChannel,
-): string {
+export function channelLabel(channel: NotificationChannel): string {
 	return channel === "email"
-		? t("push.channel_email")
-		: t("push.channel_web_push");
+		? m.push_channel_email()
+		: m.push_channel_web_push();
 }
 
-const BROWSER_KEYS: Record<string, TranslationKey> = {
-	"Google Chrome": "push.browser_chrome",
-	"Microsoft Edge": "push.browser_edge",
-	Firefox: "push.browser_firefox",
-	Opera: "push.browser_opera",
-	Safari: "push.browser_safari",
-	"this browser": "push.browser_this",
-};
-
-export function browserLabel(t: Translate, browserName: string): string {
-	const key = BROWSER_KEYS[browserName];
-	return key ? t(key) : browserName;
+export function browserLabel(browserName: string): string {
+	return BROWSER_MESSAGES[browserName]?.() ?? browserName;
 }
 
-const OS_KEYS: Record<string, TranslationKey> = {
-	iOS: "push.os_ios",
-	Mac: "push.os_macos",
-	Windows: "push.os_windows",
-	Linux: "push.os_linux",
-	Android: "push.os_android",
-};
-
-export function osLabel(t: Translate, os: string): string {
-	const key = OS_KEYS[os];
-	return key ? t(key) : os;
+export function osLabel(os: string): string {
+	return OS_MESSAGES[os]?.() ?? os;
 }
 
 export function pushPlatformLabel(
-	t: Translate,
 	platform: "ios" | "macos" | "windows" | "linux" | "other",
 ): string {
 	switch (platform) {
 		case "ios":
-			return t("push.help_os_ios");
+			return m.push_help_os_ios();
 		case "macos":
-			return t("push.help_os_macos");
+			return m.push_help_os_macos();
 		case "windows":
-			return t("push.help_os_windows");
+			return m.push_help_os_windows();
 		case "linux":
-			return t("push.help_os_linux");
+			return m.push_help_os_linux();
 		default:
-			return t("push.help_os_other");
+			return m.push_help_os_other();
 	}
 }

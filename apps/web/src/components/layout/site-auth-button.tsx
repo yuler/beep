@@ -1,13 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ComponentProps } from "react";
-
 import { SignInDialog } from "@/components/auth/sign-in-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { resolveDashboardTarget } from "@/lib/auth/account";
 import { navigateForTarget } from "@/lib/auth/guards";
 import { useMe } from "@/lib/auth/use-me";
-import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import * as m from "@/locale/paraglide/messages";
 
 type ButtonProps = ComponentProps<typeof Button>;
 
@@ -24,11 +23,10 @@ export function SiteAuthButton({
 	variant?: ButtonProps["variant"];
 	className?: string;
 }) {
-	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const { me } = useMe();
-	const resolvedSignInLabel = signInLabel ?? t("auth.sign_in");
-	const resolvedDashboardLabel = dashboardLabel ?? t("common.dashboard");
+	const resolvedSignInLabel = signInLabel ?? m.auth_sign_in();
+	const resolvedDashboardLabel = dashboardLabel ?? m.common_dashboard();
 	const target =
 		me && me.accounts.length > 0 ? resolveDashboardTarget(me.accounts) : null;
 

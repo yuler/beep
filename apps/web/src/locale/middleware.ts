@@ -1,9 +1,20 @@
-import {
-	DEFAULT_LOCALE,
-	isSupportedLocale,
-	type Locale,
-	SUPPORTED_LOCALES,
-} from "@beep/locales";
+import { paraglideMiddleware } from "@/locale/paraglide/server";
+
+export function localeMiddleware(
+	request: Request,
+	resolve: () => Response | Promise<Response>,
+) {
+	return paraglideMiddleware(request, () => resolve());
+}
+
+export const DEFAULT_LOCALE = baseLocale;
+export const SUPPORTED_LOCALES = locales;
+
+export function isSupportedLocale(
+	locale: string | undefined,
+): locale is Locale {
+	return Boolean(locale && isLocale(locale));
+}
 
 /**
  * Normalizes locale strings (e.g. backward compat for "zh-CN" -> "zh")
@@ -16,7 +27,7 @@ export function normalizeLocale(
 	if (lower === "zh-cn" || lower === "zh_cn" || lower === "zh") {
 		return "zh";
 	}
-	return isSupportedLocale(value) ? (value as Locale) : null;
+	return toLocale(value) ?? null;
 }
 
 /**
@@ -149,4 +160,4 @@ export function buildLocalizedPath(
 	return searchStr ? `${formattedPath}?${searchStr}` : formattedPath;
 }
 
-export { DEFAULT_LOCALE, isSupportedLocale, type Locale, SUPPORTED_LOCALES };
+export type { Locale };

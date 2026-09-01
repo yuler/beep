@@ -4,8 +4,8 @@ import { AuthCard, AuthLayout, AuthPending } from "@/components/layout";
 import { buttonVariants } from "@/components/ui/button";
 import type { AccountSummary } from "@/lib/auth/account";
 import { requireSession } from "@/lib/auth/guards";
-import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import * as m from "@/locale/paraglide/messages";
 
 export const Route = createFileRoute("/accounts")({
 	ssr: false,
@@ -27,12 +27,11 @@ export const Route = createFileRoute("/accounts")({
 });
 
 function AccountsPage() {
-	const { t } = useTranslation();
 	const { me } = Route.useRouteContext();
 	const lastSlug = me.last_account_slug;
 	const description = lastSlug
-		? t("account.pick_account_last_used", { slug: lastSlug })
-		: t("account.pick_account");
+		? m.account_pick_account_last_used({ slug: lastSlug })
+		: m.account_pick_account();
 
 	return (
 		<AuthLayout>
@@ -58,7 +57,6 @@ function AccountChoice({
 	account: AccountSummary;
 	lastUsed: boolean;
 }) {
-	const { t } = useTranslation();
 	const Icon = account.personal ? UserRound : Building2;
 
 	return (
@@ -79,10 +77,10 @@ function AccountChoice({
 					<span className="truncate font-medium">{account.name}</span>
 					<span className="truncate text-xs font-normal text-muted-foreground">
 						{account.personal
-							? t("account.type_personal")
-							: t("account.type_team")}{" "}
+							? m.account_type_personal()
+							: m.account_type_team()}{" "}
 						· /{account.slug}
-						{lastUsed ? t("auth.last_used_suffix") : ""}
+						{lastUsed ? m.auth_last_used_suffix() : ""}
 					</span>
 				</span>
 				{lastUsed ? <Check className="size-4 shrink-0 text-primary" /> : null}

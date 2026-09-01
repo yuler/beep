@@ -9,13 +9,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { updateSettings } from "@/lib/api/settings";
-import { useTranslation } from "@/lib/i18n";
 import { channelLabel, translateError } from "@/lib/i18n-labels";
 import {
 	NOTIFICATION_CHANNELS,
 	type NotificationChannel,
 	toggleChannel,
 } from "@/lib/notification-channels";
+import * as m from "@/locale/paraglide/messages";
 
 export function NotificationChannelSettings({
 	slug,
@@ -26,7 +26,6 @@ export function NotificationChannelSettings({
 	channels: NotificationChannel[];
 	onChanged: () => Promise<void> | void;
 }) {
-	const { t, dict } = useTranslation();
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -39,9 +38,7 @@ export function NotificationChannelSettings({
 			});
 			await onChanged();
 		} catch (err) {
-			setError(
-				err instanceof ApiError ? err.message : translateError(dict, t, err),
-			);
+			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
 			setPending(false);
 		}
@@ -50,14 +47,14 @@ export function NotificationChannelSettings({
 	return (
 		<Card className="max-w-lg">
 			<CardHeader>
-				<CardTitle>{t("settings.notifications_title")}</CardTitle>
+				<CardTitle>{m.settings_notifications_title()}</CardTitle>
 				<CardDescription>
-					{t("settings.notifications_description")}
+					{m.settings_notifications_description()}
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3">
 				<fieldset className="flex flex-col gap-2" disabled={pending}>
-					<legend className="sr-only">{t("beeps.channels")}</legend>
+					<legend className="sr-only">{m.beeps_channels()}</legend>
 					{NOTIFICATION_CHANNELS.map((channel) => (
 						<Label key={channel} className="font-normal">
 							<input
@@ -69,7 +66,7 @@ export function NotificationChannelSettings({
 									void setChannel(channel, event.target.checked)
 								}
 							/>
-							{channelLabel(t, channel)}
+							{channelLabel(channel)}
 						</Label>
 					))}
 				</fieldset>

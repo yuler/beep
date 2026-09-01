@@ -1,7 +1,6 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { ChevronsUpDown, KeyRound, LogOut, User } from "lucide-react";
 import { useState } from "react";
-
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -21,10 +20,9 @@ import {
 import { ApiError } from "@/lib/api/client";
 import type { MeResponse } from "@/lib/api/session";
 import { destroySession } from "@/lib/api/session";
-import { useTranslation } from "@/lib/i18n";
+import * as m from "@/locale/paraglide/messages";
 
 export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
-	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const router = useRouter();
 	const { isMobile } = useSidebar();
@@ -44,7 +42,7 @@ export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
 			await navigate({ to: "/" });
 		} catch (err) {
 			setSignOutError(
-				err instanceof ApiError ? err.message : t("auth.sign_out_failed"),
+				err instanceof ApiError ? err.message : m.auth_sign_out_failed(),
 			);
 		} finally {
 			setSigningOut(false);
@@ -113,14 +111,14 @@ export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
 								onClick={() => setOpen(false)}
 							>
 								<User />
-								{t("my.profile_settings")}
+								{m.my_profile_settings()}
 							</DropdownMenuItem>
 							<DropdownMenuItem
 								render={<Link to="/my/access_tokens" />}
 								onClick={() => setOpen(false)}
 							>
 								<KeyRound />
-								{t("nav.api_tokens")}
+								{m.nav_api_tokens()}
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 
@@ -135,7 +133,7 @@ export function SidebarUserMenu({ user }: { user: MeResponse["identity"] }) {
 								}}
 							>
 								<LogOut />
-								{signingOut ? t("auth.signing_out") : t("auth.logout")}
+								{signingOut ? m.auth_signing_out() : m.auth_logout()}
 							</DropdownMenuItem>
 							{signOutError ? (
 								<p

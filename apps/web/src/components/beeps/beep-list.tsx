@@ -2,7 +2,6 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { Activity, Clock, Repeat, Search, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -16,11 +15,11 @@ import { ProgressBar, StatusPill } from "@/components/ui/status-pill";
 import type { Beep } from "@/lib/api/beeps";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import { beepRunAt } from "@/lib/beep-stats";
-import { useTranslation } from "@/lib/i18n";
 import { beepRunStatusLabel, beepStatusLabel } from "@/lib/i18n-labels";
 import { runSuccessRate } from "@/lib/run-success-rate";
 import { shortId } from "@/lib/short-id";
 import { cn } from "@/lib/utils";
+import * as m from "@/locale/paraglide/messages";
 
 type FilterStatus = "all" | "active" | "firing" | "recurring" | "completed";
 
@@ -39,20 +38,15 @@ function beepStatusTone(status: Beep["status"]) {
 	}
 }
 
-function formatScheduleLabel(
-	beep: Beep,
-	t: ReturnType<typeof useTranslation>["t"],
-) {
-	if (beep.status === "completed") return t("beeps.schedule_completed");
-	if (beep.kind === "recurring") return beep.cron ?? t("beeps.schedule");
+function formatScheduleLabel(beep: Beep) {
+	if (beep.status === "completed") return m.beeps_schedule_completed();
+	if (beep.kind === "recurring") return beep.cron ?? m.beeps_schedule();
 	const nextRun = beepRunAt(beep);
-	if (!nextRun) return t("common.em_dash");
+	if (!nextRun) return m.common_em_dash();
 	return formatBeepScheduleTime(nextRun, beep.timezone, "short");
 }
 
 function useBeepColumns(slug: string, variant: "compact" | "full") {
-	const { t } = useTranslation();
-
 	return useMemo(() => {
 		const fullColumns =
 			variant === "full"
@@ -60,10 +54,7 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 						columnHelper.accessor((row) => runSuccessRate(row.runs), {
 							id: "run_success",
 							header: ({ column }) => (
-								<SortableHeader
-									column={column}
-									label={t("beeps.run_success")}
-								/>
+								<SortableHeader column={column} label={m.beeps_run_success()} />
 							),
 							cell: ({ row }) => (
 								<ProgressBar value={runSuccessRate(row.original.runs)} />
@@ -72,7 +63,7 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 						columnHelper.accessor((row) => row.runs.length, {
 							id: "runs",
 							header: ({ column }) => (
-								<SortableHeader column={column} label={t("beeps.runs")} />
+								<SortableHeader column={column} label={m.beeps_runs()} />
 							),
 							cell: ({ row }) => {
 								const beep = row.original;
@@ -84,12 +75,11 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 										</span>
 										{lastRun ? (
 											<span className="text-[11px] text-muted-foreground capitalize">
-												{t("beeps.last")}:{" "}
-												{beepRunStatusLabel(t, lastRun.status)}
+												{m.beeps_last()}: {beepRunStatusLabel(lastRun.status)}
 											</span>
 										) : (
 											<span className="text-[11px] text-muted-foreground">
-												{t("common.em_dash")}
+												{m.common_em_dash()}
 											</span>
 										)}
 									</div>
@@ -104,7 +94,7 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			columnHelper.accessor("title", {
 				id: "title",
 				header: ({ column }) => (
-					<SortableHeader column={column} label={t("term.beep_capitalized")} />
+					<SortableHeader column={column} label={m.term_beep_capitalized()} />
 				),
 				cell: ({ row }) => {
 					const beep = row.original;
@@ -131,7 +121,7 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			}),
 			columnHelper.accessor((row) => row.beeper?.name ?? row.kind, {
 				id: "source",
-				header: t("beeps.source"),
+				header: m.beeps_source(),
 				cell: ({ row }) => {
 					const beep = row.original;
 					if (beep.beeper) {
@@ -147,12 +137,12 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 							{beep.kind === "recurring" ? (
 								<>
 									<Repeat className="size-3.5" />
-									{t("beeps.kind_recurring")}
+									{m.beeps_kind_recurring()}
 								</>
 							) : (
 								<>
 									<Clock className="size-3.5" />
-									{t("beeps.kind_once")}
+									{m.beeps_kind_once()}
 								</>
 							)}
 						</span>
@@ -162,11 +152,11 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			columnHelper.accessor("status", {
 				id: "status",
 				header: ({ column }) => (
-					<SortableHeader column={column} label={t("common.status")} />
+					<SortableHeader column={column} label={m.common_status()} />
 				),
 				cell: ({ row }) => (
 					<StatusPill
-						label={beepStatusLabel(t, row.original.status)}
+						label={beepStatusLabel(row.original.status)}
 						tone={beepStatusTone(row.original.status)}
 					/>
 				),
@@ -174,14 +164,14 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			columnHelper.accessor((row) => beepRunAt(row)?.toString() ?? "", {
 				id: "schedule",
 				header: ({ column }) => (
-					<SortableHeader column={column} label={t("beeps.schedule")} />
+					<SortableHeader column={column} label={m.beeps_schedule()} />
 				),
 				cell: ({ row }) => {
 					const beep = row.original;
 					return (
 						<div className="flex flex-col gap-0.5 text-sm">
 							<span className="tabular-nums text-foreground">
-								{formatScheduleLabel(beep, t)}
+								{formatScheduleLabel(beep)}
 							</span>
 							{variant === "full" ? (
 								<span className="text-[11px] text-muted-foreground">
@@ -194,23 +184,18 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			}),
 			...fullColumns,
 		]);
-	}, [slug, variant, t]);
+	}, [slug, variant]);
 }
 
 const FILTER_TABS: {
 	id: FilterStatus;
-	labelKey:
-		| "beeps.filter_all"
-		| "beeps.filter_active"
-		| "beeps.filter_firing"
-		| "beeps.filter_recurring"
-		| "beeps.filter_completed";
+	label: () => string;
 }[] = [
-	{ id: "all", labelKey: "beeps.filter_all" },
-	{ id: "active", labelKey: "beeps.filter_active" },
-	{ id: "firing", labelKey: "beeps.filter_firing" },
-	{ id: "recurring", labelKey: "beeps.filter_recurring" },
-	{ id: "completed", labelKey: "beeps.filter_completed" },
+	{ id: "all", label: m.beeps_filter_all },
+	{ id: "active", label: m.beeps_filter_active },
+	{ id: "firing", label: m.beeps_filter_firing },
+	{ id: "recurring", label: m.beeps_filter_recurring },
+	{ id: "completed", label: m.beeps_filter_completed },
 ];
 
 export function BeepList({
@@ -222,7 +207,6 @@ export function BeepList({
 	slug: string;
 	variant?: "compact" | "full";
 }) {
-	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const [search, setSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
@@ -266,10 +250,10 @@ export function BeepList({
 					<Sparkles className="size-6" />
 				</div>
 				<h3 className="mt-3 font-heading text-base font-semibold">
-					{t("beeps.empty_no_beeps")}
+					{m.beeps_empty_no_beeps()}
 				</h3>
 				<p className="mt-1 max-w-sm text-sm text-muted-foreground">
-					{t("beeps.empty_create_hint")}
+					{m.beeps_empty_create_hint()}
 				</p>
 			</Card>
 		);
@@ -294,7 +278,7 @@ export function BeepList({
 								)}
 								onClick={() => setStatusFilter(tab.id)}
 							>
-								{t(tab.labelKey)}
+								{tab.label()}
 								<span
 									className={cn(
 										"ml-1 rounded-full px-1.5 py-0.2 text-[10px] tabular-nums",
@@ -314,7 +298,7 @@ export function BeepList({
 						<Input
 							value={search}
 							onChange={(event) => setSearch(event.target.value)}
-							placeholder={t("beeps.search_placeholder")}
+							placeholder={m.beeps_search_placeholder()}
 							className="h-8.5 pl-8 text-xs"
 						/>
 					</div>
@@ -324,7 +308,7 @@ export function BeepList({
 			{filteredBeeps.length === 0 ? (
 				<Card className="flex flex-col items-center justify-center p-8 text-center">
 					<p className="text-sm font-medium text-muted-foreground">
-						{t("beeps.filter_no_match")}
+						{m.beeps_filter_no_match()}
 					</p>
 					<Button
 						type="button"
@@ -336,7 +320,7 @@ export function BeepList({
 							setSearch("");
 						}}
 					>
-						{t("beeps.clear_filters")}
+						{m.beeps_clear_filters()}
 					</Button>
 				</Card>
 			) : (
@@ -344,7 +328,7 @@ export function BeepList({
 					data={filteredBeeps}
 					columns={columns}
 					getRowId={(beep) => beep.id}
-					emptyMessage={t("beeps.filter_no_match")}
+					emptyMessage={m.beeps_filter_no_match()}
 					onRowClick={(beep) =>
 						navigate({
 							to: "/$account_slug/beeps/$beepId",

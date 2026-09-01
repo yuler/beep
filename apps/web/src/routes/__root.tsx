@@ -1,4 +1,3 @@
-import { getDictionary, translate } from "@beep/locales";
 import {
 	createRootRoute,
 	HeadContent,
@@ -16,8 +15,8 @@ import {
 	DEFAULT_LOCALE,
 	I18nContext,
 	type Locale,
-	type TranslationKey,
 } from "@/lib/i18n";
+import * as m from "@/locale/paraglide/messages";
 import { getLocale } from "@/locale/paraglide/runtime";
 
 import appCss from "../styles.css?url";
@@ -51,7 +50,7 @@ export const Route = createRootRoute({
 			{ charSet: "utf-8" },
 			{ name: "viewport", content: "width=device-width, initial-scale=1" },
 			{
-				title: translate(getDictionary(DEFAULT_LOCALE), "term.beep"),
+				title: m.term_beep(),
 			},
 		],
 		links: [{ rel: "stylesheet", href: appCss }],
@@ -73,20 +72,13 @@ function RootComponent() {
 		document.documentElement.lang = currentLocale;
 	}, [currentLocale]);
 
-	const dict = useMemo(() => {
-		return getDictionary(currentLocale);
-	}, [currentLocale]);
-
 	const i18nValue = useMemo(() => {
 		return {
 			locale: currentLocale,
-			dict,
-			t: (key: TranslationKey, params?: Record<string, string | number>) =>
-				translate(dict, key, params),
 			getLocalizedPath: (pathname: string, targetLocale?: Locale) =>
 				buildLocalizedPath(pathname, targetLocale ?? currentLocale),
 		};
-	}, [currentLocale, dict]);
+	}, [currentLocale]);
 
 	return (
 		<I18nContext.Provider value={i18nValue}>

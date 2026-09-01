@@ -5,7 +5,6 @@ import {
 } from "@tanstack/react-router";
 import { ExternalLink, Trash2 } from "lucide-react";
 import { useState } from "react";
-
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -24,8 +23,8 @@ import {
 	fetchDevLetters,
 } from "@/lib/api/dev";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import * as m from "@/locale/paraglide/messages";
 
 const devRoute = getRouteApi("/dev");
 
@@ -35,7 +34,6 @@ export const Route = createFileRoute("/dev/letters")({
 });
 
 function LettersPage() {
-	const { t } = useTranslation();
 	const { account } = devRoute.useRouteContext();
 	const router = useRouter();
 	const { letters } = Route.useLoaderData();
@@ -51,7 +49,7 @@ function LettersPage() {
 			await router.invalidate();
 		} catch (err) {
 			setError(
-				err instanceof ApiError ? err.message : t("dev.delete_letter_failed"),
+				err instanceof ApiError ? err.message : m.dev_delete_letter_failed(),
 			);
 		} finally {
 			setPendingId(null);
@@ -60,7 +58,7 @@ function LettersPage() {
 
 	async function handleClear() {
 		if (!letters.length) return;
-		if (!window.confirm(t("dev.clear_letters_confirm"))) return;
+		if (!window.confirm(m.dev_clear_letters_confirm())) return;
 
 		setClearing(true);
 		setError(null);
@@ -69,7 +67,7 @@ function LettersPage() {
 			await router.invalidate();
 		} catch (err) {
 			setError(
-				err instanceof ApiError ? err.message : t("dev.letters_clear_failed"),
+				err instanceof ApiError ? err.message : m.dev_letters_clear_failed(),
 			);
 		} finally {
 			setClearing(false);
@@ -81,12 +79,12 @@ function LettersPage() {
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: t("nav.home"),
+						label: m.nav_home(),
 						to: "/$account_slug",
 						params: { account_slug: account.slug },
 					},
-					{ label: t("nav.dev") },
-					{ label: t("dev.letters"), isCurrentPage: true },
+					{ label: m.nav_dev() },
+					{ label: m.dev_letters(), isCurrentPage: true },
 				]}
 			/>
 
@@ -94,10 +92,10 @@ function LettersPage() {
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div>
 						<h1 className="font-heading text-2xl font-semibold tracking-tight">
-							{t("dev.letters")}
+							{m.dev_letters()}
 						</h1>
 						<p className="mt-1 text-sm text-muted-foreground">
-							{t("dev.letters_description")}
+							{m.dev_letters_description()}
 						</p>
 					</div>
 					<div className="flex flex-wrap gap-2">
@@ -108,7 +106,7 @@ function LettersPage() {
 								onClick={() => void handleClear()}
 							>
 								<Trash2 data-icon="inline-start" />
-								{t("common.clear_all")}
+								{m.common_clear_all()}
 							</Button>
 						) : null}
 						<a
@@ -117,7 +115,7 @@ function LettersPage() {
 							rel="noreferrer"
 							className={cn(buttonVariants({ variant: "outline" }))}
 						>
-							{t("dev.open_letter")}
+							{m.dev_open_letter()}
 							<ExternalLink data-icon="inline-end" />
 						</a>
 					</div>
@@ -131,12 +129,12 @@ function LettersPage() {
 
 				{letters.length === 0 ? (
 					<p className="text-sm text-muted-foreground">
-						{t("dev.letters_empty")}
+						{m.dev_letters_empty()}
 					</p>
 				) : (
 					<ul className="flex flex-col gap-3">
 						{letters.map((letter) => {
-							const subjectLabel = letter.subject ?? t("common.no_subject");
+							const subjectLabel = letter.subject ?? m.common_no_subject();
 							return (
 								<li key={letter.id}>
 									<Card
@@ -153,23 +151,23 @@ function LettersPage() {
 													href={coreAppUrl(`/letter_opener/${letter.id}`)}
 													target="_blank"
 													rel="noreferrer"
-													aria-label={`${t("dev.open_letter")} ${subjectLabel}`}
+													aria-label={`${m.dev_open_letter()} ${subjectLabel}`}
 													className={cn(
 														buttonVariants({ variant: "outline", size: "sm" }),
 													)}
 												>
-													{t("common.open")}
+													{m.common_open()}
 													<ExternalLink data-icon="inline-end" />
 												</a>
 												<Button
 													variant="destructive"
 													size="sm"
 													disabled={pendingId === letter.id || clearing}
-													aria-label={`${t("common.delete")} ${subjectLabel}`}
+													aria-label={`${m.common_delete()} ${subjectLabel}`}
 													onClick={() => void handleDelete(letter.id)}
 												>
 													<Trash2 data-icon="inline-start" />
-													{t("common.delete")}
+													{m.common_delete()}
 												</Button>
 											</CardAction>
 										</CardHeader>
@@ -178,7 +176,7 @@ function LettersPage() {
 												{letter.from ? (
 													<span className="min-w-0 truncate">
 														<span className="text-foreground/60">
-															{t("common.from")}
+															{m.common_from()}
 														</span>{" "}
 														{letter.from}
 													</span>

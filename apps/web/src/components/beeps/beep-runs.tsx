@@ -1,10 +1,9 @@
 import { ChevronRight } from "lucide-react";
-
 import { Badge } from "@/components/ui/badge";
 import type { BeepRun } from "@/lib/api/beeps";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
-import { useTranslation } from "@/lib/i18n";
 import { beepRunStatusLabel } from "@/lib/i18n-labels";
+import * as m from "@/locale/paraglide/messages";
 
 const RUN_STATUS_VARIANT: Record<
 	string,
@@ -25,18 +24,16 @@ export function BeepRuns({
 	runs: BeepRun[];
 	timezone: string;
 }) {
-	const { t } = useTranslation();
-
 	return (
 		<details className="group/runs rounded-lg border bg-muted/20 text-sm">
 			<summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
 				<ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open/runs:rotate-90" />
-				<span className="font-medium">{t("beeps.execution_runs")}</span>
+				<span className="font-medium">{m.beeps_execution_runs()}</span>
 				<span className="text-muted-foreground">{runs.length}</span>
 			</summary>
 			{runs.length === 0 ? (
 				<p className="border-t px-3 py-2 text-xs text-muted-foreground">
-					{t("beeps.no_runs")}
+					{m.beeps_no_runs()}
 				</p>
 			) : (
 				<ul className="flex flex-col gap-2 border-t px-3 py-2">
@@ -53,8 +50,8 @@ export function BeepRuns({
 									<Badge
 										variant={RUN_STATUS_VARIANT[run.status] ?? "secondary"}
 									>
-										{t("beeps.delivery_status", {
-											status: beepRunStatusLabel(t, run.status),
+										{m.beeps_delivery_status({
+											status: beepRunStatusLabel(run.status),
 										})}
 									</Badge>
 								</div>

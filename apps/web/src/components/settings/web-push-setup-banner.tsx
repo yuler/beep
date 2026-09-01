@@ -5,7 +5,6 @@ import {
 } from "@tanstack/react-router";
 import { Bell, X } from "lucide-react";
 import { useEffect, useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import {
 	Item,
@@ -16,8 +15,8 @@ import {
 	ItemTitle,
 } from "@/components/ui/item";
 import { useWebPush } from "@/hooks/use-web-push";
-import { useTranslation } from "@/lib/i18n";
-import { IOS_HOME_SCREEN_HINT } from "@/lib/web-push";
+import { iosHomeScreenHint } from "@/lib/web-push";
+import * as m from "@/locale/paraglide/messages";
 
 function dismissKey(slug: string) {
 	return `beep:web-push-banner:${slug}`;
@@ -47,7 +46,6 @@ export function WebPushSetupBanner() {
 }
 
 function WebPushSetupBannerInner({ slug }: { slug: string }) {
-	const { t } = useTranslation();
 	const { status, ready, pending, enable, error } = useWebPush(slug);
 	const [dismissed, setDismissed] = useState(true);
 	const navigate = useNavigate();
@@ -89,13 +87,13 @@ function WebPushSetupBannerInner({ slug }: { slug: string }) {
 						<Bell />
 					</ItemMedia>
 					<ItemContent>
-						<ItemTitle>{t("push.banner_title")}</ItemTitle>
+						<ItemTitle>{m.push_banner_title()}</ItemTitle>
 						<ItemDescription>
 							{needsIosInstall
-								? t(IOS_HOME_SCREEN_HINT)
+								? iosHomeScreenHint()
 								: denied
-									? t("push.banner_blocked")
-									: t("push.banner_click_enable")}
+									? m.push_banner_blocked()
+									: m.push_banner_click_enable()}
 						</ItemDescription>
 					</ItemContent>
 				</button>
@@ -104,7 +102,7 @@ function WebPushSetupBannerInner({ slug }: { slug: string }) {
 						type="button"
 						variant="ghost"
 						size="icon-sm"
-						aria-label={t("common.not_now")}
+						aria-label={m.common_not_now()}
 						onClick={dismiss}
 					>
 						<X />

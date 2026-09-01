@@ -10,7 +10,7 @@ import { BeepStats } from "@/components/beeps/beep-stats";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { fetchBeeps } from "@/lib/api/beeps";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import { useTranslation } from "@/lib/i18n";
+import * as m from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 
@@ -22,7 +22,6 @@ export const Route = createFileRoute("/$account_slug/beeps")({
 });
 
 function BeepsPage() {
-	const { t } = useTranslation();
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
 	const { beeps } = Route.useLoaderData();
@@ -36,21 +35,21 @@ function BeepsPage() {
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: t("nav.home"),
+						label: m.nav_home(),
 						to: "/$account_slug",
 						params: { account_slug: slug },
 					},
-					{ label: t("nav.beeps"), isCurrentPage: true },
+					{ label: m.nav_beeps(), isCurrentPage: true },
 				]}
 			/>
 
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
 				<div className="flex flex-col gap-1">
 					<h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
-						{t("beeps.page_title")}
+						{m.beeps_page_title()}
 					</h1>
 					<p className="text-sm text-muted-foreground">
-						{t("beeps.manage_description")}
+						{m.beeps_manage_description()}
 					</p>
 				</div>
 

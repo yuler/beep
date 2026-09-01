@@ -1,6 +1,5 @@
 import { HelpCircle } from "lucide-react";
 import { type FormEvent, useState } from "react";
-
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
@@ -13,19 +12,19 @@ import {
 } from "@/components/ui/tooltip";
 import { createBeep } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
-import { useTranslation } from "@/lib/i18n";
 import { translateError } from "@/lib/i18n-labels";
 import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
+import * as m from "@/locale/paraglide/messages";
 
 const TITLE_MAX_LENGTH = 80;
 const BODY_MAX_LENGTH = 2000;
 
 const CRON_PRESETS = [
-	{ labelKey: "beeps.cron_preset_daily_9", value: "0 9 * * *" },
-	{ labelKey: "beeps.cron_preset_weekdays_9", value: "0 9 * * 1-5" },
-	{ labelKey: "beeps.cron_preset_monday_9", value: "0 9 * * 1" },
-	{ labelKey: "beeps.cron_preset_hourly", value: "0 * * * *" },
+	{ label: m.beeps_cron_preset_daily_9, value: "0 9 * * *" },
+	{ label: m.beeps_cron_preset_weekdays_9, value: "0 9 * * 1-5" },
+	{ label: m.beeps_cron_preset_monday_9, value: "0 9 * * 1" },
+	{ label: m.beeps_cron_preset_hourly, value: "0 * * * *" },
 ] as const;
 
 function defaultRunAt() {
@@ -39,7 +38,6 @@ export function CreateBeepForm({
 	slug: string;
 	onCreated: () => Promise<void> | void;
 }) {
-	const { t, dict } = useTranslation();
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
 	const [preview, setPreview] = useState(false);
@@ -77,9 +75,7 @@ export function CreateBeepForm({
 			setFieldErrors({});
 			await onCreated();
 		} catch (err) {
-			setError(
-				err instanceof ApiError ? err.message : translateError(dict, t, err),
-			);
+			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
 			setPending(false);
 		}
@@ -88,7 +84,7 @@ export function CreateBeepForm({
 	return (
 		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
 			<div className="flex flex-col gap-2">
-				<Label>{t("beeps.type")}</Label>
+				<Label>{m.beeps_type()}</Label>
 				<div className="flex rounded-lg border border-input bg-muted/30 p-1">
 					<Button
 						type="button"
@@ -103,7 +99,7 @@ export function CreateBeepForm({
 						disabled={pending}
 						onClick={() => setKind("once")}
 					>
-						{t("beeps.kind_once")}
+						{m.beeps_kind_once()}
 					</Button>
 					<Button
 						type="button"
@@ -118,13 +114,13 @@ export function CreateBeepForm({
 						disabled={pending}
 						onClick={() => setKind("recurring")}
 					>
-						{t("beeps.kind_recurring")}
+						{m.beeps_kind_recurring()}
 					</Button>
 				</div>
 			</div>
 
 			<div className="flex flex-col gap-2">
-				<Label htmlFor="beep-title">{t("beeps.title")}</Label>
+				<Label htmlFor="beep-title">{m.beeps_title()}</Label>
 				<Input
 					id="beep-title"
 					name="title"
@@ -132,13 +128,13 @@ export function CreateBeepForm({
 					maxLength={TITLE_MAX_LENGTH}
 					value={title}
 					onChange={(event) => setTitle(event.target.value)}
-					placeholder={t("beeps.body_placeholder")}
+					placeholder={m.beeps_body_placeholder()}
 					disabled={pending}
 				/>
 			</div>
 			<div className="flex flex-col gap-2">
 				<div className="flex items-center justify-between gap-2">
-					<Label htmlFor="beep-body">{t("beeps.body")}</Label>
+					<Label htmlFor="beep-body">{m.beeps_body()}</Label>
 					<div className="flex gap-1">
 						<Button
 							type="button"
@@ -148,7 +144,7 @@ export function CreateBeepForm({
 							onClick={() => setPreview(false)}
 							disabled={pending}
 						>
-							{t("beeps.write")}
+							{m.beeps_write()}
 						</Button>
 						<Button
 							type="button"
@@ -158,7 +154,7 @@ export function CreateBeepForm({
 							onClick={() => setPreview(true)}
 							disabled={pending}
 						>
-							{t("beeps.preview")}
+							{m.beeps_preview()}
 						</Button>
 					</div>
 				</div>
@@ -168,7 +164,7 @@ export function CreateBeepForm({
 							<BeepMarkdown source={body} />
 						) : (
 							<p className="text-sm text-muted-foreground">
-								{t("beeps.nothing_to_preview")}
+								{m.beeps_nothing_to_preview()}
 							</p>
 						)}
 					</div>
@@ -183,7 +179,7 @@ export function CreateBeepForm({
 							event.currentTarget.style.height = "auto";
 							event.currentTarget.style.height = `${event.currentTarget.scrollHeight}px`;
 						}}
-						placeholder={t("beeps.body_markdown_placeholder")}
+						placeholder={m.beeps_body_markdown_placeholder()}
 						disabled={pending}
 						rows={4}
 						className={cn(
@@ -196,17 +192,17 @@ export function CreateBeepForm({
 			{kind === "once" ? (
 				<div className="flex flex-col gap-2">
 					<div className="flex items-center justify-between gap-2">
-						<Label htmlFor="beep-run-at">{t("beeps.run_at")}</Label>
+						<Label htmlFor="beep-run-at">{m.beeps_run_at()}</Label>
 						<Tooltip>
 							<TooltipTrigger
 								type="button"
 								className="text-muted-foreground hover:text-foreground"
-								aria-label={t("beeps.run_at")}
+								aria-label={m.beeps_run_at()}
 							>
 								<HelpCircle className="size-4" />
 							</TooltipTrigger>
 							<TooltipContent side="top" className="max-w-xs text-xs">
-								{t("beeps.run_at_tooltip")}
+								{m.beeps_run_at_tooltip()}
 							</TooltipContent>
 						</Tooltip>
 					</div>
@@ -225,7 +221,7 @@ export function CreateBeepForm({
 							htmlFor="beep-send-now"
 							className="cursor-pointer text-sm font-normal"
 						>
-							{t("beeps.send_immediately")}
+							{m.beeps_send_immediately()}
 						</Label>
 					</div>
 
@@ -240,7 +236,7 @@ export function CreateBeepForm({
 										...curr,
 										run_at:
 											val.getTime() <= Date.now() + 60 * 1000
-												? t("beeps.run_at_future_error")
+												? m.beeps_run_at_future_error()
 												: undefined,
 									}));
 								}}
@@ -252,13 +248,13 @@ export function CreateBeepForm({
 								</p>
 							) : (
 								<p className="text-xs text-muted-foreground">
-									{t("beeps.run_at_future_hint")}
+									{m.beeps_run_at_future_hint()}
 								</p>
 							)}
 						</div>
 					) : (
 						<p className="text-xs text-muted-foreground">
-							{t("beeps.send_immediately_hint")}
+							{m.beeps_send_immediately_hint()}
 						</p>
 					)}
 				</div>
@@ -267,17 +263,17 @@ export function CreateBeepForm({
 			{kind === "recurring" ? (
 				<div className="flex flex-col gap-2.5">
 					<div className="flex items-center justify-between gap-2">
-						<Label htmlFor="beep-cron">{t("beeps.cron_schedule")}</Label>
+						<Label htmlFor="beep-cron">{m.beeps_cron_schedule()}</Label>
 						<Tooltip>
 							<TooltipTrigger
 								type="button"
 								className="text-muted-foreground hover:text-foreground"
-								aria-label={t("beeps.cron_schedule")}
+								aria-label={m.beeps_cron_schedule()}
 							>
 								<HelpCircle className="size-4" />
 							</TooltipTrigger>
 							<TooltipContent side="top" className="max-w-xs text-xs">
-								{t("beeps.cron_tooltip")}
+								{m.beeps_cron_tooltip()}
 							</TooltipContent>
 						</Tooltip>
 					</div>
@@ -293,7 +289,7 @@ export function CreateBeepForm({
 								disabled={pending}
 								onClick={() => setCron(preset.value)}
 							>
-								{t(preset.labelKey)}
+								{preset.label()}
 							</Button>
 						))}
 					</div>
@@ -309,9 +305,9 @@ export function CreateBeepForm({
 						className="font-mono text-sm"
 					/>
 					<p className="text-xs text-muted-foreground">
-						{t("beeps.cron_format")}{" "}
+						{m.beeps_cron_format()}{" "}
 						<code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
-							{t("beeps.cron_format_parts")}
+							{m.beeps_cron_format_parts()}
 						</code>
 					</p>
 				</div>
@@ -335,11 +331,11 @@ export function CreateBeepForm({
 			>
 				{pending
 					? kind === "once" && sendNow
-						? t("beeps.sending")
-						: t("beeps.creating")
+						? m.beeps_sending()
+						: m.beeps_creating()
 					: kind === "once" && sendNow
-						? t("beeps.send_beep_now")
-						: t("beeps.create_beep")}
+						? m.beeps_send_beep_now()
+						: m.beeps_create_beep()}
 			</Button>
 		</form>
 	);

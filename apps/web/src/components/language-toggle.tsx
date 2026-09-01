@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { type Locale, useI18n } from "@/lib/i18n";
+import * as m from "@/locale/paraglide/messages";
 
 export function LanguageToggle() {
-	const { locale, getLocalizedPath, t } = useI18n();
+	const { locale, getLocalizedPath } = useI18n();
 
 	const nextLocale: Locale = locale === "en" ? "zh" : "en";
 	const label = locale === "en" ? "EN" : "中";
@@ -13,7 +14,7 @@ export function LanguageToggle() {
 			variant="outline"
 			size="icon"
 			className="text-xs font-semibold"
-			aria-label={t("common.language")}
+			aria-label={m.common_language()}
 			onClick={() => {
 				if (typeof window !== "undefined") {
 					const nextUrl = getLocalizedPath(
@@ -25,7 +26,7 @@ export function LanguageToggle() {
 				}
 			}}
 		>
-			<span className="sr-only">{t("common.language")}</span>
+			<span className="sr-only">{m.common_language()}</span>
 			<span className="text-xs">{label}</span>
 		</Button>
 	);

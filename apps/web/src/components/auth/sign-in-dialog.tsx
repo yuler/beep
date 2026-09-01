@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ComponentProps } from "react";
 import { useState } from "react";
-
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { VerifyForm } from "@/components/auth/verify-form";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { useTranslation } from "@/lib/i18n";
+import * as m from "@/locale/paraglide/messages";
 
 type ButtonProps = ComponentProps<typeof Button>;
 type Step = "email" | "verify";
@@ -29,8 +28,7 @@ export function SignInDialog({
 	variant?: ButtonProps["variant"];
 	className?: string;
 }) {
-	const { t } = useTranslation();
-	const resolvedLabel = label ?? t("auth.sign_in");
+	const resolvedLabel = label ?? m.auth_sign_in();
 	const [open, setOpen] = useState(false);
 	const [step, setStep] = useState<Step>("email");
 	const [email, setEmail] = useState("");
@@ -55,12 +53,12 @@ export function SignInDialog({
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
 					<DialogTitle>
-						{step === "email" ? t("auth.sign_in") : t("auth.check_email")}
+						{step === "email" ? m.auth_sign_in() : m.auth_check_email()}
 					</DialogTitle>
 					<DialogDescription>
 						{step === "email"
-							? t("auth.sign_in_description")
-							: t("auth.verify_description")}
+							? m.auth_sign_in_description()
+							: m.auth_verify_description()}
 					</DialogDescription>
 				</DialogHeader>
 				{step === "email" ? (
@@ -88,13 +86,13 @@ export function SignInDialog({
 				)}
 				{step === "email" ? (
 					<p className="text-center text-xs text-muted-foreground">
-						{t("auth.prefer_full_page")}{" "}
+						{m.auth_prefer_full_page()}{" "}
 						<Link
 							to="/sign"
 							className="underline underline-offset-4"
 							onClick={() => handleOpenChange(false)}
 						>
-							{t("auth.open_sign_in")}
+							{m.auth_open_sign_in()}
 						</Link>
 					</p>
 				) : null}

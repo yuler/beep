@@ -13,7 +13,6 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
-
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,7 +44,7 @@ import {
 } from "@/lib/api/access-tokens";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import { useTranslation } from "@/lib/i18n";
+import * as m from "@/locale/paraglide/messages";
 
 const myRoute = getRouteApi("/my");
 
@@ -55,7 +54,6 @@ export const Route = createFileRoute("/my/access_tokens")({
 });
 
 function AccessTokensPage() {
-	const { t } = useTranslation();
 	const { account } = myRoute.useRouteContext();
 	const data = Route.useLoaderData();
 	const router = useRouter();
@@ -87,7 +85,7 @@ function AccessTokensPage() {
 			await router.invalidate();
 		} catch (err) {
 			setCreateError(
-				err instanceof ApiError ? err.message : t("errors.create_token_failed"),
+				err instanceof ApiError ? err.message : m.errors_create_token_failed(),
 			);
 		} finally {
 			setIsCreating(false);
@@ -95,7 +93,7 @@ function AccessTokensPage() {
 	}
 
 	async function handleDelete(id: string) {
-		if (!confirm(t("my.revoke_confirm"))) {
+		if (!confirm(m.my_revoke_confirm())) {
 			return;
 		}
 
@@ -105,7 +103,7 @@ function AccessTokensPage() {
 			await router.invalidate();
 		} catch (err) {
 			alert(
-				err instanceof ApiError ? err.message : t("errors.revoke_token_failed"),
+				err instanceof ApiError ? err.message : m.errors_revoke_token_failed(),
 			);
 		} finally {
 			setDeletingId(null);
@@ -124,12 +122,12 @@ function AccessTokensPage() {
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: t("nav.home"),
+						label: m.nav_home(),
 						to: "/$account_slug",
 						params: { account_slug: account.slug },
 					},
-					{ label: t("my.personal_settings") },
-					{ label: t("my.api_tokens_breadcrumb"), isCurrentPage: true },
+					{ label: m.my_personal_settings() },
+					{ label: m.my_api_tokens_breadcrumb(), isCurrentPage: true },
 				]}
 			/>
 
@@ -137,10 +135,10 @@ function AccessTokensPage() {
 				<div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 					<div>
 						<h1 className="font-heading text-2xl font-semibold tracking-tight">
-							{t("my.api_tokens_title")}
+							{m.my_api_tokens_title()}
 						</h1>
 						<p className="mt-1 text-sm text-muted-foreground">
-							{t("my.api_tokens_description")}
+							{m.my_api_tokens_description()}
 						</p>
 					</div>
 
@@ -156,7 +154,7 @@ function AccessTokensPage() {
 					>
 						<DialogTrigger render={<Button className="gap-2" />}>
 							<Plus className="size-4" />
-							{t("my.generate_token")}
+							{m.my_generate_token()}
 						</DialogTrigger>
 
 						<DialogContent className="sm:max-w-md">
@@ -165,10 +163,10 @@ function AccessTokensPage() {
 									<DialogHeader>
 										<DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500">
 											<ShieldCheck className="size-5" />
-											{t("my.token_generated")}
+											{m.my_token_generated()}
 										</DialogTitle>
 										<DialogDescription>
-											{t("my.token_copy_warning")}
+											{m.my_token_copy_warning()}
 										</DialogDescription>
 									</DialogHeader>
 
@@ -187,12 +185,12 @@ function AccessTokensPage() {
 											{hasCopied ? (
 												<>
 													<Check className="size-4 text-emerald-600" />
-													{t("common.copied")}
+													{m.common_copied()}
 												</>
 											) : (
 												<>
 													<Copy className="size-4" />
-													{t("common.copy")}
+													{m.common_copy()}
 												</>
 											)}
 										</Button>
@@ -207,16 +205,16 @@ function AccessTokensPage() {
 												setCreatedToken(null);
 											}}
 										>
-											{t("common.done")}
+											{m.common_done()}
 										</Button>
 									</DialogFooter>
 								</>
 							) : (
 								<form onSubmit={handleCreate} className="space-y-4">
 									<DialogHeader>
-										<DialogTitle>{t("my.generate_new_token")}</DialogTitle>
+										<DialogTitle>{m.my_generate_new_token()}</DialogTitle>
 										<DialogDescription>
-											{t("my.token_auth_description")}
+											{m.my_token_auth_description()}
 										</DialogDescription>
 									</DialogHeader>
 
@@ -231,11 +229,11 @@ function AccessTokensPage() {
 
 									<div className="space-y-2">
 										<Label htmlFor="token-description">
-											{t("common.description")}
+											{m.common_description()}
 										</Label>
 										<Input
 											id="token-description"
-											placeholder={t("my.token_description_placeholder")}
+											placeholder={m.my_token_description_placeholder()}
 											value={description}
 											onChange={(e) => setDescription(e.target.value)}
 											required
@@ -245,7 +243,7 @@ function AccessTokensPage() {
 
 									<div className="space-y-2">
 										<Label htmlFor="token-permission">
-											{t("common.permission")}
+											{m.common_permission()}
 										</Label>
 										<select
 											id="token-permission"
@@ -255,8 +253,8 @@ function AccessTokensPage() {
 												setPermission(e.target.value as AccessTokenPermission)
 											}
 										>
-											<option value="write">{t("my.permission_write")}</option>
-											<option value="read">{t("my.permission_read")}</option>
+											<option value="write">{m.my_permission_write()}</option>
+											<option value="read">{m.my_permission_read()}</option>
 										</select>
 									</div>
 
@@ -266,16 +264,16 @@ function AccessTokensPage() {
 											variant="outline"
 											onClick={() => setIsCreateOpen(false)}
 										>
-											{t("common.cancel")}
+											{m.common_cancel()}
 										</Button>
 										<Button type="submit" disabled={isCreating}>
 											{isCreating ? (
 												<>
 													<Loader2 className="mr-2 size-4 animate-spin" />
-													{t("common.generating")}
+													{m.common_generating()}
 												</>
 											) : (
-												t("my.generate_token")
+												m.my_generate_token()
 											)}
 										</Button>
 									</DialogFooter>
@@ -287,9 +285,9 @@ function AccessTokensPage() {
 
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-lg">{t("my.active_tokens")}</CardTitle>
+						<CardTitle className="text-lg">{m.my_active_tokens()}</CardTitle>
 						<CardDescription>
-							{t("my.active_tokens_description")}
+							{m.my_active_tokens_description()}
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="p-0">
@@ -297,9 +295,9 @@ function AccessTokensPage() {
 							<div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
 								<KeyRound className="mb-2 size-8 text-muted-foreground/50" />
 								<p className="font-medium text-foreground">
-									{t("my.no_tokens")}
+									{m.my_no_tokens()}
 								</p>
-								<p className="text-sm">{t("my.no_tokens_description")}</p>
+								<p className="text-sm">{m.my_no_tokens_description()}</p>
 							</div>
 						) : (
 							<div className="divide-y divide-border">
@@ -311,7 +309,7 @@ function AccessTokensPage() {
 										<div className="space-y-1">
 											<div className="flex items-center gap-2">
 												<span className="font-medium">
-													{token.description || t("my.personal_access_token")}
+													{token.description || m.my_personal_access_token()}
 												</span>
 												<Badge
 													variant={
@@ -322,20 +320,20 @@ function AccessTokensPage() {
 													className="text-xs"
 												>
 													{token.permission === "write"
-														? t("my.read_write")
-														: t("my.read_only")}
+														? m.my_read_write()
+														: m.my_read_only()}
 												</Badge>
 											</div>
 											<div className="text-xs text-muted-foreground">
-												{t("admin.jobs_created")}{" "}
+												{m.admin_jobs_created()}{" "}
 												{new Date(token.created_at).toLocaleDateString()} ·{" "}
 												{token.last_used_at
-													? t("common.last_used", {
+													? m.common_last_used({
 															date: new Date(
 																token.last_used_at,
 															).toLocaleDateString(),
 														})
-													: t("common.never_used")}
+													: m.common_never_used()}
 											</div>
 										</div>
 
@@ -352,7 +350,7 @@ function AccessTokensPage() {
 												<Trash2 className="size-4" />
 											)}
 											<span className="ml-1 sm:hidden">
-												{t("common.revoke")}
+												{m.common_revoke()}
 											</span>
 										</Button>
 									</div>
@@ -362,7 +360,7 @@ function AccessTokensPage() {
 					</CardContent>
 					<CardFooter className="border-t bg-muted/30 px-6 py-3">
 						<p className="text-xs text-muted-foreground">
-							{t("my.api_header_hint")}
+							{m.my_api_header_hint()}
 						</p>
 					</CardFooter>
 				</Card>
@@ -371,10 +369,10 @@ function AccessTokensPage() {
 					<Card>
 						<CardHeader>
 							<CardTitle className="text-lg">
-								{t("my.api_example_title")}
+								{m.my_api_example_title()}
 							</CardTitle>
 							<CardDescription>
-								{t("my.api_example_description")}
+								{m.my_api_example_description()}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-3">
@@ -385,7 +383,7 @@ function AccessTokensPage() {
 								</pre>
 							</div>
 							<p className="text-xs text-muted-foreground">
-								{t("my.api_example_beeps_hint", { slug: account.slug })}
+								{m.my_api_example_beeps_hint({ slug: account.slug })}
 							</p>
 						</CardContent>
 					</Card>

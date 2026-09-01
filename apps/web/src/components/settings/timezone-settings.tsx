@@ -21,7 +21,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import { type TimezoneSource, updateSettings } from "@/lib/api/settings";
-import { useTranslation } from "@/lib/i18n";
 import { translateError } from "@/lib/i18n-labels";
 import {
 	browserTimezone,
@@ -29,19 +28,16 @@ import {
 	timezoneOption,
 	timezoneOptions,
 } from "@/lib/timezone";
+import * as m from "@/locale/paraglide/messages";
 
-function sourceHint(
-	t: ReturnType<typeof useTranslation>["t"],
-	source: TimezoneSource | null,
-	timezone: string | null,
-) {
+function sourceHint(source: TimezoneSource | null, timezone: string | null) {
 	if (!timezone) {
-		return t("settings.timezone_not_set_hint");
+		return m.settings_timezone_not_set_hint();
 	}
 	if (source === "manual") {
-		return t("settings.timezone_manual");
+		return m.settings_timezone_manual();
 	}
-	return t("settings.timezone_detected");
+	return m.settings_timezone_detected();
 }
 
 function TimezoneLabel({ option }: { option: TimezoneOption }) {
@@ -71,7 +67,6 @@ export function TimezoneSettings({
 	timezoneSource: TimezoneSource | null;
 	onChanged: () => Promise<void> | void;
 }) {
-	const { t, dict } = useTranslation();
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const items = useMemo(() => {
@@ -92,9 +87,7 @@ export function TimezoneSettings({
 			await updateSettings(slug, { timezone: next });
 			await onChanged();
 		} catch (err) {
-			setError(
-				err instanceof ApiError ? err.message : translateError(dict, t, err),
-			);
+			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
 			setPending(false);
 		}
@@ -113,9 +106,7 @@ export function TimezoneSettings({
 			});
 			await onChanged();
 		} catch (err) {
-			setError(
-				err instanceof ApiError ? err.message : translateError(dict, t, err),
-			);
+			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
 			setPending(false);
 		}
@@ -124,7 +115,7 @@ export function TimezoneSettings({
 	return (
 		<Card className="max-w-lg">
 			<CardHeader>
-				<CardTitle>{t("settings.timezone_title")}</CardTitle>
+				<CardTitle>{m.settings_timezone_title()}</CardTitle>
 				<CardDescription>
 					{sourceHint(t, timezoneSource, timezone)}
 				</CardDescription>
@@ -141,9 +132,7 @@ export function TimezoneSettings({
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3">
 				<div className="flex flex-col gap-1.5">
-					<Label htmlFor="account-timezone">
-						{t("settings.timezone_iana")}
-					</Label>
+					<Label htmlFor="account-timezone">{m.settings_timezone_iana()}</Label>
 					<Combobox
 						id="account-timezone"
 						items={items}
@@ -163,18 +152,18 @@ export function TimezoneSettings({
 								<TimezoneLabel option={selected} />
 							) : (
 								<span className="text-muted-foreground">
-									{t("settings.timezone_not_set")}
+									{m.settings_timezone_not_set()}
 								</span>
 							)}
 						</ComboboxTrigger>
 						<ComboboxContent className="flex flex-col">
 							<div className="border-b border-border p-1.5">
 								<ComboboxInput
-									placeholder={t("settings.timezone_search_placeholder")}
+									placeholder={m.settings_timezone_search_placeholder()}
 								/>
 							</div>
 							<ComboboxEmpty>
-								{t("settings.timezone_search_empty")}
+								{m.settings_timezone_search_empty()}
 							</ComboboxEmpty>
 							<ComboboxList>
 								{(item: TimezoneOption) => (
@@ -188,7 +177,7 @@ export function TimezoneSettings({
 				</div>
 				<div className="flex items-center justify-between gap-3">
 					<p className="text-xs text-muted-foreground">
-						{t("settings.timezone_browser", {
+						{m.settings_timezone_browser({
 							timezone: browserTimezone(),
 						})}
 					</p>
@@ -199,7 +188,7 @@ export function TimezoneSettings({
 						disabled={pending || timezone === browserTimezone()}
 						onClick={() => void onReset()}
 					>
-						{t("settings.timezone_reset")}
+						{m.settings_timezone_reset()}
 					</Button>
 				</div>
 				{error ? (

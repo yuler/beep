@@ -1,7 +1,6 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { Globe, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
-
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { fetchMe } from "@/lib/api/session";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { getGravatarUrl } from "@/lib/gravatar";
-import { useTranslation } from "@/lib/i18n";
+import * as m from "@/locale/paraglide/messages";
 
 const myRoute = getRouteApi("/my");
 
@@ -26,7 +25,6 @@ export const Route = createFileRoute("/my/settings")({
 });
 
 function MySettingsPage() {
-	const { t } = useTranslation();
 	const { account } = myRoute.useRouteContext();
 	const me = Route.useLoaderData();
 	const identity = me.identity;
@@ -40,30 +38,30 @@ function MySettingsPage() {
 	}, [identity.email]);
 
 	const initials = identity.email.charAt(0).toUpperCase() || "U";
-	const gravatarLabel = t("term.gravatar");
-	const avatarHintParts = t("my.avatar_gravatar_hint").split(gravatarLabel);
+	const gravatarLabel = m.term_gravatar();
+	const avatarHintParts = m.my_avatar_gravatar_hint().split(gravatarLabel);
 
 	return (
 		<>
 			<DashboardHeader
 				breadcrumbs={[
 					{
-						label: t("nav.home"),
+						label: m.nav_home(),
 						to: "/$account_slug",
 						params: { account_slug: account.slug },
 					},
-					{ label: t("my.personal_settings") },
-					{ label: t("my.profile_preferences"), isCurrentPage: true },
+					{ label: m.my_personal_settings() },
+					{ label: m.my_profile_preferences(), isCurrentPage: true },
 				]}
 			/>
 
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
 				<div>
 					<h1 className="font-heading text-2xl font-semibold tracking-tight">
-						{t("my.personal_settings")}
+						{m.my_personal_settings()}
 					</h1>
 					<p className="mt-1 text-sm text-muted-foreground">
-						{t("my.profile_subtitle")}
+						{m.my_profile_subtitle()}
 					</p>
 				</div>
 
@@ -71,10 +69,10 @@ function MySettingsPage() {
 					<Card>
 						<CardHeader>
 							<CardTitle className="text-lg">
-								{t("my.profile_information")}
+								{m.my_profile_information()}
 							</CardTitle>
 							<CardDescription>
-								{t("my.public_avatar_description")}
+								{m.my_public_avatar_description()}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-6">
@@ -84,7 +82,7 @@ function MySettingsPage() {
 									target="_blank"
 									rel="noreferrer"
 									className="group/avatar-link transition-opacity hover:opacity-85"
-									title={t("my.avatar_gravatar_title")}
+									title={m.my_avatar_gravatar_title()}
 								>
 									<Avatar size="lg" className="size-16 border border-border">
 										{avatarUrl ? (
@@ -96,7 +94,7 @@ function MySettingsPage() {
 									</Avatar>
 								</a>
 								<div className="space-y-1">
-									<p className="font-medium leading-none">{t("my.avatar")}</p>
+									<p className="font-medium leading-none">{m.my_avatar()}</p>
 									<p className="text-xs text-muted-foreground">
 										{avatarHintParts[0]}
 										<a
@@ -115,7 +113,7 @@ function MySettingsPage() {
 							<div className="space-y-2">
 								<Label htmlFor="email" className="flex items-center gap-2">
 									<Mail className="size-4 text-muted-foreground" />
-									{t("my.email_address")}
+									{m.my_email_address()}
 								</Label>
 								<div className="flex items-center gap-2">
 									<div className="flex h-9 flex-1 items-center rounded-md border border-input bg-muted/40 px-3 font-mono text-sm text-foreground select-all">
@@ -123,8 +121,8 @@ function MySettingsPage() {
 									</div>
 								</div>
 								<p className="text-xs text-muted-foreground">
-									{t("my.email_identity_hint", {
-										beep: t("term.beep_capitalized"),
+									{m.my_email_identity_hint({
+										beep: m.term_beep_capitalized(),
 									})}
 								</p>
 							</div>
@@ -133,9 +131,9 @@ function MySettingsPage() {
 
 					<Card>
 						<CardHeader>
-							<CardTitle className="text-lg">{t("my.preferences")}</CardTitle>
+							<CardTitle className="text-lg">{m.my_preferences()}</CardTitle>
 							<CardDescription>
-								{t("my.preferences_description")}
+								{m.my_preferences_description()}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
@@ -143,10 +141,10 @@ function MySettingsPage() {
 								<div className="flex items-center justify-between">
 									<Label htmlFor="language" className="flex items-center gap-2">
 										<Globe className="size-4 text-muted-foreground" />
-										{t("my.language")}
+										{m.my_language()}
 									</Label>
 									<Badge variant="secondary" className="text-xs font-normal">
-										{t("my.english_only")}
+										{m.my_english_only()}
 									</Badge>
 								</div>
 								<select
@@ -155,10 +153,10 @@ function MySettingsPage() {
 									className="flex h-9 w-full rounded-md border border-input bg-muted/40 px-3 py-1 text-sm shadow-xs disabled:cursor-not-allowed disabled:opacity-75"
 									value="en"
 								>
-									<option value="en">{t("my.english_us")}</option>
+									<option value="en">{m.my_english_us()}</option>
 								</select>
 								<p className="text-xs text-muted-foreground">
-									{t("my.languages_future")}
+									{m.my_languages_future()}
 								</p>
 							</div>
 						</CardContent>
