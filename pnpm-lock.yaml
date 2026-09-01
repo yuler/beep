@@ -99,12 +99,6 @@ importers:
         specifier: ^8.0.0
         version: 8.2.0(@types/node@22.20.1)(jiti@2.7.0)
 
-  packages/locales:
-    devDependencies:
-      typescript:
-        specifier: ^6.0.2
-        version: 6.0.3
-
 packages:
 
   '@babel/code-frame@7.27.1':
