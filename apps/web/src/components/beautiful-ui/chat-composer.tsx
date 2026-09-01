@@ -70,7 +70,7 @@ export function ChatComposer({
 	);
 	const [phase, setPhase] = useState<Phase>("done");
 	const [draft, setDraft] = useState("");
-	const [submitted, setSubmitted] = useState(() =>
+	const [submitted, setSubmitted] = useState<string>(() =>
 		m.dev_mock_starter_message(),
 	);
 	const [tab, setTab] = useState<"beeps" | "history">("beeps");
