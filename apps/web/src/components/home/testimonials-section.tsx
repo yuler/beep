@@ -1,5 +1,5 @@
 import { Star } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { m } from "@/locale/paraglide/messages";
@@ -8,25 +8,28 @@ const STARS = [1, 2, 3, 4, 5] as const;
 
 const testimonials = [
 	{
-		id: "alex",
+		id: "yuler",
 		quote: m.marketing_testimonial_1_quote,
 		author: m.marketing_testimonial_1_author,
 		role: m.marketing_testimonial_1_role,
-		initials: "AC",
+		avatar: "/avatars/yuler.png",
+		initials: "YU",
 	},
 	{
-		id: "sarah",
+		id: "jianwu",
 		quote: m.marketing_testimonial_2_quote,
 		author: m.marketing_testimonial_2_author,
 		role: m.marketing_testimonial_2_role,
-		initials: "SL",
+		avatar: "/avatars/jianwu.png",
+		initials: "JW",
 	},
 	{
-		id: "marcus",
+		id: "gonghui",
 		quote: m.marketing_testimonial_3_quote,
 		author: m.marketing_testimonial_3_author,
 		role: m.marketing_testimonial_3_role,
-		initials: "MV",
+		avatar: "/avatars/gonghui.png",
+		initials: "GH",
 	},
 ] as const;
 
@@ -49,7 +52,7 @@ export function TestimonialsSection() {
 
 				{/* Testimonial Cards */}
 				<div className="mt-14 grid gap-6 md:grid-cols-3">
-					{testimonials.map(({ id, quote, author, role, initials }) => (
+					{testimonials.map(({ id, quote, author, role, avatar, initials }) => (
 						<Card
 							key={id}
 							className="relative flex flex-col justify-between overflow-hidden border-border bg-card p-6 shadow-xs transition-shadow hover:shadow-md"
@@ -74,6 +77,7 @@ export function TestimonialsSection() {
 							{/* Author Info */}
 							<div className="mt-6 flex items-center gap-3 border-t border-border/60 pt-4">
 								<Avatar size="sm">
+									<AvatarImage src={avatar} alt={author()} />
 									<AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
 										{initials}
 									</AvatarFallback>
