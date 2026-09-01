@@ -27,11 +27,19 @@ export function AuthPending() {
 
 export function AuthLayout({ children }: { children: ReactNode }) {
 	return (
-		<div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
+		<div className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background p-6 md:p-10">
+			{/* Subtle background ambient glow */}
+			<div
+				className="pointer-events-none absolute inset-x-0 top-0 -z-10 flex transform-gpu justify-center overflow-hidden blur-3xl"
+				aria-hidden="true"
+			>
+				<div className="aspect-[1155/678] w-[72.1875rem] flex-none bg-gradient-to-tr from-primary/20 via-primary/5 to-transparent opacity-60 dark:opacity-30" />
+			</div>
+
 			<div className="absolute top-6 left-6 flex items-center gap-4">
 				<Link
 					to="/"
-					className="text-sm text-muted-foreground hover:text-foreground"
+					className="text-sm text-muted-foreground transition-colors hover:text-foreground"
 				>
 					{m.common_back()}
 				</Link>
@@ -55,16 +63,20 @@ export function AuthCard({
 	className?: string;
 }) {
 	return (
-		<Card className={cn("border border-border shadow-xs", className)}>
+		<Card
+			className={cn(
+				"border border-border/80 bg-card/90 shadow-sm backdrop-blur-xs",
+				className,
+			)}
+		>
 			<CardHeader className="flex flex-col items-center gap-2 text-center">
 				<Link
 					to="/"
 					aria-label={m.term_beep()}
-					className="mb-1 text-foreground"
+					className="mb-1 inline-flex items-center gap-2 font-semibold tracking-tight text-foreground"
 				>
-					<span className="inline-flex size-10 items-center justify-center rounded-lg bg-foreground text-background">
-						<LogoMark className="size-6" />
-					</span>
+					<LogoMark className="size-6" />
+					<span>{m.term_beep()}</span>
 				</Link>
 				<CardDescription>{description}</CardDescription>
 			</CardHeader>
