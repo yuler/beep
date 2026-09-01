@@ -54,13 +54,17 @@ export function FaqSection() {
 				<div className="mt-12 divide-y divide-border/60 rounded-xl border border-border bg-card shadow-xs">
 					{faqs.map(({ q, a }, index) => {
 						const isOpen = openIndex === index;
+						const questionId = `faq-question-${index}`;
+						const answerId = `faq-answer-${index}`;
 						return (
 							<div key={q()} className="group">
 								<button
 									type="button"
+									id={questionId}
 									onClick={() => toggleFaq(index)}
 									className="flex w-full items-center justify-between gap-4 p-5 text-left transition-colors hover:bg-muted/40"
 									aria-expanded={isOpen}
+									aria-controls={answerId}
 								>
 									<span className="font-heading text-base font-medium text-foreground">
 										{q()}
@@ -70,10 +74,16 @@ export function FaqSection() {
 											"size-4 shrink-0 text-muted-foreground transition-transform duration-200",
 											isOpen && "rotate-180 text-primary",
 										)}
+										aria-hidden="true"
 									/>
 								</button>
 								{isOpen && (
-									<div className="px-5 pb-5 pt-1 text-sm leading-relaxed text-muted-foreground">
+									<div
+										id={answerId}
+										role="region"
+										aria-labelledby={questionId}
+										className="px-5 pb-5 pt-1 text-sm leading-relaxed text-muted-foreground"
+									>
 										{a()}
 									</div>
 								)}

@@ -67,7 +67,7 @@ export function HowItWorksSection() {
 
 							{index < steps.length - 1 && (
 								<div className="mt-6 hidden items-center gap-1 text-xs font-medium text-muted-foreground md:flex">
-									<span>Next step</span>
+									<span>{m.marketing_how_it_works_next_step()}</span>
 									<ArrowRight className="size-3.5" />
 								</div>
 							)}
