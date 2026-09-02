@@ -22,6 +22,16 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
+function resolveClassName(className: unknown): string | undefined {
+	return typeof className === "string" ? className : undefined;
+}
+
+function resolveStyle(style: unknown): React.CSSProperties | undefined {
+	return style && typeof style !== "function"
+		? (style as React.CSSProperties)
+		: undefined;
+}
+
 interface ResponsiveDialogProps {
 	children: React.ReactNode;
 	open?: boolean;
@@ -62,7 +72,13 @@ function ResponsiveDialogTrigger({
 }: React.ComponentProps<typeof DialogTrigger>) {
 	const isMobile = useIsMobile();
 	if (isMobile) {
-		return <DrawerTrigger {...props}>{children}</DrawerTrigger>;
+		return (
+			<DrawerTrigger
+				{...(props as React.ComponentProps<typeof DrawerTrigger>)}
+			>
+				{children}
+			</DrawerTrigger>
+		);
 	}
 	return <DialogTrigger {...props}>{children}</DialogTrigger>;
 }
@@ -73,7 +89,11 @@ function ResponsiveDialogClose({
 }: React.ComponentProps<typeof DialogClose>) {
 	const isMobile = useIsMobile();
 	if (isMobile) {
-		return <DrawerClose {...props}>{children}</DrawerClose>;
+		return (
+			<DrawerClose {...(props as React.ComponentProps<typeof DrawerClose>)}>
+				{children}
+			</DrawerClose>
+		);
 	}
 	return <DialogClose {...props}>{children}</DialogClose>;
 }
@@ -82,6 +102,7 @@ function ResponsiveDialogContent({
 	className,
 	children,
 	showCloseButton = true,
+	style,
 	...props
 }: React.ComponentProps<typeof DialogContent>) {
 	const isMobile = useIsMobile();
@@ -91,9 +112,10 @@ function ResponsiveDialogContent({
 			<DrawerContent
 				className={cn(
 					"max-h-[90dvh] flex flex-col focus-visible:outline-none",
-					className,
+					resolveClassName(className),
 				)}
-				{...props}
+				style={resolveStyle(style)}
+				{...(props as React.ComponentProps<typeof DrawerContent>)}
 			>
 				{children}
 			</DrawerContent>
@@ -160,7 +182,12 @@ function ResponsiveDialogTitle({
 }: React.ComponentProps<typeof DialogTitle>) {
 	const isMobile = useIsMobile();
 	if (isMobile) {
-		return <DrawerTitle className={className} {...props} />;
+		return (
+			<DrawerTitle
+				className={resolveClassName(className)}
+				{...(props as React.ComponentProps<typeof DrawerTitle>)}
+			/>
+		);
 	}
 	return <DialogTitle className={className} {...props} />;
 }
@@ -171,7 +198,12 @@ function ResponsiveDialogDescription({
 }: React.ComponentProps<typeof DialogDescription>) {
 	const isMobile = useIsMobile();
 	if (isMobile) {
-		return <DrawerDescription className={className} {...props} />;
+		return (
+			<DrawerDescription
+				className={resolveClassName(className)}
+				{...(props as React.ComponentProps<typeof DrawerDescription>)}
+			/>
+		);
 	}
 	return <DialogDescription className={className} {...props} />;
 }
