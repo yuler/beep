@@ -6,6 +6,7 @@ import {
 	KeyRound,
 	LayoutDashboard,
 	Mail,
+	Server,
 	Settings,
 	User,
 } from "lucide-react";
@@ -50,6 +51,7 @@ export function DashboardSidebar({
 	const isMy = pathname.startsWith("/my");
 	const homePath = `/${slug}`;
 	const beepsPath = `/${slug}/beeps`;
+	const runnersPath = `/${slug}/runners`;
 	const settingsPath = `/${slug}/settings`;
 	const lettersPath = "/dev/letters";
 	const jobsPath = "/admin/jobs";
@@ -203,6 +205,25 @@ export function DashboardSidebar({
 										>
 											<Activity />
 											<span>{m.nav_beepers()}</span>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											isActive={
+												pathname === runnersPath ||
+												pathname.startsWith(`${runnersPath}/`)
+											}
+											tooltip={m.nav_runners()}
+											render={
+												<Link
+													to="/$account_slug/runners"
+													params={{ account_slug: slug }}
+													onClick={closeMobileSidebar}
+												/>
+											}
+										>
+											<Server />
+											<span>{m.nav_runners()}</span>
 										</SidebarMenuButton>
 									</SidebarMenuItem>
 									<SidebarMenuItem>

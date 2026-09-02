@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { BeeperList } from "@/components/beepers/beeper-list";
+import { RunnerRoutingPicker } from "@/components/beepers/runner-routing-picker";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ import {
 	fetchBeepers,
 } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
+import { fetchRunners } from "@/lib/api/runners";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { translateError } from "@/lib/i18n-labels";
 import { browserTimezone } from "@/lib/timezone";
@@ -53,11 +55,13 @@ const accountRoute = getRouteApi("/$account_slug");
 export const Route = createFileRoute("/$account_slug/beepers")({
 	loader: withAuthRedirects(async ({ params }) => {
 		const slug = params?.account_slug ?? "";
-		const [{ beeper_apps: beeperApps }, { beepers }] = await Promise.all([
-			fetchBeeperApps(),
-			fetchBeepers(slug),
-		]);
-		return { beeperApps, beepers };
+		const [{ beeper_apps: beeperApps }, { beepers }, { runners }] =
+			await Promise.all([
+				fetchBeeperApps(),
+				fetchBeepers(slug),
+				fetchRunners(slug),
+			]);
+		return { beeperApps, beepers, runners };
 	}),
 	component: BeepersPage,
 });
@@ -198,13 +202,15 @@ function BeeperAppCard({
 function BeepersPage() {
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
-	const { beeperApps, beepers } = Route.useLoaderData();
+	const { beeperApps, beepers, runners } = Route.useLoaderData();
 	const [selectedBeeperApp, setSelectedBeeperApp] = useState<BeeperApp | null>(
 		null,
 	);
 	const [formTitle, setFormTitle] = useState("");
 	const [formBody, setFormBody] = useState("");
 	const [formCron, setFormCron] = useState("");
+	const [formRunnerId, setFormRunnerId] = useState<string | null>(null);
+	const [formRunnerTag, setFormRunnerTag] = useState<string | null>(null);
 	const [formInputs, setFormInputs] = useState<Record<string, unknown>>({});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -214,6 +220,8 @@ function BeepersPage() {
 		setFormTitle(`${beeperApp.name}`);
 		setFormBody("");
 		setFormCron(beeperApp.default_cron || "*/5 * * * *");
+		setFormRunnerId(null);
+		setFormRunnerTag(null);
 		const initialInputs: Record<string, unknown> = {};
 		for (const input of beeperApp.inputs) {
 			initialInputs[input.name] =
@@ -237,6 +245,8 @@ function BeepersPage() {
 				cron: formCron.trim(),
 				timezone: browserTimezone(),
 				beeper_app_id: selectedBeeperApp.id,
+				runner_id: formRunnerId,
+				runner_tag: formRunnerTag,
 				config: formInputs,
 			});
 
@@ -426,6 +436,17 @@ function BeepersPage() {
 											/>
 										</div>
 									))}
+
+									<RunnerRoutingPicker
+										runners={runners}
+										runnerId={formRunnerId}
+										runnerTag={formRunnerTag}
+										onChange={({ runner_id, runner_tag }) => {
+											setFormRunnerId(runner_id);
+											setFormRunnerTag(runner_tag);
+										}}
+										disabled={submitting}
+									/>
 
 									{error ? (
 										<p className="text-sm text-destructive" role="alert">

@@ -19,6 +19,7 @@ import { Route as SignRouteImport } from './routes/sign'
 import { Route as Account_slugIndexRouteImport } from './routes/$account_slug/index'
 import { Route as Account_slugBeepersRouteImport } from './routes/$account_slug/beepers'
 import { Route as Account_slugBeepsRouteImport } from './routes/$account_slug/beeps'
+import { Route as Account_slugRunnersRouteImport } from './routes/$account_slug/runners'
 import { Route as Account_slugSettingsRouteImport } from './routes/$account_slug/settings'
 import { Route as AdminJobsRouteImport } from './routes/admin/jobs'
 import { Route as AdminStatsRouteImport } from './routes/admin/stats'
@@ -78,6 +79,11 @@ const Account_slugBeepersRoute = Account_slugBeepersRouteImport.update({
 const Account_slugBeepsRoute = Account_slugBeepsRouteImport.update({
   id: '/beeps',
   path: '/beeps',
+  getParentRoute: () => Account_slugRoute,
+} as any)
+const Account_slugRunnersRoute = Account_slugRunnersRouteImport.update({
+  id: '/runners',
+  path: '/runners',
   getParentRoute: () => Account_slugRoute,
 } as any)
 const Account_slugSettingsRoute = Account_slugSettingsRouteImport.update({
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/sign': typeof SignRouteWithChildren
   '/$account_slug/beepers': typeof Account_slugBeepersRoute
   '/$account_slug/beeps': typeof Account_slugBeepsRoute
+  '/$account_slug/runners': typeof Account_slugRunnersRoute
   '/$account_slug/settings': typeof Account_slugSettingsRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByTo {
   '/my': typeof MyRouteWithChildren
   '/$account_slug/beepers': typeof Account_slugBeepersRoute
   '/$account_slug/beeps': typeof Account_slugBeepsRoute
+  '/$account_slug/runners': typeof Account_slugRunnersRoute
   '/$account_slug/settings': typeof Account_slugSettingsRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/sign': typeof SignRouteWithChildren
   '/$account_slug/beepers': typeof Account_slugBeepersRoute
   '/$account_slug/beeps': typeof Account_slugBeepsRoute
+  '/$account_slug/runners': typeof Account_slugRunnersRoute
   '/$account_slug/settings': typeof Account_slugSettingsRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
@@ -209,6 +218,7 @@ export interface FileRouteTypes {
     | '/sign'
     | '/$account_slug/beepers'
     | '/$account_slug/beeps'
+    | '/$account_slug/runners'
     | '/$account_slug/settings'
     | '/admin/jobs'
     | '/admin/stats'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/my'
     | '/$account_slug/beepers'
     | '/$account_slug/beeps'
+    | '/$account_slug/runners'
     | '/$account_slug/settings'
     | '/admin/jobs'
     | '/admin/stats'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/sign'
     | '/$account_slug/beepers'
     | '/$account_slug/beeps'
+    | '/$account_slug/runners'
     | '/$account_slug/settings'
     | '/admin/jobs'
     | '/admin/stats'
@@ -346,6 +358,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Account_slugBeepsRouteImport
       parentRoute: typeof Account_slugRoute
     }
+    '/$account_slug/runners': {
+      id: '/$account_slug/runners'
+      path: '/runners'
+      fullPath: '/$account_slug/runners'
+      preLoaderRoute: typeof Account_slugRunnersRouteImport
+      parentRoute: typeof Account_slugRoute
+    }
     '/$account_slug/settings': {
       id: '/$account_slug/settings'
       path: '/settings'
@@ -422,6 +441,7 @@ declare module '@tanstack/react-router' {
 interface Account_slugRouteChildren {
   Account_slugBeepersRoute: typeof Account_slugBeepersRoute
   Account_slugBeepsRoute: typeof Account_slugBeepsRoute
+  Account_slugRunnersRoute: typeof Account_slugRunnersRoute
   Account_slugSettingsRoute: typeof Account_slugSettingsRoute
   Account_slugIndexRoute: typeof Account_slugIndexRoute
   Account_slugBeepersBeeperIdRoute: typeof Account_slugBeepersBeeperIdRoute
@@ -431,6 +451,7 @@ interface Account_slugRouteChildren {
 const Account_slugRouteChildren: Account_slugRouteChildren = {
   Account_slugBeepersRoute: Account_slugBeepersRoute,
   Account_slugBeepsRoute: Account_slugBeepsRoute,
+  Account_slugRunnersRoute: Account_slugRunnersRoute,
   Account_slugSettingsRoute: Account_slugSettingsRoute,
   Account_slugIndexRoute: Account_slugIndexRoute,
   Account_slugBeepersBeeperIdRoute: Account_slugBeepersBeeperIdRoute,

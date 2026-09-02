@@ -425,4 +425,39 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     titles = response.parsed_body["beepers"].map { |row| row["title"] }
     assert_equal [ "Mine" ], titles
   end
+
+  test "create and update support runner_id and runner_tag" do
+    runner = @account.runners.create!(name: "Test-Runner-01", tags: [ "intranet" ])
+
+    post "/api/v1/#{@account.slug}/beepers",
+      params: {
+        beeper_app_slug: "site-uptime",
+        title: "Intranet Service",
+        cron: "*/5 * * * *",
+        runner_id: runner.id,
+        config: { "target_url" => "http://192.168.1.1" }
+      },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :created
+    body = response.parsed_body
+    assert_equal runner.id, body["runner_id"]
+    assert_equal "Test-Runner-01", body["runner"]["name"]
+
+    beeper_id = body["id"]
+
+    patch "/api/v1/#{@account.slug}/beepers/#{beeper_id}",
+      params: {
+        runner_id: nil,
+        runner_tag: "intranet"
+      },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    body = response.parsed_body
+    assert_nil body["runner_id"]
+    assert_equal "intranet", body["runner_tag"]
+  end
 end

@@ -414,6 +414,29 @@ function BeeperDetailPage() {
 							) : null}
 							<div className="flex justify-between items-center gap-4">
 								<span className="text-muted-foreground">
+									{m.beepers_routing_info()}
+								</span>
+								<span className="text-right">
+									{beeper.runner ? (
+										<Badge variant="outline" className="text-[11px] font-mono">
+											{m.beepers_routed_node({ name: beeper.runner.name })}
+										</Badge>
+									) : beeper.runner_tag ? (
+										<Badge variant="outline" className="text-[11px] font-mono">
+											{m.beepers_routed_tag({ tag: beeper.runner_tag })}
+										</Badge>
+									) : (
+										<Badge
+											variant="secondary"
+											className="text-[11px] font-normal"
+										>
+											{m.beepers_routed_core()}
+										</Badge>
+									)}
+								</span>
+							</div>
+							<div className="flex justify-between items-center gap-4">
+								<span className="text-muted-foreground">
 									{m.beeps_channels()}
 								</span>
 								<span className="text-right">
