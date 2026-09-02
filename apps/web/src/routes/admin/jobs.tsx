@@ -141,43 +141,71 @@ function JobsPage() {
 								{m.admin_jobs_empty()}
 							</p>
 						) : (
-							<div className="overflow-x-auto">
-								<table className="w-full text-left text-sm">
-									<thead className="border-b text-muted-foreground">
-										<tr>
-											<th className="px-2 py-2 font-medium">
-												{m.admin_jobs_class()}
-											</th>
-											<th className="px-2 py-2 font-medium">
-												{m.admin_jobs_queue()}
-											</th>
-											<th className="px-2 py-2 font-medium">
-												{m.admin_jobs_status()}
-											</th>
-											<th className="px-2 py-2 font-medium">
-												{m.admin_jobs_created()}
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										{data.recent.map((job) => (
-											<tr
-												key={String(job.id)}
-												className="border-b last:border-0"
-											>
-												<td className="px-2 py-2 font-mono text-xs">
+							<>
+								{/* Mobile Job Cards (< md) */}
+								<div className="flex flex-col gap-2.5 md:hidden">
+									{data.recent.map((job) => (
+										<div
+											key={String(job.id)}
+											className="flex flex-col gap-1.5 rounded-lg border border-border/80 bg-muted/20 p-3 text-xs"
+										>
+											<div className="flex items-start justify-between gap-2">
+												<span className="font-mono text-foreground font-medium break-all">
 													{job.class_name}
-												</td>
-												<td className="px-2 py-2">{job.queue_name}</td>
-												<td className="px-2 py-2">{jobStatusLabel(job)}</td>
-												<td className="px-2 py-2 text-muted-foreground">
-													{new Date(job.created_at).toLocaleString()}
-												</td>
+												</span>
+												<span className="shrink-0 font-medium px-2 py-0.5 rounded-full bg-muted text-[11px]">
+													{jobStatusLabel(job)}
+												</span>
+											</div>
+											<div className="flex items-center justify-between gap-2 text-muted-foreground pt-1 border-t border-border/40 text-[11px]">
+												<span>
+													{m.admin_jobs_queue()}: {job.queue_name}
+												</span>
+												<span>{new Date(job.created_at).toLocaleString()}</span>
+											</div>
+										</div>
+									))}
+								</div>
+
+								{/* Desktop Table View (>= md) */}
+								<div className="hidden md:block overflow-x-auto">
+									<table className="w-full text-left text-sm">
+										<thead className="border-b text-muted-foreground">
+											<tr>
+												<th className="px-2 py-2 font-medium">
+													{m.admin_jobs_class()}
+												</th>
+												<th className="px-2 py-2 font-medium">
+													{m.admin_jobs_queue()}
+												</th>
+												<th className="px-2 py-2 font-medium">
+													{m.admin_jobs_status()}
+												</th>
+												<th className="px-2 py-2 font-medium">
+													{m.admin_jobs_created()}
+												</th>
 											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
+										</thead>
+										<tbody>
+											{data.recent.map((job) => (
+												<tr
+													key={String(job.id)}
+													className="border-b last:border-0"
+												>
+													<td className="px-2 py-2 font-mono text-xs">
+														{job.class_name}
+													</td>
+													<td className="px-2 py-2">{job.queue_name}</td>
+													<td className="px-2 py-2">{jobStatusLabel(job)}</td>
+													<td className="px-2 py-2 text-muted-foreground">
+														{new Date(job.created_at).toLocaleString()}
+													</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							</>
 						)}
 					</CardContent>
 				</Card>

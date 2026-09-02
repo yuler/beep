@@ -184,7 +184,7 @@ export function BeepQuickCreate({
 								<Sparkles className="size-3.5" />
 								{m.beeps_prompt_ai_assistant()}
 							</Label>
-							<span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+							<span className="hidden sm:flex items-center gap-1 text-[11px] text-muted-foreground">
 								<kbd className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded border border-border bg-muted/80 px-1 font-mono text-[10px] font-medium text-foreground shadow-2xs">
 									⌘
 								</kbd>
@@ -529,7 +529,7 @@ export function BeepQuickCreate({
 									Boolean(fieldErrors.run_at))) ||
 							(kind === "recurring" && Boolean(fieldErrors.cron))
 						}
-						className="w-fit"
+						className="w-full sm:w-fit"
 					>
 						{submitting
 							? kind === "once" && sendNow

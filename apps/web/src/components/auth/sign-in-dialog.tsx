@@ -5,13 +5,14 @@ import { SignInForm } from "@/components/auth/sign-in-form";
 import { VerifyForm } from "@/components/auth/verify-form";
 import { Button } from "@/components/ui/button";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
+	ResponsiveDialog,
+	ResponsiveDialogBody,
+	ResponsiveDialogContent,
+	ResponsiveDialogDescription,
+	ResponsiveDialogHeader,
+	ResponsiveDialogTitle,
+	ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import { m } from "@/locale/paraglide/messages";
 
 type ButtonProps = ComponentProps<typeof Button>;
@@ -44,61 +45,63 @@ export function SignInDialog({
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={handleOpenChange} disablePointerDismissal>
-			<DialogTrigger
+		<ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
+			<ResponsiveDialogTrigger
 				render={<Button size={size} variant={variant} className={className} />}
 			>
 				{resolvedLabel}
-			</DialogTrigger>
-			<DialogContent className="sm:max-w-md">
-				<DialogHeader>
-					<DialogTitle>
+			</ResponsiveDialogTrigger>
+			<ResponsiveDialogContent className="sm:max-w-md">
+				<ResponsiveDialogHeader>
+					<ResponsiveDialogTitle>
 						{step === "email" ? m.auth_sign_in() : m.auth_check_email()}
-					</DialogTitle>
-					<DialogDescription>
+					</ResponsiveDialogTitle>
+					<ResponsiveDialogDescription>
 						{step === "email"
 							? m.auth_sign_in_description()
 							: email
 								? m.auth_verify_description_email({ email })
 								: m.auth_verify_description()}
-					</DialogDescription>
-				</DialogHeader>
-				{step === "email" ? (
-					<SignInForm
-						key={email || "email"}
-						idPrefix="dialog-sign"
-						initialEmail={email}
-						stayInPlace
-						onSuccess={({ email: nextEmail }) => {
-							setEmail(nextEmail);
-							setStep("verify");
-						}}
-					/>
-				) : (
-					<VerifyForm
-						idPrefix="dialog-verify"
-						onBack={() => {
-							if (import.meta.env.DEV) {
-								sessionStorage.removeItem("beep.dev_magic_link_code");
-							}
-							setStep("email");
-						}}
-						onVerified={() => setOpen(false)}
-					/>
-				)}
-				{step === "email" ? (
-					<p className="text-center text-xs text-muted-foreground">
-						{m.auth_prefer_full_page()}{" "}
-						<Link
-							to="/sign"
-							className="underline underline-offset-4"
-							onClick={() => handleOpenChange(false)}
-						>
-							{m.auth_open_sign_in()}
-						</Link>
-					</p>
-				) : null}
-			</DialogContent>
-		</Dialog>
+					</ResponsiveDialogDescription>
+				</ResponsiveDialogHeader>
+				<ResponsiveDialogBody>
+					{step === "email" ? (
+						<SignInForm
+							key={email || "email"}
+							idPrefix="dialog-sign"
+							initialEmail={email}
+							stayInPlace
+							onSuccess={({ email: nextEmail }) => {
+								setEmail(nextEmail);
+								setStep("verify");
+							}}
+						/>
+					) : (
+						<VerifyForm
+							idPrefix="dialog-verify"
+							onBack={() => {
+								if (import.meta.env.DEV) {
+									sessionStorage.removeItem("beep.dev_magic_link_code");
+								}
+								setStep("email");
+							}}
+							onVerified={() => setOpen(false)}
+						/>
+					)}
+					{step === "email" ? (
+						<p className="text-center text-xs text-muted-foreground pt-2">
+							{m.auth_prefer_full_page()}{" "}
+							<Link
+								to="/sign"
+								className="underline underline-offset-4"
+								onClick={() => handleOpenChange(false)}
+							>
+								{m.auth_open_sign_in()}
+							</Link>
+						</p>
+					) : null}
+				</ResponsiveDialogBody>
+			</ResponsiveDialogContent>
+		</ResponsiveDialog>
 	);
 }

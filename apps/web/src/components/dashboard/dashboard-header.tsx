@@ -77,7 +77,7 @@ export function DashboardHeader({
 						</BreadcrumbList>
 					</Breadcrumb>
 
-					<div className="ml-auto flex shrink-0 items-center gap-2 pl-4">
+					<div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2 pl-2 sm:pl-4">
 						{actions}
 						<LocaleSwitcher />
 						<ThemeToggle />

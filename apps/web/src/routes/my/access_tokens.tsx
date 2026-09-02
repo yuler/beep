@@ -24,17 +24,18 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	ResponsiveDialog,
+	ResponsiveDialogBody,
+	ResponsiveDialogContent,
+	ResponsiveDialogDescription,
+	ResponsiveDialogFooter,
+	ResponsiveDialogHeader,
+	ResponsiveDialogTitle,
+	ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import {
 	type AccessToken,
 	type AccessTokenPermission,
@@ -142,7 +143,7 @@ function AccessTokensPage() {
 						</p>
 					</div>
 
-					<Dialog
+					<ResponsiveDialog
 						open={isCreateOpen}
 						onOpenChange={(open) => {
 							setIsCreateOpen(open);
@@ -152,51 +153,55 @@ function AccessTokensPage() {
 							}
 						}}
 					>
-						<DialogTrigger render={<Button className="gap-2" />}>
+						<ResponsiveDialogTrigger
+							render={<Button className="gap-2 w-full sm:w-auto" />}
+						>
 							<Plus className="size-4" />
 							{m.my_generate_token()}
-						</DialogTrigger>
+						</ResponsiveDialogTrigger>
 
-						<DialogContent className="sm:max-w-md">
+						<ResponsiveDialogContent className="sm:max-w-md">
 							{createdToken ? (
-								<>
-									<DialogHeader>
-										<DialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500">
+								<div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+									<ResponsiveDialogHeader>
+										<ResponsiveDialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500">
 											<ShieldCheck className="size-5" />
 											{m.my_token_generated()}
-										</DialogTitle>
-										<DialogDescription>
+										</ResponsiveDialogTitle>
+										<ResponsiveDialogDescription>
 											{m.my_token_copy_warning()}
-										</DialogDescription>
-									</DialogHeader>
+										</ResponsiveDialogDescription>
+									</ResponsiveDialogHeader>
 
-									<div className="my-2 flex items-center gap-2">
-										<Input
-											readOnly
-											value={createdToken}
-											className="font-mono text-sm"
-										/>
-										<Button
-											type="button"
-											variant="secondary"
-											onClick={handleCopy}
-											className="shrink-0 gap-1.5"
-										>
-											{hasCopied ? (
-												<>
-													<Check className="size-4 text-emerald-600" />
-													{m.common_copied()}
-												</>
-											) : (
-												<>
-													<Copy className="size-4" />
-													{m.common_copy()}
-												</>
-											)}
-										</Button>
-									</div>
+									<ResponsiveDialogBody>
+										<div className="my-2 flex items-center gap-2">
+											<Input
+												readOnly
+												value={createdToken}
+												className="font-mono text-sm"
+											/>
+											<Button
+												type="button"
+												variant="secondary"
+												onClick={handleCopy}
+												className="shrink-0 gap-1.5"
+											>
+												{hasCopied ? (
+													<>
+														<Check className="size-4 text-emerald-600" />
+														{m.common_copied()}
+													</>
+												) : (
+													<>
+														<Copy className="size-4" />
+														{m.common_copy()}
+													</>
+												)}
+											</Button>
+										</div>
+									</ResponsiveDialogBody>
 
-									<DialogFooter>
+									<ResponsiveDialogFooter>
 										<Button
 											type="button"
 											className="w-full sm:w-auto"
@@ -207,58 +212,65 @@ function AccessTokensPage() {
 										>
 											{m.common_done()}
 										</Button>
-									</DialogFooter>
-								</>
+									</ResponsiveDialogFooter>
+								</div>
 							) : (
-								<form onSubmit={handleCreate} className="space-y-4">
-									<DialogHeader>
-										<DialogTitle>{m.my_generate_new_token()}</DialogTitle>
-										<DialogDescription>
+								<form
+									onSubmit={handleCreate}
+									className="flex flex-col flex-1 min-h-0 overflow-hidden"
+								>
+									<ResponsiveDialogHeader>
+										<ResponsiveDialogTitle>
+											{m.my_generate_new_token()}
+										</ResponsiveDialogTitle>
+										<ResponsiveDialogDescription>
 											{m.my_token_auth_description()}
-										</DialogDescription>
-									</DialogHeader>
+										</ResponsiveDialogDescription>
+									</ResponsiveDialogHeader>
 
-									{createError ? (
-										<div
-											className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-											role="alert"
-										>
-											{createError}
+									<ResponsiveDialogBody>
+										{createError ? (
+											<div
+												className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+												role="alert"
+											>
+												{createError}
+											</div>
+										) : null}
+
+										<div className="space-y-2">
+											<Label htmlFor="token-description">
+												{m.common_description()}
+											</Label>
+											<Input
+												id="token-description"
+												placeholder={m.my_token_description_placeholder()}
+												value={description}
+												onChange={(e) => setDescription(e.target.value)}
+												required
+												autoFocus
+											/>
 										</div>
-									) : null}
 
-									<div className="space-y-2">
-										<Label htmlFor="token-description">
-											{m.common_description()}
-										</Label>
-										<Input
-											id="token-description"
-											placeholder={m.my_token_description_placeholder()}
-											value={description}
-											onChange={(e) => setDescription(e.target.value)}
-											required
-											autoFocus
-										/>
-									</div>
+										<div className="space-y-2">
+											<Label htmlFor="token-permission">
+												{m.common_permission()}
+											</Label>
+											<select
+												id="token-permission"
+												className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+												value={permission}
+												onChange={(e) =>
+													setPermission(e.target.value as AccessTokenPermission)
+												}
+											>
+												<option value="write">{m.my_permission_write()}</option>
+												<option value="read">{m.my_permission_read()}</option>
+											</select>
+										</div>
+									</ResponsiveDialogBody>
 
-									<div className="space-y-2">
-										<Label htmlFor="token-permission">
-											{m.common_permission()}
-										</Label>
-										<select
-											id="token-permission"
-											className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-											value={permission}
-											onChange={(e) =>
-												setPermission(e.target.value as AccessTokenPermission)
-											}
-										>
-											<option value="write">{m.my_permission_write()}</option>
-											<option value="read">{m.my_permission_read()}</option>
-										</select>
-									</div>
-
-									<DialogFooter>
+									<ResponsiveDialogFooter>
 										<Button
 											type="button"
 											variant="outline"
@@ -276,11 +288,11 @@ function AccessTokensPage() {
 												m.my_generate_token()
 											)}
 										</Button>
-									</DialogFooter>
+									</ResponsiveDialogFooter>
 								</form>
 							)}
-						</DialogContent>
-					</Dialog>
+						</ResponsiveDialogContent>
+					</ResponsiveDialog>
 				</div>
 
 				<Card>

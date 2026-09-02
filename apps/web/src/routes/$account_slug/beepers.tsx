@@ -25,16 +25,17 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	ResponsiveDialog,
+	ResponsiveDialogBody,
+	ResponsiveDialogContent,
+	ResponsiveDialogDescription,
+	ResponsiveDialogFooter,
+	ResponsiveDialogHeader,
+	ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import {
 	type BeeperApp,
 	createBeeper,
@@ -305,7 +306,7 @@ function BeepersPage() {
 				) : null}
 
 				{/* 3. Install Configuration Modal Popup */}
-				<Dialog
+				<ResponsiveDialog
 					open={selectedBeeperApp !== null}
 					onOpenChange={(open) => {
 						if (!open && !submitting) {
@@ -313,10 +314,13 @@ function BeepersPage() {
 						}
 					}}
 				>
-					<DialogContent className="sm:max-w-lg">
+					<ResponsiveDialogContent className="sm:max-w-lg">
 						{selectedBeeperApp ? (
-							<form onSubmit={handleInstall} className="flex flex-col gap-4">
-								<DialogHeader>
+							<form
+								onSubmit={handleInstall}
+								className="flex flex-col flex-1 min-h-0 overflow-hidden"
+							>
+								<ResponsiveDialogHeader>
 									<div className="flex items-center gap-3">
 										{(() => {
 											const meta = getBeeperAppMeta(selectedBeeperApp.slug);
@@ -333,19 +337,19 @@ function BeepersPage() {
 											);
 										})()}
 										<div>
-											<DialogTitle className="text-lg">
+											<ResponsiveDialogTitle className="text-lg">
 												{m.beepers_install_title({
 													name: selectedBeeperApp.name,
 												})}
-											</DialogTitle>
-											<DialogDescription>
+											</ResponsiveDialogTitle>
+											<ResponsiveDialogDescription>
 												{m.beepers_install_description()}
-											</DialogDescription>
+											</ResponsiveDialogDescription>
 										</div>
 									</div>
-								</DialogHeader>
+								</ResponsiveDialogHeader>
 
-								<div className="flex flex-col gap-4 py-2">
+								<ResponsiveDialogBody>
 									<div className="flex flex-col gap-2">
 										<Label htmlFor="beeper-title">{m.beepers_title()}</Label>
 										<Input
@@ -432,9 +436,9 @@ function BeepersPage() {
 											{error}
 										</p>
 									) : null}
-								</div>
+								</ResponsiveDialogBody>
 
-								<DialogFooter className="gap-2 sm:gap-0">
+								<ResponsiveDialogFooter className="gap-2 sm:gap-0">
 									<Button
 										type="button"
 										variant="ghost"
@@ -451,11 +455,11 @@ function BeepersPage() {
 									>
 										{submitting ? m.beepers_installing() : m.beepers_install()}
 									</Button>
-								</DialogFooter>
+								</ResponsiveDialogFooter>
 							</form>
 						) : null}
-					</DialogContent>
-				</Dialog>
+					</ResponsiveDialogContent>
+				</ResponsiveDialog>
 			</div>
 		</>
 	);
