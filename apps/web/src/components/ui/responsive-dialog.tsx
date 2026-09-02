@@ -73,9 +73,7 @@ function ResponsiveDialogTrigger({
 	const isMobile = useIsMobile();
 	if (isMobile) {
 		return (
-			<DrawerTrigger
-				{...(props as React.ComponentProps<typeof DrawerTrigger>)}
-			>
+			<DrawerTrigger {...(props as React.ComponentProps<typeof DrawerTrigger>)}>
 				{children}
 			</DrawerTrigger>
 		);
