@@ -90,6 +90,24 @@ class RunnerTest < ActiveSupport::TestCase
     assert_equal "offline", never_seen_runner.reload.status
   end
 
+  test "online? returns true only for active runners seen within OFFLINE_TIMEOUT" do
+    runner = @account.runners.create!(name: "Test-Runner")
+    runner.update_columns(status: "online", last_seen_at: 10.seconds.ago)
+    assert runner.online?
+
+    runner.update_columns(status: "idle", last_seen_at: 10.seconds.ago)
+    assert runner.online?
+
+    runner.update_columns(status: "offline", last_seen_at: 10.seconds.ago)
+    assert_not runner.online?
+
+    runner.update_columns(status: "online", last_seen_at: 70.seconds.ago)
+    assert_not runner.online?
+
+    runner.update_columns(status: "online", last_seen_at: nil)
+    assert_not runner.online?
+  end
+
   test "regenerates token on demand" do
     runner = @account.runners.create!(name: "HQ-Server")
     old_digest = runner.token_digest

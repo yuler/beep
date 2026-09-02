@@ -124,6 +124,131 @@ class BeeperPollerTest < ActiveSupport::TestCase
     end
   end
 
+  test "poll_due_now records error signal and finishes firing when assigned runner is offline" do
+    offline_runner = @account.runners.create!(name: "Offline-Node", status: "offline")
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Runner Offline Probe",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      runner: offline_runner,
+      config: { "status" => "ok" },
+      notification_channels: %w[ email ]
+    )
+    beeper.update_columns(next_run_at: 1.minute.ago, status: "active")
+
+    assert_no_enqueued_jobs only: RunBeeperJob do
+      Beeper.poll_due_now
+    end
+
+    beeper.reload
+    assert beeper.active?
+    assert_equal 1, beeper.runs.count
+    run = beeper.runs.first
+    assert_equal "failed", run.status
+    assert_equal "error", run.signal_status
+    assert_equal "Runner offline", run.signal_result["title"]
+    assert_includes run.signal_result["message"], "Offline-Node"
+    assert_equal 1, beeper.consecutive_failures
+  end
+
+  test "poll_due_now records error signal when no online runners match runner_tag" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Tag Offline Probe",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      runner_tag: "nonexistent-tag",
+      config: { "status" => "ok" },
+      notification_channels: %w[ email ]
+    )
+    beeper.update_columns(next_run_at: 1.minute.ago, status: "active")
+
+    Beeper.poll_due_now
+
+    beeper.reload
+    assert beeper.active?
+    assert_equal 1, beeper.runs.count
+    run = beeper.runs.first
+    assert_equal "failed", run.status
+    assert_equal "error", run.signal_status
+    assert_includes run.signal_result["message"], "nonexistent-tag"
+  end
+
+  test "reclaim_stale handles pending run when online runner becomes offline" do
+    online_runner = @account.runners.create!(name: "Initially-Online")
+    online_runner.update_columns(status: "online", last_seen_at: 5.seconds.ago)
+
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Runner Stale Pending",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      runner: online_runner,
+      config: { "status" => "ok" },
+      notification_channels: %w[ email ]
+    )
+    beeper.update_columns(next_run_at: 1.minute.ago, status: "active")
+
+    # Initial claim while online creates pending run
+    Beeper.poll_due_now
+    beeper.reload
+    assert beeper.firing?
+    assert_equal "pending", beeper.runs.last.status
+
+    # Runner goes offline and beeper firing becomes stale
+    online_runner.update_columns(status: "offline", last_seen_at: 70.seconds.ago)
+    beeper.update_columns(updated_at: 3.minutes.ago)
+
+    Beeper.reclaim_stale_firing
+
+    beeper.reload
+    assert beeper.active?
+    run = beeper.runs.last
+    assert_equal "failed", run.status
+    assert_equal "error", run.signal_status
+    assert_equal "Runner offline", run.signal_result["title"]
+  end
+
+  test "reclaim_stale handles running run that timed out without reporting results" do
+    online_runner = @account.runners.create!(name: "Crash-Node")
+    online_runner.update_columns(status: "online", last_seen_at: 5.seconds.ago)
+
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Runner Crash Test",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      runner: online_runner,
+      config: { "status" => "ok" },
+      notification_channels: %w[ email ]
+    )
+
+    run = beeper.runs.create!(
+      scheduled_for: 10.minutes.ago,
+      status: "running",
+      runner: online_runner,
+      claimed_at: 10.minutes.ago,
+      created_at: 10.minutes.ago,
+      updated_at: 6.minutes.ago
+    )
+    beeper.update_columns(status: "firing", updated_at: 6.minutes.ago)
+
+    Beeper.reclaim_stale_firing
+
+    beeper.reload
+    assert beeper.active?
+    run.reload
+    assert_equal "failed", run.status
+    assert_equal "error", run.signal_status
+    assert_equal "Runner execution timed out", run.signal_result["title"]
+    assert_includes run.signal_result["message"], "Crash-Node"
+  end
+
   private
 
   def echo_manifest

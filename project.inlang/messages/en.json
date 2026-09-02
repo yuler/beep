@@ -715,5 +715,9 @@
   "beepers_routing_info": "Execution Node",
   "beepers_routed_core": "Cloud Core",
   "beepers_routed_node": "Runner: {name}",
-  "beepers_routed_tag": "Tag: {tag}"
+  "beepers_routed_tag": "Tag: {tag}",
+  "beepers_runner_offline_badge": "Offline",
+  "beepers_runner_online_badge": "Online",
+  "beepers_runner_offline_warning": "The designated runner is currently offline. Probe tasks will fail until the runner reconnects.",
+  "beepers_runner_tag_offline_warning": "No online runners found matching tag \"{tag}\". Probe tasks will fail until an active runner with this tag connects."
 }

@@ -715,5 +715,9 @@
   "beepers_routing_info": "执行节点",
   "beepers_routed_core": "云端 Core",
   "beepers_routed_node": "Runner 节点: {name}",
-  "beepers_routed_tag": "Tag 调度: {tag}"
+  "beepers_routed_tag": "Tag 调度: {tag}",
+  "beepers_runner_offline_badge": "离线",
+  "beepers_runner_online_badge": "在线",
+  "beepers_runner_offline_warning": "指定的执行节点当前处于离线状态，在 Runner 恢复连接前探测任务将无法正常下发。",
+  "beepers_runner_tag_offline_warning": "未找到带有 \"{tag}\" 标签且在线的 Runner 节点，在节点上线前探测任务将无法正常下发。"
 }

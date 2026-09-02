@@ -459,5 +459,42 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     body = response.parsed_body
     assert_nil body["runner_id"]
     assert_equal "intranet", body["runner_tag"]
+    assert_equal false, body["has_online_runner"]
+  end
+
+  test "show returns has_online_runner and runner is_online status" do
+    runner = @account.runners.create!(name: "Test-Runner-02", status: "online")
+    runner.update_columns(last_seen_at: 10.seconds.ago)
+
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Online Runner Beeper",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      runner: runner,
+      config: { "target_url" => "http://192.168.1.1" }
+    )
+
+    get "/api/v1/#{@account.slug}/beepers/#{beeper.id}",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    body = response.parsed_body
+    assert_equal true, body["has_online_runner"]
+    assert_equal true, body["runner"]["is_online"]
+
+    # When runner is offline
+    runner.update_columns(status: "offline", last_seen_at: 10.minutes.ago)
+
+    get "/api/v1/#{@account.slug}/beepers/#{beeper.id}",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    body = response.parsed_body
+    assert_equal false, body["has_online_runner"]
+    assert_equal false, body["runner"]["is_online"]
   end
 end

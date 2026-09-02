@@ -54,9 +54,13 @@ beep monorepo
   - [ ] Token 生成采用 `beep_rt_` 前缀 + 24 字节高熵随机串，数据库仅保存 SHA256 哈希值 (`token_digest`)。
   - [ ] `raw_token` 仅在 `create` 或 `regenerate_token!` 时在内存中短暂暴露一次。
   - [ ] `matches_tag?` 正确匹配标签（支持空 tag 全匹配与具体 tag 精确匹配）。
-  - [ ] `Runner.mark_stale_offline!` 超过 60 秒无心跳自动标记为 `offline`。
+  - [ ] `online?` 辅助方法依据状态与 `OFFLINE_TIMEOUT`（60s）精准判定节点可用性。
+  - [ ] `Runner.mark_stale_offline!` 超过 60 秒无心跳自动标记为 `offline`（在后台 `BeeperPollerJob` 中周期自动执行）。
 - [ ] [`core/app/models/beeper.rb`](core/app/models/beeper.rb) 与 [`beeper_run.rb`](core/app/models/beeper_run.rb)
-  - [ ] 当 `requires_runner?` 为真时，`claim_run` 与 `trigger_run!` 不触发 Rails 进程内 Ruby 检查，而是保持 `pending` 状态等待 Runner 抢占。
+  - [ ] `has_online_runner?` 正确识别单个节点或 Tag 匹配的在线 Runner 可用性。
+  - [ ] **离线防卡死机制**：当 `requires_runner?` 且 Runner 处于离线状态时，调度或手动触发立即记录 `status: :error` 信号（"Runner offline"），累加连续失败并更新告警状态机，自动恢复 `active` 并排期下次调度，防止 Beeper 永久卡死在 `firing` 状态。
+  - [ ] **Pending 超时回收**：`reclaim_stale_firing` 对排队超时未被认领或 Runner 失联的任务自动产出离线错误信号并驱动告警。
+  - [ ] **Running 执行超时回收**：对 Runner 领单后崩溃或超时的任务（`RUNNING_STALE_AFTER`）记录执行超时错误信号并驱动告警。
   - [ ] `BeeperRun#record_signal_result!` 统一接入 `Beeper::AlertPolicy` 状态机。
 
 ### 2.2 Core API 端点与安全性 (Security & Core API)
@@ -72,8 +76,9 @@ beep monorepo
 - [ ] [`core/app/controllers/api/v1/runners_controller.rb`](core/app/controllers/api/v1/runners_controller.rb)
   - [ ] 遵循 Jbuilder 规范（无 inline JSON hash），严格按 `Current.account` 权限边界过滤。
   - [ ] 支持 Runner CRUD 与 `regenerate_token`。
-- [ ] [`core/app/controllers/api/v1/beepers_controller.rb`](core/app/controllers/api/v1/beepers_controller.rb)
+- [ ] [`core/app/controllers/api/v1/beepers_controller.rb`](core/app/controllers/api/v1/beepers_controller.rb) & [`core/app/views/api/v1/beepers/_beeper.json.jbuilder`](core/app/views/api/v1/beepers/_beeper.json.jbuilder)
   - [ ] `beeper_params` 与 `update_params` 正确放行 `:runner_id` 与 `:runner_tag`。
+  - [ ] 视图序列化输出 `has_online_runner` 以及 `runner.is_online`、`runner.last_seen_at` 供前端判定。
 
 ### 2.3 Web 管理 UI 与路由交互 (`apps/web`)
 - [ ] **工作区侧边栏导航** ([`apps/web/src/components/dashboard/dashboard-sidebar.tsx`](apps/web/src/components/dashboard/dashboard-sidebar.tsx))
@@ -85,9 +90,11 @@ beep monorepo
 - [ ] **Token 接入与运行引导弹窗** ([`apps/web/src/components/runners/runner-token-modal.tsx`](apps/web/src/components/runners/runner-token-modal.tsx))
   - [ ] 醒目展示高熵 Token 并提示不可再次查看。
   - [ ] 提供一键复制 Docker Run 命令、Docker Compose 配置片段、原生 CLI 命令行。
-- [ ] **Beeper 执行节点路由选择** ([`apps/web/src/components/beepers/runner-routing-picker.tsx`](apps/web/src/components/beepers/runner-routing-picker.tsx))
+- [ ] **Beeper 执行节点路由选择与详情页** ([`apps/web/src/components/beepers/runner-routing-picker.tsx`](apps/web/src/components/beepers/runner-routing-picker.tsx) & [`beepers_.$beeperId.tsx`](apps/web/src/routes/$account_slug/beepers_.$beeperId.tsx))
   - [ ] 三选一模式：云端 Core（默认）、指定特定 Runner 节点（下拉选择）、按 Tag 标签动态调度（输入 Tag）。
-  - [ ] 安装弹窗与编辑弹窗均支持配置路由，Beeper 详情页展示执行节点归属。
+  - [ ] 安装弹窗与编辑弹窗均支持配置路由。
+  - [ ] Beeper 详情页展示执行节点归属及实时在线/离线状态 Badge。
+  - [ ] 当绑定的 Runner 离线或 Tag 无在线节点时，顶部醒目展示离线警告横幅（Warning Banner）。
 
 ### 2.4 Go Runner 客户端与 Docker 打包 (`apps/runner`)
 - [ ] **CLI 体验与命令行入口** ([`main.go`](apps/runner/main.go))
@@ -114,7 +121,7 @@ beep monorepo
 
 ### Step 1: 运行后端、前端与客户端自动化测试
 ```bash
-# 1. 运行 Core 后端全量测试 (包含 Runner 与 Beeper 关联测试)
+# 1. 运行 Core 后端全量测试 (包含 Runner 与 Beeper 关联及离线容错测试)
 cd core && bin/rails test
 
 # 2. 运行 Web 前端类型与 Biome 检查
@@ -155,3 +162,4 @@ cd apps/runner && go build -o ../../bin/beep-runner ./main.go && cd ../..
    - 在 **Execution Target** 选择 **Specific Runner Node**（选择刚刚启动的 Runner）。
    - 安装完成后点击 **Trigger Run**。
 7. 查看终端：Runner 成功领取任务、探活执行并上报结果。Web 端详情页即时展示执行成功的 Run 记录。
+8. **验证离线容错**：终止本地 Runner 进程（或将其状态置为 offline），返回 Beeper 详情页可看到离线警告横幅与 Badge；再次触发任务，系统立即记录 `Runner offline` 错误信号，Beeper 恢复为 Active 并正确计算下一次调度时间。

@@ -61,6 +61,10 @@ class Runner < ApplicationRecord
     Array(tags).map(&:to_s).include?(tag.to_s)
   end
 
+  def online?
+    status.in?(%w[ online idle ]) && last_seen_at.present? && last_seen_at >= OFFLINE_TIMEOUT.ago
+  end
+
   def regenerate_token!
     generate_token
     save!

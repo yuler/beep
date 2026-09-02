@@ -76,12 +76,15 @@ export type Beeper = {
 	last_ping_at?: string | null;
 	runner_id?: string | null;
 	runner_tag?: string | null;
+	has_online_runner?: boolean;
 	runner?: {
 		id: string;
 		name: string;
 		status: "online" | "idle" | "offline";
+		is_online?: boolean;
 		tags: string[];
 		allow_exec: boolean;
+		last_seen_at?: string | null;
 	} | null;
 	next_run_at?: string | null;
 	last_run_at?: string | null;

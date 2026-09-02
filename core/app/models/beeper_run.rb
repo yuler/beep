@@ -33,7 +33,7 @@ class BeeperRun < ApplicationRecord
     beeper.finish_firing(last_run_at: scheduled_for)
   end
 
-  def record_signal_result!(signal, runner: nil)
+  def record_signal_result!(signal, runner: nil, run_status: :succeeded)
     sanitized_result = sanitize_signal_result(signal.to_h)
     decision = Beeper::AlertPolicy.for(beeper).evaluate(signal: signal)
 
@@ -41,7 +41,7 @@ class BeeperRun < ApplicationRecord
       update_attrs = {
         signal_status: signal.status.to_s,
         signal_result: sanitized_result,
-        status: :succeeded
+        status: run_status
       }
       update_attrs[:runner_id] = runner.id if runner.present?
       update!(update_attrs)
