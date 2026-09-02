@@ -1,7 +1,7 @@
 class BeeperApp::Receivers::SiteUptime < BeeperApp::Receivers::Base
   MAX_REDIRECTS = 3
   MAX_BODY_BYTES = 8.kilobytes
-  DEFAULT_TIMEOUT_MS = 3000
+  DEFAULT_TIMEOUT_MS = 5000
 
   def call
     target_url = config["target_url"].to_s.strip

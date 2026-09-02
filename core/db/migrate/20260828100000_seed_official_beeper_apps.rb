@@ -40,7 +40,7 @@ class SeedOfficialBeeperApps < ActiveRecord::Migration[8.2]
           "name" => "timeout_ms",
           "label" => "Timeout (ms)",
           "type" => "number",
-          "default" => 3000,
+          "default" => 5000,
           "max" => 10_000
         }
       ],
