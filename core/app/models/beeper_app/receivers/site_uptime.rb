@@ -1,7 +1,7 @@
 class BeeperApp::Receivers::SiteUptime < BeeperApp::Receivers::Base
   MAX_REDIRECTS = 3
   MAX_BODY_BYTES = 8.kilobytes
-  DEFAULT_TIMEOUT_MS = 3000
+  DEFAULT_TIMEOUT_MS = 5000
 
   def call
     target_url = config["target_url"].to_s.strip
@@ -27,8 +27,10 @@ class BeeperApp::Receivers::SiteUptime < BeeperApp::Receivers::Base
     end
 
     start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    response, final_uri = fetch_with_redirects(uri, timeout: timeout_seconds, redirects_remaining: MAX_REDIRECTS)
-    elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) * 1000).round
+    response, final_uri = Timeout.timeout(timeout_seconds) do
+      fetch_with_redirects(uri, timeout: timeout_seconds, redirects_remaining: MAX_REDIRECTS)
+    end
+    elapsed_ms = elapsed_ms_since(start_time)
 
     status_code = response.code.to_i
     metrics = {
@@ -36,18 +38,26 @@ class BeeperApp::Receivers::SiteUptime < BeeperApp::Receivers::Base
       "latency_ms" => elapsed_ms
     }
 
-    if status_code == expected_status
-      BeeperApp::Signal.new(
-        status: :ok,
-        title: "Site is operational",
-        message: "HTTP #{status_code} from #{final_uri.host} (#{elapsed_ms}ms)",
-        metrics: metrics
-      )
-    else
+    # Wrong HTTP status is more actionable than a slow-but-matching response.
+    if status_code != expected_status
       BeeperApp::Signal.new(
         status: :alerting,
         title: "Site returned HTTP #{status_code}",
         message: "Expected HTTP #{expected_status} but received HTTP #{status_code} from #{final_uri.host} (#{elapsed_ms}ms)",
+        metrics: metrics
+      )
+    elsif elapsed_ms >= timeout_ms
+      timeout_signal(
+        host: final_uri&.host || uri.host,
+        elapsed_ms: elapsed_ms,
+        timeout_ms: timeout_ms,
+        metrics: metrics
+      )
+    else
+      BeeperApp::Signal.new(
+        status: :ok,
+        title: "Site is operational",
+        message: "HTTP #{status_code} from #{final_uri.host} (#{elapsed_ms}ms)",
         metrics: metrics
       )
     end
@@ -58,10 +68,11 @@ class BeeperApp::Receivers::SiteUptime < BeeperApp::Receivers::Base
       message: e.message
     )
   rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error
-    BeeperApp::Signal.new(
-      status: :error,
-      title: "Site signal timed out",
-      message: "Connection to #{uri&.host || target_url} timed out after #{timeout_ms}ms"
+    elapsed_ms = start_time ? elapsed_ms_since(start_time) : timeout_ms
+    timeout_signal(
+      host: uri&.host || target_url,
+      elapsed_ms: elapsed_ms,
+      timeout_ms: timeout_ms
     )
   rescue StandardError => e
     BeeperApp::Signal.new(
@@ -72,6 +83,19 @@ class BeeperApp::Receivers::SiteUptime < BeeperApp::Receivers::Base
   end
 
   private
+
+  def elapsed_ms_since(start_time)
+    ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) * 1000).round
+  end
+
+  def timeout_signal(host:, elapsed_ms:, timeout_ms:, metrics: nil)
+    BeeperApp::Signal.new(
+      status: :error,
+      title: "Site signal timed out",
+      message: "Connection to #{host} timed out after #{elapsed_ms}ms (threshold: #{timeout_ms}ms)",
+      metrics: metrics || { "latency_ms" => elapsed_ms }
+    )
+  end
 
   def fetch_with_redirects(uri, timeout:, redirects_remaining:)
     if redirects_remaining < 0
