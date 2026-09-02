@@ -42,6 +42,47 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
     assert_match(/HTTP 404/, result.title)
   end
 
+  test "SiteUptime receiver reports error when response latency exceeds timeout_ms" do
+    fake_response = Net::HTTPSuccess.new("1.1", "200", "OK")
+
+    receiver = BeeperApp::Receivers::SiteUptime.new(config: {
+      "target_url" => "https://example.com/health",
+      "expected_status" => 200,
+      "timeout_ms" => 3000
+    })
+
+    receiver.define_singleton_method(:fetch_with_redirects) do |*, **|
+      [ fake_response, URI("https://example.com/health") ]
+    end
+
+    orig_clock = Process.method(:clock_gettime)
+    clock_values = [ 100.0, 104.0 ] # 4000ms elapsed > 3000ms
+    Process.define_singleton_method(:clock_gettime) { |*| clock_values.shift || 104.0 }
+    begin
+      result = receiver.call
+      assert result.error?
+      assert_match(/timed out/, result.title)
+      assert_equal 4000, result.metrics["latency_ms"]
+    ensure
+      Process.define_singleton_method(:clock_gettime, orig_clock)
+    end
+  end
+
+  test "SiteUptime receiver reports error on Timeout::Error" do
+    receiver = BeeperApp::Receivers::SiteUptime.new(config: {
+      "target_url" => "https://example.com/health",
+      "timeout_ms" => 1000
+    })
+
+    receiver.define_singleton_method(:fetch_with_redirects) do |*, **|
+      raise Timeout::Error, "execution expired"
+    end
+
+    result = receiver.call
+    assert result.error?
+    assert_match(/timed out/, result.title)
+  end
+
   test "SiteUptime blocks private / local IP addresses via SSRF protection" do
     stub_dns_resolution("127.0.0.1")
 
