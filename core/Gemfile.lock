@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/rails/rails.git
-  revision: a0aaf57a81c8df4594027768de737963c9d64fff
+  revision: 4130768a1b0d95da640ac792920e54988cf2d12f
   branch: main
   specs:
     actioncable (8.2.0.alpha)
@@ -45,6 +45,7 @@ GIT
       activesupport (= 8.2.0.alpha)
       builder (~> 3.1)
       erubi (~> 1.11)
+      herb (>= 0.10)
       rails-dom-testing (~> 2.2)
       rails-html-sanitizer (~> 1.7)
     activejob (8.2.0.alpha)
@@ -61,7 +62,7 @@ GIT
       activejob (= 8.2.0.alpha)
       activerecord (= 8.2.0.alpha)
       activesupport (= 8.2.0.alpha)
-      marcel (~> 1.0)
+      marcel (~> 2.0)
     activesupport (8.2.0.alpha)
       base64
       bigdecimal
@@ -115,7 +116,7 @@ GEM
     bindex (0.8.1)
     bootsnap (1.25.0)
       msgpack (~> 1.5)
-    brakeman (8.0.5)
+    brakeman (8.0.6)
       racc
     builder (3.3.0)
     bundler-audit (0.9.3)
@@ -144,7 +145,7 @@ GEM
     ed25519 (1.4.0)
     erb (6.0.7)
     erubi (1.13.1)
-    et-orbi (1.4.1)
+    et-orbi (1.4.2)
       tzinfo
     event_stream_parser (1.0.0)
     faraday (2.14.3)
@@ -169,6 +170,13 @@ GEM
       raabro (~> 1.4)
     globalid (1.4.0)
       activesupport (>= 6.1)
+    herb (0.10.3-aarch64-linux-gnu)
+    herb (0.10.3-aarch64-linux-musl)
+    herb (0.10.3-arm-linux-gnu)
+    herb (0.10.3-arm-linux-musl)
+    herb (0.10.3-arm64-darwin)
+    herb (0.10.3-x86_64-linux-gnu)
+    herb (0.10.3-x86_64-linux-musl)
     hotwire-spark (0.1.13)
       listen
       rails (>= 7.0.0)
@@ -229,7 +237,7 @@ GEM
       net-imap
       net-pop
       net-smtp
-    marcel (1.2.1)
+    marcel (2.1.0)
     matrix (0.4.3)
     mini_mime (1.1.5)
     minitest (6.0.6)
@@ -256,7 +264,7 @@ GEM
       net-protocol
     net-pop (0.1.2)
       net-protocol
-    net-protocol (0.2.2)
+    net-protocol (0.3.0)
       timeout
     net-scp (4.1.0)
       net-ssh (>= 2.6.5, < 8.0.0)
@@ -294,7 +302,7 @@ GEM
       actionpack (>= 7.0.0)
       activesupport (>= 7.0.0)
       rack
-    psych (5.4.0)
+    psych (5.5.0)
       date
       stringio
     public_suffix (7.0.5)
@@ -323,7 +331,7 @@ GEM
     rb-fsevent (0.11.2)
     rb-inotify (0.11.1)
       ffi (~> 1.0)
-    rbs (4.1.3)
+    rbs (4.2.0)
       logger
       prism (>= 1.6.0)
       tsort
@@ -371,17 +379,14 @@ GEM
     ruby-lsp-rails (0.4.8)
       ruby-lsp (>= 0.26.0, < 0.27.0)
     ruby-progressbar (1.13.0)
-    ruby_llm (1.16.0)
+    ruby_llm (1.2.0)
       base64
       event_stream_parser (~> 1)
-      faraday (>= 1.10.0)
-      faraday-multipart (>= 1)
-      faraday-net_http (>= 1)
-      faraday-retry (>= 1)
-      marcel (~> 1)
-      ruby_llm-schema (~> 0)
+      faraday (~> 2)
+      faraday-multipart (~> 1)
+      faraday-net_http (~> 3)
+      faraday-retry (~> 2)
       zeitwerk (~> 2)
-    ruby_llm-schema (0.4.0)
     rubyzip (3.5.0)
     securerandom (0.4.1)
     selenium-webdriver (4.47.0)
@@ -399,7 +404,7 @@ GEM
       activejob (>= 7.2)
       activerecord (>= 7.2)
       railties (>= 7.2)
-    solid_queue (1.6.0)
+    solid_queue (1.7.0)
       activejob (>= 7.1)
       activerecord (>= 7.1)
       concurrent-ruby (>= 1.3.1)
@@ -424,10 +429,10 @@ GEM
       railties (>= 6.0.0)
     stringio (3.2.0)
     thor (1.5.0)
-    thruster (0.1.25)
-    thruster (0.1.25-aarch64-linux)
-    thruster (0.1.25-arm64-darwin)
-    thruster (0.1.25-x86_64-linux)
+    thruster (0.1.26)
+    thruster (0.1.26-aarch64-linux)
+    thruster (0.1.26-arm64-darwin)
+    thruster (0.1.26-x86_64-linux)
     timeout (0.6.1)
     tsort (0.2.0)
     turbo-rails (2.0.23)
