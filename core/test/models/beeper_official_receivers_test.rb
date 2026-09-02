@@ -55,16 +55,33 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
       [ fake_response, URI("https://example.com/health") ]
     end
 
-    orig_clock = Process.method(:clock_gettime)
-    clock_values = [ 100.0, 104.0 ] # 4000ms elapsed > 3000ms
-    Process.define_singleton_method(:clock_gettime) { |*| clock_values.shift || 104.0 }
-    begin
+    with_monotonic_clock([ 100.0, 104.0 ]) do # 4000ms elapsed >= 3000ms
       result = receiver.call
       assert result.error?
       assert_match(/timed out/, result.title)
+      assert_match(/threshold: 3000ms/, result.message)
       assert_equal 4000, result.metrics["latency_ms"]
-    ensure
-      Process.define_singleton_method(:clock_gettime, orig_clock)
+      assert_equal 200, result.metrics["status"]
+    end
+  end
+
+  test "SiteUptime receiver reports error when response latency equals timeout_ms" do
+    fake_response = Net::HTTPSuccess.new("1.1", "200", "OK")
+
+    receiver = BeeperApp::Receivers::SiteUptime.new(config: {
+      "target_url" => "https://example.com/health",
+      "expected_status" => 200,
+      "timeout_ms" => 3000
+    })
+
+    receiver.define_singleton_method(:fetch_with_redirects) do |*, **|
+      [ fake_response, URI("https://example.com/health") ]
+    end
+
+    with_monotonic_clock([ 100.0, 103.0 ]) do # 3000ms elapsed == 3000ms
+      result = receiver.call
+      assert result.error?
+      assert_equal 3000, result.metrics["latency_ms"]
     end
   end
 
@@ -78,9 +95,13 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
       raise Timeout::Error, "execution expired"
     end
 
-    result = receiver.call
-    assert result.error?
-    assert_match(/timed out/, result.title)
+    with_monotonic_clock([ 50.0, 51.5 ]) do # 1500ms elapsed
+      result = receiver.call
+      assert result.error?
+      assert_match(/timed out/, result.title)
+      assert_match(/threshold: 1000ms/, result.message)
+      assert_equal 1500, result.metrics["latency_ms"]
+    end
   end
 
   test "SiteUptime blocks private / local IP addresses via SSRF protection" do
@@ -239,5 +260,16 @@ class BeeperOfficialReceiversTest < ActiveSupport::TestCase
 
     assert result.alerting?
     assert_match(/never received/, result.title)
+  end
+
+  private
+
+  def with_monotonic_clock(values)
+    orig_clock = Process.method(:clock_gettime)
+    clock_values = values.dup
+    Process.define_singleton_method(:clock_gettime) { |*| clock_values.shift || values.last }
+    yield
+  ensure
+    Process.define_singleton_method(:clock_gettime, orig_clock)
   end
 end
