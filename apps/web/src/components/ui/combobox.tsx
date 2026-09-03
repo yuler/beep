@@ -123,7 +123,9 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
 		<ComboboxPrimitive.Empty
 			data-slot="combobox-empty"
 			className={cn(
-				"px-2 py-4 text-center text-sm text-muted-foreground",
+				// Base UI keeps Empty mounted for a11y when the list has items
+				// (children=null). Hide the shell so py-4 does not leave a gap.
+				"px-2 py-4 text-center text-sm text-muted-foreground empty:hidden",
 				className,
 			)}
 			{...props}
