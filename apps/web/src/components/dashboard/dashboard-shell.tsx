@@ -19,7 +19,6 @@ export function DashboardShell({
 	return (
 		<TooltipProvider>
 			<SidebarProvider
-				className="min-h-svh"
 				style={
 					{
 						"--sidebar-width": "calc(var(--spacing) * 64)",
