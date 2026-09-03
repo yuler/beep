@@ -45,7 +45,11 @@ export function SignInDialog({
 	}
 
 	return (
-		<ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
+		<ResponsiveDialog
+			open={open}
+			onOpenChange={handleOpenChange}
+			disablePointerDismissal
+		>
 			<ResponsiveDialogTrigger
 				render={<Button size={size} variant={variant} className={className} />}
 			>

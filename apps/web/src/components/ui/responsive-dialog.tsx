@@ -48,14 +48,15 @@ interface ResponsiveDialogProps {
 	children: React.ReactNode;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
-	shouldScaleBackground?: boolean;
+	/** When true, pointer/backdrop dismiss is blocked (Dialog + Drawer). */
+	disablePointerDismissal?: boolean;
 }
 
 function ResponsiveDialog({
 	children,
 	open,
 	onOpenChange,
-	shouldScaleBackground = true,
+	disablePointerDismissal = false,
 }: ResponsiveDialogProps) {
 	const isMobile = useIsMobile();
 
@@ -65,12 +66,16 @@ function ResponsiveDialog({
 				<Drawer
 					open={open}
 					onOpenChange={onOpenChange}
-					shouldScaleBackground={shouldScaleBackground}
+					dismissible={!disablePointerDismissal}
 				>
 					{children}
 				</Drawer>
 			) : (
-				<Dialog open={open} onOpenChange={onOpenChange}>
+				<Dialog
+					open={open}
+					onOpenChange={onOpenChange}
+					disablePointerDismissal={disablePointerDismissal}
+				>
 					{children}
 				</Dialog>
 			)}
@@ -108,6 +113,9 @@ function ResponsiveDialogClose({
 	return <DialogClose {...props}>{children}</DialogClose>;
 }
 
+const contentShellClass =
+	"[&>form]:flex [&>form]:min-h-0 [&>form]:flex-1 [&>form]:flex-col [&>form]:overflow-hidden";
+
 function ResponsiveDialogContent({
 	className,
 	children,
@@ -122,6 +130,7 @@ function ResponsiveDialogContent({
 			<DrawerContent
 				className={cn(
 					"max-h-[90dvh] flex flex-col focus-visible:outline-none",
+					contentShellClass,
 					resolveClassName(className),
 				)}
 				style={resolveStyle(style)}
@@ -135,7 +144,8 @@ function ResponsiveDialogContent({
 	return (
 		<DialogContent
 			className={cn(
-				"max-h-[min(90dvh,calc(100vh-3rem))] flex flex-col overflow-hidden",
+				"max-h-[min(90dvh,calc(100vh-3rem))] flex flex-col overflow-hidden gap-0 p-0 sm:max-w-sm",
+				contentShellClass,
 				className,
 			)}
 			showCloseButton={showCloseButton}
@@ -159,7 +169,9 @@ function ResponsiveDialogHeader({
 			/>
 		);
 	}
-	return <DialogHeader className={cn("shrink-0", className)} {...props} />;
+	return (
+		<DialogHeader className={cn("shrink-0 px-4 pt-4", className)} {...props} />
+	);
 }
 
 function ResponsiveDialogFooter({
@@ -178,7 +190,7 @@ function ResponsiveDialogFooter({
 	return (
 		<DialogFooter
 			className={cn(
-				"shrink-0 border-t bg-muted/40 p-4 sm:justify-end",
+				"shrink-0 mx-0 mb-0 rounded-b-xl border-t bg-muted/40 p-4 sm:justify-end",
 				className,
 			)}
 			{...props}
@@ -226,7 +238,7 @@ function ResponsiveDialogBody({
 	return (
 		<div
 			className={cn(
-				"flex-1 min-h-0 overflow-y-auto px-4 py-2 sm:px-1 space-y-4",
+				"flex-1 min-h-0 overflow-y-auto px-4 py-2 space-y-4",
 				className,
 			)}
 			{...props}

@@ -96,10 +96,7 @@ export function EditBeeperDialog({
 	return (
 		<ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
 			<ResponsiveDialogContent className="sm:max-w-lg">
-				<form
-					onSubmit={handleSave}
-					className="flex flex-col flex-1 min-h-0 overflow-hidden"
-				>
+				<form onSubmit={handleSave}>
 					<ResponsiveDialogHeader>
 						<ResponsiveDialogTitle className="text-lg">
 							{m.beepers_edit_beeper()}

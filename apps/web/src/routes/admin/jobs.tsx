@@ -168,20 +168,20 @@ function JobsPage() {
 								</div>
 
 								{/* Desktop Table View (>= md) */}
-								<div className="hidden md:block overflow-x-auto">
-									<table className="w-full text-left text-sm">
+								<div className="hidden overflow-x-auto md:block">
+									<table className="w-full table-fixed text-left text-sm">
 										<thead className="border-b text-muted-foreground">
 											<tr>
-												<th className="px-2 py-2 font-medium">
+												<th className="w-[40%] px-2 py-2 font-medium">
 													{m.admin_jobs_class()}
 												</th>
-												<th className="px-2 py-2 font-medium">
+												<th className="w-[20%] px-2 py-2 font-medium">
 													{m.admin_jobs_queue()}
 												</th>
-												<th className="px-2 py-2 font-medium">
+												<th className="w-[15%] px-2 py-2 font-medium">
 													{m.admin_jobs_status()}
 												</th>
-												<th className="px-2 py-2 font-medium">
+												<th className="w-[25%] px-2 py-2 font-medium">
 													{m.admin_jobs_created()}
 												</th>
 											</tr>
@@ -192,12 +192,18 @@ function JobsPage() {
 													key={String(job.id)}
 													className="border-b last:border-0"
 												>
-													<td className="px-2 py-2 font-mono text-xs">
-														{job.class_name}
+													<td className="min-w-0 px-2 py-2 font-mono text-xs">
+														<span className="block truncate">
+															{job.class_name}
+														</span>
 													</td>
-													<td className="px-2 py-2">{job.queue_name}</td>
-													<td className="px-2 py-2">{jobStatusLabel(job)}</td>
-													<td className="px-2 py-2 text-muted-foreground">
+													<td className="whitespace-nowrap px-2 py-2">
+														{job.queue_name}
+													</td>
+													<td className="whitespace-nowrap px-2 py-2">
+														{jobStatusLabel(job)}
+													</td>
+													<td className="whitespace-nowrap px-2 py-2 text-muted-foreground">
 														{new Date(job.created_at).toLocaleString()}
 													</td>
 												</tr>

@@ -63,7 +63,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 					cell: ({ row }) => {
 						const beeper = row.original;
 						return (
-							<div className="flex flex-col gap-0.5">
+							<div className="flex min-w-0 max-w-md flex-col gap-0.5">
 								<span className="font-mono text-[11px] text-muted-foreground">
 									#{shortId(beeper.id)}
 								</span>
@@ -73,7 +73,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 										account_slug: slug,
 										beeperId: beeper.id,
 									}}
-									className="font-medium text-foreground hover:text-primary transition-colors"
+									className="truncate font-medium text-foreground transition-colors hover:text-primary"
 									onClick={(event) => event.stopPropagation()}
 									data-no-row-nav
 								>
@@ -277,22 +277,24 @@ export function BeeperList({
 						return (
 							<div
 								key={beeper.id}
-								className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-foreground/20 hover:shadow-xs"
+								className="relative flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-foreground/20 hover:shadow-xs"
 							>
-								<div className="flex items-start justify-between gap-3">
-									<div className="flex flex-col gap-0.5 min-w-0">
+								<Link
+									to="/$account_slug/beepers/$beeperId"
+									params={{ account_slug: slug, beeperId: beeper.id }}
+									className="absolute inset-0 z-0 rounded-xl"
+									aria-label={beeper.title}
+								/>
+								<div className="relative z-10 flex items-start justify-between gap-3 pointer-events-none">
+									<div className="flex min-w-0 flex-col gap-0.5">
 										<span className="font-mono text-[11px] text-muted-foreground">
 											#{shortId(beeper.id)}
 										</span>
-										<Link
-											to="/$account_slug/beepers/$beeperId"
-											params={{ account_slug: slug, beeperId: beeper.id }}
-											className="font-semibold text-foreground text-base truncate hover:text-primary"
-										>
+										<span className="truncate text-base font-semibold text-foreground">
 											{beeper.title}
-										</Link>
+										</span>
 									</div>
-									<div className="flex items-center gap-1.5 shrink-0">
+									<div className="flex shrink-0 items-center gap-1.5">
 										<StatusPill
 											label={healthStatusLabel(
 												beeperHealthLabel(beeper),
@@ -310,9 +312,9 @@ export function BeeperList({
 									</div>
 								</div>
 
-								<div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground border-y border-border/50 py-2.5">
+								<div className="relative z-10 grid grid-cols-2 gap-2 border-y border-border/50 py-2.5 text-xs text-muted-foreground pointer-events-none">
 									<div>
-										<span className="text-[11px] text-muted-foreground/80 block">
+										<span className="block text-[11px] text-muted-foreground/80">
 											{m.beepers_app()}
 										</span>
 										<span className="font-medium text-foreground">
@@ -320,15 +322,15 @@ export function BeeperList({
 										</span>
 									</div>
 									<div>
-										<span className="text-[11px] text-muted-foreground/80 block">
+										<span className="block text-[11px] text-muted-foreground/80">
 											{m.beeps_schedule()}
 										</span>
-										<span className="font-mono text-foreground font-medium">
+										<span className="font-mono font-medium text-foreground">
 											{beeper.cron}
 										</span>
 									</div>
 									<div>
-										<span className="text-[11px] text-muted-foreground/80 block">
+										<span className="block text-[11px] text-muted-foreground/80">
 											{m.beepers_next_run()}
 										</span>
 										<span className="text-foreground">
@@ -342,7 +344,7 @@ export function BeeperList({
 										</span>
 									</div>
 									<div>
-										<span className="text-[11px] text-muted-foreground/80 block">
+										<span className="block text-[11px] text-muted-foreground/80">
 											{m.beepers_run_success()} ({beeper.runs?.length ?? 0})
 										</span>
 										<div className="mt-1">
@@ -351,14 +353,14 @@ export function BeeperList({
 									</div>
 								</div>
 
-								<div className="flex items-center justify-between gap-2 pt-0.5">
-									<div className="flex flex-wrap gap-1 min-w-0">
+								<div className="relative z-10 flex items-center justify-between gap-2 pt-0.5">
+									<div className="flex min-w-0 flex-wrap gap-1 pointer-events-none">
 										{channels.length > 0 ? (
 											channels.map((channel) => (
 												<Badge
 													key={channel}
 													variant="outline"
-													className="text-[10px] px-1.5 py-0 font-normal"
+													className="px-1.5 py-0 text-[10px] font-normal"
 												>
 													{channelLabel(channel as NotificationChannel)}
 												</Badge>
@@ -373,8 +375,9 @@ export function BeeperList({
 										type="button"
 										variant="ghost"
 										size="xs"
-										className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground shrink-0"
+										className="relative z-10 h-7 shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground"
 										onClick={(e) => {
+											e.preventDefault();
 											e.stopPropagation();
 											setEditingBeeper(beeper);
 										}}

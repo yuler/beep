@@ -222,10 +222,7 @@ function AccessTokensPage() {
 									</ResponsiveDialogFooter>
 								</div>
 							) : (
-								<form
-									onSubmit={handleCreate}
-									className="flex flex-col flex-1 min-h-0 overflow-hidden"
-								>
+								<form onSubmit={handleCreate}>
 									<ResponsiveDialogHeader>
 										<ResponsiveDialogTitle>
 											{m.my_generate_new_token()}
