@@ -12,6 +12,13 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { fetchMe } from "@/lib/api/session";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { getGravatarUrl } from "@/lib/gravatar";
@@ -143,18 +150,30 @@ function MySettingsPage() {
 									<Globe className="size-4 text-muted-foreground" />
 									{m.my_language()}
 								</Label>
-								<select
-									id="language"
-									className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+								<Select
 									value={currentLocale}
-									onChange={(e) => switchLocale(e.target.value as Locale)}
+									onValueChange={(val) => {
+										if (val) {
+											switchLocale(val as Locale);
+										}
+									}}
 								>
-									{locales.map((loc) => (
-										<option key={loc} value={loc}>
-											{localeConfig[loc].name}
-										</option>
-									))}
-								</select>
+									<SelectTrigger id="language" className="w-full">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{locales.map((loc) => (
+											<SelectItem key={loc} value={loc}>
+												{localeConfig[loc].flag ? (
+													<span className="mr-2 text-base">
+														{localeConfig[loc].flag}
+													</span>
+												) : null}
+												<span>{localeConfig[loc].name}</span>
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</div>
 						</CardContent>
 					</Card>

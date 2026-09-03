@@ -37,6 +37,13 @@ import {
 	ResponsiveDialogTrigger,
 } from "@/components/ui/responsive-dialog";
 import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
 	type AccessToken,
 	type AccessTokenPermission,
 	createAccessToken,
@@ -256,17 +263,26 @@ function AccessTokensPage() {
 											<Label htmlFor="token-permission">
 												{m.common_permission()}
 											</Label>
-											<select
-												id="token-permission"
-												className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+											<Select
 												value={permission}
-												onChange={(e) =>
-													setPermission(e.target.value as AccessTokenPermission)
-												}
+												onValueChange={(val) => {
+													if (val) {
+														setPermission(val as AccessTokenPermission);
+													}
+												}}
 											>
-												<option value="write">{m.my_permission_write()}</option>
-												<option value="read">{m.my_permission_read()}</option>
-											</select>
+												<SelectTrigger id="token-permission" className="w-full">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="write">
+														{m.my_permission_write()}
+													</SelectItem>
+													<SelectItem value="read">
+														{m.my_permission_read()}
+													</SelectItem>
+												</SelectContent>
+											</Select>
 										</div>
 									</ResponsiveDialogBody>
 
