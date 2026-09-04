@@ -16,7 +16,7 @@ export type Runner = {
 	ip_address?: string | null;
 	last_seen_at?: string | null;
 	is_online?: boolean;
-	beepers_count?: number;
+	jobs_count?: number;
 	created_at: string;
 	updated_at: string;
 };

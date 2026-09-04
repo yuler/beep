@@ -74,18 +74,6 @@ export type Beeper = {
 	notification_channels: string[];
 	ping_token?: string | null;
 	last_ping_at?: string | null;
-	runner_id?: string | null;
-	runner_tag?: string | null;
-	has_online_runner?: boolean;
-	runner?: {
-		id: string;
-		name: string;
-		status: "online" | "idle" | "offline";
-		is_online?: boolean;
-		tags: string[];
-		allow_exec: boolean;
-		last_seen_at?: string | null;
-	} | null;
 	next_run_at?: string | null;
 	last_run_at?: string | null;
 	created_at: string;
@@ -139,8 +127,6 @@ export function createBeeper(
 		body?: string;
 		cron?: string;
 		timezone?: string;
-		runner_id?: string | null;
-		runner_tag?: string | null;
 		config?: Record<string, unknown>;
 		notification_channels?: string[];
 	},
@@ -158,8 +144,6 @@ export function updateBeeper(
 		title?: string;
 		body?: string | null;
 		cron?: string;
-		runner_id?: string | null;
-		runner_tag?: string | null;
 		config?: Record<string, unknown>;
 		notification_channels?: string[];
 	},

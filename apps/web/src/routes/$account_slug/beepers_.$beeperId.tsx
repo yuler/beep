@@ -5,7 +5,6 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import {
-	AlertTriangle,
 	Check,
 	ChevronRight,
 	Copy,
@@ -313,21 +312,6 @@ function BeeperDetailPage() {
 					</p>
 				) : null}
 
-				{beeper.has_online_runner === false ? (
-					<div className="flex items-start gap-2.5 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-						<AlertTriangle className="size-4 shrink-0 mt-0.5" />
-						<span className="font-medium">
-							{beeper.runner
-								? m.beepers_runner_offline_warning()
-								: beeper.runner_tag
-									? m.beepers_runner_tag_offline_warning({
-											tag: beeper.runner_tag,
-										})
-									: m.beepers_runner_offline_warning()}
-						</span>
-					</div>
-				) : null}
-
 				{pingUrl ? (
 					<Card className="border-primary/25 bg-primary/5">
 						<CardHeader className="pb-3">
@@ -428,62 +412,6 @@ function BeeperDetailPage() {
 									value={formatWhen(beeper.last_ping_at, m.common_em_dash())}
 								/>
 							) : null}
-							<div className="flex justify-between items-center gap-4">
-								<span className="text-muted-foreground">
-									{m.beepers_routing_info()}
-								</span>
-								<span className="flex flex-wrap items-center justify-end gap-1.5 text-right">
-									{beeper.runner ? (
-										<>
-											<Badge
-												variant="outline"
-												className="text-[11px] font-mono"
-											>
-												{m.beepers_routed_node({ name: beeper.runner.name })}
-											</Badge>
-											{beeper.runner.is_online ? (
-												<Badge
-													variant="outline"
-													className="text-[11px] font-normal text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
-												>
-													{m.beepers_runner_online_badge()}
-												</Badge>
-											) : (
-												<Badge
-													variant="destructive"
-													className="text-[11px] font-normal"
-												>
-													{m.beepers_runner_offline_badge()}
-												</Badge>
-											)}
-										</>
-									) : beeper.runner_tag ? (
-										<>
-											<Badge
-												variant="outline"
-												className="text-[11px] font-mono"
-											>
-												{m.beepers_routed_tag({ tag: beeper.runner_tag })}
-											</Badge>
-											{beeper.has_online_runner === false ? (
-												<Badge
-													variant="destructive"
-													className="text-[11px] font-normal"
-												>
-													{m.beepers_runner_offline_badge()}
-												</Badge>
-											) : null}
-										</>
-									) : (
-										<Badge
-											variant="secondary"
-											className="text-[11px] font-normal"
-										>
-											{m.beepers_routed_core()}
-										</Badge>
-									)}
-								</span>
-							</div>
 							<div className="flex justify-between items-center gap-4">
 								<span className="text-muted-foreground">
 									{m.beeps_channels()}

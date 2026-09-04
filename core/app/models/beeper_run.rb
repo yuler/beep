@@ -4,7 +4,6 @@ class BeeperRun < ApplicationRecord
   SIGNAL_RESULT_MAX_BYTES = 8.kilobytes
 
   belongs_to :beeper
-  belongs_to :runner, optional: true
 
   enum :status, %w[ pending running succeeded failed skipped expired ].index_by(&:itself)
   enum :signal_status, %w[ ok alerting error ].index_by(&:itself)
@@ -33,18 +32,16 @@ class BeeperRun < ApplicationRecord
     beeper.finish_firing(last_run_at: scheduled_for)
   end
 
-  def record_signal_result!(signal, runner: nil, run_status: :succeeded)
+  def record_signal_result!(signal, run_status: :succeeded)
     sanitized_result = sanitize_signal_result(signal.to_h)
     decision = Beeper::AlertPolicy.for(beeper).evaluate(signal: signal)
 
     ApplicationRecord.transaction do
-      update_attrs = {
+      update!(
         signal_status: signal.status.to_s,
         signal_result: sanitized_result,
         status: run_status
-      }
-      update_attrs[:runner_id] = runner.id if runner.present?
-      update!(update_attrs)
+      )
 
       beeper.update!(
         alert_state: decision.next_alert_state,

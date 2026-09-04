@@ -10,12 +10,9 @@ flowchart TD
   Claim --> Run["BeeperRun (pending)"]
   Run --> Job["RunBeeperJob"]
   Job --> Produce["BeeperApp#produce_signal(config:)"]
-  Produce -->|Built-in / Official| Native["BeeperApp::Receivers::* (In-process Ruby)"]
-  Produce -->|Custom / Community| Sandbox["Sandbox / Remote Runner (JS/Script/Agent)"]
+  Produce -->|Built-in / Official| Native["BeeperApp::Receivers::* (In-process Ruby / Cloud)"]
   Native --> Target["Target Check (HTTP / TLS / Heartbeat)"]
-  Sandbox --> Target
   Native --> Signal["Signal Result (status, metrics, message)"]
-  Sandbox --> Signal
   Signal --> Eval["AlertEvaluator on the Beeper"]
   Eval -->|notify| Create["Beeps.create!(kind: once)"]
   Eval -->|stay silent| Finish["finish_firing (next_run_at)"]
@@ -35,7 +32,7 @@ These four are load-bearing; everything below follows from them.
 
 **3. Notification is a decision on the Beeper; a notify creates a new once Beep.** The alert state machine (`AlertEvaluator`) runs against the Beeper. `should_notify` → `Beeps.create!(kind: once, …)` with channels copied onto the Beep and optional `beeper_id` so the inbox can point back at the Beeper. Delivery then uses the existing Beep path. One notify event → one Beep → N channel types on that Beep (same BeepRun). A 5-minute schedule does not email every 5 minutes for the whole outage.
 
-**4. Signal production is unified behind `BeeperApp#produce_signal`.** Built-in official receivers (`BeeperApp::Receivers::*`) run in-process for low latency and zero external dependencies, while custom or community apps use isolated sandbox/runners. The job and alert evaluation layers only consume the standardized `Signal` contract, remaining completely decoupled from how or where the signal was produced.
+**4. Signal production is unified behind `BeeperApp#produce_signal`.** Built-in official receivers (`BeeperApp::Receivers::*`) run in-process in Core. Custom catalog apps may later use an isolated sandbox. Self-hosted **Runner Jobs** are a separate scheduler (`RunnerJob` / `RunnerRun`), not an execution target on official Beepers.
 
 ---
 
@@ -142,7 +139,7 @@ In-process (official receivers):
 - Cap redirects (and re-validate each hop), response body size, and total time.
 - No custom scripts. The only code executed is ours.
 
-When custom JS arrives, isolation is a hard boundary rather than defence in depth: egress allowlist enforced at the network layer (separate namespace or proxy, not just DNS checks), authenticated and non-internet-reachable runner endpoint (shared secret or mTLS), per-isolate memory and CPU caps, 8 KB output cap enforced runner-side, and per-account concurrency and quota limits.
+When custom JS Beeper Apps arrive, isolation is a hard boundary rather than defence in depth: egress allowlist enforced at the network layer (separate namespace or proxy, not just DNS checks), authenticated and non-internet-reachable runner endpoint (shared secret or mTLS), per-isolate memory and CPU caps, 8 KB output cap enforced runner-side, and per-account concurrency and quota limits.
 
 ---
 
@@ -160,7 +157,7 @@ This period does **not** ship: a JS sandbox, a community catalog, channel destin
 
 Still open:
 
-- **One runner protocol or two.** [`TODO.md`](../../TODO.md) plans a self-hosted Runner / Agent with registration, token auth, heartbeat, task pull and result reporting. A sandbox runner is the same job with a different protocol (synchronous push). Is the managed beeper runner just the hosted deployment of that Runner? If so the protocol should be designed once, pull-based, before either is built.
+- **One runner protocol.** Self-hosted runners poll for **Runner Jobs** (user scripts). Official beepers stay in-process in Core. A JS sandbox for custom Beeper Apps is still a later, separate execution path.
 - **Engine choice must be single.** "Deno / QuickJS" is not a decision: `fetch` and `AbortSignal.timeout` are Deno; QuickJS has no fetch, no TLS and no async I/O without host functions. Deno also has no per-isolate memory cap without `--v8-flags` or a process per execution — the mechanism needs stating.
 - Whether to add a JSON-Schema gem for manifest validation (needs sign-off per [`AGENTS.md`](../../AGENTS.md)).
 - Whether Beeper alerts should reach non-owner members before reminder Beeps do.

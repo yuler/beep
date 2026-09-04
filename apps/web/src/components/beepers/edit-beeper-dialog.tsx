@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { RunnerRoutingPicker } from "@/components/beepers/runner-routing-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +13,6 @@ import {
 } from "@/components/ui/responsive-dialog";
 import { type Beeper, updateBeeper } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
-import { fetchRunners, type Runner } from "@/lib/api/runners";
 import { channelLabel, translateError } from "@/lib/i18n-labels";
 import {
 	NOTIFICATION_CHANNELS,
@@ -47,13 +45,6 @@ export function EditBeeperDialog({
 	const [editInputs, setEditInputs] = useState<Record<string, unknown>>(
 		beeper.config ?? {},
 	);
-	const [runners, setRunners] = useState<Runner[]>([]);
-	const [editRunnerId, setEditRunnerId] = useState<string | null>(
-		beeper.runner_id ?? null,
-	);
-	const [editRunnerTag, setEditRunnerTag] = useState<string | null>(
-		beeper.runner_tag ?? null,
-	);
 	const [savingEdit, setSavingEdit] = useState(false);
 	const [editError, setEditError] = useState<string | null>(null);
 
@@ -68,16 +59,8 @@ export function EditBeeperDialog({
 			(beeper.notification_channels ?? []) as NotificationChannel[],
 		);
 		setEditInputs({ ...(beeper.config ?? {}) });
-		setEditRunnerId(beeper.runner_id ?? null);
-		setEditRunnerTag(beeper.runner_tag ?? null);
 		setEditError(null);
-
-		void fetchRunners(slug)
-			.then((res) => setRunners(res.runners))
-			.catch(() => {
-				// non-blocking
-			});
-	}, [open, beeper, slug]);
+	}, [open, beeper]);
 
 	function handleOpenChange(isOpen: boolean) {
 		if (!savingEdit) {
@@ -95,8 +78,6 @@ export function EditBeeperDialog({
 				body: editBody.trim() || null,
 				cron: editCron.trim(),
 				notification_channels: editChannels,
-				runner_id: editRunnerId,
-				runner_tag: editRunnerTag,
 				config: editInputs,
 			});
 			onOpenChange(false);
@@ -239,17 +220,6 @@ export function EditBeeperDialog({
 								))}
 							</div>
 						) : null}
-
-						<RunnerRoutingPicker
-							runners={runners}
-							runnerId={editRunnerId}
-							runnerTag={editRunnerTag}
-							onChange={({ runner_id, runner_tag }) => {
-								setEditRunnerId(runner_id);
-								setEditRunnerTag(runner_tag);
-							}}
-							disabled={savingEdit}
-						/>
 
 						<div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
 							<p className="font-medium text-foreground mb-1">

@@ -1,3 +1,3 @@
 json.status "acknowledged"
 json.run_id @run.id
-json.signal_status @run.signal_status
+json.result_status @run.result_status

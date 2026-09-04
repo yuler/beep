@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
 	Clock,
 	Edit,
@@ -164,7 +165,10 @@ export function RunnerList({
 						>
 							<CardHeader className="pb-3">
 								<div className="flex items-start justify-between gap-2">
-									<div className="flex items-center gap-2.5 min-w-0">
+									<Link
+										to="/$account_slug/runners/$runnerId"
+										params={{ account_slug: slug, runnerId: runner.id }}
+										className="flex items-center gap-2.5 min-w-0"
 										<div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
 											<Server className="size-4.5" />
 										</div>
@@ -176,7 +180,7 @@ export function RunnerList({
 												{runner.token_prefix}••••
 											</CardDescription>
 										</div>
-									</div>
+									</Link>
 
 									<div className="flex items-center gap-1.5">
 										{getStatusBadge(runner)}
@@ -227,7 +231,7 @@ export function RunnerList({
 											className="gap-1 text-[10px] font-normal"
 										>
 											<Terminal className="size-3 text-amber-500" />
-											<span>exec enabled</span>
+											<span>{m.runners_exec_enabled()}</span>
 										</Badge>
 									) : (
 										<Badge
@@ -235,7 +239,7 @@ export function RunnerList({
 											className="gap-1 text-[10px] font-normal text-muted-foreground"
 										>
 											<ShieldCheck className="size-3 text-emerald-500" />
-											<span>probes only</span>
+											<span>{m.runners_scripts_locked()}</span>
 										</Badge>
 									)}
 
@@ -282,10 +286,10 @@ export function RunnerList({
 									</div>
 									<div>
 										<span className="text-muted-foreground block text-[10px]">
-											{m.runners_assigned_beepers()}
+											{m.runners_jobs_count()}
 										</span>
 										<span className="text-foreground block font-medium">
-											{runner.beepers_count ?? 0}
+											{runner.jobs_count ?? 0}
 										</span>
 									</div>
 								</div>

@@ -1,11 +1,4 @@
-json.extract! beeper, :id, :title, :body, :cron, :timezone, :status, :alert_state, :consecutive_failures, :config, :signal_metadata, :notification_channels, :ping_token, :last_ping_at, :runner_id, :runner_tag, :next_run_at, :last_run_at, :created_at, :updated_at
-json.has_online_runner beeper.has_online_runner?
-if beeper.runner
-  json.runner do
-    json.extract! beeper.runner, :id, :name, :status, :tags, :allow_exec, :last_seen_at
-    json.is_online beeper.runner.online?
-  end
-end
+json.extract! beeper, :id, :title, :body, :cron, :timezone, :status, :alert_state, :consecutive_failures, :config, :signal_metadata, :notification_channels, :ping_token, :last_ping_at, :next_run_at, :last_run_at, :created_at, :updated_at
 if beeper.beeper_app
   json.beeper_app do
     json.extract! beeper.beeper_app, :id, :slug, :name, :version, :description, :inputs, :metrics

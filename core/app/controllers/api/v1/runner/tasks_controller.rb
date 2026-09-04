@@ -10,59 +10,81 @@ class Api::V1::Runner::TasksController < Api::V1::Runner::BaseController
       allow_exec: params[:allow_exec]
     )
 
-    scope = BeeperRun.joins(:beeper)
-                     .where(beepers: { account_id: @current_runner.account_id, status: "firing" })
-                     .where(status: "pending")
-                     .where("beeper_runs.scheduled_for <= ?", Time.current)
+    candidate = RunnerRun.joins(:runner_job)
+                         .where(runner_jobs: { account_id: @current_runner.account_id, runner_id: @current_runner.id, status: "firing" })
+                         .where(status: "pending")
+                         .where(scheduled_for: ..Time.current)
+                         .order("runner_runs.scheduled_for ASC")
+                         .first
 
-    candidate_runs = scope.where(beepers: { runner_id: @current_runner.id })
-    if @current_runner.tags.present?
-      candidate_runs = candidate_runs.or(scope.where(beepers: { runner_tag: @current_runner.tags }))
-    end
-
-    @run = candidate_runs.order("beeper_runs.scheduled_for ASC").first
-
-    if @run
-      claimed = BeeperRun.where(id: @run.id, status: "pending").update_all(
-        status: "running",
-        runner_id: @current_runner.id,
-        claimed_at: Time.current,
-        updated_at: Time.current
-      ) == 1
-
-      if claimed
-        @current_runner.update_columns(status: "online")
-        @run.reload
-        render :poll
-        return
-      end
+    if candidate&.claim_for!(@current_runner)
+      @current_runner.update_columns(status: "online")
+      @run = candidate
+      render :poll
+      return
     end
 
     head :no_content
   end
 
+  def logs
+    @run = find_run
+    unless @run.running? || @run.pending?
+      return render_json_error(
+        status: :unprocessable_entity,
+        message: "Run is no longer accepting logs",
+        code: "VALIDATION_ERROR"
+      )
+    end
+
+    chunk = params[:chunk].to_s
+    if chunk.blank? && params[:lines].is_a?(Array)
+      chunk = Array(params[:lines]).join("\n")
+      chunk = "#{chunk}\n" if chunk.present?
+    end
+
+    @run.append_log!(chunk)
+    @current_runner.touch_activity!(status: "online")
+    render :logs
+  end
+
   def result
-    @run = BeeperRun.joins(:beeper)
-                    .where(beepers: { account_id: @current_runner.account_id })
-                    .find(params[:id])
+    @run = find_run
 
-    raw_status = params[:status].to_s.downcase
-    status = raw_status.in?(%w[ ok alerting error ]) ? raw_status.to_sym : :error
-    title = params[:title].to_s.presence
-    message = params[:message].to_s.presence
     raw_metrics = params[:metrics]
-    metrics = raw_metrics.respond_to?(:to_unsafe_h) ? raw_metrics.to_unsafe_h : (raw_metrics.is_a?(Hash) ? raw_metrics : {})
+    metrics = if raw_metrics.respond_to?(:to_unsafe_h)
+      raw_metrics.to_unsafe_h
+    elsif raw_metrics.is_a?(Hash)
+      raw_metrics
+    else
+      {}
+    end
 
-    signal = BeeperApp::Signal.new(
-      status: status,
-      title: title,
-      message: message,
+    recorded = @run.record_result!(
+      status: params[:status],
+      title: params[:title],
+      message: params[:message],
       metrics: metrics
     )
 
-    @run.record_signal_result!(signal, runner: @current_runner)
-    @current_runner.touch_activity!(status: "idle")
+    unless recorded
+      return render_json_error(
+        status: :unprocessable_entity,
+        message: "Run already has a result",
+        code: "VALIDATION_ERROR"
+      )
+    end
 
+    @current_runner.touch_activity!(status: "idle")
     render :result
+  end
+
+  private
+
+  def find_run
+    RunnerRun.joins(:runner_job)
+             .where(runner_jobs: { account_id: @current_runner.account_id })
+             .where(runner_id: @current_runner.id)
+             .find(params[:id])
   end
 end

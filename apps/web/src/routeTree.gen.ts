@@ -30,6 +30,7 @@ import { Route as SignIndexRouteImport } from './routes/sign/index'
 import { Route as SignVerifyRouteImport } from './routes/sign/verify'
 import { Route as Account_slugBeepersBeeperIdRouteImport } from './routes/$account_slug/beepers_.$beeperId'
 import { Route as Account_slugBeepsBeepIdRouteImport } from './routes/$account_slug/beeps_.$beepId'
+import { Route as Account_slugRunnersRunnerIdRouteImport } from './routes/$account_slug/runners_.$runnerId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -137,6 +138,12 @@ const Account_slugBeepsBeepIdRoute = Account_slugBeepsBeepIdRouteImport.update({
   path: '/beeps/$beepId',
   getParentRoute: () => Account_slugRoute,
 } as any)
+const Account_slugRunnersRunnerIdRoute =
+  Account_slugRunnersRunnerIdRouteImport.update({
+    id: '/runners_/$runnerId',
+    path: '/runners/$runnerId',
+    getParentRoute: () => Account_slugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/sign/': typeof SignIndexRoute
   '/$account_slug/beepers/$beeperId': typeof Account_slugBeepersBeeperIdRoute
   '/$account_slug/beeps/$beepId': typeof Account_slugBeepsBeepIdRoute
+  '/$account_slug/runners/$runnerId': typeof Account_slugRunnersRunnerIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -181,6 +189,7 @@ export interface FileRoutesByTo {
   '/sign': typeof SignIndexRoute
   '/$account_slug/beepers/$beeperId': typeof Account_slugBeepersBeeperIdRoute
   '/$account_slug/beeps/$beepId': typeof Account_slugBeepsBeepIdRoute
+  '/$account_slug/runners/$runnerId': typeof Account_slugRunnersRunnerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -205,6 +214,7 @@ export interface FileRoutesById {
   '/sign/': typeof SignIndexRoute
   '/$account_slug/beepers_/$beeperId': typeof Account_slugBeepersBeeperIdRoute
   '/$account_slug/beeps_/$beepId': typeof Account_slugBeepsBeepIdRoute
+  '/$account_slug/runners_/$runnerId': typeof Account_slugRunnersRunnerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -230,6 +240,7 @@ export interface FileRouteTypes {
     | '/sign/'
     | '/$account_slug/beepers/$beeperId'
     | '/$account_slug/beeps/$beepId'
+    | '/$account_slug/runners/$runnerId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/sign'
     | '/$account_slug/beepers/$beeperId'
     | '/$account_slug/beeps/$beepId'
+    | '/$account_slug/runners/$runnerId'
   id:
     | '__root__'
     | '/'
@@ -274,6 +286,7 @@ export interface FileRouteTypes {
     | '/sign/'
     | '/$account_slug/beepers_/$beeperId'
     | '/$account_slug/beeps_/$beepId'
+    | '/$account_slug/runners_/$runnerId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Account_slugBeepsBeepIdRouteImport
       parentRoute: typeof Account_slugRoute
     }
+    '/$account_slug/runners_/$runnerId': {
+      id: '/$account_slug/runners_/$runnerId'
+      path: '/runners/$runnerId'
+      fullPath: '/$account_slug/runners/$runnerId'
+      preLoaderRoute: typeof Account_slugRunnersRunnerIdRouteImport
+      parentRoute: typeof Account_slugRoute
+    }
   }
 }
 
@@ -446,6 +466,7 @@ interface Account_slugRouteChildren {
   Account_slugIndexRoute: typeof Account_slugIndexRoute
   Account_slugBeepersBeeperIdRoute: typeof Account_slugBeepersBeeperIdRoute
   Account_slugBeepsBeepIdRoute: typeof Account_slugBeepsBeepIdRoute
+  Account_slugRunnersRunnerIdRoute: typeof Account_slugRunnersRunnerIdRoute
 }
 
 const Account_slugRouteChildren: Account_slugRouteChildren = {
@@ -456,6 +477,7 @@ const Account_slugRouteChildren: Account_slugRouteChildren = {
   Account_slugIndexRoute: Account_slugIndexRoute,
   Account_slugBeepersBeeperIdRoute: Account_slugBeepersBeeperIdRoute,
   Account_slugBeepsBeepIdRoute: Account_slugBeepsBeepIdRoute,
+  Account_slugRunnersRunnerIdRoute: Account_slugRunnersRunnerIdRoute,
 }
 
 const Account_slugRouteWithChildren = Account_slugRoute._addFileChildren(

@@ -45,11 +45,10 @@ beep monorepo
 ## 2. Review Checklist (检查清单)
 
 ### 2.1 数据库迁移与数据模型 (Data Models)
-- [ ] [`core/db/migrate/20260901180000_create_runners_and_add_runner_to_beepers.rb`](core/db/migrate/20260901180000_create_runners_and_add_runner_to_beepers.rb)
+- [ ] [`core/db/migrate/20260901180000_create_runners_and_jobs.rb`](core/db/migrate/20260901180000_create_runners_and_jobs.rb)
   - [ ] `runners` 表使用 UUID 主键，`token_digest` 有唯一索引。
   - [ ] `[account_id, status]` 组合索引满足高频租户状态查询。
-  - [ ] `beepers` 表新增可选 `runner_id` 与 `runner_tag` 字段。
-  - [ ] `beeper_runs` 表新增可选 `runner_id` 与 `claimed_at` 字段。
+  - [ ] `runner_jobs` / `runner_runs` 承载 workspace 任务调度与日志，不修改 `beepers` / `beeper_runs`。
 - [ ] [`core/app/models/runner.rb`](core/app/models/runner.rb)
   - [ ] Token 生成采用 `beep_rt_` 前缀 + 24 字节高熵随机串，数据库仅保存 SHA256 哈希值 (`token_digest`)。
   - [ ] `raw_token` 仅在 `create` 或 `regenerate_token!` 时在内存中短暂暴露一次。

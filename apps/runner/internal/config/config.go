@@ -15,6 +15,7 @@ type Config struct {
 	Concurrency  int
 	PollInterval time.Duration
 	Hostname     string
+	Workspace    string
 }
 
 func LoadFromEnv() (*Config, error) {
@@ -25,6 +26,7 @@ func LoadFromEnv() (*Config, error) {
 		Concurrency:  getEnvInt("BEEP_CONCURRENCY", 5),
 		PollInterval: getEnvDuration("BEEP_POLL_INTERVAL", 3*time.Second),
 		Hostname:     getEnv("BEEP_HOSTNAME", ""),
+		Workspace:    getEnv("BEEP_WORKSPACE", ""),
 	}
 
 	if cfg.Hostname == "" {

@@ -1,115 +1,115 @@
 package exec
 
 import (
-	"bytes"
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
+	"sync"
 	"time"
 
-	"beep-runner/internal/probe"
+	"beep-runner/internal/task"
 )
 
-type ScriptExecutor struct {
+type JobExecutor struct {
 	allowExec bool
 }
 
-func NewScriptExecutor(allowExec bool) *ScriptExecutor {
-	return &ScriptExecutor{
-		allowExec: allowExec,
-	}
+func NewJobExecutor(allowExec bool) *JobExecutor {
+	return &JobExecutor{allowExec: allowExec}
 }
 
-func (e *ScriptExecutor) Run(ctx context.Context, config map[string]any) *probe.Signal {
+func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, timeout time.Duration, onLog func(string)) *task.Result {
 	if !e.allowExec {
-		return probe.ErrorSignal(
-			"Command execution disabled",
-			"Local command execution is disabled on this runner. Start the runner with --allow-exec (or BEEP_ALLOW_EXEC=1) to enable.",
+		return task.Error(
+			"Execution disabled",
+			"Start the runner with --allow-exec (or BEEP_ALLOW_EXEC=1) to run workspace scripts.",
 			map[string]any{"allowed": false},
 		)
 	}
-
-	command, _ := config["command"].(string)
-	if command == "" {
-		if script, _ := config["script"].(string); script != "" {
-			command = script
-		}
-	}
-	if strings.TrimSpace(command) == "" {
-		return probe.ErrorSignal("Missing command", "command or script config parameter is required", nil)
+	if len(argv) == 0 {
+		return task.Error("Missing command", "workspace resolved an empty command", nil)
 	}
 
-	timeoutSec := 10
-	if val, ok := config["timeout_seconds"]; ok {
-		if v, ok := val.(float64); ok && v > 0 {
-			timeoutSec = int(v)
-		}
-	}
-
-	execCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
+	execCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(execCtx, "cmd", "/C", command)
-	} else {
-		cmd = exec.CommandContext(execCtx, "sh", "-c", command)
+	cmd := exec.CommandContext(execCtx, argv[0], argv[1:]...)
+	cmd.Env = env
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return task.Error("Failed to start job", err.Error(), nil)
 	}
-
-	cmd.Env = os.Environ()
-
-	var outBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	cmd.Stderr = &outBuf
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return task.Error("Failed to start job", err.Error(), nil)
+	}
 
 	start := time.Now()
-	err := cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return task.Error("Failed to start job", err.Error(), nil)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go streamLines(stdout, onLog, &wg)
+	go streamLines(stderr, onLog, &wg)
+
+	waitErr := cmd.Wait()
+	wg.Wait()
 	durationMs := time.Since(start).Milliseconds()
-
-	outputBytes := outBuf.Bytes()
-	if len(outputBytes) > 8192 {
-		outputBytes = outputBytes[:8192]
-	}
-	outputStr := strings.TrimSpace(string(outputBytes))
-
-	metrics := map[string]any{
-		"duration_ms": durationMs,
-	}
+	metrics := map[string]any{"duration_ms": durationMs}
 
 	if execCtx.Err() == context.DeadlineExceeded {
 		metrics["timed_out"] = true
-		return probe.AlertingSignal(
-			fmt.Sprintf("Command timed out after %ds", timeoutSec),
-			fmt.Sprintf("Execution exceeded %d seconds deadline. Output:\n%s", timeoutSec, outputStr),
-			metrics,
-		)
+		return task.Alerting(fmt.Sprintf("Job timed out after %s", timeout), "Execution exceeded the deadline", metrics)
 	}
 
-	if err != nil {
+	if waitErr != nil {
 		exitCode := 1
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		if exitErr, ok := waitErr.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()
 		}
 		metrics["exit_code"] = exitCode
-
-		title := fmt.Sprintf("Command failed (exit code %d)", exitCode)
-		message := outputStr
-		if message == "" {
-			message = err.Error()
-		}
-
-		return probe.AlertingSignal(title, message, metrics)
+		return task.Alerting(fmt.Sprintf("Job failed (exit %d)", exitCode), waitErr.Error(), metrics)
 	}
 
 	metrics["exit_code"] = 0
-	title := fmt.Sprintf("Command succeeded (%dms)", durationMs)
-	message := outputStr
-	if message == "" {
-		message = "Command executed successfully with zero output"
-	}
+	return task.Ok(fmt.Sprintf("Job succeeded (%dms)", durationMs), "Command exited 0", metrics)
+}
 
-	return probe.OkSignal(title, message, metrics)
+func streamLines(r io.Reader, onLog func(string), wg *sync.WaitGroup) {
+	defer wg.Done()
+	scanner := bufio.NewScanner(r)
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if onLog != nil {
+			onLog(line + "\n")
+		}
+	}
+}
+
+func WithJobEnv(extra []string) []string {
+	env := os.Environ()
+	if len(extra) == 0 {
+		return env
+	}
+	return append(env, extra...)
+}
+
+func ConfigEnv(config map[string]any) []string {
+	if config == nil {
+		return nil
+	}
+	var out []string
+	for key, val := range config {
+		name := strings.ToUpper(strings.ReplaceAll(key, "-", "_"))
+		out = append(out, fmt.Sprintf("BEEP_CONFIG_%s=%v", name, val))
+	}
+	return out
 }

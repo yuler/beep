@@ -10,7 +10,6 @@ class Beeper < ApplicationRecord
 
   belongs_to :account
   belongs_to :beeper_app
-  belongs_to :runner, optional: true
   has_many :runs, class_name: "BeeperRun", dependent: :destroy
   has_many :beeps, dependent: :nullify
 
@@ -51,7 +50,6 @@ class Beeper < ApplicationRecord
     end
 
     def poll_due_now
-      Runner.mark_stale_offline!
       due.order(:next_run_at).limit(POLL_BATCH_SIZE).each(&:claim_due)
       reclaim_stale_firing
     end
@@ -70,7 +68,7 @@ class Beeper < ApplicationRecord
     rescue ActiveRecord::RecordNotUnique
       runs.find_by!(scheduled_for: scheduled_for)
     end
-    run.deliver_later unless requires_runner?
+    run.deliver_later
     run
   end
 
@@ -112,17 +110,6 @@ class Beeper < ApplicationRecord
       if expired?(run.scheduled_for)
         run.update!(status: :expired)
         finish_firing(last_run_at: run.scheduled_for)
-      elsif requires_runner?
-        if !has_online_runner? || run.created_at < STALE_FIRING_AFTER.ago
-          signal = BeeperApp::Signal.new(
-            status: :error,
-            title: "Runner offline",
-            message: runner_offline_reason
-          )
-          run.record_signal_result!(signal, run_status: :failed)
-        else
-          touch
-        end
       else
         touch
         run.deliver_later
@@ -131,10 +118,10 @@ class Beeper < ApplicationRecord
       if run.updated_at < RUNNING_STALE_AFTER.ago
         signal = BeeperApp::Signal.new(
           status: :error,
-          title: "Runner execution timed out",
-          message: "Runner '#{run.runner&.name || 'node'}' claimed task but timed out after #{RUNNING_STALE_AFTER.inspect} without reporting results"
+          title: "Probe execution timed out",
+          message: "Beeper run was still running after #{RUNNING_STALE_AFTER.inspect}"
         )
-        run.record_signal_result!(signal, runner: run.runner, run_status: :failed)
+        run.record_signal_result!(signal, run_status: :failed)
       end
     else
       finish_firing(last_run_at: run.scheduled_for)
@@ -225,67 +212,22 @@ class Beeper < ApplicationRecord
     )
   end
 
-  def requires_runner?
-    runner_id.present? || runner_tag.present?
-  end
-
-  def has_online_runner?
-    return true unless requires_runner?
-
-    if runner_id.present?
-      runner&.online? == true
-    elsif runner_tag.present?
-      account.runners.online_or_idle.any? { |r| r.matches_tag?(runner_tag) }
-    else
-      true
-    end
-  end
-
-  def runner_offline_reason
-    if runner_id.present?
-      runner_name = runner&.name || "ID: #{runner_id}"
-      "Assigned runner '#{runner_name}' is offline or unreachable"
-    elsif runner_tag.present?
-      "No online runners available matching tag '#{runner_tag}'"
-    else
-      "Runner is unavailable"
-    end
-  end
-
   private
 
   def claim_run(scheduled_for)
     if expired?(scheduled_for)
       runs.create!(scheduled_for: scheduled_for, status: :expired)
       finish_firing(last_run_at: scheduled_for)
-    elsif requires_runner? && !has_online_runner?
-      run = runs.create!(scheduled_for: scheduled_for, status: :pending)
-      signal = BeeperApp::Signal.new(
-        status: :error,
-        title: "Runner offline",
-        message: runner_offline_reason
-      )
-      run.record_signal_result!(signal, run_status: :failed)
-      run
     else
       run = runs.create!(scheduled_for: scheduled_for, status: :pending)
       touch
-      run.deliver_later unless requires_runner?
+      run.deliver_later
       run
     end
   rescue ActiveRecord::RecordNotUnique
     run = runs.find_by!(scheduled_for: scheduled_for)
     if run.pending?
-      if requires_runner? && !has_online_runner?
-        signal = BeeperApp::Signal.new(
-          status: :error,
-          title: "Runner offline",
-          message: runner_offline_reason
-        )
-        run.record_signal_result!(signal, run_status: :failed)
-      elsif !requires_runner?
-        run.deliver_later
-      end
+      run.deliver_later
     end
     run
   end

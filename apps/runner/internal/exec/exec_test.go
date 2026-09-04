@@ -3,54 +3,37 @@ package exec
 import (
 	"context"
 	"testing"
+	"time"
 
-	"beep-runner/internal/probe"
+	"beep-runner/internal/task"
 )
 
-func TestScriptExecutorDisabled(t *testing.T) {
-	executor := NewScriptExecutor(false)
-	ctx := context.Background()
-
-	sig := executor.Run(ctx, map[string]any{
-		"command": "echo hello",
-	})
-
-	if sig.Status != probe.StatusError {
-		t.Fatalf("expected error status when allow_exec is false, got %s", sig.Status)
+func TestJobExecutorDisabled(t *testing.T) {
+	result := NewJobExecutor(false).Run(context.Background(), []string{"true"}, nil, time.Second, nil)
+	if result.Status != task.StatusError {
+		t.Fatalf("expected error, got %s", result.Status)
 	}
 }
 
-func TestScriptExecutorSuccess(t *testing.T) {
-	executor := NewScriptExecutor(true)
-	ctx := context.Background()
-
-	sig := executor.Run(ctx, map[string]any{
-		"command": "echo 'test execution success'",
+func TestJobExecutorSuccess(t *testing.T) {
+	var logs string
+	result := NewJobExecutor(true).Run(context.Background(), []string{"/bin/echo", "hello-workspace"}, nil, 5*time.Second, func(line string) {
+		logs += line
 	})
-
-	if sig.Status != probe.StatusOk {
-		t.Fatalf("expected ok status, got %s: %s", sig.Status, sig.Message)
+	if result.Status != task.StatusOk {
+		t.Fatalf("expected ok, got %s %s", result.Status, result.Message)
 	}
-	if sig.Metrics["exit_code"] != 0 {
-		t.Errorf("expected exit code 0, got %v", sig.Metrics["exit_code"])
-	}
-	if sig.Message != "'test execution success'" && sig.Message != "test execution success" {
-		t.Errorf("unexpected output: %s", sig.Message)
+	if logs == "" {
+		t.Fatalf("expected captured stdout")
 	}
 }
 
-func TestScriptExecutorNonZeroExit(t *testing.T) {
-	executor := NewScriptExecutor(true)
-	ctx := context.Background()
-
-	sig := executor.Run(ctx, map[string]any{
-		"command": "exit 2",
-	})
-
-	if sig.Status != probe.StatusAlerting {
-		t.Fatalf("expected alerting status on non-zero exit, got %s", sig.Status)
+func TestJobExecutorNonZeroExit(t *testing.T) {
+	result := NewJobExecutor(true).Run(context.Background(), []string{"/bin/sh", "-c", "exit 2"}, nil, 5*time.Second, nil)
+	if result.Status != task.StatusAlerting {
+		t.Fatalf("expected alerting, got %s", result.Status)
 	}
-	if sig.Metrics["exit_code"] != 2 {
-		t.Errorf("expected exit code 2, got %v", sig.Metrics["exit_code"])
+	if result.Metrics["exit_code"] != 2 {
+		t.Errorf("expected exit 2, got %v", result.Metrics["exit_code"])
 	}
 }

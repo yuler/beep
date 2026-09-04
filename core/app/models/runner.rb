@@ -6,8 +6,8 @@ class Runner < ApplicationRecord
   NAME_MAX_LENGTH = 80
 
   belongs_to :account
-  has_many :beepers, dependent: :nullify
-  has_many :beeper_runs, dependent: :nullify
+  has_many :jobs, class_name: "RunnerJob", dependent: :destroy
+  has_many :runs, class_name: "RunnerRun", dependent: :destroy
 
   enum :status, %w[ online idle offline ].index_by(&:itself), default: "offline"
 

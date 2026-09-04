@@ -34,7 +34,7 @@ COPY --from=build /app/bin/beep-runner /usr/local/bin/beep-runner
 ARG APP_VERSION
 ARG GIT_REVISION
 LABEL org.opencontainers.image.title="beep-runner" \
-      org.opencontainers.image.description="Self-hosted probe runner for Beep" \
+      org.opencontainers.image.description="Self-hosted workspace runner for Beep" \
       org.opencontainers.image.version="${APP_VERSION}" \
       org.opencontainers.image.revision="${GIT_REVISION}"
 

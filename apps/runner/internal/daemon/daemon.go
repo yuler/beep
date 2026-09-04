@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -10,42 +11,38 @@ import (
 	"beep-runner/internal/client"
 	"beep-runner/internal/config"
 	"beep-runner/internal/exec"
-	"beep-runner/internal/probe"
+	"beep-runner/internal/task"
+	"beep-runner/internal/workspace"
 )
 
 type Daemon struct {
-	cfg        *config.Config
-	client     *client.Client
-	dispatcher *probe.Dispatcher
-	executor   *exec.ScriptExecutor
-	sem        chan struct{}
-	wg         sync.WaitGroup
+	cfg       *config.Config
+	client    *client.Client
+	workspace *workspace.Workspace
+	executor  *exec.JobExecutor
+	sem       chan struct{}
+	wg        sync.WaitGroup
 }
 
-func New(cfg *config.Config) *Daemon {
-	executor := exec.NewScriptExecutor(cfg.AllowExec)
-	dispatcher := probe.NewDispatcher(executor.Run)
-
+func New(cfg *config.Config, ws *workspace.Workspace) *Daemon {
 	return &Daemon{
-		cfg:        cfg,
-		client:     client.New(cfg),
-		dispatcher: dispatcher,
-		executor:   executor,
-		sem:        make(chan struct{}, cfg.Concurrency),
+		cfg:       cfg,
+		client:    client.New(cfg),
+		workspace: ws,
+		executor:  exec.NewJobExecutor(cfg.AllowExec),
+		sem:       make(chan struct{}, cfg.Concurrency),
 	}
 }
 
 func (d *Daemon) Start(ctx context.Context) error {
-	log.Printf("[beep-runner] Connecting to server %s (concurrency=%d, allow_exec=%v)...",
-		d.cfg.ServerURL, d.cfg.Concurrency, d.cfg.AllowExec)
+	log.Printf("[beep-runner] Connecting to %s workspace=%s concurrency=%d allow_exec=%v",
+		d.cfg.ServerURL, d.workspace.Root, d.cfg.Concurrency, d.cfg.AllowExec)
 
-	// Initial Ping
 	pingRes, err := d.client.Ping(ctx)
 	if err != nil {
 		return fmt.Errorf("initial handshake failed: %w", err)
 	}
-
-	log.Printf("[beep-runner] Connected successfully! Runner ID: %s (%s)", pingRes.RunnerID, pingRes.RunnerName)
+	log.Printf("[beep-runner] Connected: %s (%s)", pingRes.RunnerID, pingRes.RunnerName)
 
 	ticker := time.NewTicker(d.cfg.PollInterval)
 	defer ticker.Stop()
@@ -53,11 +50,9 @@ func (d *Daemon) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("[beep-runner] Shutting down, waiting for running tasks to complete...")
+			log.Println("[beep-runner] Shutting down...")
 			d.wg.Wait()
-			log.Println("[beep-runner] All tasks completed. Goodbye.")
 			return nil
-
 		case <-ticker.C:
 			d.pollAndExecute(ctx)
 		}
@@ -65,40 +60,88 @@ func (d *Daemon) Start(ctx context.Context) error {
 }
 
 func (d *Daemon) pollAndExecute(ctx context.Context) {
-	// Attempt to poll a task
-	task, err := d.client.Poll(ctx)
+	t, err := d.client.Poll(ctx)
 	if err != nil {
 		if ctx.Err() == nil {
 			log.Printf("[beep-runner] Poll error: %v", err)
 		}
 		return
 	}
-
-	if task == nil {
-		return // No tasks pending
+	if t == nil {
+		return
 	}
 
-	// Acquire concurrency slot
 	d.sem <- struct{}{}
 	d.wg.Add(1)
-
-	go func(t *probe.RunnerTask) {
+	go func(job *task.Task) {
 		defer func() {
 			<-d.sem
 			d.wg.Done()
 		}()
+		d.execute(job)
+	}(t)
+}
 
-		log.Printf("[beep-runner] Executing task %s (%s - %s)...", t.ID, t.AppSlug, t.Title)
+func (d *Daemon) execute(job *task.Task) {
+	log.Printf("[beep-runner] Running %s (%s)", job.JobSlug, job.ID)
 
-		taskCtx, cancel := context.WithTimeout(context.Background(), time.Duration(t.TimeoutSeconds+5)*time.Second)
-		defer cancel()
+	timeout := time.Duration(job.TimeoutSeconds) * time.Second
+	if timeout <= 0 {
+		timeout = 60 * time.Second
+	}
+	taskCtx, cancel := context.WithTimeout(context.Background(), timeout+5*time.Second)
+	defer cancel()
 
-		signal := d.dispatcher.Dispatch(taskCtx, t)
-
-		log.Printf("[beep-runner] Task %s finished: status=%s title=%q", t.ID, signal.Status, signal.Title)
-
-		if err := d.client.ReportResult(taskCtx, t.ID, signal); err != nil {
-			log.Printf("[beep-runner] Error reporting result for task %s: %v", t.ID, err)
+	argv, err := d.workspace.Resolve(job.JobSlug)
+	if err != nil {
+		result := task.Error("Unknown local job", err.Error(), nil)
+		_ = d.client.ReportLog(taskCtx, job.LogURL, err.Error()+"\n")
+		if reportErr := d.client.ReportResult(taskCtx, job.ResultURL, result); reportErr != nil {
+			log.Printf("[beep-runner] result error: %v", reportErr)
 		}
-	}(task)
+		return
+	}
+
+	configJSON, _ := json.Marshal(job.Config)
+	env := exec.WithJobEnv(append(exec.ConfigEnv(job.Config),
+		"BEEP_SERVER="+d.cfg.ServerURL,
+		"BEEP_RUNNER_TOKEN="+d.cfg.RunnerToken,
+		"BEEP_RUN_ID="+job.ID,
+		"BEEP_JOB_SLUG="+job.JobSlug,
+		"BEEP_LOG_URL="+job.LogURL,
+		"BEEP_RESULT_URL="+job.ResultURL,
+		"BEEP_CONFIG="+string(configJSON),
+	))
+
+	var logBuf string
+	var logMu sync.Mutex
+	flush := func(force bool) {
+		logMu.Lock()
+		chunk := logBuf
+		if !force && len(chunk) < 256 {
+			logMu.Unlock()
+			return
+		}
+		logBuf = ""
+		logMu.Unlock()
+		if chunk == "" {
+			return
+		}
+		if err := d.client.ReportLog(taskCtx, job.LogURL, chunk); err != nil {
+			log.Printf("[beep-runner] log upload: %v", err)
+		}
+	}
+
+	result := d.executor.Run(taskCtx, argv, env, timeout, func(line string) {
+		log.Print("[job " + job.JobSlug + "] " + line)
+		logMu.Lock()
+		logBuf += line
+		logMu.Unlock()
+		flush(false)
+	})
+	flush(true)
+
+	if err := d.client.ReportResult(taskCtx, job.ResultURL, result); err != nil {
+		log.Printf("[beep-runner] result error for %s: %v", job.ID, err)
+	}
 }

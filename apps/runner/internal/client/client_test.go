@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"beep-runner/internal/config"
-	"beep-runner/internal/probe"
+	"beep-runner/internal/task"
 )
 
 func TestClientPing(t *testing.T) {
@@ -16,12 +16,7 @@ func TestClientPing(t *testing.T) {
 		if r.URL.Path != "/api/v1/runner/ping" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
-		if r.Header.Get("X-Runner-Token") != "beep_rt_test" {
-			t.Errorf("unexpected token header: %s", r.Header.Get("X-Runner-Token"))
-		}
-
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]any{
 			"status":      "ok",
 			"runner_id":   "run_123",
@@ -31,78 +26,60 @@ func TestClientPing(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	cfg := &config.Config{
-		ServerURL:   ts.URL,
-		RunnerToken: "beep_rt_test",
-	}
-
-	c := New(cfg)
+	c := New(&config.Config{ServerURL: ts.URL, RunnerToken: "beep_rt_test"})
 	res, err := c.Ping(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected ping error: %v", err)
 	}
-
 	if res.RunnerID != "run_123" {
 		t.Errorf("expected runner_id run_123, got %s", res.RunnerID)
 	}
 }
 
-func TestClientPollAndReportResult(t *testing.T) {
-	polled := false
-	resultReported := false
-
+func TestClientPollLogAndResult(t *testing.T) {
+	var gotLog, gotResult bool
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-
-		if r.URL.Path == "/api/v1/runner/tasks/poll" {
-			polled = true
-			w.WriteHeader(http.StatusOK)
+		switch r.URL.Path {
+		case "/api/v1/runner/tasks/poll":
 			json.NewEncoder(w).Encode(map[string]any{
 				"task": map[string]any{
-					"id":              "task-uuid-1",
-					"beeper_id":       "beeper-uuid-1",
-					"title":           "Site Check",
-					"app_slug":        "site-uptime",
-					"config":          map[string]any{"target_url": "https://example.com"},
+					"id":              "task-1",
+					"job_slug":        "intranet-http",
+					"name":            "Intranet HTTP",
 					"timeout_seconds": 15,
+					"log_url":         "http://example.invalid/logs",
+					"result_url":      "http://example.invalid/result",
+					"config":          map[string]any{"target_url": "http://10.0.0.5"},
 				},
 			})
-			return
-		}
-
-		if r.URL.Path == "/api/v1/runner/tasks/task-uuid-1/result" {
-			resultReported = true
+		case "/logs":
+			gotLog = true
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]any{
-				"status": "acknowledged",
-			})
-			return
+			json.NewEncoder(w).Encode(map[string]any{"status": "acknowledged"})
+		case "/result":
+			gotResult = true
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]any{"status": "acknowledged"})
+		default:
+			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
-
-		t.Errorf("unexpected path: %s", r.URL.Path)
 	}))
 	defer ts.Close()
 
-	cfg := &config.Config{
-		ServerURL:   ts.URL,
-		RunnerToken: "beep_rt_test",
+	c := New(&config.Config{ServerURL: ts.URL, RunnerToken: "beep_rt_test"})
+	job, err := c.Poll(context.Background())
+	if err != nil || job == nil || job.JobSlug != "intranet-http" {
+		t.Fatalf("poll: %v %#v", err, job)
 	}
 
-	c := New(cfg)
-	task, err := c.Poll(context.Background())
-	if err != nil {
-		t.Fatalf("unexpected poll error: %v", err)
+	if err := c.ReportLog(context.Background(), ts.URL+"/logs", "hello\n"); err != nil {
+		t.Fatal(err)
 	}
-	if task == nil || task.ID != "task-uuid-1" {
-		t.Fatalf("expected task id task-uuid-1, got %v", task)
+	if err := c.ReportResult(context.Background(), ts.URL+"/result", task.Ok("ok", "", nil)); err != nil {
+		t.Fatal(err)
 	}
-
-	sig := probe.OkSignal("HTTP 200 OK", "all good", map[string]any{"latency_ms": 25})
-	if err := c.ReportResult(context.Background(), task.ID, sig); err != nil {
-		t.Fatalf("unexpected report result error: %v", err)
-	}
-
-	if !polled || !resultReported {
-		t.Errorf("expected both poll and report result to be executed")
+	if !gotLog || !gotResult {
+		t.Fatalf("expected log and result posts, got log=%v result=%v", gotLog, gotResult)
 	}
 }

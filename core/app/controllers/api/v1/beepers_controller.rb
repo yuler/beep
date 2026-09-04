@@ -76,13 +76,13 @@ class Api::V1::BeepersController < Api::V1::BaseController
   end
 
   def beeper_params
-    attrs = params.permit(:title, :body, :cron, :runner_id, :runner_tag, notification_channels: [])
+    attrs = params.permit(:title, :body, :cron, notification_channels: [])
     attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
     attrs
   end
 
   def update_params
-    attrs = params.permit(:title, :body, :cron, :runner_id, :runner_tag, notification_channels: [])
+    attrs = params.permit(:title, :body, :cron, notification_channels: [])
     attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
     attrs
   end
