@@ -81,6 +81,7 @@ var jobCreateCmd = &cobra.Command{
 		filePath, created, err := ws.CreateScript(
 			createParams.Slug,
 			createParams.ScriptType,
+			"",
 			createParams.Name,
 			createParams.Cron,
 			createParams.Timezone,
@@ -140,6 +141,8 @@ var jobCreateCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to sync job to server: %w", err)
 		}
+
+		_ = ws.UpdateScriptID(filePath, serverJob.ID)
 
 		fmt.Println(ui.Success("Successfully registered job on server: %s (%s: %s, %s: %s)",
 			ui.Bold(serverJob.Name), ui.Dim("ID"), ui.Dim(serverJob.ID), ui.Dim("Cron"), ui.Yellow(serverJob.Cron)))
@@ -235,7 +238,7 @@ var jobRemoveCmd = &cobra.Command{
 var jobListCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"ls"},
-	Short:   "List local jobs in workspace and on server",
+	Short:   "List workspace jobs and compare with server",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -252,42 +255,172 @@ var jobListCmd = &cobra.Command{
 			return fmt.Errorf("failed to list local jobs: %w", err)
 		}
 
-		fmt.Printf("%s (%s):\n", ui.Bold(ui.Cyan("Local Workspace Jobs")), ui.Dim(ws.Root))
-		if len(localJobs) == 0 {
-			fmt.Println(ui.Dim("  (No local jobs found)"))
-		} else {
-			for _, j := range localJobs {
-				desc := fmt.Sprintf("[%s, %s: %s]", ui.Bold(j.Name), ui.Dim("cron"), ui.Yellow(j.Cron))
-				if j.TimeoutSeconds > 0 && j.TimeoutSeconds != 30 {
-					desc += fmt.Sprintf(" (%ds)", j.TimeoutSeconds)
-				}
-				if j.FilePath != "" {
-					fmt.Printf("  %s %-18s %-42s -> %s\n", ui.Bullet(), ui.Cyan(j.Slug), desc, ui.Dim(j.FilePath))
-				} else {
-					fmt.Printf("  %s %-18s %-42s -> %s (jobs.json)\n", ui.Bullet(), ui.Cyan(j.Slug), desc, ui.Dim(strings.Join(j.Command, " ")))
-				}
-			}
+		localMap := make(map[string]workspace.LocalJob)
+		for _, lj := range localJobs {
+			localMap[strings.ToLower(lj.Slug)] = lj
 		}
 
+		var serverJobs []*client.ServerJob
+		var serverErr error
 		if cfg.ServerURL != "" && cfg.RunnerToken != "" {
-			fmt.Println()
-			fmt.Printf("%s (%s):\n", ui.Bold(ui.Cyan("Server Jobs")), ui.Dim(cfg.ServerURL))
 			c := client.New(cfg)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
+			serverJobs, serverErr = c.ListJobs(ctx)
+			cancel()
+		}
 
-			serverJobs, err := c.ListJobs(ctx)
-			if err != nil {
-				fmt.Printf("  %s\n", ui.Warn("Could not fetch server jobs: %v", err))
-			} else if len(serverJobs) == 0 {
-				fmt.Println(ui.Dim("  (No jobs configured on server)"))
+		if serverErr != nil {
+			fmt.Println(ui.Warn("Warning: Could not fetch server jobs: %v", serverErr))
+		}
+
+		// If no server configured or server call failed, just show local jobs
+		if cfg.ServerURL == "" || cfg.RunnerToken == "" || serverErr != nil {
+			fmt.Printf("%s (%s):\n", ui.Bold(ui.Cyan("Local Workspace Jobs")), ui.Dim(ws.Root))
+			if len(localJobs) == 0 {
+				fmt.Println(ui.Dim("  (No local jobs found in jobs/)"))
 			} else {
-				for _, sj := range serverJobs {
-					fmt.Printf("  %s %-18s [%s] %s: %-14s %s\n",
-						ui.Bullet(), ui.Cyan(sj.Slug), ui.Bold(sj.Name), ui.Dim("cron"), ui.Yellow(sj.Cron), ui.StatusBadge(sj.Status))
+				for _, j := range localJobs {
+					desc := fmt.Sprintf("[%s, %s: %s]", ui.Bold(j.Name), ui.Dim("cron"), ui.Yellow(j.Cron))
+					if j.TimeoutSeconds > 0 && j.TimeoutSeconds != 30 {
+						desc += fmt.Sprintf(" (%ds)", j.TimeoutSeconds)
+					}
+					idStr := ""
+					if j.ID != "" {
+						idStr = fmt.Sprintf(" (ID: %s)", ui.Dim(j.ID))
+					}
+					if j.FilePath != "" {
+						fmt.Printf("  %s %-18s %-36s%s -> %s\n", ui.Bullet(), ui.Cyan(j.Slug), desc, idStr, ui.Dim(j.FilePath))
+					} else {
+						fmt.Printf("  %s %-18s %-36s%s -> %s (jobs.json)\n", ui.Bullet(), ui.Cyan(j.Slug), desc, idStr, ui.Dim(strings.Join(j.Command, " ")))
+					}
 				}
 			}
+			return nil
 		}
+
+		serverMap := make(map[string]*client.ServerJob)
+		for _, sj := range serverJobs {
+			serverMap[strings.ToLower(sj.Slug)] = sj
+		}
+
+		var allSlugs []string
+		seen := make(map[string]bool)
+		for _, lj := range localJobs {
+			slug := strings.ToLower(lj.Slug)
+			if !seen[slug] {
+				seen[slug] = true
+				allSlugs = append(allSlugs, slug)
+			}
+		}
+		for _, sj := range serverJobs {
+			slug := strings.ToLower(sj.Slug)
+			if !seen[slug] {
+				seen[slug] = true
+				allSlugs = append(allSlugs, slug)
+			}
+		}
+
+		fmt.Printf("%s\n", ui.Bold(ui.Cyan("Workspace & Server Job Status:")))
+		fmt.Printf("  %s %s  |  %s %s\n\n", ui.Dim("Workspace:"), ui.Bold(ws.Root), ui.Dim("Server:"), ui.Bold(cfg.ServerURL))
+
+		if len(allSlugs) == 0 {
+			fmt.Println(ui.Dim("  (No jobs found locally or on server)"))
+			fmt.Printf("  Create one with: %s\n", ui.Cyan("beep-runner job create <slug>"))
+			return nil
+		}
+
+		for _, slug := range allSlugs {
+			lj, hasLocal := localMap[slug]
+			sj, hasServer := serverMap[slug]
+
+			if hasLocal && hasServer {
+				serverDesc := ""
+				if sj.Config != nil {
+					if d, ok := sj.Config["description"].(string); ok {
+						serverDesc = d
+					}
+				}
+
+				var diffs []string
+				if lj.Name != "" && sj.Name != "" && lj.Name != sj.Name {
+					diffs = append(diffs, fmt.Sprintf("name: local %q != server %q", lj.Name, sj.Name))
+				}
+				if lj.Cron != "" && sj.Cron != "" && lj.Cron != sj.Cron {
+					diffs = append(diffs, fmt.Sprintf("schedule: local %q != server %q", lj.Cron, sj.Cron))
+				}
+				serverTz := sj.Timezone
+				if serverTz == "" {
+					serverTz = "UTC"
+				}
+				localTz := lj.Timezone
+				if localTz == "" {
+					localTz = "UTC"
+				}
+				if !strings.EqualFold(localTz, serverTz) {
+					diffs = append(diffs, fmt.Sprintf("timezone: local %q != server %q", localTz, serverTz))
+				}
+				serverTimeout := sj.TimeoutSeconds
+				if serverTimeout <= 0 {
+					serverTimeout = 30
+				}
+				localTimeout := lj.TimeoutSeconds
+				if localTimeout <= 0 {
+					localTimeout = 30
+				}
+				if localTimeout != serverTimeout {
+					diffs = append(diffs, fmt.Sprintf("timeout: local %ds != server %ds", localTimeout, serverTimeout))
+				}
+				if lj.Description != "" && serverDesc != "" && lj.Description != serverDesc {
+					diffs = append(diffs, fmt.Sprintf("description: local %q != server %q", lj.Description, serverDesc))
+				}
+
+				if len(diffs) == 0 {
+					fmt.Printf("  %s %-18s %s %s\n",
+						ui.Green("✓"),
+						ui.Bold(ui.Cyan(slug)),
+						ui.Green("[synced]"),
+						ui.Dim(fmt.Sprintf("(%s, %s, %s)", lj.Name, lj.Cron, sj.Status)),
+					)
+					fmt.Printf("    %s %s (%s: %s)\n", ui.Dim("File:"), ui.Dim(lj.FilePath), ui.Dim("ID"), ui.Dim(sj.ID))
+				} else {
+					fmt.Printf("  %s %-18s %s %s\n",
+						ui.Yellow("!"),
+						ui.Bold(ui.Cyan(slug)),
+						ui.Yellow("[out of sync / modified]"),
+						ui.Dim(fmt.Sprintf("(%s)", lj.Name)),
+					)
+					fmt.Printf("    %s %s (%s: %s)\n", ui.Dim("File:"), ui.Dim(lj.FilePath), ui.Dim("ID"), ui.Dim(sj.ID))
+					for _, d := range diffs {
+						fmt.Printf("    %s %s\n", ui.Yellow("•"), ui.Yellow(d))
+					}
+					fmt.Printf("    %s Run %s to push local, or %s to pull server\n",
+						ui.Dim("Tip:"),
+						ui.Cyan(fmt.Sprintf("beep-runner push %s", slug)),
+						ui.Cyan(fmt.Sprintf("beep-runner pull %s", slug)),
+					)
+				}
+			} else if hasLocal && !hasServer {
+				fmt.Printf("  %s %-18s %s %s\n",
+					ui.Cyan("●"),
+					ui.Bold(ui.Cyan(slug)),
+					ui.Cyan("[local only]"),
+					ui.Dim(fmt.Sprintf("(%s, %s)", lj.Name, lj.Cron)),
+				)
+				fmt.Printf("    %s %s\n", ui.Dim("File:"), ui.Dim(lj.FilePath))
+				fmt.Printf("    %s Run %s to register on server\n", ui.Dim("Tip:"), ui.Cyan(fmt.Sprintf("beep-runner push %s", slug)))
+			} else if !hasLocal && hasServer {
+				fmt.Printf("  %s %-18s %s %s\n",
+					ui.Magenta("●"),
+					ui.Bold(ui.Cyan(slug)),
+					ui.Magenta("[remote only]"),
+					ui.Dim(fmt.Sprintf("(%s, %s, %s)", sj.Name, sj.Cron, sj.Status)),
+				)
+				fmt.Printf("    %s %s\n", ui.Dim("ID:"), ui.Dim(sj.ID))
+				fmt.Printf("    %s Run %s to pull script to workspace\n", ui.Dim("Tip:"), ui.Cyan(fmt.Sprintf("beep-runner pull %s", slug)))
+			}
+			fmt.Println()
+		}
+
 		return nil
 	},
 }
@@ -420,8 +553,12 @@ func runJobPushExec(cmd *cobra.Command, args []string) error {
 		if tz == "" {
 			tz = "UTC"
 		}
-		fmt.Printf("  %s %s [%s, %s: %s] (%s)\n",
-			ui.Bullet(), ui.Cyan(j.Slug), ui.Bold(j.Name), ui.Dim("cron"), ui.Yellow(j.Cron), ui.Dim(tz))
+		// Update local script ID
+		if fpath, found := ws.FindScriptFile(j.Slug); found {
+			_ = ws.UpdateScriptID(fpath, j.ID)
+		}
+		fmt.Printf("  %s %s [%s, %s: %s] (%s, %s: %s)\n",
+			ui.Bullet(), ui.Cyan(j.Slug), ui.Bold(j.Name), ui.Dim("cron"), ui.Yellow(j.Cron), ui.Dim(tz), ui.Dim("ID"), ui.Dim(j.ID))
 	}
 	return nil
 }
@@ -478,7 +615,6 @@ func runJobPullExec(cmd *cobra.Command, args []string) error {
 	}
 
 	pulledCount := 0
-	skippedCount := 0
 
 	for _, sj := range serverJobs {
 		if !targetMap[strings.ToLower(sj.Slug)] {
@@ -492,26 +628,23 @@ func runJobPullExec(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		filePath, created, pullErr := ws.PullJob(sj.Slug, "sh", sj.Name, sj.Cron, sj.Timezone, desc, sj.TimeoutSeconds, force)
+		filePath, created, pullErr := ws.PullJob(sj.Slug, "sh", sj.ID, sj.Name, sj.Cron, sj.Timezone, desc, sj.TimeoutSeconds, force)
 		if pullErr != nil {
 			fmt.Printf("  %s %s: %v\n", ui.Error("Failed to pull"), ui.Cyan(sj.Slug), pullErr)
 			continue
 		}
 
+		pulledCount++
 		if created {
-			pulledCount++
-			fmt.Println(ui.Success("Pulled %s -> %s", ui.Bold(sj.Slug), ui.Cyan(filePath)))
+			fmt.Println(ui.Success("Created local script: %s (%s: %s)", ui.Cyan(filePath), ui.Dim("ID"), ui.Dim(sj.ID)))
 		} else {
-			skippedCount++
-			fmt.Println(ui.Info("Local script already exists: %s %s", ui.Cyan(filePath), ui.Dim("(use --force to overwrite)")))
+			fmt.Println(ui.Success("Updated local script header: %s (%s: %s)", ui.Cyan(filePath), ui.Dim("ID"), ui.Dim(sj.ID)))
 		}
 	}
 
 	fmt.Println()
 	if pulledCount > 0 {
 		fmt.Println(ui.Success("Successfully pulled %d job(s) from server (%s)", pulledCount, ui.Dim(cfg.ServerURL)))
-	} else if skippedCount > 0 {
-		fmt.Println(ui.Info("All %d server job(s) already exist locally in %s", skippedCount, ui.Dim(ws.JobsDir())))
 	}
 	return nil
 }

@@ -23,6 +23,7 @@ type JobSpec struct {
 }
 
 type LocalJob struct {
+	ID             string   `json:"id,omitempty"`
 	Slug           string   `json:"slug"`
 	Name           string   `json:"name"`
 	Cron           string   `json:"cron"`
@@ -35,6 +36,7 @@ type LocalJob struct {
 }
 
 type JobMetadata struct {
+	ID             string
 	Name           string
 	Cron           string
 	Timezone       string
@@ -154,6 +156,8 @@ func ParseScriptMetadata(filePath string) (JobMetadata, error) {
 		}
 
 		switch strings.ToLower(key) {
+		case "id", "job_id", "jobid":
+			meta.ID = val
 		case "name", "title":
 			meta.Name = val
 		case "schedule", "cron":
@@ -187,7 +191,7 @@ func DetectTimezone() string {
 	return "UTC"
 }
 
-func (w *Workspace) CreateScript(slug, scriptType, name, cron, timezone, description string, timeoutSeconds int) (filePath string, created bool, err error) {
+func (w *Workspace) CreateScript(slug, scriptType, id, name, cron, timezone, description string, timeoutSeconds int) (filePath string, created bool, err error) {
 	slug = strings.TrimSpace(strings.ToLower(slug))
 	if slug == "" {
 		return "", false, fmt.Errorf("job slug cannot be empty")
@@ -232,6 +236,7 @@ func (w *Workspace) CreateScript(slug, scriptType, name, cron, timezone, descrip
 	switch ext {
 	case ".py":
 		content = fmt.Sprintf(`#!/usr/bin/env python3
+# @id: %s
 # @name: %s
 # @schedule: %s
 # @timeout: %ds
@@ -251,9 +256,10 @@ print(f"[{os.getenv('BEEP_JOB_SLUG', '%s')}] Starting health check...")
 # Exit 0 for ok, non-zero for error/alerting.
 print("Check passed successfully.")
 sys.exit(0)
-`, name, cron, timeoutSeconds, timezone, description, slug)
+`, id, name, cron, timeoutSeconds, timezone, description, slug)
 	case ".js":
 		content = fmt.Sprintf(`#!/usr/bin/env node
+// @id: %s
 // @name: %s
 // @schedule: %s
 // @timeout: %ds
@@ -270,9 +276,10 @@ console.log("[%s] Starting health check...");
 // Exit 0 for ok, non-zero for error/alerting.
 console.log("Check passed successfully.");
 process.exit(0);
-`, name, cron, timeoutSeconds, timezone, description, slug)
+`, id, name, cron, timeoutSeconds, timezone, description, slug)
 	case ".rb":
 		content = fmt.Sprintf(`#!/usr/bin/env ruby
+# @id: %s
 # @name: %s
 # @schedule: %s
 # @timeout: %ds
@@ -283,9 +290,10 @@ puts "[%s] Starting health check..."
 # Put your check logic here.
 puts "Check passed successfully."
 exit 0
-`, name, cron, timeoutSeconds, timezone, description, slug)
+`, id, name, cron, timeoutSeconds, timezone, description, slug)
 	default:
 		content = fmt.Sprintf(`#!/usr/bin/env bash
+# @id: %s
 # @name: %s
 # @schedule: %s
 # @timeout: %ds
@@ -305,7 +313,7 @@ echo "[%s] Starting health check..."
 
 echo "Check passed successfully."
 exit 0
-`, name, cron, timeoutSeconds, timezone, description, slug)
+`, id, name, cron, timeoutSeconds, timezone, description, slug)
 	}
 
 	if err := os.WriteFile(targetPath, []byte(content), 0o755); err != nil {
@@ -315,26 +323,117 @@ exit 0
 	return targetPath, true, nil
 }
 
-func (w *Workspace) PullJob(slug, scriptType, name, cron, timezone, description string, timeoutSeconds int, overwrite bool) (filePath string, created bool, err error) {
+func (w *Workspace) UpdateScriptHeader(filePath, id, name, cron, timezone, description string, timeoutSeconds int) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	ext := strings.ToLower(filepath.Ext(filePath))
+	commentPrefix := "# "
+	if ext == ".js" || ext == ".ts" {
+		commentPrefix = "// "
+	} else if ext == ".sql" {
+		commentPrefix = "-- "
+	}
+
+	lines := strings.Split(string(data), "\n")
+	var shebang string
+	startIndex := 0
+
+	if len(lines) > 0 && strings.HasPrefix(lines[0], "#!") {
+		shebang = lines[0]
+		startIndex = 1
+	}
+
+	// Skip existing @ comment lines
+	for startIndex < len(lines) {
+		trimmed := strings.TrimSpace(lines[startIndex])
+		if trimmed == "" {
+			startIndex++
+			continue
+		}
+		isComment := strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "--")
+		if isComment {
+			c := strings.TrimLeft(trimmed, "#/- ")
+			if strings.HasPrefix(c, "@") {
+				startIndex++
+				continue
+			}
+		}
+		break
+	}
+
+	remainingBody := strings.Join(lines[startIndex:], "\n")
+	remainingBody = strings.TrimLeft(remainingBody, "\r\n")
+
+	if cron == "" {
+		cron = "*/5 * * * *"
+	}
+	if timeoutSeconds <= 0 {
+		timeoutSeconds = 30
+	}
+	if timezone == "" {
+		timezone = DetectTimezone()
+	}
+
+	var sb strings.Builder
+	if shebang != "" {
+		sb.WriteString(shebang)
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString(fmt.Sprintf("%s@id: %s\n", commentPrefix, id))
+	sb.WriteString(fmt.Sprintf("%s@name: %s\n", commentPrefix, name))
+	sb.WriteString(fmt.Sprintf("%s@schedule: %s\n", commentPrefix, cron))
+	sb.WriteString(fmt.Sprintf("%s@timeout: %ds\n", commentPrefix, timeoutSeconds))
+	sb.WriteString(fmt.Sprintf("%s@timezone: %s\n", commentPrefix, timezone))
+	sb.WriteString(fmt.Sprintf("%s@description: %s\n\n", commentPrefix, description))
+	sb.WriteString(remainingBody)
+
+	return os.WriteFile(filePath, []byte(sb.String()), 0o755)
+}
+
+func (w *Workspace) UpdateScriptID(filePath string, id string) error {
+	meta, err := ParseScriptMetadata(filePath)
+	if err != nil {
+		return err
+	}
+	return w.UpdateScriptHeader(filePath, id, meta.Name, meta.Cron, meta.Timezone, meta.Description, meta.TimeoutSeconds)
+}
+
+func (w *Workspace) FindScriptFile(slug string) (string, bool) {
+	slug = strings.TrimSpace(strings.ToLower(slug))
+	candidates := []string{
+		filepath.Join(w.JobsDir(), slug),
+		filepath.Join(w.JobsDir(), slug+".sh"),
+		filepath.Join(w.JobsDir(), slug+".py"),
+		filepath.Join(w.JobsDir(), slug+".rb"),
+		filepath.Join(w.JobsDir(), slug+".js"),
+	}
+	for _, c := range candidates {
+		if info, err := os.Stat(c); err == nil && !info.IsDir() {
+			return c, true
+		}
+	}
+	return "", false
+}
+
+func (w *Workspace) PullJob(slug, scriptType, id, name, cron, timezone, description string, timeoutSeconds int, overwrite bool) (filePath string, created bool, err error) {
 	slug = strings.TrimSpace(strings.ToLower(slug))
 	if slug == "" {
 		return "", false, fmt.Errorf("job slug cannot be empty")
 	}
 
-	ext := ".sh"
-	if scriptType != "" {
-		ext = "." + strings.TrimPrefix(scriptType, ".")
-	}
-
-	targetPath := filepath.Join(w.JobsDir(), slug+ext)
-	if _, err := os.Stat(targetPath); err == nil {
-		if !overwrite {
-			return targetPath, false, nil
+	existingPath, found := w.FindScriptFile(slug)
+	if found {
+		if err := w.UpdateScriptHeader(existingPath, id, name, cron, timezone, description, timeoutSeconds); err != nil {
+			return existingPath, false, fmt.Errorf("failed to update script header for %s: %w", existingPath, err)
 		}
-		_ = os.Remove(targetPath)
+		return existingPath, false, nil
 	}
 
-	return w.CreateScript(slug, scriptType, name, cron, timezone, description, timeoutSeconds)
+	return w.CreateScript(slug, scriptType, id, name, cron, timezone, description, timeoutSeconds)
 }
 
 func (w *Workspace) RemoveJob(slug string) (removedFiles []string, removedFromJSON bool, err error) {
@@ -408,6 +507,7 @@ func (w *Workspace) ListJobs() ([]LocalJob, error) {
 			}
 
 			jobsMap[slug] = LocalJob{
+				ID:             meta.ID,
 				Slug:           slug,
 				Name:           jobName,
 				Cron:           cron,
