@@ -112,7 +112,7 @@ func startBackgroundDaemon(cfg *config.Config) error {
 	// Filter out daemon flags from args so child doesn't think it needs to spawn again
 	childArgs := stripDaemonFlags(os.Args[1:])
 
-	subcommands := map[string]bool{"up": true, "run": true, "ping": true, "version": true, "config": true, "job": true}
+	subcommands := map[string]bool{"up": true, "run": true, "status": true, "stop": true, "ping": true, "version": true, "config": true, "job": true}
 	hasSubcommand := false
 	for _, a := range childArgs {
 		if !strings.HasPrefix(a, "-") {

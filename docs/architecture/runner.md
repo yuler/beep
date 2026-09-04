@@ -143,12 +143,23 @@ beep-runner up
 # Start daemon in background
 beep-runner up -d
 # or: beep-runner -d
+
+# Check daemon running status
+beep-runner status
+
+# Stop running daemon
+beep-runner stop
+beep-runner stop --force
 ```
 
 Command flags for `beep-runner up`:
 - `-d, --daemon`: Run runner process in background (daemon mode).
 - `-c, --concurrency`: Max concurrent worker jobs (default `5`).
 - `-i, --poll-interval`: Task polling interval (default `3s`).
+
+Command flags for `beep-runner stop`:
+- `-f, --force`: Forcibly kill (SIGKILL) if graceful shutdown times out.
+- `--timeout`: Timeout duration waiting for shutdown (default `10s`).
 
 Global flags: `--workspace` / `-w`, `--server`, `--token`, `--no-color`, `--no-interactive`.
 

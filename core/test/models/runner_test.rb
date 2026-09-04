@@ -46,11 +46,11 @@ class RunnerTest < ActiveSupport::TestCase
     assert_not runner.matches_tag?("public")
   end
 
-  test "touch_activity! updates metadata and status" do
+  test "touch_activity updates metadata and status" do
     runner = @account.runners.create!(name: "HQ-Server")
 
     travel_to Time.zone.parse("2026-09-01 12:00:00 UTC") do
-      runner.touch_activity!(
+      runner.touch_activity(
         version: "1.0.0",
         os: "linux",
         arch: "arm64",
@@ -70,7 +70,7 @@ class RunnerTest < ActiveSupport::TestCase
     end
   end
 
-  test "mark_stale_offline! transitions inactive runners to offline" do
+  test "mark_stale_offline transitions inactive runners to offline" do
     active_runner = @account.runners.create!(name: "Active-Runner")
     active_runner.update_columns(status: "online", last_seen_at: 10.seconds.ago)
 
@@ -80,7 +80,7 @@ class RunnerTest < ActiveSupport::TestCase
     never_seen_runner = @account.runners.create!(name: "Never-Seen")
     never_seen_runner.update_columns(status: "idle", last_seen_at: nil)
 
-    Runner.mark_stale_offline!
+    Runner.mark_stale_offline
 
     assert_equal "online", active_runner.reload.status
     assert_equal "offline", stale_runner.reload.status
@@ -109,7 +109,7 @@ class RunnerTest < ActiveSupport::TestCase
     runner = @account.runners.create!(name: "HQ-Server")
     old_token = runner.token
 
-    runner.regenerate_token!
+    runner.regenerate_token
     assert_not_equal old_token, runner.token
     assert runner.token.start_with?("beep_rt_")
   end

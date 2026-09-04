@@ -8,10 +8,10 @@ class Runner < ApplicationRecord
   has_many :jobs, class_name: "Runner::Job", dependent: :destroy
   has_many :runs, class_name: "Runner::Run", dependent: :destroy
 
+  enum :status, %w[ online idle offline ].index_by(&:itself), default: "offline"
+
   has_secure_token prefix: TOKEN_PREFIX
   self.filter_attributes += [ :token ]
-
-  enum :status, %w[ online idle offline ].index_by(&:itself), default: "offline"
 
   normalizes :name, with: ->(value) { value&.strip.presence }
 
@@ -28,7 +28,7 @@ class Runner < ApplicationRecord
       end
     end
 
-    def mark_stale_offline!
+    def mark_stale_offline
       where(status: %w[ online idle ])
         .where(last_seen_at: ..OFFLINE_TIMEOUT.ago)
         .or(where(status: %w[ online idle ], last_seen_at: nil))
@@ -36,7 +36,7 @@ class Runner < ApplicationRecord
     end
   end
 
-  def touch_activity!(version: nil, os: nil, arch: nil, hostname: nil, ip_address: nil, status: "idle")
+  def touch_activity(version: nil, os: nil, arch: nil, hostname: nil, ip_address: nil, status: "idle")
     attrs = {
       status: status.in?(%w[ online idle ]) ? status : "idle",
       last_seen_at: Time.current
@@ -64,13 +64,9 @@ class Runner < ApplicationRecord
     token&.first(12)
   end
 
-  def regenerate_token!
-    regenerate_token
-  end
-
   private
 
-  def normalize_tags
-    self.tags = Array(tags).map { |t| t.to_s.strip }.reject(&:blank?).uniq
-  end
+    def normalize_tags
+      self.tags = Array(tags).map { |t| t.to_s.strip }.reject(&:blank?).uniq
+    end
 end

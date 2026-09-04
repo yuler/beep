@@ -33,7 +33,7 @@ class Runner::Job < ApplicationRecord
 
   class << self
     def poll_due_now
-      Runner.mark_stale_offline!
+      Runner.mark_stale_offline
       due.order(:next_run_at).limit(POLL_BATCH_SIZE).each(&:claim_due)
       reclaim_stale_firing
     end
@@ -148,58 +148,58 @@ class Runner::Job < ApplicationRecord
 
   private
 
-  def claim_run(scheduled_for)
-    if expired?(scheduled_for)
-      runs.create!(scheduled_for: scheduled_for, status: :expired, runner: runner)
-      finish_firing(last_run_at: scheduled_for)
-    elsif !runner.online?
-      run = runs.create!(scheduled_for: scheduled_for, status: :pending, runner: runner)
-      run.record_result!(
-        status: :error,
-        title: "Runner offline",
-        message: "Assigned runner '#{runner.name}' is offline or unreachable",
-        run_status: :failed
-      )
-      run
-    else
-      run = runs.create!(scheduled_for: scheduled_for, status: :pending, runner: runner)
-      touch
-      run
+    def claim_run(scheduled_for)
+      if expired?(scheduled_for)
+        runs.create!(scheduled_for: scheduled_for, status: :expired, runner: runner)
+        finish_firing(last_run_at: scheduled_for)
+      elsif !runner.online?
+        run = runs.create!(scheduled_for: scheduled_for, status: :pending, runner: runner)
+        run.record_result!(
+          status: :error,
+          title: "Runner offline",
+          message: "Assigned runner '#{runner.name}' is offline or unreachable",
+          run_status: :failed
+        )
+        run
+      else
+        run = runs.create!(scheduled_for: scheduled_for, status: :pending, runner: runner)
+        touch
+        run
+      end
+    rescue ActiveRecord::RecordNotUnique
+      runs.find_by!(scheduled_for: scheduled_for)
     end
-  rescue ActiveRecord::RecordNotUnique
-    runs.find_by!(scheduled_for: scheduled_for)
-  end
 
-  def assign_account_from_runner
-    self.account_id = runner.account_id if runner.present? && account_id.blank?
-  end
-
-  def runner_belongs_to_account
-    return if runner.blank? || account_id.blank?
-    return if runner.account_id == account_id
-
-    errors.add(:runner, "must belong to the same account")
-  end
-
-  def sync_next_run_at
-    if (new_record? && next_run_at.nil?) || (persisted? && will_save_change_to_cron?)
-      self.next_run_at = calculate_next_run_at
+    def assign_account_from_runner
+      self.account_id = runner.account_id if runner.present? && account_id.blank?
     end
-  end
 
-  def timezone_is_iana
-    return if timezone.blank?
+    def runner_belongs_to_account
+      return if runner.blank? || account_id.blank?
+      return if runner.account_id == account_id
 
-    errors.add(:timezone, "is invalid") unless IanaTimezone.valid?(timezone)
-  end
-
-  def validate_cron_expression
-    return if cron.blank?
-
-    tz = timezone.presence || IanaTimezone::DEFAULT
-    parsed = Fugit.parse("#{cron} #{tz}")
-    if parsed.nil?
-      errors.add(:cron, "is invalid")
+      errors.add(:runner, "must belong to the same account")
     end
-  end
+
+    def sync_next_run_at
+      if (new_record? && next_run_at.nil?) || (persisted? && will_save_change_to_cron?)
+        self.next_run_at = calculate_next_run_at
+      end
+    end
+
+    def timezone_is_iana
+      return if timezone.blank?
+
+      errors.add(:timezone, "is invalid") unless IanaTimezone.valid?(timezone)
+    end
+
+    def validate_cron_expression
+      return if cron.blank?
+
+      tz = timezone.presence || IanaTimezone::DEFAULT
+      parsed = Fugit.parse("#{cron} #{tz}")
+      if parsed.nil?
+        errors.add(:cron, "is invalid")
+      end
+    end
 end

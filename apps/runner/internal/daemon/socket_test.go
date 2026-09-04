@@ -50,3 +50,31 @@ func TestAcquireSocket(t *testing.T) {
 	}
 	_ = sl2.Close()
 }
+
+func TestGetDaemonStatusAndStopDaemon(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "beep-sock-status-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// When not running, GetDaemonStatus returns nil, nil
+	status, err := GetDaemonStatus(tempDir)
+	if err != nil || status != nil {
+		t.Fatalf("expected nil status when daemon not running, got %v, err: %v", status, err)
+	}
+
+	sl, err := AcquireSocket(tempDir)
+	if err != nil {
+		t.Fatalf("failed to acquire socket: %v", err)
+	}
+	defer sl.Close()
+
+	status, err = GetDaemonStatus(tempDir)
+	if err != nil {
+		t.Fatalf("failed to get status: %v", err)
+	}
+	if status == nil || status.PID != os.Getpid() {
+		t.Fatalf("expected status PID %d, got %v", os.Getpid(), status)
+	}
+}

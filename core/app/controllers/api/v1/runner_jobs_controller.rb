@@ -61,27 +61,27 @@ class Api::V1::RunnerJobsController < Api::V1::BaseController
 
   private
 
-  def set_runner
-    @runner = Current.account.runners.find(params[:runner_id])
-  end
+    def set_runner
+      @runner = Current.account.runners.find(params[:runner_id])
+    end
 
-  def set_job
-    @job = @runner.jobs.find(params[:id])
-  end
+    def set_job
+      @job = @runner.jobs.find(params[:id])
+    end
 
-  def job_params
-    attrs = params.permit(:name, :slug, :cron, :timeout_seconds)
-    attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
-    attrs
-  end
+    def job_params
+      attrs = params.permit(:name, :slug, :cron, :timeout_seconds)
+      attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
+      attrs
+    end
 
-  def update_params
-    attrs = params.permit(:name, :slug, :cron, :timeout_seconds)
-    attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
-    attrs
-  end
+    def update_params
+      attrs = params.permit(:name, :slug, :cron, :timeout_seconds)
+      attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
+      attrs
+    end
 
-  def job_timezone
-    IanaTimezone.resolve(Current.user.timezone, params[:timezone])
-  end
+    def job_timezone
+      IanaTimezone.resolve(Current.user.timezone, params[:timezone])
+    end
 end

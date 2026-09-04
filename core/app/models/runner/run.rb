@@ -8,7 +8,7 @@ class Runner::Run < ApplicationRecord
   enum :status, %w[ pending running succeeded failed expired ].index_by(&:itself)
   enum :result_status, %w[ ok alerting error ].index_by(&:itself)
 
-  def claim_for!(runner)
+  def claim_for(runner)
     claimed = self.class.where(id: id, status: :pending).update_all(
       status: "running",
       runner_id: runner.id,
@@ -24,7 +24,7 @@ class Runner::Run < ApplicationRecord
     end
   end
 
-  def append_log!(chunk)
+  def append_log(chunk)
     text = chunk.to_s
     return if text.blank?
 
@@ -63,19 +63,19 @@ class Runner::Run < ApplicationRecord
 
   private
 
-  def sanitize_result(hash)
-    json_str = hash.to_json
-    return hash if json_str.bytesize <= RESULT_MAX_BYTES
+    def sanitize_result(hash)
+      json_str = hash.to_json
+      return hash if json_str.bytesize <= RESULT_MAX_BYTES
 
-    truncated = {
-      "status" => hash["status"],
-      "title" => hash["title"]&.to_s&.truncate(200),
-      "message" => hash["message"]&.to_s&.truncate(500),
-      "metrics" => hash["metrics"].is_a?(Hash) ? hash["metrics"].slice(*hash["metrics"].keys.first(20)) : {},
-      "truncated" => true
-    }.compact
+      truncated = {
+        "status" => hash["status"],
+        "title" => hash["title"]&.to_s&.truncate(200),
+        "message" => hash["message"]&.to_s&.truncate(500),
+        "metrics" => hash["metrics"].is_a?(Hash) ? hash["metrics"].slice(*hash["metrics"].keys.first(20)) : {},
+        "truncated" => true
+      }.compact
 
-    truncated.delete("metrics") if truncated.to_json.bytesize > RESULT_MAX_BYTES
-    truncated
-  end
+      truncated.delete("metrics") if truncated.to_json.bytesize > RESULT_MAX_BYTES
+      truncated
+    end
 end

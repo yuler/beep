@@ -69,7 +69,7 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
 
   test "logs appends output then result records outcome" do
     run = @job.trigger_run!
-    run.claim_for!(@runner)
+    run.claim_for(@runner)
 
     post "/api/v1/runner/tasks/#{run.id}/logs",
       params: { chunk: "checking health\n" },
@@ -117,7 +117,7 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
 
   test "logs scrubs malformed utf8 on truncation" do
     run = @job.trigger_run!
-    run.claim_for!(@runner)
+    run.claim_for(@runner)
 
     # Append multibyte characters that exceed 256KB limit
     chunk = "你好世界🌟" * 15_000

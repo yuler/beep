@@ -1,6 +1,6 @@
 class Api::V1::Runner::TasksController < Api::V1::Runner::BaseController
   def poll
-    @current_runner.touch_activity!(
+    @current_runner.touch_activity(
       status: "idle",
       version: params[:version],
       os: params[:os],
@@ -16,7 +16,7 @@ class Api::V1::Runner::TasksController < Api::V1::Runner::BaseController
                          .order("runner_runs.scheduled_for ASC")
                          .first
 
-    if candidate&.claim_for!(@current_runner)
+    if candidate&.claim_for(@current_runner)
       @current_runner.update_columns(status: "online")
       @run = candidate
       render :poll
@@ -42,8 +42,8 @@ class Api::V1::Runner::TasksController < Api::V1::Runner::BaseController
       chunk = "#{chunk}\n" if chunk.present?
     end
 
-    @run.append_log!(chunk)
-    @current_runner.touch_activity!(status: "online")
+    @run.append_log(chunk)
+    @current_runner.touch_activity(status: "online")
     render :logs
   end
 
@@ -74,16 +74,16 @@ class Api::V1::Runner::TasksController < Api::V1::Runner::BaseController
       )
     end
 
-    @current_runner.touch_activity!(status: "idle")
+    @current_runner.touch_activity(status: "idle")
     render :result
   end
 
   private
 
-  def find_run
-    Runner::Run.joins(:runner_job)
-             .where(runner_jobs: { account_id: @current_runner.account_id })
-             .where(runner_id: @current_runner.id)
-             .find(params[:id])
-  end
+    def find_run
+      Runner::Run.joins(:runner_job)
+               .where(runner_jobs: { account_id: @current_runner.account_id })
+               .where(runner_id: @current_runner.id)
+               .find(params[:id])
+    end
 end

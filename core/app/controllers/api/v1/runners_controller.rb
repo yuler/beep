@@ -2,7 +2,7 @@ class Api::V1::RunnersController < Api::V1::BaseController
   before_action :set_runner, only: %i[ show update destroy regenerate_token ]
 
   def index
-    Runner.mark_stale_offline!
+    Runner.mark_stale_offline
     @runners = Current.account.runners.order(created_at: :desc)
     render :index
   end
@@ -43,21 +43,21 @@ class Api::V1::RunnersController < Api::V1::BaseController
   end
 
   def regenerate_token
-    @runner.regenerate_token!
+    @runner.regenerate_token
     render :create
   end
 
   private
 
-  def set_runner
-    @runner = Current.account.runners.find(params[:id])
-  end
+    def set_runner
+      @runner = Current.account.runners.find(params[:id])
+    end
 
-  def runner_params
-    params.require(:runner).permit(:name, tags: [])
-  end
+    def runner_params
+      params.require(:runner).permit(:name, tags: [])
+    end
 
-  def update_params
-    params.require(:runner).permit(:name, tags: [])
-  end
+    def update_params
+      params.require(:runner).permit(:name, tags: [])
+    end
 end

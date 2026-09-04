@@ -1,6 +1,6 @@
 class Api::V1::Runner::PingsController < Api::V1::Runner::BaseController
   def create
-    @current_runner.touch_activity!(
+    @current_runner.touch_activity(
       version: params[:version],
       os: params[:os],
       arch: params[:arch],

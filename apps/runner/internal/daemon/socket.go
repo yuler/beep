@@ -2,11 +2,14 @@ package daemon
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"beep-runner/internal/version"
@@ -34,27 +37,80 @@ func SocketPath(workspaceDir string) string {
 	return filepath.Join(workspaceDir, ".socket")
 }
 
-// CheckRunning checks whether a runner daemon is actively listening on the workspace socket.
-// Returns true, PID, and nil if running.
-func CheckRunning(workspaceDir string) (bool, int, error) {
+// GetDaemonStatus queries the workspace Unix domain socket for running status and metadata.
+// Returns nil, nil if the daemon is not running.
+func GetDaemonStatus(workspaceDir string) (*SocketStatus, error) {
 	socketPath := SocketPath(workspaceDir)
 	if _, err := os.Stat(socketPath); os.IsNotExist(err) {
-		return false, 0, nil
+		return nil, nil
 	}
 
 	conn, err := net.DialTimeout("unix", socketPath, 300*time.Millisecond)
 	if err != nil {
-		return false, 0, nil
+		return nil, nil
 	}
 	defer conn.Close()
 
 	_ = conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
 	var status SocketStatus
 	if err := json.NewDecoder(conn).Decode(&status); err != nil {
-		// Connected but failed to parse JSON, still considered running
-		return true, 0, nil
+		return nil, fmt.Errorf("failed to decode daemon socket response: %w", err)
+	}
+	return &status, nil
+}
+
+// CheckRunning checks whether a runner daemon is actively listening on the workspace socket.
+// Returns true, PID, and nil if running.
+func CheckRunning(workspaceDir string) (bool, int, error) {
+	status, err := GetDaemonStatus(workspaceDir)
+	if err != nil || status == nil || status.PID == 0 {
+		return false, 0, err
 	}
 	return true, status.PID, nil
+}
+
+// StopDaemon signals and terminates the runner daemon running in workspaceDir.
+// Returns stopped PID or 0 if not running.
+func StopDaemon(workspaceDir string, timeout time.Duration, force bool) (int, error) {
+	running, pid, err := CheckRunning(workspaceDir)
+	if err != nil {
+		return 0, err
+	}
+	if !running || pid == 0 {
+		return 0, nil
+	}
+
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return 0, fmt.Errorf("process %d not found: %w", pid, err)
+	}
+
+	// Send SIGTERM to initiate graceful shutdown
+	if err := proc.Signal(syscall.SIGTERM); err != nil {
+		if errors.Is(err, os.ErrProcessDone) || strings.Contains(err.Error(), "process already finished") {
+			_ = os.Remove(SocketPath(workspaceDir))
+			return pid, nil
+		}
+		return 0, fmt.Errorf("failed to send signal to PID %d: %w", pid, err)
+	}
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		time.Sleep(100 * time.Millisecond)
+		isRun, _, _ := CheckRunning(workspaceDir)
+		if !isRun {
+			return pid, nil
+		}
+	}
+
+	if force {
+		_ = proc.Signal(syscall.SIGKILL)
+		time.Sleep(100 * time.Millisecond)
+		_ = os.Remove(SocketPath(workspaceDir))
+		return pid, nil
+	}
+
+	return pid, fmt.Errorf("daemon (PID: %d) did not stop within %s (use --force to kill)", pid, timeout)
 }
 
 // AcquireSocket attempts to create and listen on the Unix domain socket in workspaceDir.

@@ -64,36 +64,35 @@ class Api::V1::Runner::JobsController < Api::V1::Runner::BaseController
 
   private
 
-  # Prefer @id when present so a local filename rename updates the same
-  # Runner::Job (slug change) instead of inserting a duplicate under the new slug.
-  def find_or_build_job(id:, slug:)
-    if id.present?
-      existing = @current_runner.jobs.find_by(id: id)
-      return existing if existing
+    # Prefer id when present so a local filename rename updates the same
+    # Runner::Job (slug change) instead of inserting a duplicate under the new slug.
+    def find_or_build_job(id:, slug:)
+      if id.present? && (job = @current_runner.jobs.find_by(id: id))
+        job
+      else
+        @current_runner.jobs.find_or_initialize_by(slug: slug)
+      end
     end
 
-    @current_runner.jobs.find_or_initialize_by(slug: slug)
-  end
+    def job_attrs_from(data)
+      slug = data[:slug].to_s.strip.downcase
+      name = data[:name].presence || (slug.present? ? slug.tr("_-", " ").titleize : nil)
+      cron = data[:cron].presence || "*/5 * * * *"
+      timezone = IanaTimezone.resolve(data[:timezone])
+      timeout_seconds = data[:timeout_seconds].presence || 30
+      config = data[:config].respond_to?(:to_unsafe_h) ? data[:config].to_unsafe_h : (data[:config] || {})
+      if data[:description].present? && !config.key?("description")
+        config = config.merge("description" => data[:description].to_s)
+      end
 
-  def job_attrs_from(data)
-    slug = data[:slug].to_s.strip.downcase
-    name = data[:name].presence || (slug.present? ? slug.tr("_-", " ").titleize : nil)
-    cron = data[:cron].presence || "*/5 * * * *"
-    timezone = IanaTimezone.resolve(data[:timezone])
-    timeout_seconds = data[:timeout_seconds].presence || 30
-    config = data[:config].respond_to?(:to_unsafe_h) ? data[:config].to_unsafe_h : (data[:config] || {})
-    if data[:description].present? && !config.key?("description")
-      config = config.merge("description" => data[:description].to_s)
+      {
+        account: @current_runner.account,
+        slug: slug,
+        name: name,
+        cron: cron,
+        timezone: timezone,
+        timeout_seconds: timeout_seconds,
+        config: config
+      }
     end
-
-    {
-      account: @current_runner.account,
-      slug: slug,
-      name: name,
-      cron: cron,
-      timezone: timezone,
-      timeout_seconds: timeout_seconds,
-      config: config
-    }
-  end
 end

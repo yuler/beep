@@ -54,3 +54,21 @@ func TestUpCommandRegistration(t *testing.T) {
 		t.Errorf("expected alias command name 'up', got %s", aliasCmd.Name())
 	}
 }
+
+func TestStatusAndStopCommandRegistration(t *testing.T) {
+	statusCmd, _, err := RootCmd.Find([]string{"status"})
+	if err != nil {
+		t.Fatalf("failed to find 'status' command: %v", err)
+	}
+	if statusCmd.Name() != "status" {
+		t.Errorf("expected command name 'status', got %s", statusCmd.Name())
+	}
+
+	stopCmd, _, err := RootCmd.Find([]string{"stop"})
+	if err != nil {
+		t.Fatalf("failed to find 'stop' command: %v", err)
+	}
+	if stopCmd.Name() != "stop" {
+		t.Errorf("expected command name 'stop', got %s", stopCmd.Name())
+	}
+}

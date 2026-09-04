@@ -28,10 +28,10 @@ module Api
 
         private
 
-        def set_job
-          runner = Current.account.runners.find(params[:runner_id])
-          @job = runner.jobs.find(params[:job_id])
-        end
+          def set_job
+            runner = Current.account.runners.find(params[:runner_id])
+            @job = runner.jobs.find(params[:job_id])
+          end
       end
     end
   end
