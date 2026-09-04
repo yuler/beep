@@ -56,7 +56,7 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, created, err := ws.CreateScript("my-ping", "sh", "My Custom Ping", "*/2 * * * *", 45)
+	path, created, err := ws.CreateScript("my-ping", "sh", "My Custom Ping", "*/2 * * * *", "Asia/Shanghai", "Health check for ping", 45)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,12 +78,18 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 	if meta.Cron != "*/2 * * * *" {
 		t.Fatalf("expected cron '*/2 * * * *', got %q", meta.Cron)
 	}
+	if meta.Timezone != "Asia/Shanghai" {
+		t.Fatalf("expected timezone 'Asia/Shanghai', got %q", meta.Timezone)
+	}
+	if meta.Description != "Health check for ping" {
+		t.Fatalf("expected description 'Health check for ping', got %q", meta.Description)
+	}
 	if meta.TimeoutSeconds != 45 {
 		t.Fatalf("expected timeout 45, got %d", meta.TimeoutSeconds)
 	}
 
 	// Calling again should not overwrite
-	_, created2, err := ws.CreateScript("my-ping", "sh", "", "", 0)
+	_, created2, err := ws.CreateScript("my-ping", "sh", "", "", "", "", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +98,7 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 	}
 
 	// Test Python script creation
-	pyPath, createdPy, err := ws.CreateScript("py-worker", "py", "", "0 * * * *", 60)
+	pyPath, createdPy, err := ws.CreateScript("py-worker", "py", "", "0 * * * *", "UTC", "", 60)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,5 +132,51 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 	}
 	if len(jobsAfter) != 1 {
 		t.Fatalf("expected 1 job after remove, got %d", len(jobsAfter))
+	}
+}
+
+func TestPullJob(t *testing.T) {
+	root := t.TempDir()
+	ws, err := Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Pull new job
+	filePath, created, err := ws.PullJob("cloud-db-check", "sh", "Cloud DB Check", "*/10 * * * *", "UTC", "Ping remote DB", 30, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !created {
+		t.Fatalf("expected created to be true for new job")
+	}
+	if _, err := os.Stat(filePath); err != nil {
+		t.Fatalf("expected file to exist at %s", filePath)
+	}
+
+	// Pull existing without force
+	_, created2, err := ws.PullJob("cloud-db-check", "sh", "Cloud DB Check", "*/10 * * * *", "UTC", "Ping remote DB", 30, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created2 {
+		t.Fatalf("expected created to be false without force")
+	}
+
+	// Pull existing with force
+	_, created3, err := ws.PullJob("cloud-db-check", "sh", "Cloud DB Check Updated", "0 * * * *", "Asia/Tokyo", "Updated DB check", 60, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !created3 {
+		t.Fatalf("expected created to be true with force")
+	}
+
+	meta, err := ParseScriptMetadata(filePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if meta.Name != "Cloud DB Check Updated" || meta.Cron != "0 * * * *" || meta.Timezone != "Asia/Tokyo" {
+		t.Fatalf("unexpected pulled metadata: %+v", meta)
 	}
 }

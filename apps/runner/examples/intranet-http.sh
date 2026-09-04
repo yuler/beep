@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# @name: Intranet HTTP Health Check
+# @name: Intranet Gateway Health Check
 # @schedule: */5 * * * *
 # @timeout: 30s
+# @timezone: Asia/Shanghai
 # @description: Ping internal health check endpoint
 #
 # Example: intranet HTTP check. Create a Runner Job with slug `intranet-http`.

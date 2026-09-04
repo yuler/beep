@@ -170,7 +170,24 @@ func ParseScriptMetadata(filePath string) (JobMetadata, error) {
 	return meta, scanner.Err()
 }
 
-func (w *Workspace) CreateScript(slug, scriptType, name, cron string, timeoutSeconds int) (filePath string, created bool, err error) {
+func DetectTimezone() string {
+	if tz := os.Getenv("TZ"); tz != "" {
+		return tz
+	}
+	loc := time.Now().Location().String()
+	if loc != "" && loc != "Local" {
+		return loc
+	}
+	if data, err := os.ReadFile("/etc/timezone"); err == nil {
+		tz := strings.TrimSpace(string(data))
+		if tz != "" {
+			return tz
+		}
+	}
+	return "UTC"
+}
+
+func (w *Workspace) CreateScript(slug, scriptType, name, cron, timezone, description string, timeoutSeconds int) (filePath string, created bool, err error) {
 	slug = strings.TrimSpace(strings.ToLower(slug))
 	if slug == "" {
 		return "", false, fmt.Errorf("job slug cannot be empty")
@@ -184,6 +201,12 @@ func (w *Workspace) CreateScript(slug, scriptType, name, cron string, timeoutSec
 	}
 	if timeoutSeconds <= 0 {
 		timeoutSeconds = 30
+	}
+	if timezone == "" {
+		timezone = DetectTimezone()
+	}
+	if description == "" {
+		description = fmt.Sprintf("Health check job for %s", slug)
 	}
 
 	ext := ".sh"
@@ -212,7 +235,8 @@ func (w *Workspace) CreateScript(slug, scriptType, name, cron string, timeoutSec
 # @name: %s
 # @schedule: %s
 # @timeout: %ds
-# @description: Health check job for %s
+# @timezone: %s
+# @description: %s
 
 import os
 import sys
@@ -227,13 +251,14 @@ print(f"[{os.getenv('BEEP_JOB_SLUG', '%s')}] Starting health check...")
 # Exit 0 for ok, non-zero for error/alerting.
 print("Check passed successfully.")
 sys.exit(0)
-`, name, cron, timeoutSeconds, slug, slug)
+`, name, cron, timeoutSeconds, timezone, description, slug)
 	case ".js":
 		content = fmt.Sprintf(`#!/usr/bin/env node
 // @name: %s
 // @schedule: %s
 // @timeout: %ds
-// @description: Health check job for %s
+// @timezone: %s
+// @description: %s
 
 // Environment variables available:
 //   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
@@ -245,25 +270,27 @@ console.log("[%s] Starting health check...");
 // Exit 0 for ok, non-zero for error/alerting.
 console.log("Check passed successfully.");
 process.exit(0);
-`, name, cron, timeoutSeconds, slug, slug)
+`, name, cron, timeoutSeconds, timezone, description, slug)
 	case ".rb":
 		content = fmt.Sprintf(`#!/usr/bin/env ruby
 # @name: %s
 # @schedule: %s
 # @timeout: %ds
-# @description: Health check job for %s
+# @timezone: %s
+# @description: %s
 
 puts "[%s] Starting health check..."
 # Put your check logic here.
 puts "Check passed successfully."
 exit 0
-`, name, cron, timeoutSeconds, slug, slug)
+`, name, cron, timeoutSeconds, timezone, description, slug)
 	default:
 		content = fmt.Sprintf(`#!/usr/bin/env bash
 # @name: %s
 # @schedule: %s
 # @timeout: %ds
-# @description: Health check job for %s
+# @timezone: %s
+# @description: %s
 
 set -euo pipefail
 
@@ -278,7 +305,7 @@ echo "[%s] Starting health check..."
 
 echo "Check passed successfully."
 exit 0
-`, name, cron, timeoutSeconds, slug, slug)
+`, name, cron, timeoutSeconds, timezone, description, slug)
 	}
 
 	if err := os.WriteFile(targetPath, []byte(content), 0o755); err != nil {
@@ -286,6 +313,28 @@ exit 0
 	}
 
 	return targetPath, true, nil
+}
+
+func (w *Workspace) PullJob(slug, scriptType, name, cron, timezone, description string, timeoutSeconds int, overwrite bool) (filePath string, created bool, err error) {
+	slug = strings.TrimSpace(strings.ToLower(slug))
+	if slug == "" {
+		return "", false, fmt.Errorf("job slug cannot be empty")
+	}
+
+	ext := ".sh"
+	if scriptType != "" {
+		ext = "." + strings.TrimPrefix(scriptType, ".")
+	}
+
+	targetPath := filepath.Join(w.JobsDir(), slug+ext)
+	if _, err := os.Stat(targetPath); err == nil {
+		if !overwrite {
+			return targetPath, false, nil
+		}
+		_ = os.Remove(targetPath)
+	}
+
+	return w.CreateScript(slug, scriptType, name, cron, timezone, description, timeoutSeconds)
 }
 
 func (w *Workspace) RemoveJob(slug string) (removedFiles []string, removedFromJSON bool, err error) {

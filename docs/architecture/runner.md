@@ -72,21 +72,29 @@ Supported comment directives:
 - `# @schedule:` or `# @cron:` — Cron expression for scheduling (e.g. `*/5 * * * *`, `0 * * * *`)
 - `# @timeout:` — Execution timeout (e.g. `30s`, `1m`)
 - `# @timezone:` / `# @tz:` — Timezone (e.g. `UTC`, `Asia/Shanghai`)
+- `# @description:` / `# @desc:` — Job description
 
-### CLI Commands
+### CLI Commands (Git-style Workflow)
 
 ```bash
 # Configure runner credentials and options once
 beep-runner config set --server https://core.example.com --token beep_rt_xxx
 
-# Create a local job script and sync to server
+# Create a local job script scaffold
 beep-runner job create intranet-http --cron "*/5 * * * *"
+
+# Push local workspace jobs to Beep Core (like git push)
+beep-runner job push
+# or push a specific job:
+beep-runner job push intranet-http
+
+# Pull all registered server jobs to local workspace (like git pull)
+beep-runner job pull
+# or force overwrite existing files:
+beep-runner job pull --force
 
 # Remove a local job script and delete from server
 beep-runner job remove intranet-http
-
-# Sync all local workspace scripts to server
-beep-runner job sync
 
 # List workspace jobs and server jobs
 beep-runner job list

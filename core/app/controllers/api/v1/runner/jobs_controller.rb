@@ -11,6 +11,9 @@ class Api::V1::Runner::JobsController < Api::V1::Runner::BaseController
     timezone = IanaTimezone.resolve(params[:timezone])
     timeout_seconds = params[:timeout_seconds].presence || 30
     config = params[:config].respond_to?(:to_unsafe_h) ? params[:config].to_unsafe_h : (params[:config] || {})
+    if params[:description].present? && !config.key?("description")
+      config = config.merge("description" => params[:description].to_s)
+    end
 
     @job = @current_runner.jobs.find_or_initialize_by(slug: slug)
     @job.assign_attributes(
@@ -47,6 +50,9 @@ class Api::V1::Runner::JobsController < Api::V1::Runner::BaseController
         timezone = IanaTimezone.resolve(job_data[:timezone])
         timeout_seconds = job_data[:timeout_seconds].presence || 30
         config = job_data[:config].respond_to?(:to_unsafe_h) ? job_data[:config].to_unsafe_h : (job_data[:config] || {})
+        if job_data[:description].present? && !config.key?("description")
+          config = config.merge("description" => job_data[:description].to_s)
+        end
 
         job = @current_runner.jobs.find_or_initialize_by(slug: slug)
         job.assign_attributes(

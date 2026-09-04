@@ -15,6 +15,7 @@ import (
 	"beep-runner/internal/client"
 	"beep-runner/internal/config"
 	"beep-runner/internal/daemon"
+	"beep-runner/internal/ui"
 	"beep-runner/internal/version"
 	"beep-runner/internal/workspace"
 )
@@ -23,7 +24,7 @@ func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "version", "--version", "-v":
-			fmt.Printf("beep-runner version %s (%s, %s)\n", version.Version, version.GitCommit, version.BuildDate)
+			fmt.Printf("%s version %s (%s, %s)\n", ui.Bold(ui.Cyan("beep-runner")), ui.Bold(version.Version), ui.Dim(version.GitCommit), ui.Dim(version.BuildDate))
 			return
 		case "ping":
 			runPing(os.Args[2:])
@@ -40,8 +41,14 @@ func main() {
 		case "job", "jobs":
 			runJobCommand(os.Args[2:])
 			return
+		case "push":
+			runJobPush(os.Args[2:])
+			return
+		case "pull":
+			runJobPull(os.Args[2:])
+			return
 		case "sync":
-			runJobSync(os.Args[2:])
+			runJobPush(os.Args[2:])
 			return
 		case "help", "--help", "-h":
 			printUsage()
@@ -53,32 +60,33 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println("Beep self-hosted runner")
+	fmt.Println(ui.Bold(ui.Cyan("Beep self-hosted runner")))
 	fmt.Println()
 	fmt.Println("A runner executes scheduled jobs locally in your workspace and reports logs/results to Core.")
 	fmt.Println()
-	fmt.Println("Usage:")
-	fmt.Println("  beep-runner [command] [flags]")
+	fmt.Println(ui.Section("Usage:"))
+	fmt.Printf("  %s %s %s\n", ui.Bold("beep-runner"), ui.Green("[command]"), ui.Cyan("[flags]"))
 	fmt.Println()
-	fmt.Println("Commands:")
-	fmt.Println("  run                  Start the runner daemon (default)")
-	fmt.Println("  config               Show current configuration")
-	fmt.Println("  config set           Set configuration parameters (server, token, etc.)")
-	fmt.Println("  config unset <key>   Remove a configuration parameter")
-	fmt.Println("  config path          Print path to config file")
-	fmt.Println("  ping                 Test connectivity and authentication with Beep Core")
-	fmt.Println("  job create <slug>    Create a local job script and sync to server")
-	fmt.Println("  job remove <slug>    Remove a local job script and delete from server")
-	fmt.Println("  job sync             Sync all local workspace jobs to Beep Core")
-	fmt.Println("  job list             List local jobs in workspace and on server")
-	fmt.Println("  version              Print version information")
+	fmt.Println(ui.Section("Commands:"))
+	fmt.Printf("  %-24s %s\n", ui.Green("run"), "Start the runner daemon (default)")
+	fmt.Printf("  %-24s %s\n", ui.Green("config"), "Show current configuration")
+	fmt.Printf("  %-24s %s\n", ui.Green("config set"), "Set configuration parameters (server, token, etc.)")
+	fmt.Printf("  %-24s %s\n", ui.Green("config unset <key>"), "Remove a configuration parameter")
+	fmt.Printf("  %-24s %s\n", ui.Green("config path"), "Print path to config file")
+	fmt.Printf("  %-24s %s\n", ui.Green("ping"), "Test connectivity and authentication with Beep Core")
+	fmt.Printf("  %-24s %s\n", ui.Green("job create <slug>"), "Create a local job script scaffold")
+	fmt.Printf("  %-24s %s\n", ui.Green("job push [slug]"), "Push local workspace job(s) to Beep Core (like git push)")
+	fmt.Printf("  %-24s %s\n", ui.Green("job pull [slug]"), "Pull server job(s) to local workspace (like git pull)")
+	fmt.Printf("  %-24s %s\n", ui.Green("job remove <slug>"), "Remove a local job script and delete from server")
+	fmt.Printf("  %-24s %s\n", ui.Green("job list"), "List local jobs in workspace and on server")
+	fmt.Printf("  %-24s %s\n", ui.Green("version"), "Print version information")
 	fmt.Println()
-	fmt.Println("Flags:")
-	fmt.Println("  --server             Beep server URL (env: BEEP_SERVER)")
-	fmt.Println("  --token              Runner token (env: BEEP_RUNNER_TOKEN)")
-	fmt.Println("  --workspace          Local job workspace (env: BEEP_WORKSPACE, default ~/.beep-runner)")
-	fmt.Println("  --concurrency        Max concurrent jobs (default 5)")
-	fmt.Println("  --poll-interval      Poll interval (default 3s)")
+	fmt.Println(ui.Section("Flags:"))
+	fmt.Printf("  %-24s %s\n", ui.Cyan("--server"), "Beep server URL (env: BEEP_SERVER)")
+	fmt.Printf("  %-24s %s\n", ui.Cyan("--token"), "Runner token (env: BEEP_RUNNER_TOKEN)")
+	fmt.Printf("  %-24s %s\n", ui.Cyan("--workspace"), "Local job workspace (env: BEEP_WORKSPACE, default ~/.beep-runner)")
+	fmt.Printf("  %-24s %s\n", ui.Cyan("--concurrency"), "Max concurrent jobs (default 5)")
+	fmt.Printf("  %-24s %s\n", ui.Cyan("--poll-interval"), "Poll interval (default 3s)")
 }
 
 func peekWorkspace(args []string) string {
@@ -150,7 +158,7 @@ func runConfigShow(args []string) {
 	fs.StringVar(&workspaceFlag, "workspace", "", "Workspace directory")
 	wsHint := peekWorkspace(args)
 	if err := fs.Parse(args); err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("%s", ui.Error("Error: %v", err))
 	}
 	if workspaceFlag != "" {
 		wsHint = workspaceFlag
@@ -158,7 +166,7 @@ func runConfigShow(args []string) {
 
 	cfg, err := config.Load(wsHint)
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		log.Fatalf("%s", ui.Error("Error loading config: %v", err))
 	}
 
 	tokenStr := config.MaskToken(cfg.RunnerToken)
@@ -166,14 +174,14 @@ func runConfigShow(args []string) {
 		tokenStr = cfg.RunnerToken
 	}
 
-	fmt.Println("Beep Runner Configuration:")
-	fmt.Printf("  Config File:    %s\n", cfg.ConfigFile)
-	fmt.Printf("  Server URL:     %s\n", cfg.ServerURL)
-	fmt.Printf("  Runner Token:   %s\n", tokenStr)
-	fmt.Printf("  Workspace:      %s\n", cfg.Workspace)
-	fmt.Printf("  Concurrency:    %d\n", cfg.Concurrency)
-	fmt.Printf("  Poll Interval:  %s\n", cfg.PollInterval)
-	fmt.Printf("  Hostname:       %s\n", cfg.Hostname)
+	fmt.Println(ui.Bold(ui.Cyan("Beep Runner Configuration:")))
+	fmt.Println(ui.KeyValue("Config File", ui.Dim(cfg.ConfigFile)))
+	fmt.Println(ui.KeyValue("Server URL", ui.Bold(cfg.ServerURL)))
+	fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(tokenStr)))
+	fmt.Println(ui.KeyValue("Workspace", ui.Dim(cfg.Workspace)))
+	fmt.Println(ui.KeyValue("Concurrency", ui.Bold(strconv.Itoa(cfg.Concurrency))))
+	fmt.Println(ui.KeyValue("Poll Interval", ui.Bold(cfg.PollInterval.String())))
+	fmt.Println(ui.KeyValue("Hostname", ui.Dim(cfg.Hostname)))
 }
 
 func runConfigSet(args []string) {
@@ -204,7 +212,7 @@ func runConfigSet(args []string) {
 	fs.StringVar(&pollIntervalFlag, "poll-interval", "", "Poll interval (e.g. 3s)")
 
 	if err := fs.Parse(flagArgs); err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("%s", ui.Error("Error: %v", err))
 	}
 
 	updated := false
@@ -264,19 +272,21 @@ func runConfigSet(args []string) {
 	}
 
 	if !updated {
-		fmt.Println("No configuration options provided.")
-		fmt.Println("\nUsage:")
-		fmt.Println("  beep-runner config set --server <url> --token <token>")
-		fmt.Println("  beep-runner config set server <url>")
-		fmt.Println("  beep-runner config set token <token>")
+		fmt.Println(ui.Warn("No configuration options provided."))
+		fmt.Println()
+		fmt.Println(ui.Section("Usage:"))
+		fmt.Printf("  %s\n", ui.Cyan("beep-runner config set --server <url> --token <token>"))
+		fmt.Printf("  %s\n", ui.Cyan("beep-runner config set server <url>"))
+		fmt.Printf("  %s\n", ui.Cyan("beep-runner config set token <token>"))
 		return
 	}
 
 	if err := config.SaveFile(configPath, fc); err != nil {
-		log.Fatalf("Failed to save config: %v", err)
+		log.Fatalf("%s", ui.Error("Failed to save config: %v", err))
 	}
 
-	fmt.Printf("✓ Saved configuration to %s\n\n", configPath)
+	fmt.Println(ui.Success("Saved configuration to %s", ui.Bold(configPath)))
+	fmt.Println()
 	if wsHint != "" {
 		runConfigShow([]string{"--workspace=" + wsHint})
 	} else {
@@ -286,8 +296,9 @@ func runConfigSet(args []string) {
 
 func runConfigUnset(args []string) {
 	if len(args) == 0 {
-		fmt.Println("Usage: beep-runner config unset <key>")
-		fmt.Println("Keys: server, token, workspace, concurrency, poll-interval")
+		fmt.Println(ui.Section("Usage:"))
+		fmt.Printf("  %s\n", ui.Cyan("beep-runner config unset <key>"))
+		fmt.Printf("  %s: server, token, workspace, concurrency, poll-interval\n", ui.Dim("Keys"))
 		return
 	}
 
@@ -296,7 +307,7 @@ func runConfigUnset(args []string) {
 
 	fc, err := config.LoadFile(configPath)
 	if err != nil {
-		log.Fatalf("Failed to load config file: %v", err)
+		log.Fatalf("%s", ui.Error("Failed to load config file: %v", err))
 	}
 
 	key := strings.ToLower(args[0])
@@ -312,14 +323,15 @@ func runConfigUnset(args []string) {
 	case "poll_interval", "poll-interval":
 		fc.PollInterval = ""
 	default:
-		log.Fatalf("Unknown config key %q", key)
+		log.Fatalf("%s", ui.Error("Unknown config key %q", key))
 	}
 
 	if err := config.SaveFile(configPath, fc); err != nil {
-		log.Fatalf("Failed to save config: %v", err)
+		log.Fatalf("%s", ui.Error("Failed to save config: %v", err))
 	}
 
-	fmt.Printf("✓ Unset %s in %s\n\n", key, configPath)
+	fmt.Println(ui.Success("Unset %s in %s", ui.Bold(key), ui.Dim(configPath)))
+	fmt.Println()
 	if wsHint != "" {
 		runConfigShow([]string{"--workspace=" + wsHint})
 	} else {
@@ -330,15 +342,15 @@ func runConfigUnset(args []string) {
 func runDaemon(args []string) {
 	cfg, err := parseFlags(args)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("%s", ui.Error("Error: %v", err))
 	}
 	if err := cfg.Validate(); err != nil {
-		log.Fatalf("Configuration error: %v", err)
+		log.Fatalf("%s", ui.Error("Configuration error: %v", err))
 	}
 
 	ws, err := workspace.Open(cfg.Workspace)
 	if err != nil {
-		log.Fatalf("Workspace error: %v", err)
+		log.Fatalf("%s", ui.Error("Workspace error: %v", err))
 	}
 
 	d := daemon.New(cfg, ws)
@@ -350,22 +362,22 @@ func runDaemon(args []string) {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		log.Println("[beep-runner] Received termination signal...")
+		log.Println(ui.Dim("[beep-runner] Received termination signal..."))
 		cancel()
 	}()
 
 	if err := d.Start(ctx); err != nil {
-		log.Fatalf("Runner daemon error: %v", err)
+		log.Fatalf("%s", ui.Error("Runner daemon error: %v", err))
 	}
 }
 
 func runPing(args []string) {
 	cfg, err := parseFlags(args)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("%s", ui.Error("Error: %v", err))
 	}
 	if err := cfg.Validate(); err != nil {
-		log.Fatalf("Configuration error: %v", err)
+		log.Fatalf("%s", ui.Error("Configuration error: %v", err))
 	}
 
 	c := client.New(cfg)
@@ -374,13 +386,13 @@ func runPing(args []string) {
 
 	res, err := c.Ping(ctx)
 	if err != nil {
-		log.Fatalf("Ping failed: %v", err)
+		log.Fatalf("%s", ui.Error("Ping failed: %v", err))
 	}
 
-	fmt.Println("Ping successful!")
-	fmt.Printf("  Runner ID:   %s\n", res.RunnerID)
-	fmt.Printf("  Runner Name: %s\n", res.RunnerName)
-	fmt.Printf("  Server Time: %s\n", res.ServerTime)
+	fmt.Println(ui.Success("Ping successful!"))
+	fmt.Println(ui.KeyValue("Runner ID", ui.Bold(res.RunnerID)))
+	fmt.Println(ui.KeyValue("Runner Name", ui.Bold(res.RunnerName)))
+	fmt.Println(ui.KeyValue("Server Time", ui.Dim(res.ServerTime)))
 }
 
 func runJobCommand(args []string) {
@@ -395,37 +407,47 @@ func runJobCommand(args []string) {
 	switch sub {
 	case "create", "new", "add":
 		runJobCreate(rest)
+	case "push":
+		runJobPush(rest)
+	case "pull":
+		runJobPull(rest)
+	case "sync":
+		runJobPush(rest)
 	case "remove", "rm", "delete", "del":
 		runJobRemove(rest)
-	case "sync":
-		runJobSync(rest)
 	case "list", "ls":
 		runJobList(rest)
 	case "help", "-h", "--help":
 		printJobUsage()
 	default:
-		fmt.Fprintf(os.Stderr, "Error: unknown job command %q.\n\n", args[0])
+		fmt.Fprintln(os.Stderr, ui.Error("unknown job command %q.\n", args[0]))
 		printJobUsage()
 		os.Exit(1)
 	}
 }
 
 func printJobUsage() {
-	fmt.Println("Usage:")
-	fmt.Println("  beep-runner job create <slug> [flags]   Create local script & register job on server")
-	fmt.Println("  beep-runner job remove <slug> [flags]   Remove local script & delete job from server")
-	fmt.Println("  beep-runner job sync [flags]            Sync all local jobs in workspace to server")
-	fmt.Println("  beep-runner job list [flags]            List local and server jobs")
+	fmt.Println(ui.Section("Usage:"))
+	fmt.Printf("  %s %s %s   %s\n", ui.Bold("beep-runner"), ui.Green("job create <slug>"), ui.Cyan("[flags]"), "Create local script scaffold")
+	fmt.Printf("  %s %s %s     %s\n", ui.Bold("beep-runner"), ui.Green("job push [slug]"), ui.Cyan("[flags]"), "Push local workspace job(s) to Beep Core (like git push)")
+	fmt.Printf("  %s %s %s     %s\n", ui.Bold("beep-runner"), ui.Green("job pull [slug]"), ui.Cyan("[flags]"), "Pull server job(s) to local workspace (like git pull)")
+	fmt.Printf("  %s %s %s   %s\n", ui.Bold("beep-runner"), ui.Green("job remove <slug>"), ui.Cyan("[flags]"), "Remove local script & delete job from server")
+	fmt.Printf("  %s %s %s            %s\n", ui.Bold("beep-runner"), ui.Green("job list"), ui.Cyan("[flags]"), "List local and server jobs")
 	fmt.Println()
-	fmt.Println("Flags for job create:")
-	fmt.Println("  --name        Job name (default: humanized slug or script @name)")
-	fmt.Println("  --cron        Cron expression (default: */5 * * * * or script @schedule)")
-	fmt.Println("  --type        Script type: sh, py, js, rb (default: sh)")
-	fmt.Println("  --timeout     Timeout in seconds (default: 30 or script @timeout)")
-	fmt.Println("  --no-sync     Create local script only without syncing to server")
+	fmt.Println(ui.Section("Flags for job create:"))
+	fmt.Printf("  %-16s %s\n", ui.Cyan("--name"), "Job name (default: humanized slug or script @name)")
+	fmt.Printf("  %-16s %s\n", ui.Cyan("--cron"), "Cron expression (default: */5 * * * * or script @schedule)")
+	fmt.Printf("  %-16s %s\n", ui.Cyan("--timezone"), "Timezone (default: system timezone or script @timezone)")
+	fmt.Printf("  %-16s %s\n", ui.Cyan("--description"), "Job description (default: script @description)")
+	fmt.Printf("  %-16s %s\n", ui.Cyan("--type"), "Script type: sh, py, js, rb (default: sh)")
+	fmt.Printf("  %-16s %s\n", ui.Cyan("--timeout"), "Timeout in seconds (default: 30 or script @timeout)")
+	fmt.Printf("  %-16s %s\n", ui.Cyan("--no-sync"), "Create local script only without syncing to server")
 	fmt.Println()
-	fmt.Println("Flags for job remove:")
-	fmt.Println("  --no-sync     Remove local script only without deleting from server")
+	fmt.Println(ui.Section("Flags for job pull:"))
+	fmt.Printf("  %-16s %s\n", ui.Cyan("--force"), "Overwrite existing local scripts with server definition")
+	fmt.Println()
+	fmt.Println(ui.Section("Flags for job remove:"))
+	fmt.Printf("  %-16s %s\n", ui.Cyan("--no-sync"), "Remove local script only without deleting from server")
 }
 
 func splitFlagsAndArgs(args []string, boolFlags map[string]bool) (flagArgs []string, positional []string) {
@@ -449,7 +471,7 @@ func runJobCreate(args []string) {
 	wsHint := peekWorkspace(args)
 	cfg, err := config.Load(wsHint)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("%s", ui.Error("Error: %v", err))
 	}
 
 	boolFlags := map[string]bool{"no-sync": true}
@@ -459,12 +481,18 @@ func runJobCreate(args []string) {
 	var (
 		name           string
 		cron           string
+		timezone       string
+		description    string
 		scriptType     string
 		timeoutSeconds int
 		noSync         bool
 	)
 	fs.StringVar(&name, "name", "", "Display name of the job")
 	fs.StringVar(&cron, "cron", "*/5 * * * *", "Cron schedule expression")
+	fs.StringVar(&timezone, "timezone", "", "Timezone (e.g. Asia/Shanghai, UTC)")
+	fs.StringVar(&timezone, "tz", "", "Timezone alias")
+	fs.StringVar(&description, "description", "", "Description of the job")
+	fs.StringVar(&description, "desc", "", "Description alias")
 	fs.StringVar(&scriptType, "type", "sh", "Script type (sh, py, js, rb)")
 	fs.IntVar(&timeoutSeconds, "timeout", 30, "Timeout in seconds")
 	fs.BoolVar(&noSync, "no-sync", false, "Do not sync to server")
@@ -473,7 +501,7 @@ func runJobCreate(args []string) {
 	fs.StringVar(&cfg.Workspace, "workspace", cfg.Workspace, "Workspace directory")
 
 	if err := fs.Parse(flagArgs); err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("%s", ui.Error("Error: %v", err))
 	}
 
 	var slug string
@@ -481,35 +509,52 @@ func runJobCreate(args []string) {
 		slug = positional[0]
 	}
 	if slug == "" {
-		fmt.Println("Error: job slug is required.")
-		fmt.Println("Example: beep-runner job create intranet-http --cron '*/5 * * * *'")
+		fmt.Println(ui.Error("job slug is required."))
+		fmt.Printf("Example: %s\n", ui.Cyan("beep-runner job create intranet-http --cron '*/5 * * * *'"))
 		os.Exit(1)
 	}
 
 	ws, err := workspace.Open(cfg.Workspace)
 	if err != nil {
-		log.Fatalf("Workspace error: %v", err)
+		log.Fatalf("%s", ui.Error("Workspace error: %v", err))
 	}
 
-	filePath, created, err := ws.CreateScript(slug, scriptType, name, cron, timeoutSeconds)
+	filePath, created, err := ws.CreateScript(slug, scriptType, name, cron, timezone, description, timeoutSeconds)
 	if err != nil {
-		log.Fatalf("Failed to create script: %v", err)
+		log.Fatalf("%s", ui.Error("Failed to create script: %v", err))
 	}
 
 	if created {
-		fmt.Printf("✓ Created local script: %s\n", filePath)
+		fmt.Println(ui.Success("Created local script: %s", ui.Cyan(filePath)))
 	} else {
-		fmt.Printf("ℹ Local script already exists: %s\n", filePath)
+		fmt.Println(ui.Info("Local script already exists: %s", ui.Cyan(filePath)))
+		if meta, metaErr := workspace.ParseScriptMetadata(filePath); metaErr == nil {
+			if name == "" && meta.Name != "" {
+				name = meta.Name
+			}
+			if cron == "*/5 * * * *" && meta.Cron != "" {
+				cron = meta.Cron
+			}
+			if timezone == "" && meta.Timezone != "" {
+				timezone = meta.Timezone
+			}
+			if description == "" && meta.Description != "" {
+				description = meta.Description
+			}
+			if timeoutSeconds == 30 && meta.TimeoutSeconds > 0 {
+				timeoutSeconds = meta.TimeoutSeconds
+			}
+		}
 	}
 
 	if noSync {
-		fmt.Println("Skipping server sync (--no-sync specified).")
+		fmt.Println(ui.Dim("Skipping server sync (--no-sync specified)."))
 		return
 	}
 
 	if cfg.ServerURL == "" || cfg.RunnerToken == "" {
-		fmt.Println("ℹ Server URL or Runner Token not configured; skipping server sync.")
-		fmt.Println("  Tip: Configure once with 'beep-runner config set --server <url> --token <token>'")
+		fmt.Println(ui.Info("Server URL or Runner Token not configured; skipping server sync."))
+		fmt.Printf("  %s %s\n", ui.Dim("Tip: Configure once with"), ui.Cyan("beep-runner config set --server <url> --token <token>"))
 		return
 	}
 
@@ -521,23 +566,27 @@ func runJobCreate(args []string) {
 		Slug:           slug,
 		Name:           name,
 		Cron:           cron,
+		Timezone:       timezone,
 		TimeoutSeconds: timeoutSeconds,
+		Description:    description,
 	})
 	if err != nil {
-		log.Fatalf("Failed to sync job to server: %v", err)
+		log.Fatalf("%s", ui.Error("Failed to sync job to server: %v", err))
 	}
 
-	fmt.Printf("✓ Successfully registered job on server: %s (ID: %s, Cron: %s)\n", serverJob.Name, serverJob.ID, serverJob.Cron)
-	fmt.Println("\nNext steps:")
-	fmt.Printf("  1. Edit your script: %s\n", filePath)
-	fmt.Printf("  2. Start runner daemon: beep-runner run\n")
+	fmt.Println(ui.Success("Successfully registered job on server: %s (%s: %s, %s: %s)",
+		ui.Bold(serverJob.Name), ui.Dim("ID"), ui.Dim(serverJob.ID), ui.Dim("Cron"), ui.Yellow(serverJob.Cron)))
+	fmt.Println()
+	fmt.Println(ui.Section("Next steps:"))
+	fmt.Printf("  1. Edit your script: %s\n", ui.Cyan(filePath))
+	fmt.Printf("  2. Start runner daemon: %s\n", ui.Green("beep-runner run"))
 }
 
 func runJobRemove(args []string) {
 	wsHint := peekWorkspace(args)
 	cfg, err := config.Load(wsHint)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("%s", ui.Error("Error: %v", err))
 	}
 
 	boolFlags := map[string]bool{"no-sync": true}
@@ -551,7 +600,7 @@ func runJobRemove(args []string) {
 	fs.StringVar(&cfg.Workspace, "workspace", cfg.Workspace, "Workspace directory")
 
 	if err := fs.Parse(flagArgs); err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("%s", ui.Error("Error: %v", err))
 	}
 
 	var slug string
@@ -559,30 +608,30 @@ func runJobRemove(args []string) {
 		slug = positional[0]
 	}
 	if slug == "" {
-		fmt.Println("Error: job slug is required.")
-		fmt.Println("Example: beep-runner job remove intranet-http")
+		fmt.Println(ui.Error("job slug is required."))
+		fmt.Printf("Example: %s\n", ui.Cyan("beep-runner job remove intranet-http"))
 		os.Exit(1)
 	}
 
 	ws, err := workspace.Open(cfg.Workspace)
 	if err != nil {
-		log.Fatalf("Workspace error: %v", err)
+		log.Fatalf("%s", ui.Error("Workspace error: %v", err))
 	}
 
 	removedFiles, removedFromJSON, err := ws.RemoveJob(slug)
 	if err != nil {
-		fmt.Printf("ℹ %v\n", err)
+		fmt.Println(ui.Info("%v", err))
 	} else {
 		for _, f := range removedFiles {
-			fmt.Printf("✓ Removed local job script: %s\n", f)
+			fmt.Println(ui.Success("Removed local job script: %s", ui.Cyan(f)))
 		}
 		if removedFromJSON {
-			fmt.Printf("✓ Removed %q from jobs.json\n", slug)
+			fmt.Println(ui.Success("Removed %q from jobs.json", ui.Bold(slug)))
 		}
 	}
 
 	if noSync {
-		fmt.Println("Skipping server delete (--no-sync specified).")
+		fmt.Println(ui.Dim("Skipping server delete (--no-sync specified)."))
 		return
 	}
 
@@ -592,47 +641,73 @@ func runJobRemove(args []string) {
 		defer cancel()
 
 		if err := c.DeleteJob(ctx, slug); err != nil {
-			fmt.Printf("⚠ Warning: Failed to delete job on server: %v\n", err)
+			fmt.Println(ui.Warn("Failed to delete job on server: %v", err))
 		} else {
-			fmt.Printf("✓ Deleted job %q from server\n", slug)
+			fmt.Println(ui.Success("Deleted job %q from server", ui.Bold(slug)))
 		}
 	}
 }
 
-func runJobSync(args []string) {
-	cfg, err := parseFlags(args)
+func runJobPush(args []string) {
+	wsHint := peekWorkspace(args)
+	cfg, err := config.Load(wsHint)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("%s", ui.Error("Error: %v", err))
+	}
+
+	boolFlags := map[string]bool{}
+	flagArgs, positional := splitFlagsAndArgs(args, boolFlags)
+
+	fs := flag.NewFlagSet("job push", flag.ExitOnError)
+	fs.StringVar(&cfg.ServerURL, "server", cfg.ServerURL, "Beep server URL")
+	fs.StringVar(&cfg.RunnerToken, "token", cfg.RunnerToken, "Runner token")
+	fs.StringVar(&cfg.Workspace, "workspace", cfg.Workspace, "Workspace directory")
+
+	if err := fs.Parse(flagArgs); err != nil {
+		log.Fatalf("%s", ui.Error("Error: %v", err))
 	}
 	if err := cfg.Validate(); err != nil {
-		log.Fatalf("Configuration error: %v", err)
+		log.Fatalf("%s", ui.Error("Configuration error: %v", err))
 	}
 
 	ws, err := workspace.Open(cfg.Workspace)
 	if err != nil {
-		log.Fatalf("Workspace error: %v", err)
+		log.Fatalf("%s", ui.Error("Workspace error: %v", err))
 	}
 
 	localJobs, err := ws.ListJobs()
 	if err != nil {
-		log.Fatalf("Failed to list local jobs: %v", err)
+		log.Fatalf("%s", ui.Error("Failed to list local jobs: %v", err))
 	}
 
-	if len(localJobs) == 0 {
-		fmt.Printf("No local jobs found in %s/jobs\n", ws.Root)
-		fmt.Println("Create one with: beep-runner job create <slug>")
-		return
+	var targetSlug string
+	if len(positional) > 0 {
+		targetSlug = strings.TrimSpace(strings.ToLower(positional[0]))
 	}
 
 	var syncReqs []*client.CreateJobRequest
 	for _, job := range localJobs {
+		if targetSlug != "" && !strings.EqualFold(job.Slug, targetSlug) {
+			continue
+		}
 		syncReqs = append(syncReqs, &client.CreateJobRequest{
 			Slug:           job.Slug,
 			Name:           job.Name,
 			Cron:           job.Cron,
 			Timezone:       job.Timezone,
 			TimeoutSeconds: job.TimeoutSeconds,
+			Description:    job.Description,
 		})
+	}
+
+	if len(syncReqs) == 0 {
+		if targetSlug != "" {
+			log.Fatalf("%s", ui.Error("Job %q not found in local workspace %s", targetSlug, ws.Root))
+		} else {
+			fmt.Println(ui.Warn("No local jobs found in %s/jobs", ws.Root))
+			fmt.Printf("Create one with: %s\n", ui.Cyan("beep-runner job create <slug>"))
+			return
+		}
 	}
 
 	c := client.New(cfg)
@@ -641,12 +716,103 @@ func runJobSync(args []string) {
 
 	synced, err := c.SyncJobs(ctx, syncReqs)
 	if err != nil {
-		log.Fatalf("Failed to sync jobs: %v", err)
+		log.Fatalf("%s", ui.Error("Failed to push jobs to server: %v", err))
 	}
 
-	fmt.Printf("✓ Successfully synced %d jobs to server:\n", len(synced))
+	fmt.Println(ui.Success("Successfully pushed %d job(s) to server (%s):", len(synced), ui.Dim(cfg.ServerURL)))
 	for _, j := range synced {
-		fmt.Printf("  - %s (slug: %s, cron: %s)\n", j.Name, j.Slug, j.Cron)
+		tz := j.Timezone
+		if tz == "" {
+			tz = "UTC"
+		}
+		fmt.Printf("  %s %s [%s, %s: %s] (%s)\n",
+			ui.Bullet(), ui.Cyan(j.Slug), ui.Bold(j.Name), ui.Dim("cron"), ui.Yellow(j.Cron), ui.Dim(tz))
+	}
+}
+
+func runJobPull(args []string) {
+	wsHint := peekWorkspace(args)
+	cfg, err := config.Load(wsHint)
+	if err != nil {
+		log.Fatalf("%s", ui.Error("Error: %v", err))
+	}
+
+	boolFlags := map[string]bool{"force": true}
+	flagArgs, positional := splitFlagsAndArgs(args, boolFlags)
+
+	var force bool
+	fs := flag.NewFlagSet("job pull", flag.ExitOnError)
+	fs.BoolVar(&force, "force", false, "Overwrite existing local scripts")
+	fs.StringVar(&cfg.ServerURL, "server", cfg.ServerURL, "Beep server URL")
+	fs.StringVar(&cfg.RunnerToken, "token", cfg.RunnerToken, "Runner token")
+	fs.StringVar(&cfg.Workspace, "workspace", cfg.Workspace, "Workspace directory")
+
+	if err := fs.Parse(flagArgs); err != nil {
+		log.Fatalf("%s", ui.Error("Error: %v", err))
+	}
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("%s", ui.Error("Configuration error: %v", err))
+	}
+
+	var targetSlug string
+	if len(positional) > 0 {
+		targetSlug = strings.TrimSpace(strings.ToLower(positional[0]))
+	}
+
+	ws, err := workspace.Open(cfg.Workspace)
+	if err != nil {
+		log.Fatalf("%s", ui.Error("Workspace error: %v", err))
+	}
+
+	c := client.New(cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	serverJobs, err := c.ListJobs(ctx)
+	if err != nil {
+		log.Fatalf("%s", ui.Error("Failed to fetch server jobs: %v", err))
+	}
+
+	if len(serverJobs) == 0 {
+		fmt.Println(ui.Info("No jobs registered on server (%s)", cfg.ServerURL))
+		return
+	}
+
+	pulledCount := 0
+	skippedCount := 0
+
+	for _, sj := range serverJobs {
+		if targetSlug != "" && !strings.EqualFold(sj.Slug, targetSlug) {
+			continue
+		}
+
+		desc := ""
+		if sj.Config != nil {
+			if d, ok := sj.Config["description"].(string); ok {
+				desc = d
+			}
+		}
+
+		filePath, created, pullErr := ws.PullJob(sj.Slug, "sh", sj.Name, sj.Cron, sj.Timezone, desc, sj.TimeoutSeconds, force)
+		if pullErr != nil {
+			fmt.Printf("  %s %s: %v\n", ui.Error("Failed to pull"), ui.Cyan(sj.Slug), pullErr)
+			continue
+		}
+
+		if created {
+			pulledCount++
+			fmt.Println(ui.Success("Pulled %s -> %s", ui.Bold(sj.Slug), ui.Cyan(filePath)))
+		} else {
+			skippedCount++
+			fmt.Println(ui.Info("Local script already exists: %s %s", ui.Cyan(filePath), ui.Dim("(use --force to overwrite)")))
+		}
+	}
+
+	fmt.Println()
+	if pulledCount > 0 {
+		fmt.Println(ui.Success("Successfully pulled %d job(s) from server (%s)", pulledCount, ui.Dim(cfg.ServerURL)))
+	} else if skippedCount > 0 {
+		fmt.Println(ui.Info("All %d server job(s) already exist locally in %s", skippedCount, ui.Dim(ws.JobsDir())))
 	}
 }
 
@@ -654,7 +820,7 @@ func runJobList(args []string) {
 	wsHint := peekWorkspace(args)
 	cfg, err := config.Load(wsHint)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("%s", ui.Error("Error: %v", err))
 	}
 
 	fs := flag.NewFlagSet("job list", flag.ExitOnError)
@@ -663,51 +829,55 @@ func runJobList(args []string) {
 	fs.StringVar(&cfg.Workspace, "workspace", cfg.Workspace, "Workspace directory")
 
 	if err := fs.Parse(args); err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("%s", ui.Error("Error: %v", err))
 	}
 
 	ws, err := workspace.Open(cfg.Workspace)
 	if err != nil {
-		log.Fatalf("Workspace error: %v", err)
+		log.Fatalf("%s", ui.Error("Workspace error: %v", err))
 	}
 
 	localJobs, err := ws.ListJobs()
 	if err != nil {
-		log.Fatalf("Failed to list local jobs: %v", err)
+		log.Fatalf("%s", ui.Error("Failed to list local jobs: %v", err))
 	}
 
-	fmt.Printf("Local Workspace Jobs (%s):\n", ws.Root)
+	fmt.Printf("%s (%s):\n", ui.Bold(ui.Cyan("Local Workspace Jobs")), ui.Dim(ws.Root))
 	if len(localJobs) == 0 {
-		fmt.Println("  (No local jobs found)")
+		fmt.Println(ui.Dim("  (No local jobs found)"))
 	} else {
 		for _, j := range localJobs {
-			desc := fmt.Sprintf("[%s, cron: %s]", j.Name, j.Cron)
+			desc := fmt.Sprintf("[%s, %s: %s]", ui.Bold(j.Name), ui.Dim("cron"), ui.Yellow(j.Cron))
 			if j.TimeoutSeconds > 0 && j.TimeoutSeconds != 30 {
 				desc += fmt.Sprintf(" (%ds)", j.TimeoutSeconds)
 			}
 			if j.FilePath != "" {
-				fmt.Printf("  • %-18s %-34s -> %s\n", j.Slug, desc, j.FilePath)
+				fmt.Printf("  %s %-18s %-42s -> %s\n", ui.Bullet(), ui.Cyan(j.Slug), desc, ui.Dim(j.FilePath))
 			} else {
-				fmt.Printf("  • %-18s %-34s -> %s (jobs.json)\n", j.Slug, desc, strings.Join(j.Command, " "))
+				fmt.Printf("  %s %-18s %-42s -> %s (jobs.json)\n", ui.Bullet(), ui.Cyan(j.Slug), desc, ui.Dim(strings.Join(j.Command, " ")))
 			}
 		}
 	}
 
 	if cfg.ServerURL != "" && cfg.RunnerToken != "" {
-		fmt.Printf("\nServer Jobs (%s):\n", cfg.ServerURL)
+		fmt.Println()
+		fmt.Printf("%s (%s):\n", ui.Bold(ui.Cyan("Server Jobs")), ui.Dim(cfg.ServerURL))
 		c := client.New(cfg)
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		serverJobs, err := c.ListJobs(ctx)
 		if err != nil {
-			fmt.Printf("  (Could not fetch server jobs: %v)\n", err)
+			fmt.Printf("  %s\n", ui.Warn("Could not fetch server jobs: %v", err))
 		} else if len(serverJobs) == 0 {
-			fmt.Println("  (No jobs configured on server)")
+			fmt.Println(ui.Dim("  (No jobs configured on server)"))
 		} else {
 			for _, sj := range serverJobs {
-				fmt.Printf("  • %-18s [%s] cron: %-12s (status: %s)\n", sj.Slug, sj.Name, sj.Cron, sj.Status)
+				fmt.Printf("  %s %-18s [%s] %s: %-14s %s\n",
+					ui.Bullet(), ui.Cyan(sj.Slug), ui.Bold(sj.Name), ui.Dim("cron"), ui.Yellow(sj.Cron), ui.StatusBadge(sj.Status))
 			}
 		}
 	}
 }
+
+

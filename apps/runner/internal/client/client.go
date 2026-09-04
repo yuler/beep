@@ -72,6 +72,7 @@ type CreateJobRequest struct {
 	Cron           string         `json:"cron,omitempty"`
 	Timezone       string         `json:"timezone,omitempty"`
 	TimeoutSeconds int            `json:"timeout_seconds,omitempty"`
+	Description    string         `json:"description,omitempty"`
 	Config         map[string]any `json:"config,omitempty"`
 }
 
