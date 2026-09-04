@@ -63,7 +63,7 @@ func printUsage() {
 	fmt.Println("Commands:")
 	fmt.Println("  run                  Start the runner daemon (default)")
 	fmt.Println("  config               Show current configuration")
-	fmt.Println("  config set           Set configuration parameters (server, token, allow-exec, etc.)")
+	fmt.Println("  config set           Set configuration parameters (server, token, etc.)")
 	fmt.Println("  config unset <key>   Remove a configuration parameter")
 	fmt.Println("  config path          Print path to config file")
 	fmt.Println("  ping                 Test connectivity and authentication with Beep Core")
@@ -76,7 +76,6 @@ func printUsage() {
 	fmt.Println("  --server             Beep server URL (env: BEEP_SERVER)")
 	fmt.Println("  --token              Runner token (env: BEEP_RUNNER_TOKEN)")
 	fmt.Println("  --workspace          Local job workspace (env: BEEP_WORKSPACE, default ~/.beep-runner)")
-	fmt.Println("  --allow-exec         Allow running workspace scripts (env: BEEP_ALLOW_EXEC)")
 	fmt.Println("  --concurrency        Max concurrent jobs (default 5)")
 	fmt.Println("  --poll-interval      Poll interval (default 3s)")
 }
@@ -104,7 +103,6 @@ func parseFlags(args []string) (*config.Config, error) {
 	fs.StringVar(&cfg.ServerURL, "server", cfg.ServerURL, "Beep server URL")
 	fs.StringVar(&cfg.RunnerToken, "token", cfg.RunnerToken, "Runner token")
 	fs.StringVar(&cfg.Workspace, "workspace", cfg.Workspace, "Local workspace directory")
-	fs.BoolVar(&cfg.AllowExec, "allow-exec", cfg.AllowExec, "Allow local scripts")
 	fs.IntVar(&cfg.Concurrency, "concurrency", cfg.Concurrency, "Max concurrency")
 	fs.DurationVar(&cfg.PollInterval, "poll-interval", cfg.PollInterval, "Poll interval")
 
@@ -172,7 +170,6 @@ func runConfigShow(args []string) {
 	fmt.Printf("  Server URL:     %s\n", cfg.ServerURL)
 	fmt.Printf("  Runner Token:   %s\n", tokenStr)
 	fmt.Printf("  Workspace:      %s\n", cfg.Workspace)
-	fmt.Printf("  Allow Exec:     %t\n", cfg.AllowExec)
 	fmt.Printf("  Concurrency:    %d\n", cfg.Concurrency)
 	fmt.Printf("  Poll Interval:  %s\n", cfg.PollInterval)
 	fmt.Printf("  Hostname:       %s\n", cfg.Hostname)
@@ -187,14 +184,13 @@ func runConfigSet(args []string) {
 		fc = &config.FileConfig{}
 	}
 
-	boolFlags := map[string]bool{"allow-exec": true}
+	boolFlags := map[string]bool{}
 	flagArgs, positional := splitFlagsAndArgs(args, boolFlags)
 
 	var (
 		serverFlag       string
 		tokenFlag        string
 		workspaceFlag    string
-		allowExecFlag    bool
 		concurrencyFlag  int
 		pollIntervalFlag string
 	)
@@ -203,7 +199,6 @@ func runConfigSet(args []string) {
 	fs.StringVar(&serverFlag, "server", "", "Beep server URL")
 	fs.StringVar(&tokenFlag, "token", "", "Runner token")
 	fs.StringVar(&workspaceFlag, "workspace", "", "Workspace directory")
-	fs.BoolVar(&allowExecFlag, "allow-exec", false, "Allow local script execution")
 	fs.IntVar(&concurrencyFlag, "concurrency", 0, "Max concurrency")
 	fs.StringVar(&pollIntervalFlag, "poll-interval", "", "Poll interval (e.g. 3s)")
 
@@ -224,11 +219,6 @@ func runConfigSet(args []string) {
 	}
 	if workspaceFlag != "" {
 		fc.Workspace = workspaceFlag
-		updated = true
-	}
-	if allowExecFlag {
-		t := true
-		fc.AllowExec = &t
 		updated = true
 	}
 	if concurrencyFlag > 0 {
@@ -258,11 +248,6 @@ func runConfigSet(args []string) {
 				fc.Workspace = val
 				updated = true
 				i++
-			case "allow_exec", "allow-exec", "exec":
-				v, _ := strconv.ParseBool(val)
-				fc.AllowExec = &v
-				updated = true
-				i++
 			case "concurrency":
 				if n, err := strconv.Atoi(val); err == nil && n > 0 {
 					fc.Concurrency = n
@@ -274,23 +259,15 @@ func runConfigSet(args []string) {
 				updated = true
 				i++
 			}
-		} else {
-			// Single key like "allow-exec"
-			if key == "allow_exec" || key == "allow-exec" {
-				t := true
-				fc.AllowExec = &t
-				updated = true
-			}
 		}
 	}
 
 	if !updated {
 		fmt.Println("No configuration options provided.")
 		fmt.Println("\nUsage:")
-		fmt.Println("  beep-runner config set --server <url> --token <token> [--allow-exec]")
+		fmt.Println("  beep-runner config set --server <url> --token <token>")
 		fmt.Println("  beep-runner config set server <url>")
 		fmt.Println("  beep-runner config set token <token>")
-		fmt.Println("  beep-runner config set allow-exec true")
 		return
 	}
 
@@ -309,7 +286,7 @@ func runConfigSet(args []string) {
 func runConfigUnset(args []string) {
 	if len(args) == 0 {
 		fmt.Println("Usage: beep-runner config unset <key>")
-		fmt.Println("Keys: server, token, workspace, allow-exec, concurrency, poll-interval")
+		fmt.Println("Keys: server, token, workspace, concurrency, poll-interval")
 		return
 	}
 
@@ -329,8 +306,6 @@ func runConfigUnset(args []string) {
 		fc.RunnerToken = ""
 	case "workspace", "dir":
 		fc.Workspace = ""
-	case "allow_exec", "allow-exec", "exec":
-		fc.AllowExec = nil
 	case "concurrency":
 		fc.Concurrency = 0
 	case "poll_interval", "poll-interval":
@@ -549,7 +524,7 @@ func runJobCreate(args []string) {
 	fmt.Printf("✓ Successfully registered job on server: %s (ID: %s, Cron: %s)\n", serverJob.Name, serverJob.ID, serverJob.Cron)
 	fmt.Println("\nNext steps:")
 	fmt.Printf("  1. Edit your script: %s\n", filePath)
-	fmt.Printf("  2. Start runner daemon: beep-runner run --allow-exec\n")
+	fmt.Printf("  2. Start runner daemon: beep-runner run\n")
 }
 
 func runJobSync(args []string) {

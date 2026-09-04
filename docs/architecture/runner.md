@@ -29,7 +29,7 @@ sequenceDiagram
 1. **Pull-only HTTP(S).** The agent opens all connections outbound (GitLab Runner style). No inbound ports.
 2. **Scripts stay on the host.** Core stores `slug`, cron, timeout, and optional `config`. The agent resolves `slug` to `~/.beep-runner/jobs/<slug>` or `jobs.json`.
 3. **Logs and results are first-class.** Stdout is uploaded while the job runs. Scripts may also POST to `BEEP_LOG_URL` / `BEEP_RESULT_URL` with `X-Runner-Token`.
-4. **`--allow-exec` is required** to run workspace scripts. Permissions and which files exist are controlled on the machine.
+4. **User-controlled workspace.** Scripts live on the host. Permissions and executable rights are controlled on the machine by the user.
 5. **One agent per token / machine**, concurrent jobs via a worker pool.
 
 ---
@@ -55,7 +55,7 @@ Examples: [`apps/runner/examples`](../../apps/runner/examples).
 
 ```bash
 # Configure runner credentials and options once
-beep-runner config set --server https://core.example.com --token beep_rt_xxx --allow-exec
+beep-runner config set --server https://core.example.com --token beep_rt_xxx
 
 # Start daemon
 beep-runner run

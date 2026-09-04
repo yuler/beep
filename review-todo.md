@@ -16,7 +16,7 @@
 - **纯出站长轮询 (Pull-only HTTP)**：Go Runner 仅对外发起出站请求（GitLab Runner 风格），无需在内网开启任何入站端口。
 - **脚本留在本地**：Core 仅保存任务元信息（`slug`、cron 表达式、时区、超时时间、自定义 `config` JSON）；Runner 节点在本地 `~/.beep-runner/jobs/<slug>` 或 `jobs.json` 中匹配并执行真实脚本。
 - **日志与结果一流支持 (Streaming Logs & First-class Results)**：执行过程中实时流式分块上报 stdout/stderr，Core 限制单次执行日志上限（256KB）与结果上限（8KB）。
-- **安全沙箱控制**：必须通过 `--allow-exec` 或 `BEEP_ALLOW_EXEC=true` 显式开启脚本执行权限。
+- **用户控制工作区**：脚本存储在用户机器上，执行权限和文件安全由用户本地文件系统完全掌控。
 
 ```mermaid
 sequenceDiagram
@@ -69,10 +69,11 @@ beep monorepo
 │       └── runner-jobs.ts                  # Runner Job & Run API Client
 ├── apps/runner/                            # Go 客户端 (beep-runner 单二进制与 Dockerfile)
 │   ├── Dockerfile                          # 多架构轻量级镜像打包 (Go 多阶段静态编译)
-│   ├── main.go                             # CLI 命令 (run, ping, test, version)
+│   ├── main.go                             # CLI 命令 (run, ping, config, job create/sync/list, version)
 │   ├── internal/client/                    # HTTP 任务拉取、日志流式传输与结果上报客户端
+│   ├── internal/config/                    # 本地 config.json 配置文件持久化与环境变量加载
 │   ├── internal/daemon/                    # 常驻 Worker Pool 与并发调度器
-│   ├── internal/exec/                      # 本地 Shell / 脚本安全执行与流式捕获引擎
+│   ├── internal/exec/                      # 本地 Shell / 脚本执行与流式捕获引擎
 │   ├── internal/workspace/                 # 本地工作区目录扫描与 jobs.json 映射解析
 │   ├── internal/task/                      # Task 任务流编排
 │   └── examples/                           # 官方示例脚本 (heartbeat-ping, intranet-http, jobs.json)
@@ -85,7 +86,7 @@ beep monorepo
 
 ### 3.1 数据库迁移与数据模型 (Data Models)
 - [ ] [`core/db/migrate/20260901180000_create_runners_and_jobs.rb`](core/db/migrate/20260901180000_create_runners_and_jobs.rb)
-  - [ ] `runners` 表使用 UUID 主键，`token_digest` 有唯一索引，包含 `allow_exec` 与 `last_seen_at` 字段。
+  - [ ] `runners` 表使用 UUID 主键，`token_digest` 有唯一索引，包含 `last_seen_at` 字段。
   - [ ] `runner_jobs` 表包含 `account_id`、`runner_id`、`slug`（作用域在 runner_id 下唯一）、`cron`、`timezone`、`timeout_seconds`、`config` (jsonb)、`status`（active / paused / firing）、`next_run_at`、`last_run_at`。
   - [ ] `runner_runs` 表包含 `runner_job_id`、`runner_id`、`scheduled_for`、`status`（pending / running / succeeded / failed / expired）、`result_status`、`result` (jsonb)、`log` (text)。
   - [ ] 官方 `beepers` 与 `beeper_runs` 表保持干净，不侵入 runner 路由字段。
@@ -121,7 +122,7 @@ beep monorepo
 ### 3.3 Web 管理 UI (`apps/web`)
 - [ ] **Runner 控制台与列表** ([`apps/web/src/routes/$account_slug/runners.tsx`](apps/web/src/routes/$account_slug/runners.tsx) & [`runner-list.tsx`](apps/web/src/components/runners/runner-list.tsx))
   - [ ] 状态 Badge 区分在线（绿色脉冲）、空闲（蓝色）、离线（灰色）。
-  - [ ] 展示版本号、系统架构、主机名、IP 地址、关联 Job 数量、最后活跃时间与 exec 权限标签。
+  - [ ] 展示版本号、系统架构、主机名、IP 地址、关联 Job 数量与最后活跃时间。
   - [ ] 点击卡片直接下钻到 Runner 详情及 Job 管理页。
 - [ ] **Runner 详情与 Job 工作区管理** ([`apps/web/src/routes/$account_slug/runners_.$runnerId.tsx`](apps/web/src/routes/$account_slug/runners_.$runnerId.tsx))
   - [ ] 左侧展示 Runner 基本信息与所有绑定的 Runner Jobs 列表。
@@ -133,22 +134,22 @@ beep monorepo
   - [ ] 弹窗容器设置 `overflow-x-hidden min-w-0`，杜绝弹窗自身横向滚动。
   - [ ] 代码块容器具备独立 `overflow-x-auto whitespace-pre` 横向滚动能力。
   - [ ] 在标题栏与代码块右上角均提供快捷复制按钮，并附带即时复制成功状态反馈。
-  - [ ] 启动命令包含 `--workspace` 与 `--allow-exec` 说明。
+  - [ ] 启动命令包含 `beep-runner config set` 一键配置说明。
 
 ### 3.4 Go Runner 客户端与 Docker 打包 (`apps/runner`)
 - [ ] **工作区目录与脚本发现** ([`apps/runner/internal/workspace/workspace.go`](apps/runner/internal/workspace/workspace.go))
   - [ ] 默认读取 `~/.beep-runner` 工作区目录（可通过 `--workspace` 自定义）。
   - [ ] 自动发现 `jobs/<slug>` 脚本文件（支持 `.sh`, `.py`, `.js` 或可执行二进制），或由 `jobs.json` 显式配置。
 - [ ] **脚本执行引擎与环境变量注入** ([`apps/runner/internal/exec/exec.go`](apps/runner/internal/exec/exec.go))
-  - [ ] 必须显式开启 `--allow-exec` 或 `BEEP_ALLOW_EXEC=true` 才允许运行脚本。
+  - [ ] 默认直接执行本地工作区脚本，权限完全由用户本地文件系统控制。
   - [ ] 执行时自动注入环境参数：`BEEP_SERVER`, `BEEP_RUNNER_TOKEN`, `BEEP_RUN_ID`, `BEEP_JOB_SLUG`, `BEEP_LOG_URL`, `BEEP_RESULT_URL`, `BEEP_CONFIG`, `BEEP_CONFIG_*`。
   - [ ] 实时捕获 stdout / stderr 并分块流式上传至 Core。
 - [ ] **Worker Pool 调度器与生命周期** ([`apps/runner/internal/daemon/daemon.go`](apps/runner/internal/daemon/daemon.go))
   - [ ] 基于 channel semaphore 控制并发度 (`--concurrency`)。
   - [ ] 优雅退出处理（监听 `SIGINT` / `SIGTERM`，等待执行中的任务完成后再退出）。
-- [ ] **CLI 入口与官方示例** ([`main.go`](apps/runner/main.go) & [`apps/runner/examples/`](apps/runner/examples/))
-  - [ ] 支持 `run`, `ping`, `test`, `version` 等子命令。
-  - [ ] 提供开箱即用的示例脚本：`heartbeat-ping.sh`、`intranet-http.sh`、`jobs.json`。
+- [ ] **CLI 配置与任务脚手架** ([`main.go`](apps/runner/main.go) & [`apps/runner/internal/config/`](apps/runner/internal/config/))
+  - [ ] `beep-runner config [show|set|unset|path]`：持久化保存 Server 与 Token。
+  - [ ] `beep-runner job [create|sync|list]`：一键创建本地脚本模版并自动同步注册至服务端。
 
 ---
 
@@ -177,7 +178,7 @@ cd apps/runner && go build -o ../../bin/beep-runner ./main.go && cd ../..
 ./bin/beep-runner --help
 
 # 2. 本地持久化配置 Server 与 Token
-./bin/beep-runner config set --server http://core.beep.localhost:3000 --token <YOUR_TOKEN> --allow-exec
+./bin/beep-runner config set --server http://core.beep.localhost:3000 --token <YOUR_TOKEN>
 
 # 3. 查看当前有效配置
 ./bin/beep-runner config
@@ -187,12 +188,12 @@ cd apps/runner && go build -o ../../bin/beep-runner ./main.go && cd ../..
 1. 启动全栈开发环境：`mise dev`
 2. 打开浏览器访问 `http://web.beep.localhost:3000` 并登录。
 3. 进入左侧侧边栏 **Runners**（`/$slug/runners`）：
-   - 点击 **Add Runner** 创建一个节点（例如 `Office-Mac`，标签 `intranet`，开启 allow exec）。
+   - 点击 **Add Runner** 创建一个节点（例如 `Office-Mac`，标签 `intranet`）。
    - 弹窗中复制生成的 Token（`beep_rt_xxx`）及快速配置命令。
 4. 使用 CLI 一键配置节点与创建本地 Job：
    ```bash
    # 1. 一键保存认证信息与服务端地址
-   ./bin/beep-runner config set --server http://core.beep.localhost:3000 --token <YOUR_TOKEN> --allow-exec
+   ./bin/beep-runner config set --server http://core.beep.localhost:3000 --token <YOUR_TOKEN>
 
    # 2. 一键创建本地脚本并自动注册到服务端
    ./bin/beep-runner job create intranet-http --cron "* * * * *" --name "Intranet HTTP Check"

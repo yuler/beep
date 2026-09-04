@@ -57,7 +57,6 @@ class RunnerTest < ActiveSupport::TestCase
         arch: "arm64",
         hostname: "nas-01",
         ip_address: "192.168.1.50",
-        allow_exec: true,
         status: "idle"
       )
 
@@ -68,7 +67,6 @@ class RunnerTest < ActiveSupport::TestCase
       assert_equal "arm64", runner.arch
       assert_equal "nas-01", runner.hostname
       assert_equal "192.168.1.50", runner.ip_address
-      assert_equal true, runner.allow_exec
       assert_equal Time.zone.parse("2026-09-01 12:00:00 UTC"), runner.last_seen_at
     end
   end

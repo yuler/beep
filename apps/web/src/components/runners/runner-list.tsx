@@ -5,8 +5,6 @@ import {
 	KeyRound,
 	MoreHorizontal,
 	Server,
-	ShieldCheck,
-	Terminal,
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -224,38 +222,20 @@ export function RunnerList({
 							</CardHeader>
 
 							<CardContent className="flex flex-col gap-3.5 text-xs text-muted-foreground pt-0">
-								{/* Tags & Execution Badge */}
-								<div className="flex flex-wrap items-center gap-1.5 min-h-[1.5rem]">
-									{runner.allow_exec ? (
-										<Badge
-											variant="secondary"
-											className="gap-1 text-[10px] font-normal"
-										>
-											<Terminal className="size-3 text-amber-500" />
-											<span>{m.runners_exec_enabled()}</span>
-										</Badge>
-									) : (
-										<Badge
-											variant="outline"
-											className="gap-1 text-[10px] font-normal text-muted-foreground"
-										>
-											<ShieldCheck className="size-3 text-emerald-500" />
-											<span>{m.runners_scripts_locked()}</span>
-										</Badge>
-									)}
-
-									{runner.tags && runner.tags.length > 0
-										? runner.tags.map((tag) => (
-												<Badge
-													key={tag}
-													variant="outline"
-													className="font-mono text-[10px] bg-muted/30"
-												>
-													{tag}
-												</Badge>
-											))
-										: null}
-								</div>
+								{/* Tags */}
+								{runner.tags && runner.tags.length > 0 ? (
+									<div className="flex flex-wrap items-center gap-1.5 min-h-[1.5rem]">
+										{runner.tags.map((tag) => (
+											<Badge
+												key={tag}
+												variant="outline"
+												className="font-mono text-[10px] bg-muted/30"
+											>
+												{tag}
+											</Badge>
+										))}
+									</div>
+								) : null}
 
 								{/* Metadata Grid */}
 								<div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-2.5 font-mono text-[11px]">

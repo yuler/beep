@@ -14,7 +14,6 @@ type FileConfig struct {
 	ServerURL    string `json:"server_url,omitempty"`
 	RunnerToken  string `json:"runner_token,omitempty"`
 	Workspace    string `json:"workspace,omitempty"`
-	AllowExec    *bool  `json:"allow_exec,omitempty"`
 	Concurrency  int    `json:"concurrency,omitempty"`
 	PollInterval string `json:"poll_interval,omitempty"`
 	Hostname     string `json:"hostname,omitempty"`
@@ -23,7 +22,6 @@ type FileConfig struct {
 type Config struct {
 	ServerURL    string
 	RunnerToken  string
-	AllowExec    bool
 	Concurrency  int
 	PollInterval time.Duration
 	Hostname     string
@@ -110,12 +108,6 @@ func Load(wsHint string) (*Config, error) {
 
 	runnerToken := getEnv("BEEP_RUNNER_TOKEN", fc.RunnerToken)
 
-	allowExec := false
-	if fc.AllowExec != nil {
-		allowExec = *fc.AllowExec
-	}
-	allowExec = getEnvBool("BEEP_ALLOW_EXEC", allowExec)
-
 	concurrency := 5
 	if fc.Concurrency > 0 {
 		concurrency = fc.Concurrency
@@ -142,7 +134,6 @@ func Load(wsHint string) (*Config, error) {
 	cfg := &Config{
 		ServerURL:    serverURL,
 		RunnerToken:  runnerToken,
-		AllowExec:    allowExec,
 		Concurrency:  concurrency,
 		PollInterval: pollInterval,
 		Hostname:     hostname,
@@ -188,14 +179,6 @@ func MaskToken(token string) string {
 func getEnv(key, defaultVal string) string {
 	if val := os.Getenv(key); val != "" {
 		return strings.TrimSpace(val)
-	}
-	return defaultVal
-}
-
-func getEnvBool(key string, defaultVal bool) bool {
-	if val := os.Getenv(key); val != "" {
-		v := strings.ToLower(strings.TrimSpace(val))
-		return v == "1" || v == "true" || v == "yes" || v == "on"
 	}
 	return defaultVal
 }

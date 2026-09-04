@@ -40,7 +40,7 @@ class Runner < ApplicationRecord
     end
   end
 
-  def touch_activity!(version: nil, os: nil, arch: nil, hostname: nil, ip_address: nil, allow_exec: nil, status: "idle")
+  def touch_activity!(version: nil, os: nil, arch: nil, hostname: nil, ip_address: nil, status: "idle")
     attrs = {
       status: status.in?(%w[ online idle ]) ? status : "idle",
       last_seen_at: Time.current
@@ -50,7 +50,6 @@ class Runner < ApplicationRecord
     attrs[:arch] = arch if arch.present?
     attrs[:hostname] = hostname if hostname.present?
     attrs[:ip_address] = ip_address if ip_address.present?
-    attrs[:allow_exec] = allow_exec unless allow_exec.nil?
 
     update_columns(attrs)
   end

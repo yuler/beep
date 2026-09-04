@@ -22,8 +22,7 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
         version: "0.1.0",
         os: "linux",
         arch: "amd64",
-        hostname: "node-1",
-        allow_exec: true
+        hostname: "node-1"
       },
       headers: { "X-Runner-Token" => @runner_token },
       as: :json
@@ -36,7 +35,6 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
     @runner.reload
     assert_equal "0.1.0", @runner.version
     assert_equal "linux", @runner.os
-    assert_equal true, @runner.allow_exec
   end
 
   test "poll returns 204 when no tasks are due" do

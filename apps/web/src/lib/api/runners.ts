@@ -8,7 +8,6 @@ export type Runner = {
 	token_prefix: string;
 	status: RunnerStatus;
 	tags: string[];
-	allow_exec: boolean;
 	version?: string | null;
 	os?: string | null;
 	arch?: string | null;
@@ -57,7 +56,6 @@ export function createRunner(
 	body: {
 		name: string;
 		tags?: string[];
-		allow_exec?: boolean;
 	},
 ) {
 	return apiFetch<RunnerWithTokenResponse>(`/api/v1/${accountSlug}/runners`, {
@@ -72,7 +70,6 @@ export function updateRunner(
 	body: {
 		name?: string;
 		tags?: string[];
-		allow_exec?: boolean;
 	},
 ) {
 	return apiFetch<RunnerResponse>(

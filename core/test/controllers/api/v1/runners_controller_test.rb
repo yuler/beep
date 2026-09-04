@@ -42,8 +42,7 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
         params: {
           runner: {
             name: "Office-Gateway",
-            tags: [ "office", "intranet" ],
-            allow_exec: true
+            tags: [ "office", "intranet" ]
           }
         },
         headers: { "Authorization" => "Bearer #{@token}" },
@@ -53,7 +52,6 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
       body = response.parsed_body["runner"]
       assert_equal "Office-Gateway", body["name"]
       assert_equal [ "office", "intranet" ], body["tags"]
-      assert_equal true, body["allow_exec"]
       assert body["token"].start_with?("beep_rt_")
     end
   end
@@ -65,8 +63,7 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
       params: {
         runner: {
           name: "New-Name",
-          tags: [ "production" ],
-          allow_exec: true
+          tags: [ "production" ]
         }
       },
       headers: { "Authorization" => "Bearer #{@token}" },
@@ -76,7 +73,6 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
     runner.reload
     assert_equal "New-Name", runner.name
     assert_equal [ "production" ], runner.tags
-    assert_equal true, runner.allow_exec
   end
 
   test "destroy removes runner" do

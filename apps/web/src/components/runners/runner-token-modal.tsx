@@ -97,18 +97,9 @@ export function RunnerTokenModal({
 	}
 
 	const serverUrl = publicApiOrigin();
-	const token = runner.token;
-	const allowExecFlag = runner.allow_exec ? " --allow-exec" : "";
-	const allowExecEnv = runner.allow_exec
-		? " \\\n  -e BEEP_ALLOW_EXEC=true"
-		: "";
-	const allowExecCompose = runner.allow_exec
-		? "\n      - BEEP_ALLOW_EXEC=true"
-		: "";
-
 	const dockerRunCmd = `docker run -d --name beep-runner --restart=always \\
   -e BEEP_SERVER=${serverUrl} \\
-  -e BEEP_RUNNER_TOKEN=${token}${allowExecEnv} \\
+  -e BEEP_RUNNER_TOKEN=${token} \\
   -v beep-runner-workspace:/home/beep/.beep-runner \\
   ghcr.io/yuler/beep-runner:latest`;
 
@@ -121,12 +112,12 @@ export function RunnerTokenModal({
       - beep-runner-workspace:/home/beep/.beep-runner
     environment:
       - BEEP_SERVER=${serverUrl}
-      - BEEP_RUNNER_TOKEN=${token}${allowExecCompose}
+      - BEEP_RUNNER_TOKEN=${token}
 
 volumes:
   beep-runner-workspace:`;
 
-	const cliCmd = `beep-runner config set --server ${serverUrl} --token ${token}${allowExecFlag}
+	const cliCmd = `beep-runner config set --server ${serverUrl} --token ${token}
 beep-runner run`;
 
 	function copyToClipboard(key: string, text: string) {

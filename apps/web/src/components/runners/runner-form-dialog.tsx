@@ -38,7 +38,6 @@ export function RunnerFormDialog({
 	const isEdit = Boolean(runner);
 	const [name, setName] = useState("");
 	const [tagsInput, setTagsInput] = useState("");
-	const [allowExec, setAllowExec] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -47,11 +46,9 @@ export function RunnerFormDialog({
 		if (runner) {
 			setName(runner.name);
 			setTagsInput((runner.tags || []).join(", "));
-			setAllowExec(Boolean(runner.allow_exec));
 		} else {
 			setName("");
 			setTagsInput("");
-			setAllowExec(false);
 		}
 		setError(null);
 	}, [open, runner]);
@@ -71,7 +68,6 @@ export function RunnerFormDialog({
 				const res = await updateRunner(slug, runner.id, {
 					name: name.trim(),
 					tags,
-					allow_exec: allowExec,
 				});
 				onOpenChange(false);
 				onSuccess(res.runner);
@@ -79,7 +75,6 @@ export function RunnerFormDialog({
 				const res = await createRunner(slug, {
 					name: name.trim(),
 					tags,
-					allow_exec: allowExec,
 				});
 				onOpenChange(false);
 				onSuccess(res.runner);
@@ -136,24 +131,6 @@ export function RunnerFormDialog({
 							/>
 						</div>
 
-						<div className="flex flex-col gap-1.5 rounded-lg border border-input p-3 dark:bg-input/20">
-							<Label className="flex items-center gap-2 font-normal cursor-pointer text-sm">
-								<input
-									type="checkbox"
-									className="size-4 accent-primary rounded"
-									checked={allowExec}
-									disabled={submitting}
-									onChange={(e) => setAllowExec(e.target.checked)}
-								/>
-								<span className="font-medium text-foreground">
-									{m.runners_allow_exec()}
-								</span>
-							</Label>
-							<p className="text-[11px] text-muted-foreground pl-6">
-								{m.runners_allow_exec_hint()}
-							</p>
-						</div>
-
 						{error ? (
 							<p className="text-sm text-destructive" role="alert">
 								{error}
@@ -164,23 +141,18 @@ export function RunnerFormDialog({
 					<DialogFooter className="gap-2 sm:gap-0">
 						<Button
 							type="button"
-							variant="ghost"
-							size="sm"
+							variant="outline"
 							onClick={() => onOpenChange(false)}
 							disabled={submitting}
 						>
 							{m.common_cancel()}
 						</Button>
-						<Button
-							type="submit"
-							size="sm"
-							disabled={submitting || !name.trim()}
-						>
+						<Button type="submit" disabled={submitting}>
 							{submitting
 								? m.common_saving()
 								: isEdit
-									? m.beepers_save_changes()
-									: m.runners_add_runner()}
+									? m.runners_update_runner()
+									: m.runners_create_runner()}
 						</Button>
 					</DialogFooter>
 				</form>

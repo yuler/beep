@@ -29,14 +29,14 @@ func New(cfg *config.Config, ws *workspace.Workspace) *Daemon {
 		cfg:       cfg,
 		client:    client.New(cfg),
 		workspace: ws,
-		executor:  exec.NewJobExecutor(cfg.AllowExec),
+		executor:  exec.NewJobExecutor(),
 		sem:       make(chan struct{}, cfg.Concurrency),
 	}
 }
 
 func (d *Daemon) Start(ctx context.Context) error {
-	log.Printf("[beep-runner] Connecting to %s workspace=%s concurrency=%d allow_exec=%v",
-		d.cfg.ServerURL, d.workspace.Root, d.cfg.Concurrency, d.cfg.AllowExec)
+	log.Printf("[beep-runner] Connecting to %s workspace=%s concurrency=%d",
+		d.cfg.ServerURL, d.workspace.Root, d.cfg.Concurrency)
 
 	pingRes, err := d.client.Ping(ctx)
 	if err != nil {

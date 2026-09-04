@@ -6,8 +6,7 @@ class Api::V1::Runner::TasksController < Api::V1::Runner::BaseController
       os: params[:os],
       arch: params[:arch],
       hostname: params[:hostname],
-      ip_address: request.remote_ip,
-      allow_exec: params[:allow_exec]
+      ip_address: request.remote_ip
     )
 
     candidate = RunnerRun.joins(:runner_job)

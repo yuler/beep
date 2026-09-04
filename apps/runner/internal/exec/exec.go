@@ -14,22 +14,13 @@ import (
 	"beep-runner/internal/task"
 )
 
-type JobExecutor struct {
-	allowExec bool
-}
+type JobExecutor struct{}
 
-func NewJobExecutor(allowExec bool) *JobExecutor {
-	return &JobExecutor{allowExec: allowExec}
+func NewJobExecutor() *JobExecutor {
+	return &JobExecutor{}
 }
 
 func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, timeout time.Duration, onLog func(string)) *task.Result {
-	if !e.allowExec {
-		return task.Error(
-			"Execution disabled",
-			"Start the runner with --allow-exec (or BEEP_ALLOW_EXEC=1) to run workspace scripts.",
-			map[string]any{"allowed": false},
-		)
-	}
 	if len(argv) == 0 {
 		return task.Error("Missing command", "workspace resolved an empty command", nil)
 	}

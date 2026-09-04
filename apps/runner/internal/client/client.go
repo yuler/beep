@@ -39,11 +39,10 @@ type PingResponse struct {
 func (c *Client) Ping(ctx context.Context) (*PingResponse, error) {
 	url := fmt.Sprintf("%s/api/v1/runner/ping", c.cfg.ServerURL)
 	payload := map[string]any{
-		"version":    version.Version,
-		"os":         runtime.GOOS,
-		"arch":       runtime.GOARCH,
-		"hostname":   c.cfg.Hostname,
-		"allow_exec": c.cfg.AllowExec,
+		"version":  version.Version,
+		"os":       runtime.GOOS,
+		"arch":     runtime.GOARCH,
+		"hostname": c.cfg.Hostname,
 	}
 
 	var res PingResponse
@@ -121,11 +120,10 @@ type PollResponse struct {
 func (c *Client) Poll(ctx context.Context) (*task.Task, error) {
 	url := fmt.Sprintf("%s/api/v1/runner/tasks/poll", c.cfg.ServerURL)
 	payload := map[string]any{
-		"version":    version.Version,
-		"os":         runtime.GOOS,
-		"arch":       runtime.GOARCH,
-		"hostname":   c.cfg.Hostname,
-		"allow_exec": c.cfg.AllowExec,
+		"version":  version.Version,
+		"os":       runtime.GOOS,
+		"arch":     runtime.GOARCH,
+		"hostname": c.cfg.Hostname,
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))

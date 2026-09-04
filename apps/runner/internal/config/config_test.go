@@ -10,14 +10,12 @@ import (
 func TestConfigLoadFromEnv(t *testing.T) {
 	os.Setenv("BEEP_SERVER", "https://beep.example.com")
 	os.Setenv("BEEP_RUNNER_TOKEN", "beep_rt_test123")
-	os.Setenv("BEEP_ALLOW_EXEC", "true")
 	os.Setenv("BEEP_CONCURRENCY", "10")
 	os.Setenv("BEEP_POLL_INTERVAL", "5s")
 	os.Setenv("BEEP_HOSTNAME", "my-nas")
 	defer func() {
 		os.Unsetenv("BEEP_SERVER")
 		os.Unsetenv("BEEP_RUNNER_TOKEN")
-		os.Unsetenv("BEEP_ALLOW_EXEC")
 		os.Unsetenv("BEEP_CONCURRENCY")
 		os.Unsetenv("BEEP_POLL_INTERVAL")
 		os.Unsetenv("BEEP_HOSTNAME")
@@ -33,9 +31,6 @@ func TestConfigLoadFromEnv(t *testing.T) {
 	}
 	if cfg.RunnerToken != "beep_rt_test123" {
 		t.Errorf("expected token beep_rt_test123, got %s", cfg.RunnerToken)
-	}
-	if !cfg.AllowExec {
-		t.Errorf("expected allow_exec to be true")
 	}
 	if cfg.Concurrency != 10 {
 		t.Errorf("expected concurrency 10, got %d", cfg.Concurrency)
@@ -56,11 +51,9 @@ func TestConfigFilePersistence(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "config.json")
 
-	allow := true
 	fc := &FileConfig{
 		ServerURL:    "https://core.internal:8080",
 		RunnerToken:  "beep_rt_saved_token",
-		AllowExec:    &allow,
 		Concurrency:  8,
 		PollInterval: "2s",
 	}
@@ -89,9 +82,6 @@ func TestConfigFilePersistence(t *testing.T) {
 	}
 	if cfg.RunnerToken != "beep_rt_saved_token" {
 		t.Errorf("expected token from file, got %s", cfg.RunnerToken)
-	}
-	if !cfg.AllowExec {
-		t.Errorf("expected allow_exec from file to be true")
 	}
 	if cfg.Concurrency != 8 {
 		t.Errorf("expected concurrency 8, got %d", cfg.Concurrency)

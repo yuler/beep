@@ -54,10 +54,10 @@ class Api::V1::RunnersController < Api::V1::BaseController
   end
 
   def runner_params
-    params.require(:runner).permit(:name, :allow_exec, tags: [])
+    params.require(:runner).permit(:name, tags: [])
   end
 
   def update_params
-    params.require(:runner).permit(:name, :allow_exec, tags: [])
+    params.require(:runner).permit(:name, tags: [])
   end
 end
