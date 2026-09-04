@@ -21,6 +21,7 @@ export type DashboardBreadcrumbItem = {
 		| "/$account_slug/settings"
 		| "/$account_slug/beeps"
 		| "/$account_slug/beepers"
+		| "/$account_slug/runners"
 		| "/admin/jobs"
 		| "/admin/stats"
 		| "/my/access_tokens"
