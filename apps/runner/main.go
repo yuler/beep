@@ -68,6 +68,7 @@ func printUsage() {
 	fmt.Println("  config path          Print path to config file")
 	fmt.Println("  ping                 Test connectivity and authentication with Beep Core")
 	fmt.Println("  job create <slug>    Create a local job script and sync to server")
+	fmt.Println("  job remove <slug>    Remove a local job script and delete from server")
 	fmt.Println("  job sync             Sync all local workspace jobs to Beep Core")
 	fmt.Println("  job list             List local jobs in workspace and on server")
 	fmt.Println("  version              Print version information")
@@ -388,38 +389,43 @@ func runJobCommand(args []string) {
 		return
 	}
 
-	sub := args[0]
+	sub := strings.ToLower(args[0])
 	rest := args[1:]
 
 	switch sub {
 	case "create", "new", "add":
 		runJobCreate(rest)
+	case "remove", "rm", "delete", "del":
+		runJobRemove(rest)
 	case "sync":
 		runJobSync(rest)
 	case "list", "ls":
 		runJobList(rest)
+	case "help", "-h", "--help":
+		printJobUsage()
 	default:
-		// If user typed: beep-runner job <slug> -> treat as create <slug>
-		if !strings.HasPrefix(sub, "-") {
-			runJobCreate(args)
-		} else {
-			printJobUsage()
-		}
+		fmt.Fprintf(os.Stderr, "Error: unknown job command %q.\n\n", args[0])
+		printJobUsage()
+		os.Exit(1)
 	}
 }
 
 func printJobUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  beep-runner job create <slug> [flags]   Create local script & register job on server")
+	fmt.Println("  beep-runner job remove <slug> [flags]   Remove local script & delete job from server")
 	fmt.Println("  beep-runner job sync [flags]            Sync all local jobs in workspace to server")
 	fmt.Println("  beep-runner job list [flags]            List local and server jobs")
 	fmt.Println()
 	fmt.Println("Flags for job create:")
-	fmt.Println("  --name        Job name (default: humanized slug)")
-	fmt.Println("  --cron        Cron expression (default: */5 * * * *)")
+	fmt.Println("  --name        Job name (default: humanized slug or script @name)")
+	fmt.Println("  --cron        Cron expression (default: */5 * * * * or script @schedule)")
 	fmt.Println("  --type        Script type: sh, py, js, rb (default: sh)")
-	fmt.Println("  --timeout     Timeout in seconds (default: 30)")
+	fmt.Println("  --timeout     Timeout in seconds (default: 30 or script @timeout)")
 	fmt.Println("  --no-sync     Create local script only without syncing to server")
+	fmt.Println()
+	fmt.Println("Flags for job remove:")
+	fmt.Println("  --no-sync     Remove local script only without deleting from server")
 }
 
 func splitFlagsAndArgs(args []string, boolFlags map[string]bool) (flagArgs []string, positional []string) {
@@ -485,7 +491,7 @@ func runJobCreate(args []string) {
 		log.Fatalf("Workspace error: %v", err)
 	}
 
-	filePath, created, err := ws.CreateScript(slug, scriptType)
+	filePath, created, err := ws.CreateScript(slug, scriptType, name, cron, timeoutSeconds)
 	if err != nil {
 		log.Fatalf("Failed to create script: %v", err)
 	}
@@ -527,6 +533,72 @@ func runJobCreate(args []string) {
 	fmt.Printf("  2. Start runner daemon: beep-runner run\n")
 }
 
+func runJobRemove(args []string) {
+	wsHint := peekWorkspace(args)
+	cfg, err := config.Load(wsHint)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	boolFlags := map[string]bool{"no-sync": true}
+	flagArgs, positional := splitFlagsAndArgs(args, boolFlags)
+
+	fs := flag.NewFlagSet("job remove", flag.ExitOnError)
+	var noSync bool
+	fs.BoolVar(&noSync, "no-sync", false, "Do not delete from server")
+	fs.StringVar(&cfg.ServerURL, "server", cfg.ServerURL, "Beep server URL")
+	fs.StringVar(&cfg.RunnerToken, "token", cfg.RunnerToken, "Runner token")
+	fs.StringVar(&cfg.Workspace, "workspace", cfg.Workspace, "Workspace directory")
+
+	if err := fs.Parse(flagArgs); err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	var slug string
+	if len(positional) > 0 {
+		slug = positional[0]
+	}
+	if slug == "" {
+		fmt.Println("Error: job slug is required.")
+		fmt.Println("Example: beep-runner job remove intranet-http")
+		os.Exit(1)
+	}
+
+	ws, err := workspace.Open(cfg.Workspace)
+	if err != nil {
+		log.Fatalf("Workspace error: %v", err)
+	}
+
+	removedFiles, removedFromJSON, err := ws.RemoveJob(slug)
+	if err != nil {
+		fmt.Printf("ℹ %v\n", err)
+	} else {
+		for _, f := range removedFiles {
+			fmt.Printf("✓ Removed local job script: %s\n", f)
+		}
+		if removedFromJSON {
+			fmt.Printf("✓ Removed %q from jobs.json\n", slug)
+		}
+	}
+
+	if noSync {
+		fmt.Println("Skipping server delete (--no-sync specified).")
+		return
+	}
+
+	if cfg.ServerURL != "" && cfg.RunnerToken != "" {
+		c := client.New(cfg)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := c.DeleteJob(ctx, slug); err != nil {
+			fmt.Printf("⚠ Warning: Failed to delete job on server: %v\n", err)
+		} else {
+			fmt.Printf("✓ Deleted job %q from server\n", slug)
+		}
+	}
+}
+
 func runJobSync(args []string) {
 	cfg, err := parseFlags(args)
 	if err != nil {
@@ -555,8 +627,11 @@ func runJobSync(args []string) {
 	var syncReqs []*client.CreateJobRequest
 	for _, job := range localJobs {
 		syncReqs = append(syncReqs, &client.CreateJobRequest{
-			Slug: job.Slug,
-			Cron: "*/5 * * * *",
+			Slug:           job.Slug,
+			Name:           job.Name,
+			Cron:           job.Cron,
+			Timezone:       job.Timezone,
+			TimeoutSeconds: job.TimeoutSeconds,
 		})
 	}
 
@@ -606,10 +681,14 @@ func runJobList(args []string) {
 		fmt.Println("  (No local jobs found)")
 	} else {
 		for _, j := range localJobs {
+			desc := fmt.Sprintf("[%s, cron: %s]", j.Name, j.Cron)
+			if j.TimeoutSeconds > 0 && j.TimeoutSeconds != 30 {
+				desc += fmt.Sprintf(" (%ds)", j.TimeoutSeconds)
+			}
 			if j.FilePath != "" {
-				fmt.Printf("  • %-20s -> %s\n", j.Slug, j.FilePath)
+				fmt.Printf("  • %-18s %-34s -> %s\n", j.Slug, desc, j.FilePath)
 			} else {
-				fmt.Printf("  • %-20s -> %s (jobs.json)\n", j.Slug, strings.Join(j.Command, " "))
+				fmt.Printf("  • %-18s %-34s -> %s (jobs.json)\n", j.Slug, desc, strings.Join(j.Command, " "))
 			}
 		}
 	}
@@ -627,7 +706,7 @@ func runJobList(args []string) {
 			fmt.Println("  (No jobs configured on server)")
 		} else {
 			for _, sj := range serverJobs {
-				fmt.Printf("  • %-20s [%s] cron: %-12s (status: %s)\n", sj.Slug, sj.Name, sj.Cron, sj.Status)
+				fmt.Printf("  • %-18s [%s] cron: %-12s (status: %s)\n", sj.Slug, sj.Name, sj.Cron, sj.Status)
 			}
 		}
 	}

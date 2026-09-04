@@ -1,23 +1,45 @@
 package workspace
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type JobSpec struct {
-	Command []string `json:"command"`
+	Command        []string `json:"command"`
+	Name           string   `json:"name,omitempty"`
+	Cron           string   `json:"cron,omitempty"`
+	Schedule       string   `json:"schedule,omitempty"`
+	Timezone       string   `json:"timezone,omitempty"`
+	TimeoutSeconds int      `json:"timeout_seconds,omitempty"`
+	Description    string   `json:"description,omitempty"`
 }
 
 type LocalJob struct {
-	Slug     string   `json:"slug"`
-	FilePath string   `json:"file_path,omitempty"`
-	Command  []string `json:"command,omitempty"`
-	Source   string   `json:"source"` // "file" or "jobs.json"
+	Slug           string   `json:"slug"`
+	Name           string   `json:"name"`
+	Cron           string   `json:"cron"`
+	Timezone       string   `json:"timezone,omitempty"`
+	TimeoutSeconds int      `json:"timeout_seconds,omitempty"`
+	Description    string   `json:"description,omitempty"`
+	FilePath       string   `json:"file_path,omitempty"`
+	Command        []string `json:"command,omitempty"`
+	Source         string   `json:"source"` // "file" or "jobs.json"
+}
+
+type JobMetadata struct {
+	Name           string
+	Cron           string
+	Timezone       string
+	TimeoutSeconds int
+	Description    string
 }
 
 type Workspace struct {
@@ -53,10 +75,115 @@ func (w *Workspace) JobsDir() string {
 	return filepath.Join(w.Root, "jobs")
 }
 
-func (w *Workspace) CreateScript(slug, scriptType string) (filePath string, created bool, err error) {
+func HumanizeSlug(slug string) string {
+	parts := strings.FieldsFunc(slug, func(r rune) bool {
+		return r == '-' || r == '_' || r == '.' || r == ' '
+	})
+	for i, p := range parts {
+		if len(p) > 0 {
+			parts[i] = strings.ToUpper(p[:1]) + strings.ToLower(p[1:])
+		}
+	}
+	if len(parts) == 0 {
+		return slug
+	}
+	return strings.Join(parts, " ")
+}
+
+func ParseTimeoutSeconds(val string) int {
+	val = strings.TrimSpace(strings.ToLower(val))
+	if val == "" {
+		return 0
+	}
+	if d, err := time.ParseDuration(val); err == nil {
+		return int(d.Seconds())
+	}
+	if n, err := strconv.Atoi(strings.TrimSuffix(val, "s")); err == nil && n > 0 {
+		return n
+	}
+	return 0
+}
+
+func ParseScriptMetadata(filePath string) (JobMetadata, error) {
+	var meta JobMetadata
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return meta, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	lineCount := 0
+	for scanner.Scan() && lineCount < 60 {
+		lineCount++
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "#!") {
+			continue
+		}
+
+		var comment string
+		if strings.HasPrefix(line, "#") {
+			comment = strings.TrimSpace(strings.TrimPrefix(line, "#"))
+		} else if strings.HasPrefix(line, "//") {
+			comment = strings.TrimSpace(strings.TrimPrefix(line, "//"))
+		} else if strings.HasPrefix(line, "--") {
+			comment = strings.TrimSpace(strings.TrimPrefix(line, "--"))
+		} else {
+			// Stop scanning when reaching non-comment script lines
+			break
+		}
+
+		if !strings.HasPrefix(comment, "@") {
+			continue
+		}
+
+		directive := strings.TrimPrefix(comment, "@")
+		var key, val string
+		if idx := strings.IndexAny(directive, ":="); idx != -1 {
+			key = strings.TrimSpace(directive[:idx])
+			val = strings.TrimSpace(directive[idx+1:])
+		} else if idx := strings.Index(directive, " "); idx != -1 {
+			key = strings.TrimSpace(directive[:idx])
+			val = strings.TrimSpace(directive[idx+1:])
+		} else {
+			continue
+		}
+
+		switch strings.ToLower(key) {
+		case "name", "title":
+			meta.Name = val
+		case "schedule", "cron":
+			meta.Cron = val
+		case "timezone", "tz":
+			meta.Timezone = val
+		case "timeout", "timeout_seconds":
+			meta.TimeoutSeconds = ParseTimeoutSeconds(val)
+		case "description", "desc":
+			meta.Description = val
+		}
+	}
+
+	return meta, scanner.Err()
+}
+
+func (w *Workspace) CreateScript(slug, scriptType, name, cron string, timeoutSeconds int) (filePath string, created bool, err error) {
 	slug = strings.TrimSpace(strings.ToLower(slug))
 	if slug == "" {
 		return "", false, fmt.Errorf("job slug cannot be empty")
+	}
+
+	if name == "" {
+		name = HumanizeSlug(slug)
+	}
+	if cron == "" {
+		cron = "*/5 * * * *"
+	}
+	if timeoutSeconds <= 0 {
+		timeoutSeconds = 30
 	}
 
 	ext := ".sh"
@@ -82,10 +209,14 @@ func (w *Workspace) CreateScript(slug, scriptType string) (filePath string, crea
 	switch ext {
 	case ".py":
 		content = fmt.Sprintf(`#!/usr/bin/env python3
+# @name: %s
+# @schedule: %s
+# @timeout: %ds
+# @description: Health check job for %s
+
 import os
 import sys
 
-# Beep Runner job: %s
 # Environment variables available:
 #   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
 #   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
@@ -96,10 +227,14 @@ print(f"[{os.getenv('BEEP_JOB_SLUG', '%s')}] Starting health check...")
 # Exit 0 for ok, non-zero for error/alerting.
 print("Check passed successfully.")
 sys.exit(0)
-`, slug, slug)
+`, name, cron, timeoutSeconds, slug, slug)
 	case ".js":
 		content = fmt.Sprintf(`#!/usr/bin/env node
-// Beep Runner job: %s
+// @name: %s
+// @schedule: %s
+// @timeout: %ds
+// @description: Health check job for %s
+
 // Environment variables available:
 //   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
 //   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
@@ -110,21 +245,28 @@ console.log("[%s] Starting health check...");
 // Exit 0 for ok, non-zero for error/alerting.
 console.log("Check passed successfully.");
 process.exit(0);
-`, slug, slug)
+`, name, cron, timeoutSeconds, slug, slug)
 	case ".rb":
 		content = fmt.Sprintf(`#!/usr/bin/env ruby
-# Beep Runner job: %s
+# @name: %s
+# @schedule: %s
+# @timeout: %ds
+# @description: Health check job for %s
 
 puts "[%s] Starting health check..."
 # Put your check logic here.
 puts "Check passed successfully."
 exit 0
-`, slug, slug)
+`, name, cron, timeoutSeconds, slug, slug)
 	default:
 		content = fmt.Sprintf(`#!/usr/bin/env bash
+# @name: %s
+# @schedule: %s
+# @timeout: %ds
+# @description: Health check job for %s
+
 set -euo pipefail
 
-# Beep Runner job: %s
 # Environment variables available:
 #   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
 #   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
@@ -136,7 +278,7 @@ echo "[%s] Starting health check..."
 
 echo "Check passed successfully."
 exit 0
-`, slug, slug)
+`, name, cron, timeoutSeconds, slug, slug)
 	}
 
 	if err := os.WriteFile(targetPath, []byte(content), 0o755); err != nil {
@@ -144,6 +286,45 @@ exit 0
 	}
 
 	return targetPath, true, nil
+}
+
+func (w *Workspace) RemoveJob(slug string) (removedFiles []string, removedFromJSON bool, err error) {
+	slug = strings.TrimSpace(strings.ToLower(slug))
+	if slug == "" {
+		return nil, false, fmt.Errorf("job slug cannot be empty")
+	}
+
+	entries, readErr := os.ReadDir(w.JobsDir())
+	if readErr == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			ext := filepath.Ext(name)
+			fileSlug := strings.TrimSuffix(name, ext)
+			if strings.EqualFold(fileSlug, slug) {
+				fullPath := filepath.Join(w.JobsDir(), name)
+				if rmErr := os.Remove(fullPath); rmErr == nil {
+					removedFiles = append(removedFiles, fullPath)
+				}
+			}
+		}
+	}
+
+	if _, ok := w.jobs[slug]; ok {
+		delete(w.jobs, slug)
+		removedFromJSON = true
+		if saveErr := w.saveJobsJSON(); saveErr != nil {
+			return removedFiles, removedFromJSON, saveErr
+		}
+	}
+
+	if len(removedFiles) == 0 && !removedFromJSON {
+		return nil, false, fmt.Errorf("job %q not found in workspace %s", slug, w.Root)
+	}
+
+	return removedFiles, removedFromJSON, nil
 }
 
 func (w *Workspace) ListJobs() ([]LocalJob, error) {
@@ -162,19 +343,60 @@ func (w *Workspace) ListJobs() ([]LocalJob, error) {
 				continue
 			}
 			filePath := filepath.Join(w.JobsDir(), name)
+			meta, _ := ParseScriptMetadata(filePath)
+
+			jobName := meta.Name
+			if jobName == "" {
+				jobName = HumanizeSlug(slug)
+			}
+			cron := meta.Cron
+			if cron == "" {
+				cron = "*/5 * * * *"
+			}
+			timeout := meta.TimeoutSeconds
+			if timeout <= 0 {
+				timeout = 30
+			}
+
 			jobsMap[slug] = LocalJob{
-				Slug:     slug,
-				FilePath: filePath,
-				Source:   "file",
+				Slug:           slug,
+				Name:           jobName,
+				Cron:           cron,
+				Timezone:       meta.Timezone,
+				TimeoutSeconds: timeout,
+				Description:    meta.Description,
+				FilePath:       filePath,
+				Source:         "file",
 			}
 		}
 	}
 
 	for slug, spec := range w.jobs {
+		jobName := spec.Name
+		if jobName == "" {
+			jobName = HumanizeSlug(slug)
+		}
+		cron := spec.Cron
+		if cron == "" && spec.Schedule != "" {
+			cron = spec.Schedule
+		}
+		if cron == "" {
+			cron = "*/5 * * * *"
+		}
+		timeout := spec.TimeoutSeconds
+		if timeout <= 0 {
+			timeout = 30
+		}
+
 		jobsMap[slug] = LocalJob{
-			Slug:    slug,
-			Command: spec.Command,
-			Source:  "jobs.json",
+			Slug:           slug,
+			Name:           jobName,
+			Cron:           cron,
+			Timezone:       spec.Timezone,
+			TimeoutSeconds: timeout,
+			Description:    spec.Description,
+			Command:        spec.Command,
+			Source:         "jobs.json",
 		}
 	}
 
@@ -246,6 +468,24 @@ func (w *Workspace) loadJobsJSON() error {
 		w.jobs[slug] = spec
 	}
 	return nil
+}
+
+func (w *Workspace) saveJobsJSON() error {
+	path := filepath.Join(w.Root, "jobs.json")
+	if len(w.jobs) == 0 {
+		if _, err := os.Stat(path); err == nil {
+			_ = os.Remove(path)
+		}
+		return nil
+	}
+	payload := map[string]any{
+		"jobs": w.jobs,
+	}
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o644)
 }
 
 func (w *Workspace) expandArgv(argv []string) []string {

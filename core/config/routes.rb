@@ -98,7 +98,7 @@ Rails.application.routes.draw do
 
       namespace :runner do
         resource :ping, only: %i[ create ]
-        resources :jobs, only: %i[ index create ] do
+        resources :jobs, only: %i[ index create destroy ] do
           post :sync, on: :collection
         end
         resources :tasks, only: [] do

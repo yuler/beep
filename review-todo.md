@@ -147,9 +147,13 @@ beep monorepo
 - [ ] **Worker Pool 调度器与生命周期** ([`apps/runner/internal/daemon/daemon.go`](apps/runner/internal/daemon/daemon.go))
   - [ ] 基于 channel semaphore 控制并发度 (`--concurrency`)。
   - [ ] 优雅退出处理（监听 `SIGINT` / `SIGTERM`，等待执行中的任务完成后再退出）。
-- [ ] **CLI 配置与任务脚手架** ([`main.go`](apps/runner/main.go) & [`apps/runner/internal/config/`](apps/runner/internal/config/))
+- [ ] **CLI 配置与任务管理脚手架** ([`main.go`](apps/runner/main.go) & [`apps/runner/internal/config/`](apps/runner/internal/config/))
   - [ ] `beep-runner config [show|set|unset|path]`：持久化保存 Server 与 Token。
-  - [ ] `beep-runner job [create|sync|list]`：一键创建本地脚本模版并自动同步注册至服务端。
+  - [ ] `beep-runner job create <slug>`：创建本地脚本模版并自动同步注册至服务端，支持在脚本头部 `# @schedule: ...` / `# @name: ...` 配置元数据。
+  - [ ] `beep-runner job remove <slug>`：删除本地脚本并同步删除服务端任务。
+  - [ ] `beep-runner job sync`：解析本地所有脚本元数据并全量同步至服务端。
+  - [ ] `beep-runner job list`：同时列出本地工作区任务（展示 parsed cron/schedule）与服务端任务。
+  - [ ] 严格校验子命令，未知子命令（如 `job xxx`）提示命令不存在，杜绝意外创建。
 
 ---
 

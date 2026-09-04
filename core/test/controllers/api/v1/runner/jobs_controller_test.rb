@@ -81,4 +81,23 @@ class Api::V1::Runner::JobsControllerTest < ActionDispatch::IntegrationTest
     assert @runner.jobs.exists?(slug: "job-one")
     assert @runner.jobs.exists?(slug: "job-two")
   end
+
+  test "destroy removes job by slug" do
+    assert @runner.jobs.exists?(slug: "existing-job")
+
+    delete "/api/v1/runner/jobs/existing-job",
+      headers: { "X-Runner-Token" => @runner_token },
+      as: :json
+
+    assert_response :no_content
+    assert_not @runner.jobs.exists?(slug: "existing-job")
+  end
+
+  test "destroy returns not found for non-existent job" do
+    delete "/api/v1/runner/jobs/non-existent",
+      headers: { "X-Runner-Token" => @runner_token },
+      as: :json
+
+    assert_response :not_found
+  end
 end

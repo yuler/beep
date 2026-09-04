@@ -42,20 +42,54 @@ sequenceDiagram
 
 ---
 
-## Workspace
+## Workspace & Job Script Metadata
 
 ```
 ~/.beep-runner/
+  config.json
   jobs.json
   jobs/
     intranet-http.sh
+    backup-check.py
 ```
 
-Examples: [`apps/runner/examples`](../../apps/runner/examples).
+Job scripts can define metadata and schedules in comments at the top of the file:
+
+```bash
+#!/usr/bin/env bash
+# @name: Intranet HTTP Health Check
+# @schedule: */5 * * * *
+# @timeout: 30s
+# @description: Ping internal gateway
+
+set -euo pipefail
+echo "Starting check..."
+exit 0
+```
+
+Supported comment directives:
+- `# @name:` / `// @name:` — Human-readable job name
+- `# @schedule:` or `# @cron:` — Cron expression for scheduling (e.g. `*/5 * * * *`, `0 * * * *`)
+- `# @timeout:` — Execution timeout (e.g. `30s`, `1m`)
+- `# @timezone:` / `# @tz:` — Timezone (e.g. `UTC`, `Asia/Shanghai`)
+
+### CLI Commands
 
 ```bash
 # Configure runner credentials and options once
 beep-runner config set --server https://core.example.com --token beep_rt_xxx
+
+# Create a local job script and sync to server
+beep-runner job create intranet-http --cron "*/5 * * * *"
+
+# Remove a local job script and delete from server
+beep-runner job remove intranet-http
+
+# Sync all local workspace scripts to server
+beep-runner job sync
+
+# List workspace jobs and server jobs
+beep-runner job list
 
 # Start daemon
 beep-runner run

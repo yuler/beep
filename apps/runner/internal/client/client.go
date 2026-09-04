@@ -113,6 +113,25 @@ func (c *Client) ListJobs(ctx context.Context) ([]*ServerJob, error) {
 	return res.Jobs, nil
 }
 
+func (c *Client) DeleteJob(ctx context.Context, slug string) error {
+	url := fmt.Sprintf("%s/api/v1/runner/jobs/%s", c.cfg.ServerURL, slug)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	c.setHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("delete failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+	return nil
+}
+
 type PollResponse struct {
 	Task *task.Task `json:"task"`
 }

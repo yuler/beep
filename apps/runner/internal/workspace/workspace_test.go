@@ -56,7 +56,7 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, created, err := ws.CreateScript("my-ping", "sh")
+	path, created, err := ws.CreateScript("my-ping", "sh", "My Custom Ping", "*/2 * * * *", 45)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,8 +67,23 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 		t.Fatalf("expected script file to exist at %s", path)
 	}
 
+	// Verify metadata parsing
+	meta, err := ParseScriptMetadata(path)
+	if err != nil {
+		t.Fatalf("failed to parse metadata: %v", err)
+	}
+	if meta.Name != "My Custom Ping" {
+		t.Fatalf("expected name 'My Custom Ping', got %q", meta.Name)
+	}
+	if meta.Cron != "*/2 * * * *" {
+		t.Fatalf("expected cron '*/2 * * * *', got %q", meta.Cron)
+	}
+	if meta.TimeoutSeconds != 45 {
+		t.Fatalf("expected timeout 45, got %d", meta.TimeoutSeconds)
+	}
+
 	// Calling again should not overwrite
-	_, created2, err := ws.CreateScript("my-ping", "sh")
+	_, created2, err := ws.CreateScript("my-ping", "sh", "", "", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +92,7 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 	}
 
 	// Test Python script creation
-	pyPath, createdPy, err := ws.CreateScript("py-worker", "py")
+	pyPath, createdPy, err := ws.CreateScript("py-worker", "py", "", "0 * * * *", 60)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,5 +106,25 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 	}
 	if len(jobs) != 2 {
 		t.Fatalf("expected 2 jobs, got %d", len(jobs))
+	}
+
+	// Test RemoveJob
+	removedFiles, inJSON, err := ws.RemoveJob("my-ping")
+	if err != nil {
+		t.Fatalf("unexpected remove error: %v", err)
+	}
+	if len(removedFiles) != 1 || inJSON {
+		t.Fatalf("expected 1 removed file, got %v", removedFiles)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("expected file to be deleted")
+	}
+
+	jobsAfter, err := ws.ListJobs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(jobsAfter) != 1 {
+		t.Fatalf("expected 1 job after remove, got %d", len(jobsAfter))
 	}
 }

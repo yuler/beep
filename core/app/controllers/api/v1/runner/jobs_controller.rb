@@ -70,4 +70,20 @@ class Api::V1::Runner::JobsController < Api::V1::Runner::BaseController
       code: "VALIDATION_ERROR"
     )
   end
+
+  def destroy
+    slug = params[:id].to_s.strip.downcase
+    @job = @current_runner.jobs.find_by(slug: slug) || @current_runner.jobs.find_by(id: params[:id])
+
+    if @job
+      @job.destroy
+      head :no_content
+    else
+      render_json_error(
+        status: :not_found,
+        message: "Job not found",
+        code: "NOT_FOUND"
+      )
+    end
+  end
 end

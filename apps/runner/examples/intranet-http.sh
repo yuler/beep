@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @name: Intranet HTTP Health Check
+# @schedule: */5 * * * *
+# @timeout: 30s
+# @description: Ping internal health check endpoint
+#
 # Example: intranet HTTP check. Create a Runner Job with slug `intranet-http`.
 # Place this file at ~/.beep-runner/jobs/intranet-http.sh (chmod +x).
 #
