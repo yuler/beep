@@ -3,6 +3,7 @@ package workspace
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -210,5 +211,87 @@ func TestPullJob(t *testing.T) {
 	}
 	if len(jobs) != 1 {
 		t.Fatalf("expected 1 job (no duplicate), got %d jobs", len(jobs))
+	}
+}
+
+func TestPullJobForceOverwritesBody(t *testing.T) {
+	root := t.TempDir()
+	ws, err := Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	path, _, err := ws.PullJob("force-me", "bash", "job_force", "Force Me", "*/5 * * * *", "UTC", "orig", 30, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("#!/bin/sh\necho custom-body\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	_, created, err := ws.PullJob("force-me", "bash", "job_force", "Force Me", "*/5 * * * *", "UTC", "orig", 30, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created {
+		t.Fatal("expected non-force pull to keep existing file")
+	}
+	kept, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(kept), "echo custom-body") {
+		t.Fatalf("non-force pull should keep local body, got %q", kept)
+	}
+
+	_, _, err = ws.PullJob("force-me", "bash", "job_force", "Force Me", "*/5 * * * *", "UTC", "orig", 30, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rewritten, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(rewritten), "echo custom-body") {
+		t.Fatal("expected --force to replace the local script body")
+	}
+}
+
+func TestListJobsAndResolvePreferFileOverJSON(t *testing.T) {
+	root := t.TempDir()
+	jobsDir := filepath.Join(root, "jobs")
+	if err := os.MkdirAll(jobsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	script := filepath.Join(jobsDir, "same-slug")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho from-file\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	jobsJSON := `{"jobs":{"same-slug":{"name":"From JSON","command":["echo","from-json"]}}}`
+	if err := os.WriteFile(filepath.Join(root, "jobs.json"), []byte(jobsJSON), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ws, err := Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jobs, err := ws.ListJobs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(jobs) != 1 {
+		t.Fatalf("expected 1 job, got %d", len(jobs))
+	}
+	if jobs[0].Source != "file" || jobs[0].FilePath != script {
+		t.Fatalf("expected file-backed job, got %+v", jobs[0])
+	}
+
+	argv, err := ws.Resolve("same-slug")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(argv) != 1 || argv[0] != script {
+		t.Fatalf("expected file path argv, got %v", argv)
 	}
 }

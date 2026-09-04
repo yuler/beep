@@ -46,4 +46,12 @@ func TestDailyLogWriter(t *testing.T) {
 	if !strings.Contains(content, "[OK] Job finished successfully\n") {
 		t.Errorf("expected clean message in log, got: %q", content)
 	}
+
+	info, err := os.Stat(expectedFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Errorf("expected log file mode 0600, got %o", info.Mode().Perm())
+	}
 }

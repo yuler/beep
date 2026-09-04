@@ -70,26 +70,31 @@ func (d *Daemon) Start(ctx context.Context) error {
 }
 
 func (d *Daemon) pollAndExecute(ctx context.Context) {
-	t, err := d.client.Poll(ctx)
-	if err != nil {
-		if ctx.Err() == nil {
-			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("Poll error:"), err)
+	for {
+		if len(d.sem) >= cap(d.sem) {
+			return
 		}
-		return
-	}
-	if t == nil {
-		return
-	}
+		t, err := d.client.Poll(ctx)
+		if err != nil {
+			if ctx.Err() == nil {
+				log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("Poll error:"), err)
+			}
+			return
+		}
+		if t == nil {
+			return
+		}
 
-	d.sem <- struct{}{}
-	d.wg.Add(1)
-	go func(job *task.Task) {
-		defer func() {
-			<-d.sem
-			d.wg.Done()
-		}()
-		d.execute(job)
-	}(t)
+		d.sem <- struct{}{}
+		d.wg.Add(1)
+		go func(job *task.Task) {
+			defer func() {
+				<-d.sem
+				d.wg.Done()
+			}()
+			d.execute(job)
+		}(t)
+	}
 }
 
 func (d *Daemon) execute(job *task.Task) {
@@ -121,16 +126,7 @@ func (d *Daemon) execute(job *task.Task) {
 		return
 	}
 
-	configJSON, _ := json.Marshal(job.Config)
-	env := exec.WithJobEnv(append(exec.ConfigEnv(job.Config),
-		"BEEP_SERVER="+d.cfg.ServerURL,
-		"BEEP_RUNNER_TOKEN="+d.cfg.RunnerToken,
-		"BEEP_RUN_ID="+job.ID,
-		"BEEP_JOB_SLUG="+job.JobSlug,
-		"BEEP_LOG_URL="+job.LogURL,
-		"BEEP_RESULT_URL="+job.ResultURL,
-		"BEEP_CONFIG="+string(configJSON),
-	))
+	env := d.jobEnv(job)
 
 	var logBuf string
 	var logMu sync.Mutex
@@ -179,4 +175,16 @@ func (d *Daemon) execute(job *task.Task) {
 	if err := d.client.ReportResult(reportCtx, job.ResultURL, result); err != nil {
 		log.Printf("%s %s for %s: %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error"), job.ID, err)
 	}
+}
+
+func (d *Daemon) jobEnv(job *task.Task) []string {
+	configJSON, _ := json.Marshal(job.Config)
+	return exec.WithJobEnv(append(exec.ConfigEnv(job.Config),
+		"BEEP_SERVER="+d.cfg.ServerURL,
+		"BEEP_RUN_ID="+job.ID,
+		"BEEP_JOB_SLUG="+job.JobSlug,
+		"BEEP_LOG_URL="+job.LogURL,
+		"BEEP_RESULT_URL="+job.ResultURL,
+		"BEEP_CONFIG="+string(configJSON),
+	))
 }

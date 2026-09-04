@@ -4,7 +4,7 @@
 #   docker build -f apps/runner/Dockerfile -t beep-runner .
 #
 
-ARG GO_VERSION=1.24
+ARG GO_VERSION=1.27
 FROM docker.io/library/golang:${GO_VERSION}-alpine AS build
 
 WORKDIR /app
@@ -42,4 +42,4 @@ USER beep
 WORKDIR /home/beep
 
 ENTRYPOINT ["/usr/local/bin/beep-runner"]
-CMD ["run"]
+CMD ["up"]

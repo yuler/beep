@@ -73,6 +73,7 @@ func loadConfig() (*config.Config, error) {
 	}
 	if flagToken != "" {
 		cfg.RunnerToken = flagToken
+		fmt.Fprintln(os.Stderr, ui.Warn("passing --token on the command line exposes it in process lists; prefer config.json or BEEP_RUNNER_TOKEN"))
 	}
 	if flagWorkspace != "" {
 		cfg.Workspace = flagWorkspace

@@ -665,7 +665,7 @@ func PromptConfigSetWizard(fc *config.FileConfig) error {
 			huh.NewInput().
 				Title("Runner Token").
 				Description("Authentication token from Beep Runners panel").
-				Placeholder("beep_rt_...").
+				Placeholder("beep_runner_...").
 				EchoMode(huh.EchoModePassword).
 				Value(&token).
 				Validate(func(s string) error {

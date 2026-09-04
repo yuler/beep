@@ -1,4 +1,5 @@
 class Runner < ApplicationRecord
+  # rt = runner token
   TOKEN_PREFIX = "beep_rt_"
   OFFLINE_TIMEOUT = 60.seconds
   NAME_MAX_LENGTH = 80

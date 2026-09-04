@@ -223,13 +223,13 @@ var jobRemoveCmd = &cobra.Command{
 			removedFiles, removedFromJSON, err := ws.RemoveJob(slug)
 			if err != nil {
 				fmt.Println(ui.Info("%v", err))
-			} else {
-				for _, f := range removedFiles {
-					fmt.Println(ui.Success("Removed local job script: %s", ui.Cyan(f)))
-				}
-				if removedFromJSON {
-					fmt.Println(ui.Success("Removed %s from jobs.json", ui.Bold(slug)))
-				}
+				continue
+			}
+			for _, f := range removedFiles {
+				fmt.Println(ui.Success("Removed local job script: %s", ui.Cyan(f)))
+			}
+			if removedFromJSON {
+				fmt.Println(ui.Success("Removed %s from jobs.json", ui.Bold(slug)))
 			}
 
 			if syncServer && cfg.ServerURL != "" && cfg.RunnerToken != "" {

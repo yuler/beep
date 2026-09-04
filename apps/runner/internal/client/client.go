@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"runtime"
+	"strings"
 	"time"
 
 	"beep-runner/internal/config"
@@ -178,16 +180,15 @@ func (c *Client) ReportLog(ctx context.Context, logURL, chunk string) error {
 	if chunk == "" {
 		return nil
 	}
-	url := logURL
-	if url == "" {
-		return fmt.Errorf("log url is empty")
+	if err := c.allowedCallbackURL(logURL); err != nil {
+		return err
 	}
-	return c.postJSON(ctx, url, map[string]any{"chunk": chunk}, http.StatusOK, nil)
+	return c.postJSON(ctx, logURL, map[string]any{"chunk": chunk}, http.StatusOK, nil)
 }
 
 func (c *Client) ReportResult(ctx context.Context, resultURL string, result *task.Result) error {
-	if resultURL == "" {
-		return fmt.Errorf("result url is empty")
+	if err := c.allowedCallbackURL(resultURL); err != nil {
+		return err
 	}
 	payload := map[string]any{
 		"status":  result.Status,
@@ -196,6 +197,27 @@ func (c *Client) ReportResult(ctx context.Context, resultURL string, result *tas
 		"metrics": result.Metrics,
 	}
 	return c.postJSON(ctx, resultURL, payload, http.StatusOK, nil)
+}
+
+func (c *Client) allowedCallbackURL(raw string) error {
+	if strings.TrimSpace(raw) == "" {
+		return fmt.Errorf("callback url is empty")
+	}
+	target, err := url.Parse(raw)
+	if err != nil || target.Scheme == "" || target.Host == "" {
+		return fmt.Errorf("invalid callback url")
+	}
+	base, err := url.Parse(c.cfg.ServerURL)
+	if err != nil || base.Scheme == "" || base.Host == "" {
+		return fmt.Errorf("invalid server URL")
+	}
+	if !strings.EqualFold(target.Scheme, base.Scheme) || !strings.EqualFold(target.Host, base.Host) {
+		return fmt.Errorf("callback url %s does not match server %s", raw, c.cfg.ServerURL)
+	}
+	if !strings.HasPrefix(target.Path, "/api/v1/runner/tasks/") {
+		return fmt.Errorf("callback url path is not a runner task endpoint")
+	}
+	return nil
 }
 
 func (c *Client) postJSON(ctx context.Context, url string, payload any, want int, dest any) error {

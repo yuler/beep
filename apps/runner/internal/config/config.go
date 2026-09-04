@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -161,7 +162,37 @@ func (c *Config) Validate() error {
 	if c.PollInterval < 500*time.Millisecond {
 		c.PollInterval = 500 * time.Millisecond
 	}
+	if err := requireSafeServerURL(c.ServerURL); err != nil {
+		return err
+	}
 	return nil
+}
+
+func requireSafeServerURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return fmt.Errorf("invalid server URL %q", raw)
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "https":
+		return nil
+	case "http":
+		if isLocalHTTPHost(u.Hostname()) {
+			return nil
+		}
+		return fmt.Errorf("HTTPS is required for server URL %s (HTTP is only allowed for localhost)", raw)
+	default:
+		return fmt.Errorf("unsupported server URL scheme %q", u.Scheme)
+	}
+}
+
+func isLocalHTTPHost(host string) bool {
+	h := strings.ToLower(strings.TrimSpace(host))
+	switch h {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	}
+	return strings.HasSuffix(h, ".localhost")
 }
 
 func MaskToken(token string) string {
@@ -172,7 +203,7 @@ func MaskToken(token string) string {
 	if len(token) <= 12 {
 		return "••••••••"
 	}
-	prefix := token[:8]
+	prefix := token[:12]
 	return prefix + "••••••••"
 }
 

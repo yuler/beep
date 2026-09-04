@@ -354,7 +354,7 @@ func GenerateShebang(scriptType string) (shebang string, commentPrefix string, t
 		return "#!/usr/bin/env bash", "# ", `set -euo pipefail
 
 # Environment variables available:
-#   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
+#   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
 #   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
 
 echo "[%s] Starting health check..."
@@ -367,7 +367,7 @@ exit 0
 `
 	case "node", "nodejs", "node.js", "js":
 		return "#!/usr/bin/env node", "// ", `// Environment variables available:
-//   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
+//   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
 //   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
 
 console.log("[%s] Starting health check...");
@@ -379,7 +379,7 @@ process.exit(0);
 `
 	case "bun":
 		return "#!/usr/bin/env bun", "// ", `// Environment variables available:
-//   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
+//   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
 //   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
 
 console.log("[%s] Starting health check with bun...");
@@ -393,7 +393,7 @@ process.exit(0);
 import sys
 
 # Environment variables available:
-#   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
+#   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
 #   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
 
 print(f"[{os.getenv('BEEP_JOB_SLUG', '%s')}] Starting health check...")
@@ -604,7 +604,6 @@ func (w *Workspace) PullJob(slug, scriptType, id, name, cron, timezone, descript
 	}
 
 	if found {
-		// If local filename does not match server slug, rename to server slug (without extension)
 		targetPath := filepath.Join(w.JobsDir(), slug)
 		if existingPath != targetPath {
 			if _, statErr := os.Stat(targetPath); statErr == nil {
@@ -614,6 +613,13 @@ func (w *Workspace) PullJob(slug, scriptType, id, name, cron, timezone, descript
 				return existingPath, false, fmt.Errorf("failed to rename %s to %s: %w", existingPath, targetPath, renameErr)
 			}
 			existingPath = targetPath
+		}
+
+		if overwrite {
+			if rmErr := os.Remove(existingPath); rmErr != nil && !os.IsNotExist(rmErr) {
+				return existingPath, false, fmt.Errorf("failed to overwrite %s: %w", existingPath, rmErr)
+			}
+			return w.CreateScript(slug, scriptType, id, name, cron, timezone, description, timeoutSeconds)
 		}
 
 		if err := w.UpdateScriptHeader(existingPath, id, name, cron, timezone, description, timeoutSeconds); err != nil {
@@ -701,6 +707,9 @@ func (w *Workspace) ListJobs() ([]LocalJob, error) {
 	}
 
 	for slug, spec := range w.jobs {
+		if _, exists := jobsMap[slug]; exists {
+			continue
+		}
 		jobName := spec.Name
 		if jobName == "" {
 			jobName = HumanizeSlug(slug)
@@ -742,14 +751,14 @@ func (w *Workspace) Resolve(slug string) (argv []string, err error) {
 	}
 	slug = strings.TrimSpace(slug)
 
-	if spec, ok := w.jobs[slug]; ok && len(spec.Command) > 0 {
-		return w.expandArgv(spec.Command), nil
-	}
-
 	jobsDir := w.JobsDir()
 	target := filepath.Join(jobsDir, slug)
 	if info, statErr := os.Stat(target); statErr == nil && !info.IsDir() {
 		return []string{target}, nil
+	}
+
+	if spec, ok := w.jobs[slug]; ok && len(spec.Command) > 0 {
+		return w.expandArgv(spec.Command), nil
 	}
 
 	return nil, fmt.Errorf("no local executable for job %q in %s (add jobs/%s or jobs.json)", slug, jobsDir, slug)

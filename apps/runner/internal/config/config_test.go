@@ -9,7 +9,7 @@ import (
 
 func TestConfigLoadFromEnv(t *testing.T) {
 	os.Setenv("BEEP_SERVER", "https://beep.example.com")
-	os.Setenv("BEEP_RUNNER_TOKEN", "beep_rt_test123")
+	os.Setenv("BEEP_RUNNER_TOKEN", "beep_runner_test123")
 	os.Setenv("BEEP_CONCURRENCY", "10")
 	os.Setenv("BEEP_POLL_INTERVAL", "5s")
 	os.Setenv("BEEP_HOSTNAME", "my-nas")
@@ -29,8 +29,8 @@ func TestConfigLoadFromEnv(t *testing.T) {
 	if cfg.ServerURL != "https://beep.example.com" {
 		t.Errorf("expected server URL https://beep.example.com, got %s", cfg.ServerURL)
 	}
-	if cfg.RunnerToken != "beep_rt_test123" {
-		t.Errorf("expected token beep_rt_test123, got %s", cfg.RunnerToken)
+	if cfg.RunnerToken != "beep_runner_test123" {
+		t.Errorf("expected token beep_runner_test123, got %s", cfg.RunnerToken)
 	}
 	if cfg.Concurrency != 10 {
 		t.Errorf("expected concurrency 10, got %d", cfg.Concurrency)
@@ -53,7 +53,7 @@ func TestConfigFilePersistence(t *testing.T) {
 
 	fc := &FileConfig{
 		ServerURL:    "https://core.internal:8080",
-		RunnerToken:  "beep_rt_saved_token",
+		RunnerToken:  "beep_runner_saved_token",
 		Concurrency:  8,
 		PollInterval: "2s",
 	}
@@ -69,7 +69,7 @@ func TestConfigFilePersistence(t *testing.T) {
 	if loaded.ServerURL != "https://core.internal:8080" {
 		t.Errorf("unexpected server URL: %s", loaded.ServerURL)
 	}
-	if loaded.RunnerToken != "beep_rt_saved_token" {
+	if loaded.RunnerToken != "beep_runner_saved_token" {
 		t.Errorf("unexpected token: %s", loaded.RunnerToken)
 	}
 
@@ -80,7 +80,7 @@ func TestConfigFilePersistence(t *testing.T) {
 	if cfg.ServerURL != "https://core.internal:8080" {
 		t.Errorf("expected server URL from file, got %s", cfg.ServerURL)
 	}
-	if cfg.RunnerToken != "beep_rt_saved_token" {
+	if cfg.RunnerToken != "beep_runner_saved_token" {
 		t.Errorf("expected token from file, got %s", cfg.RunnerToken)
 	}
 	if cfg.Concurrency != 8 {
@@ -91,11 +91,31 @@ func TestConfigFilePersistence(t *testing.T) {
 	}
 }
 
+func TestValidateAllowsHTTPLocalhost(t *testing.T) {
+	cfg := &Config{
+		ServerURL:   "http://core.localhost:3000",
+		RunnerToken: "beep_runner_test",
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("localhost HTTP should be allowed: %v", err)
+	}
+}
+
+func TestValidateRejectsPlainHTTPRemote(t *testing.T) {
+	cfg := &Config{
+		ServerURL:   "http://core.example.com",
+		RunnerToken: "beep_runner_test",
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected HTTPS requirement for non-local HTTP server URL")
+	}
+}
+
 func TestMaskToken(t *testing.T) {
 	if MaskToken("") != "(not set)" {
 		t.Errorf("expected (not set), got %s", MaskToken(""))
 	}
-	if MaskToken("beep_rt_12345678abcdefgh") != "beep_rt_••••••••" {
-		t.Errorf("unexpected masked token: %s", MaskToken("beep_rt_12345678abcdefgh"))
+	if MaskToken("beep_runner_12345678abcdefgh") != "beep_runner_••••••••" {
+		t.Errorf("unexpected masked token: %s", MaskToken("beep_runner_12345678abcdefgh"))
 	}
 }

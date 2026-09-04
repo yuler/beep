@@ -117,7 +117,7 @@ Interactive TTY prompts (Huh) when args are omitted; use `--no-interactive` for 
 
 ```bash
 # Configure credentials once (stored in <workspace>/config.json)
-beep-runner config set --server https://core.example.com --token beep_rt_xxx
+beep-runner config set --server https://core.example.com --token beep_runner_xxx
 beep-runner config          # show
 beep-runner config path     # print config.json path
 
@@ -152,7 +152,7 @@ Command flags for `beep-runner up`:
 
 Global flags: `--workspace` / `-w`, `--server`, `--token`, `--no-color`, `--no-interactive`.
 
-Injected env at exec time: `BEEP_SERVER`, `BEEP_RUNNER_TOKEN`, `BEEP_RUN_ID`, `BEEP_JOB_SLUG`, `BEEP_LOG_URL`, `BEEP_RESULT_URL`, `BEEP_CONFIG`, `BEEP_CONFIG_*`.
+Injected env at exec time: `BEEP_SERVER`, `BEEP_RUN_ID`, `BEEP_JOB_SLUG`, `BEEP_LOG_URL`, `BEEP_RESULT_URL`, `BEEP_CONFIG`, `BEEP_CONFIG_*`.
 
 ### Same machine: production + local development
 

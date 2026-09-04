@@ -59,7 +59,7 @@ func (w *DailyLogWriter) rotateIfNeeded(now time.Time) error {
 		w.currentFile = nil
 	}
 	filename := filepath.Join(w.dir, fmt.Sprintf("%s-%s.log", w.prefix, day))
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open log file %s: %w", filename, err)
 	}
