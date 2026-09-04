@@ -169,6 +169,7 @@ export function RunnerList({
 										to="/$account_slug/runners/$runnerId"
 										params={{ account_slug: slug, runnerId: runner.id }}
 										className="flex items-center gap-2.5 min-w-0"
+									>
 										<div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
 											<Server className="size-4.5" />
 										</div>

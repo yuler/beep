@@ -20,6 +20,71 @@ interface RunnerTokenModalProps {
 	onOpenChange: (open: boolean) => void;
 }
 
+interface CodeSnippetProps {
+	label: string;
+	code: string;
+	snippetKey: string;
+	copiedKey: string | null;
+	onCopy: (key: string, text: string) => void;
+}
+
+function CodeSnippet({
+	label,
+	code,
+	snippetKey,
+	copiedKey,
+	onCopy,
+}: CodeSnippetProps) {
+	const isCopied = copiedKey === snippetKey;
+
+	return (
+		<div className="flex flex-col gap-1.5 min-w-0 max-w-full">
+			<div className="flex items-center justify-between gap-2">
+				<span className="text-xs font-semibold text-foreground uppercase tracking-wider truncate">
+					{label}
+				</span>
+				<Button
+					variant="ghost"
+					size="sm"
+					className="h-7 px-2 text-xs gap-1 shrink-0"
+					onClick={() => onCopy(snippetKey, code)}
+				>
+					{isCopied ? (
+						<>
+							<Check className="size-3.5 text-emerald-500" />
+							<span className="text-emerald-500">{m.runners_copied()}</span>
+						</>
+					) : (
+						<>
+							<Copy className="size-3.5" />
+							<span>{m.runners_copy()}</span>
+						</>
+					)}
+				</Button>
+			</div>
+			<div className="relative group min-w-0 max-w-full rounded-lg border bg-muted/60">
+				<pre className="overflow-x-auto p-3 font-mono text-xs text-foreground whitespace-pre select-all min-w-0 max-w-full">
+					{code}
+				</pre>
+				<Button
+					variant="outline"
+					size="icon-xs"
+					className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity bg-background/90 hover:bg-background border shadow-xs"
+					onClick={() => onCopy(snippetKey, code)}
+					aria-label={m.runners_copy()}
+					title={m.runners_copy()}
+				>
+					{isCopied ? (
+						<Check className="size-3 text-emerald-500" />
+					) : (
+						<Copy className="size-3" />
+					)}
+				</Button>
+			</div>
+		</div>
+	);
+}
+
 export function RunnerTokenModal({
 	runner,
 	open,
@@ -71,7 +136,7 @@ volumes:
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+			<DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden min-w-0">
 				<DialogHeader>
 					<div className="flex items-center gap-2">
 						<Terminal className="size-5 text-primary" />
@@ -82,7 +147,7 @@ volumes:
 					<DialogDescription>{m.runners_token_modal_desc()}</DialogDescription>
 				</DialogHeader>
 
-				<div className="flex flex-col gap-5 py-2">
+				<div className="flex flex-col gap-5 py-2 min-w-0 max-w-full overflow-x-hidden">
 					<Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
 						<AlertTitle className="text-xs font-semibold uppercase tracking-wider">
 							{m.term_gravatar()} {/* safety margin fallback */}
@@ -94,15 +159,15 @@ volumes:
 					</Alert>
 
 					{/* Token Block */}
-					<div className="flex flex-col gap-1.5">
-						<div className="flex items-center justify-between">
-							<span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+					<div className="flex flex-col gap-1.5 min-w-0 max-w-full">
+						<div className="flex items-center justify-between gap-2">
+							<span className="text-xs font-semibold text-foreground uppercase tracking-wider truncate">
 								Token
 							</span>
 							<Button
 								variant="ghost"
 								size="sm"
-								className="h-7 px-2 text-xs gap-1"
+								className="h-7 px-2 text-xs gap-1 shrink-0"
 								onClick={() => copyToClipboard("token", token)}
 							>
 								{copiedKey === "token" ? (
@@ -120,106 +185,51 @@ volumes:
 								)}
 							</Button>
 						</div>
-						<div className="rounded-lg border bg-muted/60 px-3 py-2 font-mono text-xs text-foreground select-all break-all">
+						<div className="relative group min-w-0 max-w-full rounded-lg border bg-muted/60 px-3 py-2 font-mono text-xs text-foreground select-all break-all pr-9">
 							{token}
+							<Button
+								variant="outline"
+								size="icon-xs"
+								className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity bg-background/90 hover:bg-background border shadow-xs"
+								onClick={() => copyToClipboard("token", token)}
+								aria-label={m.runners_copy()}
+								title={m.runners_copy()}
+							>
+								{copiedKey === "token" ? (
+									<Check className="size-3 text-emerald-500" />
+								) : (
+									<Copy className="size-3" />
+								)}
+							</Button>
 						</div>
 					</div>
 
 					{/* Docker Run Command */}
-					<div className="flex flex-col gap-1.5">
-						<div className="flex items-center justify-between">
-							<span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-								{m.runners_docker_command()}
-							</span>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-7 px-2 text-xs gap-1"
-								onClick={() => copyToClipboard("docker", dockerRunCmd)}
-							>
-								{copiedKey === "docker" ? (
-									<>
-										<Check className="size-3.5 text-emerald-500" />
-										<span className="text-emerald-500">
-											{m.runners_copied()}
-										</span>
-									</>
-								) : (
-									<>
-										<Copy className="size-3.5" />
-										<span>{m.runners_copy()}</span>
-									</>
-								)}
-							</Button>
-						</div>
-						<pre className="rounded-lg border bg-muted/60 p-3 font-mono text-xs text-foreground overflow-x-auto whitespace-pre select-all">
-							{dockerRunCmd}
-						</pre>
-					</div>
+					<CodeSnippet
+						label={m.runners_docker_command()}
+						code={dockerRunCmd}
+						snippetKey="docker"
+						copiedKey={copiedKey}
+						onCopy={copyToClipboard}
+					/>
 
 					{/* Docker Compose YAML */}
-					<div className="flex flex-col gap-1.5">
-						<div className="flex items-center justify-between">
-							<span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-								{m.runners_docker_compose()}
-							</span>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-7 px-2 text-xs gap-1"
-								onClick={() => copyToClipboard("compose", dockerComposeYaml)}
-							>
-								{copiedKey === "compose" ? (
-									<>
-										<Check className="size-3.5 text-emerald-500" />
-										<span className="text-emerald-500">
-											{m.runners_copied()}
-										</span>
-									</>
-								) : (
-									<>
-										<Copy className="size-3.5" />
-										<span>{m.runners_copy()}</span>
-									</>
-								)}
-							</Button>
-						</div>
-						<pre className="rounded-lg border bg-muted/60 p-3 font-mono text-xs text-foreground overflow-x-auto whitespace-pre select-all">
-							{dockerComposeYaml}
-						</pre>
-					</div>
+					<CodeSnippet
+						label={m.runners_docker_compose()}
+						code={dockerComposeYaml}
+						snippetKey="compose"
+						copiedKey={copiedKey}
+						onCopy={copyToClipboard}
+					/>
 
 					{/* Direct Binary CLI */}
-					<div className="flex flex-col gap-1.5">
-						<div className="flex items-center justify-between">
-							<span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-								{m.runners_cli_command()}
-							</span>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-7 px-2 text-xs gap-1"
-								onClick={() => copyToClipboard("cli", cliCmd)}
-							>
-								{copiedKey === "cli" ? (
-									<>
-										<Check className="size-3.5 text-emerald-500" />
-										<span className="text-emerald-500">
-											{m.runners_copied()}
-										</span>
-									</>
-								) : (
-									<>
-										<Copy className="size-3.5" />
-										<span>{m.runners_copy()}</span>
-									</>
-								)}
-							</Button>
-						</div>
-						<pre className="rounded-lg border bg-muted/60 p-3 font-mono text-xs text-foreground overflow-x-auto whitespace-pre select-all">
-							{cliCmd}
-						</pre>
-					</div>
+					<CodeSnippet
+						label={m.runners_cli_command()}
+						code={cliCmd}
+						snippetKey="cli"
+						copiedKey={copiedKey}
+						onCopy={copyToClipboard}
+					/>
 				</div>
 
 				<DialogFooter>
