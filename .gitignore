@@ -66,5 +66,12 @@ TODO.md
 # Docker Compose (local copy from compose.example.yml)
 compose.yml
 
+# Binaries
+bin/beep-runner
+bin/runner
+
+# Runner
+.beep-runner
+
 # Docs
 docs/superpowers

@@ -1,0 +1,7 @@
+{
+  "jobs": {
+    "intranet-http": {
+      "command": ["bash", "jobs/intranet-http.sh"]
+    }
+  }
+}

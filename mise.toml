@@ -2,6 +2,7 @@
 ruby = "3.4.7"
 node = "24.17.0"
 pnpm = "10.14.0"
+go = "1.25.0"
 gum = "0.17.0"
 overmind = "2.5.1"
 tmux = "3.7b"
@@ -44,6 +45,38 @@ run = "pnpm run dev -- --port ${WEB_PORT}"
 description = "Build the web app for production"
 dir = "apps/web"
 run = "pnpm run build"
+
+[tasks."runner:build"]
+description = "Build the Go runner binary"
+dir = "apps/runner"
+run = "go build -ldflags=\"-s -w -X beep-runner/internal/version.Version=$(cat ../../VERSION)\" -o ../../bin/beep-runner ."
+
+[tasks."runner:test"]
+description = "Run Go runner unit tests"
+dir = "apps/runner"
+run = "go test -v ./..."
+
+[tasks."runner:link"]
+description = "Symlink ~/.beep-runner to .beep-runner in current repo"
+run = """
+mkdir -p "$HOME/.beep-runner"
+ln -sfn "$HOME/.beep-runner" .beep-runner
+echo "Linked ~/.beep-runner -> .beep-runner"
+"""
+
+[tasks."runner:unlink"]
+description = "Unlink .beep-runner from current repo"
+run = """
+if [ -L .beep-runner ]; then
+  rm .beep-runner
+  echo "Unlinked .beep-runner"
+elif [ -e .beep-runner ]; then
+  echo "Error: .beep-runner exists but is not a symlink" >&2
+  exit 1
+else
+  echo ".beep-runner is not linked"
+fi
+"""
 
 [tasks."locale:sort"]
 description = "Sort message keys alphabetically in all locale JSON files"

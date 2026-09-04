@@ -22,14 +22,25 @@ class BeeperRun < ApplicationRecord
     end
 
     signal = beeper.beeper_app.produce_signal(config: beeper.effective_config)
-    sanitized_result = sanitize_signal_result(signal.to_h)
+    record_signal_result!(signal)
+  rescue StandardError => e
+    update!(
+      signal_status: "error",
+      signal_result: { "status" => "error", "message" => e.message },
+      status: :failed
+    )
+    beeper.finish_firing(last_run_at: scheduled_for)
+  end
 
+  def record_signal_result!(signal, run_status: :succeeded)
+    sanitized_result = sanitize_signal_result(signal.to_h)
     decision = Beeper::AlertPolicy.for(beeper).evaluate(signal: signal)
 
     ApplicationRecord.transaction do
       update!(
         signal_status: signal.status.to_s,
-        signal_result: sanitized_result
+        signal_result: sanitized_result,
+        status: run_status
       )
 
       beeper.update!(
@@ -41,14 +52,6 @@ class BeeperRun < ApplicationRecord
       beeper.notify_from!(signal) if decision.should_notify
     end
 
-    update!(status: :succeeded)
-    beeper.finish_firing(last_run_at: scheduled_for)
-  rescue StandardError => e
-    update!(
-      signal_status: "error",
-      signal_result: { "status" => "error", "message" => e.message },
-      status: :failed
-    )
     beeper.finish_firing(last_run_at: scheduled_for)
   end
 

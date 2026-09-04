@@ -293,6 +293,63 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_02_112000) do
     t.index ["user_id", "endpoint"], name: "index_push_subscriptions_on_user_id_and_endpoint", unique: true
   end
 
+  create_table "runner_jobs", id: :uuid, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.uuid "runner_id", null: false
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.string "cron", null: false
+    t.string "timezone", null: false
+    t.string "status", default: "active", null: false
+    t.integer "timeout_seconds", default: 60, null: false
+    t.json "config", default: {}, null: false
+    t.datetime "next_run_at"
+    t.datetime "last_run_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status", "next_run_at"], name: "index_runner_jobs_on_due"
+    t.index ["account_id"], name: "index_runner_jobs_on_account_id"
+    t.index ["runner_id", "slug"], name: "index_runner_jobs_on_runner_id_and_slug", unique: true
+    t.index ["runner_id"], name: "index_runner_jobs_on_runner_id"
+  end
+
+  create_table "runner_runs", id: :uuid, force: :cascade do |t|
+    t.uuid "runner_job_id", null: false
+    t.uuid "runner_id", null: false
+    t.datetime "scheduled_for", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "claimed_at"
+    t.string "result_status"
+    t.json "result"
+    t.text "log", default: "", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["runner_id", "status"], name: "index_runner_runs_on_runner_id_and_status"
+    t.index ["runner_id"], name: "index_runner_runs_on_runner_id"
+    t.index ["runner_job_id", "scheduled_for"], name: "index_runner_runs_on_runner_job_id_and_scheduled_for", unique: true
+    t.index ["runner_job_id"], name: "index_runner_runs_on_runner_job_id"
+  end
+
+  create_table "runners", id: :uuid, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.string "name", null: false
+    t.string "token", null: false
+    t.string "status", default: "offline", null: false
+    t.json "tags", default: [], null: false
+    t.boolean "allow_exec", default: false, null: false
+    t.string "version"
+    t.string "os"
+    t.string "arch"
+    t.string "hostname"
+    t.string "ip_address"
+    t.datetime "last_seen_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_runners_on_account_id_and_status"
+    t.index ["account_id"], name: "index_runners_on_account_id"
+    t.index ["token"], name: "index_runners_on_token", unique: true
+  end
+
   create_table "sessions", id: :uuid, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.uuid "identity_id", null: false
@@ -335,4 +392,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_02_112000) do
   add_foreign_key "identity_access_tokens", "identities"
   add_foreign_key "push_subscriptions", "accounts"
   add_foreign_key "push_subscriptions", "users"
+  add_foreign_key "runner_jobs", "accounts"
+  add_foreign_key "runner_jobs", "runners"
+  add_foreign_key "runner_runs", "runner_jobs"
+  add_foreign_key "runner_runs", "runners"
+  add_foreign_key "runners", "accounts"
 end

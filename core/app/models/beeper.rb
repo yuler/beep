@@ -116,8 +116,12 @@ class Beeper < ApplicationRecord
       end
     elsif run.running?
       if run.updated_at < RUNNING_STALE_AFTER.ago
-        run.update!(status: :failed)
-        finish_firing(last_run_at: run.scheduled_for)
+        signal = BeeperApp::Signal.new(
+          status: :error,
+          title: "Probe execution timed out",
+          message: "Beeper run was still running after #{RUNNING_STALE_AFTER.inspect}"
+        )
+        run.record_signal_result!(signal, run_status: :failed)
       end
     else
       finish_firing(last_run_at: run.scheduled_for)
@@ -218,10 +222,13 @@ class Beeper < ApplicationRecord
       run = runs.create!(scheduled_for: scheduled_for, status: :pending)
       touch
       run.deliver_later
+      run
     end
   rescue ActiveRecord::RecordNotUnique
     run = runs.find_by!(scheduled_for: scheduled_for)
-    run.deliver_later if run.pending?
+    if run.pending?
+      run.deliver_later
+    end
     run
   end
 
