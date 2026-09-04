@@ -54,7 +54,11 @@ sequenceDiagram
 Examples: [`apps/runner/examples`](../../apps/runner/examples).
 
 ```bash
-beep-runner run --server https://core.example.com --token beep_rt_xxx --workspace ~/.beep-runner --allow-exec
+# Configure runner credentials and options once
+beep-runner config set --server https://core.example.com --token beep_rt_xxx --allow-exec
+
+# Start daemon
+beep-runner run
 ```
 
 Injected env: `BEEP_SERVER`, `BEEP_RUNNER_TOKEN`, `BEEP_RUN_ID`, `BEEP_JOB_SLUG`, `BEEP_LOG_URL`, `BEEP_RESULT_URL`, `BEEP_CONFIG`, `BEEP_CONFIG_*`.

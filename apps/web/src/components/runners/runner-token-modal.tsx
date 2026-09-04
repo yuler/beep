@@ -126,7 +126,8 @@ export function RunnerTokenModal({
 volumes:
   beep-runner-workspace:`;
 
-	const cliCmd = `beep-runner run --server ${serverUrl} --token ${token} --workspace ~/.beep-runner${allowExecFlag}`;
+	const cliCmd = `beep-runner config set --server ${serverUrl} --token ${token}${allowExecFlag}
+beep-runner run`;
 
 	function copyToClipboard(key: string, text: string) {
 		void navigator.clipboard.writeText(text);

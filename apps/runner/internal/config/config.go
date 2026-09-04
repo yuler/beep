@@ -1,12 +1,24 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 )
+
+type FileConfig struct {
+	ServerURL    string `json:"server_url,omitempty"`
+	RunnerToken  string `json:"runner_token,omitempty"`
+	Workspace    string `json:"workspace,omitempty"`
+	AllowExec    *bool  `json:"allow_exec,omitempty"`
+	Concurrency  int    `json:"concurrency,omitempty"`
+	PollInterval string `json:"poll_interval,omitempty"`
+	Hostname     string `json:"hostname,omitempty"`
+}
 
 type Config struct {
 	ServerURL    string
@@ -16,38 +28,141 @@ type Config struct {
 	PollInterval time.Duration
 	Hostname     string
 	Workspace    string
+	ConfigFile   string
 }
 
-func LoadFromEnv() (*Config, error) {
-	cfg := &Config{
-		ServerURL:    getEnv("BEEP_SERVER", "http://core.localhost:3000"),
-		RunnerToken:  getEnv("BEEP_RUNNER_TOKEN", ""),
-		AllowExec:    getEnvBool("BEEP_ALLOW_EXEC", false),
-		Concurrency:  getEnvInt("BEEP_CONCURRENCY", 5),
-		PollInterval: getEnvDuration("BEEP_POLL_INTERVAL", 3*time.Second),
-		Hostname:     getEnv("BEEP_HOSTNAME", ""),
-		Workspace:    getEnv("BEEP_WORKSPACE", ""),
+func DefaultWorkspace() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ".beep-runner"
+	}
+	return filepath.Join(home, ".beep-runner")
+}
+
+func GetConfigPath(ws string) string {
+	if ws == "" {
+		ws = getEnv("BEEP_WORKSPACE", "")
+	}
+	if ws == "" {
+		ws = DefaultWorkspace()
+	}
+	if strings.HasPrefix(ws, "~") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			ws = filepath.Join(home, strings.TrimPrefix(ws, "~"))
+		}
+	}
+	abs, err := filepath.Abs(ws)
+	if err == nil {
+		ws = abs
+	}
+	return filepath.Join(ws, "config.json")
+}
+
+func LoadFile(configPath string) (*FileConfig, error) {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &FileConfig{}, nil
+		}
+		return nil, err
+	}
+	var fc FileConfig
+	if err := json.Unmarshal(data, &fc); err != nil {
+		return nil, fmt.Errorf("invalid config file %s: %w", configPath, err)
+	}
+	return &fc, nil
+}
+
+func SaveFile(configPath string, fc *FileConfig) error {
+	dir := filepath.Dir(configPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+	data, err := json.MarshalIndent(fc, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(configPath, append(data, '\n'), 0o600)
+}
+
+func Load(wsHint string) (*Config, error) {
+	configPath := GetConfigPath(wsHint)
+	fc, err := LoadFile(configPath)
+	if err != nil {
+		// Log or ignore unparseable non-fatal config file error and fallback
+		fc = &FileConfig{}
 	}
 
-	if cfg.Hostname == "" {
+	ws := wsHint
+	if ws == "" {
+		ws = getEnv("BEEP_WORKSPACE", fc.Workspace)
+	}
+	if ws == "" {
+		ws = DefaultWorkspace()
+	}
+
+	serverURL := getEnv("BEEP_SERVER", fc.ServerURL)
+	if serverURL == "" {
+		serverURL = "http://core.localhost:3000"
+	}
+	serverURL = strings.TrimRight(serverURL, "/")
+
+	runnerToken := getEnv("BEEP_RUNNER_TOKEN", fc.RunnerToken)
+
+	allowExec := false
+	if fc.AllowExec != nil {
+		allowExec = *fc.AllowExec
+	}
+	allowExec = getEnvBool("BEEP_ALLOW_EXEC", allowExec)
+
+	concurrency := 5
+	if fc.Concurrency > 0 {
+		concurrency = fc.Concurrency
+	}
+	concurrency = getEnvInt("BEEP_CONCURRENCY", concurrency)
+
+	pollInterval := 3 * time.Second
+	if fc.PollInterval != "" {
+		if d, err := time.ParseDuration(fc.PollInterval); err == nil && d > 0 {
+			pollInterval = d
+		}
+	}
+	pollInterval = getEnvDuration("BEEP_POLL_INTERVAL", pollInterval)
+
+	hostname := getEnv("BEEP_HOSTNAME", fc.Hostname)
+	if hostname == "" {
 		if h, err := os.Hostname(); err == nil {
-			cfg.Hostname = h
+			hostname = h
 		} else {
-			cfg.Hostname = "unknown-host"
+			hostname = "unknown-host"
 		}
 	}
 
-	cfg.ServerURL = strings.TrimRight(cfg.ServerURL, "/")
+	cfg := &Config{
+		ServerURL:    serverURL,
+		RunnerToken:  runnerToken,
+		AllowExec:    allowExec,
+		Concurrency:  concurrency,
+		PollInterval: pollInterval,
+		Hostname:     hostname,
+		Workspace:    ws,
+		ConfigFile:   configPath,
+	}
 
 	return cfg, nil
 }
 
+func LoadFromEnv() (*Config, error) {
+	return Load("")
+}
+
 func (c *Config) Validate() error {
 	if c.ServerURL == "" {
-		return fmt.Errorf("server URL is required (set --server or BEEP_SERVER)")
+		return fmt.Errorf("server URL is required (set via 'beep-runner config set --server <url>' or --server or BEEP_SERVER)")
 	}
 	if c.RunnerToken == "" {
-		return fmt.Errorf("runner token is required (set --token or BEEP_RUNNER_TOKEN)")
+		return fmt.Errorf("runner token is required (set via 'beep-runner config set --token <token>' or --token or BEEP_RUNNER_TOKEN)")
 	}
 	if c.Concurrency <= 0 {
 		c.Concurrency = 5
@@ -56,6 +171,18 @@ func (c *Config) Validate() error {
 		c.PollInterval = 500 * time.Millisecond
 	}
 	return nil
+}
+
+func MaskToken(token string) string {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return "(not set)"
+	}
+	if len(token) <= 12 {
+		return "••••••••"
+	}
+	prefix := token[:8]
+	return prefix + "••••••••"
 }
 
 func getEnv(key, defaultVal string) string {

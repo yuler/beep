@@ -172,14 +172,15 @@ cd apps/runner && go test -v ./...
 # 在项目根目录编译
 cd apps/runner && go build -o ../../bin/beep-runner ./main.go && cd ../..
 
-# 1. 查看版本输出
+# 1. 查看版本输出与帮助
 ./bin/beep-runner version
+./bin/beep-runner --help
 
-# 2. 测试本地脚本探活
-./bin/beep-runner test exec "echo 'Hello from Beep Runner'"
+# 2. 本地持久化配置 Server 与 Token
+./bin/beep-runner config set --server http://core.beep.localhost:3000 --token <YOUR_TOKEN> --allow-exec
 
-# 3. 测试网络连通性
-./bin/beep-runner test http https://example.com
+# 3. 查看当前有效配置
+./bin/beep-runner config
 ```
 
 ### Step 3: Web 端到端管理与本地脚本执行联调
@@ -187,26 +188,23 @@ cd apps/runner && go build -o ../../bin/beep-runner ./main.go && cd ../..
 2. 打开浏览器访问 `http://web.beep.localhost:3000` 并登录。
 3. 进入左侧侧边栏 **Runners**（`/$slug/runners`）：
    - 点击 **Add Runner** 创建一个节点（例如 `Office-Mac`，标签 `intranet`，开启 allow exec）。
-   - 弹窗中复制生成的 Token（`beep_rt_xxx`）及启动命令。
-4. 在本地初始化工作区并放入示例脚本：
+   - 弹窗中复制生成的 Token（`beep_rt_xxx`）及快速配置命令。
+4. 使用 CLI 一键配置节点与创建本地 Job：
    ```bash
-   mkdir -p ~/.beep-runner/jobs
-   cp apps/runner/examples/intranet-http.sh ~/.beep-runner/jobs/intranet-http
-   chmod +x ~/.beep-runner/jobs/intranet-http
+   # 1. 一键保存认证信息与服务端地址
+   ./bin/beep-runner config set --server http://core.beep.localhost:3000 --token <YOUR_TOKEN> --allow-exec
+
+   # 2. 一键创建本地脚本并自动注册到服务端
+   ./bin/beep-runner job create intranet-http --cron "* * * * *" --name "Intranet HTTP Check"
    ```
 5. 启动 Runner 守护进程：
    ```bash
-   ./bin/beep-runner run --server http://core.beep.localhost:3000 --token <YOUR_TOKEN> --workspace ~/.beep-runner --allow-exec
+   ./bin/beep-runner run
    ```
 6. 刷新 Web 页面：
    - Runner 列表显示状态为 `Online`（绿色脉冲）。
-   - 点击该 Runner 进入详情页（`/$slug/runners/<runner_id>`）。
-7. 创建一个 Runner Job：
-   - Name: `Intranet HTTP Check`
-   - Slug: `intranet-http`
-   - Cron: `* * * * *` (每分钟执行)
-   - 点击 **Save Job**。
-8. 验证执行与日志查看：
+   - 点击该 Runner 进入详情页（`/$slug/runners/<runner_id>`），可看到已自动注册的 `Intranet HTTP Check` 任务。
+7. 验证执行与日志查看：
    - 点击 **Trigger Run** 立即触发执行。
-   - 在终端可观察到 Runner 领取任务并执行 `~/.beep-runner/jobs/intranet-http`。
+   - 在终端可观察到 Runner 领取任务并执行 `~/.beep-runner/jobs/intranet-http.sh`。
    - Web 页面历史运行列表中出现新 Run 记录，点击可即时查看实时输出的日志和执行结果指标。

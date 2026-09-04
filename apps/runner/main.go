@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -29,6 +30,12 @@ func main() {
 			return
 		case "run":
 			runDaemon(os.Args[2:])
+			return
+		case "config":
+			runConfigCommand(os.Args[2:])
+			return
+		case "auth":
+			runConfigSet(os.Args[2:])
 			return
 		case "job", "jobs":
 			runJobCommand(os.Args[2:])
@@ -55,6 +62,10 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Commands:")
 	fmt.Println("  run                  Start the runner daemon (default)")
+	fmt.Println("  config               Show current configuration")
+	fmt.Println("  config set           Set configuration parameters (server, token, allow-exec, etc.)")
+	fmt.Println("  config unset <key>   Remove a configuration parameter")
+	fmt.Println("  config path          Print path to config file")
 	fmt.Println("  ping                 Test connectivity and authentication with Beep Core")
 	fmt.Println("  job create <slug>    Create a local job script and sync to server")
 	fmt.Println("  job sync             Sync all local workspace jobs to Beep Core")
@@ -70,8 +81,21 @@ func printUsage() {
 	fmt.Println("  --poll-interval      Poll interval (default 3s)")
 }
 
+func peekWorkspace(args []string) string {
+	for i, arg := range args {
+		if strings.HasPrefix(arg, "--workspace=") {
+			return strings.TrimPrefix(arg, "--workspace=")
+		}
+		if arg == "--workspace" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return ""
+}
+
 func parseFlags(args []string) (*config.Config, error) {
-	cfg, err := config.LoadFromEnv()
+	wsHint := peekWorkspace(args)
+	cfg, err := config.Load(wsHint)
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +113,242 @@ func parseFlags(args []string) (*config.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func runConfigCommand(args []string) {
+	if len(args) == 0 {
+		runConfigShow(nil)
+		return
+	}
+
+	sub := args[0]
+	rest := args[1:]
+
+	switch sub {
+	case "show", "get", "list", "ls":
+		runConfigShow(rest)
+	case "set", "save":
+		runConfigSet(rest)
+	case "unset", "rm", "delete":
+		runConfigUnset(rest)
+	case "path", "file":
+		wsHint := peekWorkspace(rest)
+		fmt.Println(config.GetConfigPath(wsHint))
+	default:
+		if strings.HasPrefix(sub, "-") {
+			runConfigShow(args)
+		} else {
+			runConfigSet(args)
+		}
+	}
+}
+
+func runConfigShow(args []string) {
+	var showToken bool
+	var workspaceFlag string
+	fs := flag.NewFlagSet("config show", flag.ExitOnError)
+	fs.BoolVar(&showToken, "show-token", false, "Display unmasked runner token")
+	fs.StringVar(&workspaceFlag, "workspace", "", "Workspace directory")
+	wsHint := peekWorkspace(args)
+	if err := fs.Parse(args); err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+	if workspaceFlag != "" {
+		wsHint = workspaceFlag
+	}
+
+	cfg, err := config.Load(wsHint)
+	if err != nil {
+		log.Fatalf("Error loading config: %v", err)
+	}
+
+	tokenStr := config.MaskToken(cfg.RunnerToken)
+	if showToken && cfg.RunnerToken != "" {
+		tokenStr = cfg.RunnerToken
+	}
+
+	fmt.Println("Beep Runner Configuration:")
+	fmt.Printf("  Config File:    %s\n", cfg.ConfigFile)
+	fmt.Printf("  Server URL:     %s\n", cfg.ServerURL)
+	fmt.Printf("  Runner Token:   %s\n", tokenStr)
+	fmt.Printf("  Workspace:      %s\n", cfg.Workspace)
+	fmt.Printf("  Allow Exec:     %t\n", cfg.AllowExec)
+	fmt.Printf("  Concurrency:    %d\n", cfg.Concurrency)
+	fmt.Printf("  Poll Interval:  %s\n", cfg.PollInterval)
+	fmt.Printf("  Hostname:       %s\n", cfg.Hostname)
+}
+
+func runConfigSet(args []string) {
+	wsHint := peekWorkspace(args)
+	configPath := config.GetConfigPath(wsHint)
+
+	fc, err := config.LoadFile(configPath)
+	if err != nil {
+		fc = &config.FileConfig{}
+	}
+
+	boolFlags := map[string]bool{"allow-exec": true}
+	flagArgs, positional := splitFlagsAndArgs(args, boolFlags)
+
+	var (
+		serverFlag       string
+		tokenFlag        string
+		workspaceFlag    string
+		allowExecFlag    bool
+		concurrencyFlag  int
+		pollIntervalFlag string
+	)
+
+	fs := flag.NewFlagSet("config set", flag.ExitOnError)
+	fs.StringVar(&serverFlag, "server", "", "Beep server URL")
+	fs.StringVar(&tokenFlag, "token", "", "Runner token")
+	fs.StringVar(&workspaceFlag, "workspace", "", "Workspace directory")
+	fs.BoolVar(&allowExecFlag, "allow-exec", false, "Allow local script execution")
+	fs.IntVar(&concurrencyFlag, "concurrency", 0, "Max concurrency")
+	fs.StringVar(&pollIntervalFlag, "poll-interval", "", "Poll interval (e.g. 3s)")
+
+	if err := fs.Parse(flagArgs); err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	updated := false
+
+	// Handle flag updates
+	if serverFlag != "" {
+		fc.ServerURL = strings.TrimRight(serverFlag, "/")
+		updated = true
+	}
+	if tokenFlag != "" {
+		fc.RunnerToken = tokenFlag
+		updated = true
+	}
+	if workspaceFlag != "" {
+		fc.Workspace = workspaceFlag
+		updated = true
+	}
+	if allowExecFlag {
+		t := true
+		fc.AllowExec = &t
+		updated = true
+	}
+	if concurrencyFlag > 0 {
+		fc.Concurrency = concurrencyFlag
+		updated = true
+	}
+	if pollIntervalFlag != "" {
+		fc.PollInterval = pollIntervalFlag
+		updated = true
+	}
+
+	// Handle positional key-value pairs (e.g. beep-runner config set server https://...)
+	for i := 0; i < len(positional); i++ {
+		key := strings.ToLower(positional[i])
+		if i+1 < len(positional) {
+			val := positional[i+1]
+			switch key {
+			case "server", "server_url", "server-url", "url":
+				fc.ServerURL = strings.TrimRight(val, "/")
+				updated = true
+				i++
+			case "token", "runner_token", "runner-token", "auth":
+				fc.RunnerToken = val
+				updated = true
+				i++
+			case "workspace", "dir", "workdir":
+				fc.Workspace = val
+				updated = true
+				i++
+			case "allow_exec", "allow-exec", "exec":
+				v, _ := strconv.ParseBool(val)
+				fc.AllowExec = &v
+				updated = true
+				i++
+			case "concurrency":
+				if n, err := strconv.Atoi(val); err == nil && n > 0 {
+					fc.Concurrency = n
+					updated = true
+					i++
+				}
+			case "poll_interval", "poll-interval", "interval":
+				fc.PollInterval = val
+				updated = true
+				i++
+			}
+		} else {
+			// Single key like "allow-exec"
+			if key == "allow_exec" || key == "allow-exec" {
+				t := true
+				fc.AllowExec = &t
+				updated = true
+			}
+		}
+	}
+
+	if !updated {
+		fmt.Println("No configuration options provided.")
+		fmt.Println("\nUsage:")
+		fmt.Println("  beep-runner config set --server <url> --token <token> [--allow-exec]")
+		fmt.Println("  beep-runner config set server <url>")
+		fmt.Println("  beep-runner config set token <token>")
+		fmt.Println("  beep-runner config set allow-exec true")
+		return
+	}
+
+	if err := config.SaveFile(configPath, fc); err != nil {
+		log.Fatalf("Failed to save config: %v", err)
+	}
+
+	fmt.Printf("✓ Saved configuration to %s\n\n", configPath)
+	if wsHint != "" {
+		runConfigShow([]string{"--workspace=" + wsHint})
+	} else {
+		runConfigShow(nil)
+	}
+}
+
+func runConfigUnset(args []string) {
+	if len(args) == 0 {
+		fmt.Println("Usage: beep-runner config unset <key>")
+		fmt.Println("Keys: server, token, workspace, allow-exec, concurrency, poll-interval")
+		return
+	}
+
+	wsHint := peekWorkspace(args)
+	configPath := config.GetConfigPath(wsHint)
+
+	fc, err := config.LoadFile(configPath)
+	if err != nil {
+		log.Fatalf("Failed to load config file: %v", err)
+	}
+
+	key := strings.ToLower(args[0])
+	switch key {
+	case "server", "server_url", "server-url":
+		fc.ServerURL = ""
+	case "token", "runner_token", "runner-token":
+		fc.RunnerToken = ""
+	case "workspace", "dir":
+		fc.Workspace = ""
+	case "allow_exec", "allow-exec", "exec":
+		fc.AllowExec = nil
+	case "concurrency":
+		fc.Concurrency = 0
+	case "poll_interval", "poll-interval":
+		fc.PollInterval = ""
+	default:
+		log.Fatalf("Unknown config key %q", key)
+	}
+
+	if err := config.SaveFile(configPath, fc); err != nil {
+		log.Fatalf("Failed to save config: %v", err)
+	}
+
+	fmt.Printf("✓ Unset %s in %s\n\n", key, configPath)
+	if wsHint != "" {
+		runConfigShow([]string{"--workspace=" + wsHint})
+	} else {
+		runConfigShow(nil)
+	}
 }
 
 func runDaemon(args []string) {
@@ -205,7 +465,8 @@ func splitFlagsAndArgs(args []string, boolFlags map[string]bool) (flagArgs []str
 }
 
 func runJobCreate(args []string) {
-	cfg, err := config.LoadFromEnv()
+	wsHint := peekWorkspace(args)
+	cfg, err := config.Load(wsHint)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
@@ -266,8 +527,8 @@ func runJobCreate(args []string) {
 	}
 
 	if cfg.ServerURL == "" || cfg.RunnerToken == "" {
-		fmt.Println("ℹ Server URL or Runner Token not provided; skipping server sync.")
-		fmt.Println("  To sync to server, provide --server and --token flags or set BEEP_SERVER and BEEP_RUNNER_TOKEN.")
+		fmt.Println("ℹ Server URL or Runner Token not configured; skipping server sync.")
+		fmt.Println("  Tip: Configure once with 'beep-runner config set --server <url> --token <token>'")
 		return
 	}
 
@@ -288,7 +549,7 @@ func runJobCreate(args []string) {
 	fmt.Printf("✓ Successfully registered job on server: %s (ID: %s, Cron: %s)\n", serverJob.Name, serverJob.ID, serverJob.Cron)
 	fmt.Println("\nNext steps:")
 	fmt.Printf("  1. Edit your script: %s\n", filePath)
-	fmt.Printf("  2. Start runner daemon: beep-runner run --server %s --token %s --allow-exec\n", cfg.ServerURL, cfg.RunnerToken)
+	fmt.Printf("  2. Start runner daemon: beep-runner run --allow-exec\n")
 }
 
 func runJobSync(args []string) {
@@ -340,7 +601,8 @@ func runJobSync(args []string) {
 }
 
 func runJobList(args []string) {
-	cfg, err := config.LoadFromEnv()
+	wsHint := peekWorkspace(args)
+	cfg, err := config.Load(wsHint)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
