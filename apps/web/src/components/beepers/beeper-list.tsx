@@ -63,7 +63,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 					cell: ({ row }) => {
 						const beeper = row.original;
 						return (
-							<div className="flex min-w-48 flex-col gap-0.5">
+							<div className="flex min-w-0 max-w-md flex-col gap-0.5">
 								<span className="font-mono text-[11px] text-muted-foreground">
 									#{shortId(beeper.id)}
 								</span>
@@ -73,7 +73,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 										account_slug: slug,
 										beeperId: beeper.id,
 									}}
-									className="font-medium text-foreground hover:text-primary"
+									className="truncate font-medium text-foreground transition-colors hover:text-primary"
 									onClick={(event) => event.stopPropagation()}
 									data-no-row-nav
 								>
@@ -263,18 +263,150 @@ export function BeeperList({
 
 	return (
 		<>
-			<DataTable
-				data={beepers}
-				columns={columns}
-				getRowId={(beeper) => beeper.id}
-				emptyMessage={m.beepers_empty_no_beepers()}
-				onRowClick={(beeper) =>
-					navigate({
-						to: "/$account_slug/beepers/$beeperId",
-						params: { account_slug: slug, beeperId: beeper.id },
+			{/* Mobile Card List View (< md) */}
+			<div className="flex flex-col gap-3 md:hidden">
+				{beepers.length === 0 ? (
+					<div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+						{m.beepers_empty_no_beepers()}
+					</div>
+				) : (
+					beepers.map((beeper) => {
+						const channels = beeper.notification_channels ?? [];
+						const successRate = runSuccessRate(beeper.runs ?? []);
+
+						return (
+							<div
+								key={beeper.id}
+								className="relative flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-foreground/20 hover:shadow-xs"
+							>
+								<Link
+									to="/$account_slug/beepers/$beeperId"
+									params={{ account_slug: slug, beeperId: beeper.id }}
+									className="absolute inset-0 z-0 rounded-xl"
+									aria-label={beeper.title}
+								/>
+								<div className="relative z-10 flex items-start justify-between gap-3 pointer-events-none">
+									<div className="flex min-w-0 flex-col gap-0.5">
+										<span className="font-mono text-[11px] text-muted-foreground">
+											#{shortId(beeper.id)}
+										</span>
+										<span className="truncate text-base font-semibold text-foreground">
+											{beeper.title}
+										</span>
+									</div>
+									<div className="flex shrink-0 items-center gap-1.5">
+										<StatusPill
+											label={healthStatusLabel(
+												beeperHealthLabel(beeper),
+											).toUpperCase()}
+											tone={
+												beeperHealthIsDestructive(beeper)
+													? "rose"
+													: healthTone(beeper)
+											}
+										/>
+										<StatusPill
+											label={beepStatusLabel(beeper.status)}
+											tone={beeperStatusTone(beeper.status)}
+										/>
+									</div>
+								</div>
+
+								<div className="relative z-10 grid grid-cols-2 gap-2 border-y border-border/50 py-2.5 text-xs text-muted-foreground pointer-events-none">
+									<div>
+										<span className="block text-[11px] text-muted-foreground/80">
+											{m.beepers_app()}
+										</span>
+										<span className="font-medium text-foreground">
+											{beeper.beeper_app?.name ?? m.common_em_dash()}
+										</span>
+									</div>
+									<div>
+										<span className="block text-[11px] text-muted-foreground/80">
+											{m.beeps_schedule()}
+										</span>
+										<span className="font-mono font-medium text-foreground">
+											{beeper.cron}
+										</span>
+									</div>
+									<div>
+										<span className="block text-[11px] text-muted-foreground/80">
+											{m.beepers_next_run()}
+										</span>
+										<span className="text-foreground">
+											{beeper.next_run_at
+												? formatBeepScheduleTime(
+														beeper.next_run_at,
+														beeper.timezone,
+														"short",
+													)
+												: m.common_em_dash()}
+										</span>
+									</div>
+									<div>
+										<span className="block text-[11px] text-muted-foreground/80">
+											{m.beepers_run_success()} ({beeper.runs?.length ?? 0})
+										</span>
+										<div className="mt-1">
+											<ProgressBar value={successRate} />
+										</div>
+									</div>
+								</div>
+
+								<div className="relative z-10 flex items-center justify-between gap-2 pt-0.5">
+									<div className="flex min-w-0 flex-wrap gap-1 pointer-events-none">
+										{channels.length > 0 ? (
+											channels.map((channel) => (
+												<Badge
+													key={channel}
+													variant="outline"
+													className="px-1.5 py-0 text-[10px] font-normal"
+												>
+													{channelLabel(channel as NotificationChannel)}
+												</Badge>
+											))
+										) : (
+											<span className="text-[11px] text-muted-foreground">
+												{m.beepers_default_channels()}
+											</span>
+										)}
+									</div>
+									<Button
+										type="button"
+										variant="ghost"
+										size="xs"
+										className="relative z-10 h-7 shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground"
+										onClick={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											setEditingBeeper(beeper);
+										}}
+									>
+										<Edit className="size-3.5" data-icon="inline-start" />
+										{m.beepers_edit()}
+									</Button>
+								</div>
+							</div>
+						);
 					})
-				}
-			/>
+				)}
+			</div>
+
+			{/* Desktop Table View (>= md) */}
+			<div className="hidden md:block">
+				<DataTable
+					data={beepers}
+					columns={columns}
+					getRowId={(beeper) => beeper.id}
+					emptyMessage={m.beepers_empty_no_beepers()}
+					onRowClick={(beeper) =>
+						navigate({
+							to: "/$account_slug/beepers/$beeperId",
+							params: { account_slug: slug, beeperId: beeper.id },
+						})
+					}
+				/>
+			</div>
 
 			{editingBeeper ? (
 				<EditBeeperDialog

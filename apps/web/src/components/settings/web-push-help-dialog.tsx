@@ -1,14 +1,16 @@
 import { CircleHelp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
+	ResponsiveDialog,
+	ResponsiveDialogBody,
+	ResponsiveDialogClose,
+	ResponsiveDialogContent,
+	ResponsiveDialogDescription,
+	ResponsiveDialogFooter,
+	ResponsiveDialogHeader,
+	ResponsiveDialogTitle,
+	ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import { browserLabel, pushPlatformLabel } from "@/lib/i18n-labels";
 import { iosHomeScreenHint, type NotificationPlatform } from "@/lib/web-push";
 import { m } from "@/locale/paraglide/messages";
@@ -41,46 +43,52 @@ export function WebPushHelpDialog({
 	const platformLabel = pushPlatformLabel(platform);
 
 	return (
-		<Dialog>
-			<DialogTrigger
+		<ResponsiveDialog>
+			<ResponsiveDialogTrigger
 				render={
 					<Button type="button" variant="outline" size="sm" className="w-fit" />
 				}
 			>
 				<CircleHelp data-icon="inline-start" />
 				{m.common_tips()}
-			</DialogTrigger>
-			<DialogContent className="sm:max-w-md">
-				<DialogHeader>
-					<DialogTitle>{m.push_help_title()}</DialogTitle>
-					<DialogDescription>
+			</ResponsiveDialogTrigger>
+			<ResponsiveDialogContent className="sm:max-w-md">
+				<ResponsiveDialogHeader>
+					<ResponsiveDialogTitle>{m.push_help_title()}</ResponsiveDialogTitle>
+					<ResponsiveDialogDescription>
 						{m.push_help_description({ browser })}
-					</DialogDescription>
-				</DialogHeader>
-				<ol className="flex list-decimal flex-col gap-4 pl-4 text-sm">
-					<li>
-						<span className="font-medium">{m.push_help_step_browser()}</span>{" "}
-						<span className="text-muted-foreground">
-							{m.push_help_browser_step()}
-						</span>
-					</li>
-					<li>
-						<span className="font-medium">
-							{m.push_help_step_os({ platform: platformLabel })}
-						</span>{" "}
-						<span className="text-muted-foreground">
-							{osStepBody(platform, browserName)}
-						</span>
-					</li>
-					<li>
-						<span className="font-medium">{m.push_help_step_test()}</span>{" "}
-						<span className="text-muted-foreground">
-							{m.push_help_step_test_body()}
-						</span>
-					</li>
-				</ol>
-				<DialogFooter showCloseButton />
-			</DialogContent>
-		</Dialog>
+					</ResponsiveDialogDescription>
+				</ResponsiveDialogHeader>
+				<ResponsiveDialogBody>
+					<ol className="flex list-decimal flex-col gap-4 pl-4 text-sm">
+						<li>
+							<span className="font-medium">{m.push_help_step_browser()}</span>{" "}
+							<span className="text-muted-foreground">
+								{m.push_help_browser_step()}
+							</span>
+						</li>
+						<li>
+							<span className="font-medium">
+								{m.push_help_step_os({ platform: platformLabel })}
+							</span>{" "}
+							<span className="text-muted-foreground">
+								{osStepBody(platform, browserName)}
+							</span>
+						</li>
+						<li>
+							<span className="font-medium">{m.push_help_step_test()}</span>{" "}
+							<span className="text-muted-foreground">
+								{m.push_help_step_test_body()}
+							</span>
+						</li>
+					</ol>
+				</ResponsiveDialogBody>
+				<ResponsiveDialogFooter>
+					<ResponsiveDialogClose
+						render={<Button variant="outline">{m.common_cancel()}</Button>}
+					/>
+				</ResponsiveDialogFooter>
+			</ResponsiveDialogContent>
+		</ResponsiveDialog>
 	);
 }

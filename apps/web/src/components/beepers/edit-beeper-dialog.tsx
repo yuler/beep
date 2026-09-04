@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { RunnerRoutingPicker } from "@/components/beepers/runner-routing-picker";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	ResponsiveDialog,
+	ResponsiveDialogBody,
+	ResponsiveDialogContent,
+	ResponsiveDialogDescription,
+	ResponsiveDialogFooter,
+	ResponsiveDialogHeader,
+	ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { type Beeper, updateBeeper } from "@/lib/api/beepers";
 import { ApiError } from "@/lib/api/client";
 import { fetchRunners, type Runner } from "@/lib/api/runners";
@@ -112,19 +113,19 @@ export function EditBeeperDialog({
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent className="sm:max-w-lg">
-				<form onSubmit={handleSave} className="flex flex-col gap-4">
-					<DialogHeader>
-						<DialogTitle className="text-lg">
+		<ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
+			<ResponsiveDialogContent className="sm:max-w-lg">
+				<form onSubmit={handleSave}>
+					<ResponsiveDialogHeader>
+						<ResponsiveDialogTitle className="text-lg">
 							{m.beepers_edit_beeper()}
-						</DialogTitle>
-						<DialogDescription>
+						</ResponsiveDialogTitle>
+						<ResponsiveDialogDescription>
 							{m.beepers_edit_description()}
-						</DialogDescription>
-					</DialogHeader>
+						</ResponsiveDialogDescription>
+					</ResponsiveDialogHeader>
 
-					<div className="flex flex-col gap-4 py-2">
+					<ResponsiveDialogBody>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="edit-beeper-title">{m.beepers_title()}</Label>
 							<Input
@@ -277,9 +278,9 @@ export function EditBeeperDialog({
 								{editError}
 							</p>
 						) : null}
-					</div>
+					</ResponsiveDialogBody>
 
-					<DialogFooter className="gap-2 sm:gap-0">
+					<ResponsiveDialogFooter className="gap-2 sm:gap-0">
 						<Button
 							type="button"
 							variant="ghost"
@@ -296,9 +297,9 @@ export function EditBeeperDialog({
 						>
 							{savingEdit ? m.common_saving() : m.beepers_save_changes()}
 						</Button>
-					</DialogFooter>
+					</ResponsiveDialogFooter>
 				</form>
-			</DialogContent>
-		</Dialog>
+			</ResponsiveDialogContent>
+		</ResponsiveDialog>
 	);
 }

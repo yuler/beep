@@ -204,7 +204,10 @@ export function DataTable<TData extends RowData>({
 								}
 							>
 								{row.getAllCells().map((cell) => (
-									<TableCell key={cell.id} className="px-3 py-3">
+									<TableCell
+										key={cell.id}
+										className="min-w-0 px-3 py-3 align-middle"
+									>
 										<table.FlexRender cell={cell} />
 									</TableCell>
 								))}

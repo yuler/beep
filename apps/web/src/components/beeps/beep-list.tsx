@@ -99,7 +99,7 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 				cell: ({ row }) => {
 					const beep = row.original;
 					return (
-						<div className="flex min-w-48 flex-col gap-0.5">
+						<div className="flex min-w-0 max-w-md flex-col gap-0.5">
 							<span className="font-mono text-[11px] text-muted-foreground">
 								#{shortId(beep.id)}
 							</span>
@@ -109,7 +109,7 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 									account_slug: slug,
 									beepId: beep.id,
 								}}
-								className="font-medium text-foreground hover:text-primary"
+								className="truncate font-medium text-foreground transition-colors hover:text-primary"
 								onClick={(event) => event.stopPropagation()}
 								data-no-row-nav
 							>
@@ -324,18 +324,115 @@ export function BeepList({
 					</Button>
 				</Card>
 			) : (
-				<DataTable
-					data={filteredBeeps}
-					columns={columns}
-					getRowId={(beep) => beep.id}
-					emptyMessage={m.beeps_filter_no_match()}
-					onRowClick={(beep) =>
-						navigate({
-							to: "/$account_slug/beeps/$beepId",
-							params: { account_slug: slug, beepId: beep.id },
-						})
-					}
-				/>
+				<>
+					{/* Mobile Card List View (< md) */}
+					<div className="flex flex-col gap-3 md:hidden">
+						{filteredBeeps.map((beep) => {
+							const successRate = runSuccessRate(beep.runs);
+							const lastRun = beep.runs[beep.runs.length - 1];
+
+							return (
+								<div
+									key={beep.id}
+									className="relative flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-foreground/20 hover:shadow-xs"
+								>
+									<Link
+										to="/$account_slug/beeps/$beepId"
+										params={{ account_slug: slug, beepId: beep.id }}
+										className="absolute inset-0 z-0 rounded-xl"
+										aria-label={beep.title}
+									/>
+									<div className="relative z-10 flex items-start justify-between gap-3 pointer-events-none">
+										<div className="flex min-w-0 flex-col gap-0.5">
+											<span className="font-mono text-[11px] text-muted-foreground">
+												#{shortId(beep.id)}
+											</span>
+											<span className="truncate text-base font-semibold text-foreground">
+												{beep.title}
+											</span>
+										</div>
+										<StatusPill
+											label={beepStatusLabel(beep.status)}
+											tone={beepStatusTone(beep.status)}
+										/>
+									</div>
+
+									<div className="relative z-10 grid grid-cols-2 gap-2 border-y border-border/50 py-2.5 text-xs text-muted-foreground pointer-events-none">
+										<div>
+											<span className="block text-[11px] text-muted-foreground/80">
+												{m.beeps_source()}
+											</span>
+											<span className="mt-0.5 inline-flex items-center gap-1 font-medium text-foreground">
+												{beep.beeper ? (
+													<>
+														<Activity className="size-3 text-primary" />
+														<span className="truncate">{beep.beeper.name}</span>
+													</>
+												) : beep.kind === "recurring" ? (
+													<>
+														<Repeat className="size-3" />
+														<span>{m.beeps_kind_recurring()}</span>
+													</>
+												) : (
+													<>
+														<Clock className="size-3" />
+														<span>{m.beeps_kind_once()}</span>
+													</>
+												)}
+											</span>
+										</div>
+										<div>
+											<span className="block text-[11px] text-muted-foreground/80">
+												{m.beeps_schedule()}
+											</span>
+											<span className="mt-0.5 block font-medium text-foreground">
+												{formatScheduleLabel(beep)}
+											</span>
+										</div>
+										{variant === "full" ? (
+											<>
+												<div>
+													<span className="block text-[11px] text-muted-foreground/80">
+														{m.beeps_run_success()}
+													</span>
+													<div className="mt-1">
+														<ProgressBar value={successRate} />
+													</div>
+												</div>
+												<div>
+													<span className="block text-[11px] text-muted-foreground/80">
+														{m.beeps_runs()} ({beep.runs.length})
+													</span>
+													<span className="text-[11px] capitalize text-foreground">
+														{lastRun
+															? `${m.beeps_last()}: ${beepRunStatusLabel(lastRun.status)}`
+															: m.common_em_dash()}
+													</span>
+												</div>
+											</>
+										) : null}
+									</div>
+								</div>
+							);
+						})}
+					</div>
+
+					{/* Desktop Table View (>= md) */}
+					<div className="hidden md:block">
+						<DataTable
+							data={filteredBeeps}
+							columns={columns}
+							getRowId={(beep) => beep.id}
+							emptyMessage={m.beeps_filter_no_match()}
+							onRowClick={(beep) =>
+								navigate({
+									to: "/$account_slug/beeps/$beepId",
+									params: { account_slug: slug, beepId: beep.id },
+								})
+							}
+						/>
+					</div>
+				</>
 			)}
 		</div>
 	);
