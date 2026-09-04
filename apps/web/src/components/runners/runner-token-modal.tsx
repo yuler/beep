@@ -97,6 +97,7 @@ export function RunnerTokenModal({
 	}
 
 	const serverUrl = publicApiOrigin();
+	const token = runner.token;
 	const dockerRunCmd = `docker run -d --name beep-runner --restart=always \\
   -e BEEP_SERVER=${serverUrl} \\
   -e BEEP_RUNNER_TOKEN=${token} \\
@@ -142,8 +143,7 @@ beep-runner run`;
 				<div className="flex flex-col gap-5 py-2 min-w-0 max-w-full overflow-x-hidden">
 					<Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
 						<AlertTitle className="text-xs font-semibold uppercase tracking-wider">
-							{m.term_gravatar()} {/* safety margin fallback */}
-							Important
+							{m.common_tips()}
 						</AlertTitle>
 						<AlertDescription className="text-xs">
 							{m.runners_token_warning()}
