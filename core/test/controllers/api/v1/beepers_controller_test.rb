@@ -425,5 +425,4 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     titles = response.parsed_body["beepers"].map { |row| row["title"] }
     assert_equal [ "Mine" ], titles
   end
-
 end

@@ -26,9 +26,9 @@ import {
 	fetchRunnerJobRuns,
 	fetchRunnerJobs,
 	pauseRunnerJob,
-	resumeRunnerJob,
 	type RunnerJob,
 	type RunnerRun,
+	resumeRunnerJob,
 	triggerRunnerJobRun,
 } from "@/lib/api/runner-jobs";
 import { fetchRunner } from "@/lib/api/runners";
@@ -348,9 +348,7 @@ function RunnerDetailPage() {
 						<CardHeader>
 							<CardTitle>{m.runners_runs_title()}</CardTitle>
 							<CardDescription>
-								{selectedJob
-									? selectedJob.slug
-									: m.runners_runs_select_job()}
+								{selectedJob ? selectedJob.slug : m.runners_runs_select_job()}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-3">
