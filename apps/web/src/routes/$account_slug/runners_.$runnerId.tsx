@@ -4,9 +4,10 @@ import {
 	notFound,
 	useRouter,
 } from "@tanstack/react-router";
-import { Pause, Play, Plus, Trash2 } from "lucide-react";
+import { Edit, Pause, Play, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { RunnerJobFormDialog } from "@/components/runners/runner-job-form-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -73,6 +74,8 @@ function RunnerDetailPage() {
 	const [jobSlug, setJobSlug] = useState("");
 	const [cron, setCron] = useState("*/5 * * * *");
 	const [submitting, setSubmitting] = useState(false);
+	const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
+	const [editingJob, setEditingJob] = useState<RunnerJob | null>(null);
 
 	const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? null;
 
@@ -319,6 +322,17 @@ function RunnerDetailPage() {
 											<Button
 												size="sm"
 												variant="outline"
+												onClick={() => {
+													setEditingJob(job);
+													setIsJobDialogOpen(true);
+												}}
+											>
+												<Edit data-icon="inline-start" />
+												{m.common_edit()}
+											</Button>
+											<Button
+												size="sm"
+												variant="outline"
 												onClick={() => void handleToggle(job)}
 											>
 												{job.status === "paused" ? (
@@ -386,6 +400,18 @@ function RunnerDetailPage() {
 					</Card>
 				</div>
 			</div>
+
+			<RunnerJobFormDialog
+				slug={slug}
+				runnerId={runner.id}
+				job={editingJob}
+				open={isJobDialogOpen}
+				onOpenChange={setIsJobDialogOpen}
+				onSuccess={async (job) => {
+					await router.invalidate();
+					setSelectedJobId(job.id);
+				}}
+			/>
 		</>
 	);
 }

@@ -395,8 +395,8 @@ var jobListCmd = &cobra.Command{
 					}
 					fmt.Printf("    %s Run %s to push local, or %s to pull server\n",
 						ui.Dim("Tip:"),
-						ui.Cyan(fmt.Sprintf("beep-runner push %s", slug)),
-						ui.Cyan(fmt.Sprintf("beep-runner pull %s", slug)),
+						ui.Cyan(fmt.Sprintf("beep-runner job push %s", slug)),
+						ui.Cyan(fmt.Sprintf("beep-runner job pull %s", slug)),
 					)
 				}
 			} else if hasLocal && !hasServer {
@@ -407,7 +407,7 @@ var jobListCmd = &cobra.Command{
 					ui.Dim(fmt.Sprintf("(%s, %s)", lj.Name, lj.Cron)),
 				)
 				fmt.Printf("    %s %s\n", ui.Dim("File:"), ui.Dim(lj.FilePath))
-				fmt.Printf("    %s Run %s to register on server\n", ui.Dim("Tip:"), ui.Cyan(fmt.Sprintf("beep-runner push %s", slug)))
+				fmt.Printf("    %s Run %s to register on server\n", ui.Dim("Tip:"), ui.Cyan(fmt.Sprintf("beep-runner job push %s", slug)))
 			} else if !hasLocal && hasServer {
 				fmt.Printf("  %s %-18s %s %s\n",
 					ui.Magenta("●"),
@@ -416,38 +416,12 @@ var jobListCmd = &cobra.Command{
 					ui.Dim(fmt.Sprintf("(%s, %s, %s)", sj.Name, sj.Cron, sj.Status)),
 				)
 				fmt.Printf("    %s %s\n", ui.Dim("ID:"), ui.Dim(sj.ID))
-				fmt.Printf("    %s Run %s to pull script to workspace\n", ui.Dim("Tip:"), ui.Cyan(fmt.Sprintf("beep-runner pull %s", slug)))
+				fmt.Printf("    %s Run %s to pull script to workspace\n", ui.Dim("Tip:"), ui.Cyan(fmt.Sprintf("beep-runner job pull %s", slug)))
 			}
 			fmt.Println()
 		}
 
 		return nil
-	},
-}
-
-// Top-level Git-style aliases
-var pushCmd = &cobra.Command{
-	Use:   "push [slug]",
-	Short: "Push local workspace job(s) to Beep Core (alias for job push)",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runJobPushExec(cmd, args)
-	},
-}
-
-var pullCmd = &cobra.Command{
-	Use:   "pull [slug]",
-	Short: "Pull server job(s) to local workspace (alias for job pull)",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runJobPullExec(cmd, args)
-	},
-}
-
-var syncCmd = &cobra.Command{
-	Use:    "sync [slug]",
-	Short:  "Sync jobs to server (alias for job push)",
-	Hidden: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runJobPushExec(cmd, args)
 	},
 }
 
@@ -463,7 +437,6 @@ func init() {
 	jobCreateCmd.Flags().BoolVar(&flagJobNoSync, "no-sync", false, "Do not sync to server")
 
 	jobPullCmd.Flags().BoolVar(&flagJobForce, "force", false, "Overwrite existing local scripts with server definition")
-	pullCmd.Flags().BoolVar(&flagJobForce, "force", false, "Overwrite existing local scripts with server definition")
 
 	jobRemoveCmd.Flags().BoolVar(&flagJobNoSync, "no-sync", false, "Remove local script only without deleting from server")
 

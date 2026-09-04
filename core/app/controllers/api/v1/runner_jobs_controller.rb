@@ -12,7 +12,16 @@ class Api::V1::RunnerJobsController < Api::V1::BaseController
   end
 
   def create
-    @job = @runner.jobs.new(job_params.merge(account: Current.account, timezone: job_timezone))
+    attrs = job_params
+    attrs[:account] = Current.account
+    attrs[:timezone] = job_timezone
+    if params[:description].present?
+      config = (attrs[:config] || {}).dup
+      config["description"] = params[:description].to_s
+      attrs[:config] = config
+    end
+
+    @job = @runner.jobs.new(attrs)
 
     if @job.save
       render :show, status: :created
@@ -26,7 +35,15 @@ class Api::V1::RunnerJobsController < Api::V1::BaseController
   end
 
   def update
-    if @job.update(update_params)
+    attrs = update_params
+    attrs[:timezone] = IanaTimezone.resolve(params[:timezone]) if params.key?(:timezone)
+    if params.key?(:description)
+      config = (attrs[:config] || @job.config || {}).dup
+      config["description"] = params[:description].to_s
+      attrs[:config] = config
+    end
+
+    if @job.update(attrs)
       render :show
     else
       render_json_error(
@@ -59,7 +76,7 @@ class Api::V1::RunnerJobsController < Api::V1::BaseController
   end
 
   def update_params
-    attrs = params.permit(:name, :cron, :timeout_seconds)
+    attrs = params.permit(:name, :slug, :cron, :timeout_seconds)
     attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
     attrs
   end

@@ -24,7 +24,7 @@ var RootCmd = &cobra.Command{
 	Long: ui.Bold(ui.Cyan("Beep self-hosted runner")) + `
 
 A runner executes scheduled jobs locally in your workspace and reports logs/results to Beep Core.
-Like git, you can create, push, pull, and manage local check scripts.`,
+Use job create / push / pull to manage local check scripts.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if flagNoColor {
 			ui.SetEnabled(false)
@@ -56,11 +56,6 @@ func init() {
 	RootCmd.AddCommand(versionCmd)
 	RootCmd.AddCommand(configCmd)
 	RootCmd.AddCommand(jobCmd)
-
-	// Top-level Git-style aliases
-	RootCmd.AddCommand(pushCmd)
-	RootCmd.AddCommand(pullCmd)
-	RootCmd.AddCommand(syncCmd)
 }
 
 func loadConfig() (*config.Config, error) {

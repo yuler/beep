@@ -39,5 +39,26 @@ class Api::V1::RunnerJobsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :created
     assert_equal "pending", response.parsed_body["status"]
+
+    patch "/api/v1/#{@account.slug}/runners/#{@runner.id}/jobs/#{job["id"]}",
+      params: {
+        name: "Intranet HTTP Updated",
+        slug: "intranet-http-updated",
+        cron: "*/10 * * * *",
+        timezone: "Asia/Shanghai",
+        timeout_seconds: 45,
+        description: "Updated health check job"
+      },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    updated = response.parsed_body
+    assert_equal "Intranet HTTP Updated", updated["name"]
+    assert_equal "intranet-http-updated", updated["slug"]
+    assert_equal "*/10 * * * *", updated["cron"]
+    assert_equal "Asia/Shanghai", updated["timezone"]
+    assert_equal 45, updated["timeout_seconds"]
+    assert_equal "Updated health check job", updated.dig("config", "description")
   end
 end
