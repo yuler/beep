@@ -3,8 +3,7 @@ class CreateRunnersAndJobs < ActiveRecord::Migration[8.2]
     create_table :runners, id: :uuid do |t|
       t.references :account, null: false, foreign_key: true, type: :uuid
       t.string :name, null: false
-      t.string :token_digest, null: false
-      t.string :token_prefix, null: false
+      t.string :token, null: false
       t.string :status, null: false, default: "offline"
       t.json :tags, null: false, default: []
       t.boolean :allow_exec, null: false, default: false
@@ -18,7 +17,7 @@ class CreateRunnersAndJobs < ActiveRecord::Migration[8.2]
       t.timestamps
     end
 
-    add_index :runners, :token_digest, unique: true
+    add_index :runners, :token, unique: true
     add_index :runners, [ :account_id, :status ]
 
     create_table :runner_jobs, id: :uuid do |t|

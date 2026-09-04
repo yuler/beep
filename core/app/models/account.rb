@@ -8,7 +8,7 @@ class Account < ApplicationRecord
   has_many :beepers, dependent: :destroy
   has_many :beeper_apps, dependent: :destroy
   has_many :runners, dependent: :destroy
-  has_many :runner_jobs, dependent: :destroy
+  has_many :runner_jobs, class_name: "Runner::Job", dependent: :destroy
   has_many :push_subscriptions, class_name: "Push::Subscription", dependent: :destroy
   has_many :invitations, dependent: :destroy
   has_many :slug_holds, class_name: "Account::SlugHold", dependent: :delete_all

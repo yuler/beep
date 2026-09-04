@@ -119,7 +119,7 @@ volumes:
   beep-runner-workspace:`;
 
 	const cliCmd = `beep-runner config set --server ${serverUrl} --token ${token}
-beep-runner run`;
+beep-runner up`;
 
 	function copyToClipboard(key: string, text: string) {
 		void navigator.clipboard.writeText(text);

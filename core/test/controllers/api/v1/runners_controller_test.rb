@@ -89,7 +89,7 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
 
   test "regenerate_token issues a new token" do
     runner = @account.runners.create!(name: "Token-Runner")
-    old_digest = runner.token_digest
+    old_token = runner.token
 
     post "/api/v1/#{@account.slug}/runners/#{runner.id}/regenerate_token",
       headers: { "Authorization" => "Bearer #{@token}" },
@@ -99,6 +99,6 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
     body = response.parsed_body["runner"]
     assert body["token"].start_with?("beep_rt_")
     runner.reload
-    assert_not_equal old_digest, runner.token_digest
+    assert_not_equal old_token, runner.token
   end
 end

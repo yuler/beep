@@ -9,8 +9,8 @@ class Api::V1::Runner::TasksController < Api::V1::Runner::BaseController
       ip_address: request.remote_ip
     )
 
-    candidate = RunnerRun.joins(:runner_job)
-                         .where(runner_jobs: { account_id: @current_runner.account_id, runner_id: @current_runner.id, status: "firing" })
+    candidate = Runner::Run.joins(:runner_job)
+                         .where(runner_jobs: { account_id: @current_runner.account_id, runner_id: @current_runner.id })
                          .where(status: "pending")
                          .where(scheduled_for: ..Time.current)
                          .order("runner_runs.scheduled_for ASC")
@@ -81,7 +81,7 @@ class Api::V1::Runner::TasksController < Api::V1::Runner::BaseController
   private
 
   def find_run
-    RunnerRun.joins(:runner_job)
+    Runner::Run.joins(:runner_job)
              .where(runner_jobs: { account_id: @current_runner.account_id })
              .where(runner_id: @current_runner.id)
              .find(params[:id])

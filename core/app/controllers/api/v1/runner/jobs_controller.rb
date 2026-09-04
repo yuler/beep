@@ -65,7 +65,7 @@ class Api::V1::Runner::JobsController < Api::V1::Runner::BaseController
   private
 
   # Prefer @id when present so a local filename rename updates the same
-  # RunnerJob (slug change) instead of inserting a duplicate under the new slug.
+  # Runner::Job (slug change) instead of inserting a duplicate under the new slug.
   def find_or_build_job(id:, slug:)
     if id.present?
       existing = @current_runner.jobs.find_by(id: id)

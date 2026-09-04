@@ -161,7 +161,7 @@ var jobCreateCmd = &cobra.Command{
 		fmt.Println()
 		fmt.Println(ui.Section("Next steps:"))
 		fmt.Printf("  1. Edit your script: %s\n", ui.Cyan(filePath))
-		fmt.Printf("  2. Start runner daemon: %s\n", ui.Green("beep-runner run"))
+		fmt.Printf("  2. Start runner daemon: %s\n", ui.Green("beep-runner up"))
 		return nil
 	},
 }

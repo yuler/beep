@@ -5,7 +5,7 @@ class Api::V1::Runner::JobsControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:john_account)
     @runner = @account.runners.create!(name: "Test-Runner")
     @runner.update_columns(status: "online", last_seen_at: 5.seconds.ago)
-    @runner_token = @runner.raw_token
+    @runner_token = @runner.token
     @job = @runner.jobs.create!(
       name: "Existing Job",
       slug: "existing-job",

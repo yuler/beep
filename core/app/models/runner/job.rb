@@ -1,6 +1,4 @@
-class RunnerJob < ApplicationRecord
-  self.table_name = "runner_jobs"
-
+class Runner::Job < ApplicationRecord
   POLL_BATCH_SIZE = 100
   STALE_FIRING_AFTER = 2.minutes
   RUNNING_STALE_AFTER = 5.minutes
@@ -12,7 +10,7 @@ class RunnerJob < ApplicationRecord
 
   belongs_to :account
   belongs_to :runner
-  has_many :runs, class_name: "RunnerRun", dependent: :destroy
+  has_many :runs, class_name: "Runner::Run", foreign_key: :runner_job_id, inverse_of: :runner_job, dependent: :destroy
 
   enum :status, %w[ active paused firing ].index_by(&:itself), default: "active"
 

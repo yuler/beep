@@ -1,35 +1,30 @@
 class Runner < ApplicationRecord
-  self.table_name = "runners"
-
   TOKEN_PREFIX = "beep_rt_"
   OFFLINE_TIMEOUT = 60.seconds
   NAME_MAX_LENGTH = 80
 
   belongs_to :account
-  has_many :jobs, class_name: "RunnerJob", dependent: :destroy
-  has_many :runs, class_name: "RunnerRun", dependent: :destroy
+  has_many :jobs, class_name: "Runner::Job", dependent: :destroy
+  has_many :runs, class_name: "Runner::Run", dependent: :destroy
+
+  has_secure_token prefix: TOKEN_PREFIX
+  self.filter_attributes += [ :token ]
 
   enum :status, %w[ online idle offline ].index_by(&:itself), default: "offline"
-
-  attr_reader :raw_token
 
   normalizes :name, with: ->(value) { value&.strip.presence }
 
   validates :name, presence: true, length: { maximum: NAME_MAX_LENGTH }
-  validates :token_digest, presence: true, uniqueness: true
-  validates :token_prefix, presence: true
 
-  before_validation :generate_token_if_needed, on: :create
   before_validation :normalize_tags
 
   scope :online_or_idle, -> { where(status: %w[ online idle ]).where(last_seen_at: OFFLINE_TIMEOUT.ago..) }
 
   class << self
     def find_by_raw_token(token)
-      return nil if token.blank?
-
-      digest = Digest::SHA256.hexdigest(token.to_s.strip)
-      find_by(token_digest: digest)
+      if token.present?
+        find_by(token: token.to_s.strip)
+      end
     end
 
     def mark_stale_offline!
@@ -64,23 +59,15 @@ class Runner < ApplicationRecord
     status.in?(%w[ online idle ]) && last_seen_at.present? && last_seen_at >= OFFLINE_TIMEOUT.ago
   end
 
+  def token_prefix
+    token&.first(12)
+  end
+
   def regenerate_token!
-    generate_token
-    save!
+    regenerate_token
   end
 
   private
-
-  def generate_token_if_needed
-    generate_token if token_digest.blank?
-  end
-
-  def generate_token
-    token = "#{TOKEN_PREFIX}#{SecureRandom.hex(24)}"
-    self.token_digest = Digest::SHA256.hexdigest(token)
-    self.token_prefix = token[0, 12]
-    @raw_token = token
-  end
 
   def normalize_tags
     self.tags = Array(tags).map { |t| t.to_s.strip }.reject(&:blank?).uniq

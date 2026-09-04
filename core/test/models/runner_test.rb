@@ -5,19 +5,18 @@ class RunnerTest < ActiveSupport::TestCase
     @account = accounts(:john_account)
   end
 
-  test "generates token on create with prefix and digest" do
+  test "generates token on create with prefix" do
     runner = @account.runners.create!(name: "HQ-Server")
 
     assert runner.persisted?
-    assert runner.raw_token.start_with?("beep_rt_")
-    assert_equal runner.token_prefix, runner.raw_token[0, 12]
-    assert_equal Digest::SHA256.hexdigest(runner.raw_token), runner.token_digest
+    assert runner.token.start_with?("beep_rt_")
+    assert_equal runner.token_prefix, runner.token[0, 12]
     assert_equal "offline", runner.status
   end
 
   test "finds runner by raw token" do
     runner = @account.runners.create!(name: "HQ-Server")
-    found = Runner.find_by_raw_token(runner.raw_token)
+    found = Runner.find_by_raw_token(runner.token)
 
     assert_equal runner.id, found.id
     assert_nil Runner.find_by_raw_token("invalid_token")
@@ -108,10 +107,10 @@ class RunnerTest < ActiveSupport::TestCase
 
   test "regenerates token on demand" do
     runner = @account.runners.create!(name: "HQ-Server")
-    old_digest = runner.token_digest
+    old_token = runner.token
 
     runner.regenerate_token!
-    assert_not_equal old_digest, runner.token_digest
-    assert runner.raw_token.start_with?("beep_rt_")
+    assert_not_equal old_token, runner.token
+    assert runner.token.start_with?("beep_rt_")
   end
 end

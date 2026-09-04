@@ -93,6 +93,18 @@ func HumanizeSlug(slug string) string {
 	return strings.Join(parts, " ")
 }
 
+// ValidateSlug verifies that slug is a valid single file name and not a path traversal attempt.
+func ValidateSlug(slug string) error {
+	slug = strings.TrimSpace(strings.ToLower(slug))
+	if slug == "" {
+		return fmt.Errorf("job slug cannot be empty")
+	}
+	if filepath.Base(slug) != slug || strings.Contains(slug, "..") || strings.ContainsAny(slug, `/\`) {
+		return fmt.Errorf("invalid slug %q: must not contain path separators or parent directory references", slug)
+	}
+	return nil
+}
+
 func ParseTimeoutSeconds(val string) int {
 	val = strings.TrimSpace(strings.ToLower(val))
 	if val == "" {
@@ -419,10 +431,10 @@ exit 0
 }
 
 func (w *Workspace) CreateScript(slug, scriptType, id, name, cron, timezone, description string, timeoutSeconds int) (filePath string, created bool, err error) {
-	slug = strings.TrimSpace(strings.ToLower(slug))
-	if slug == "" {
-		return "", false, fmt.Errorf("job slug cannot be empty")
+	if err := ValidateSlug(slug); err != nil {
+		return "", false, err
 	}
+	slug = strings.TrimSpace(strings.ToLower(slug))
 
 	if name == "" {
 		name = HumanizeSlug(slug)
@@ -486,25 +498,22 @@ func (w *Workspace) UpdateScriptHeader(filePath, id, name, cron, timezone, descr
 		commentPrefix = "-- "
 	}
 
-	// Skip existing @ comment lines
-	for startIndex < len(lines) {
-		trimmed := strings.TrimSpace(lines[startIndex])
-		if trimmed == "" {
-			startIndex++
-			continue
-		}
+	// Filter out all existing @ directive comment lines from the remaining body
+	var remainingLines []string
+	for i := startIndex; i < len(lines); i++ {
+		line := lines[i]
+		trimmed := strings.TrimSpace(line)
 		isComment := strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "--")
 		if isComment {
 			c := strings.TrimLeft(trimmed, "#/- ")
 			if strings.HasPrefix(c, "@") {
-				startIndex++
 				continue
 			}
 		}
-		break
+		remainingLines = append(remainingLines, line)
 	}
 
-	remainingBody := strings.Join(lines[startIndex:], "\n")
+	remainingBody := strings.Join(remainingLines, "\n")
 	remainingBody = strings.TrimLeft(remainingBody, "\r\n")
 
 	if cron == "" {
@@ -543,6 +552,9 @@ func (w *Workspace) UpdateScriptID(filePath string, id string) error {
 }
 
 func (w *Workspace) FindScriptFile(slug string) (string, bool) {
+	if err := ValidateSlug(slug); err != nil {
+		return "", false
+	}
 	slug = strings.TrimSpace(strings.ToLower(slug))
 	target := filepath.Join(w.JobsDir(), slug)
 	if info, err := os.Stat(target); err == nil && !info.IsDir() {
@@ -574,10 +586,10 @@ func (w *Workspace) FindScriptFileByID(id string) (string, bool) {
 }
 
 func (w *Workspace) PullJob(slug, scriptType, id, name, cron, timezone, description string, timeoutSeconds int, overwrite bool) (filePath string, created bool, err error) {
-	slug = strings.TrimSpace(strings.ToLower(slug))
-	if slug == "" {
-		return "", false, fmt.Errorf("job slug cannot be empty")
+	if err := ValidateSlug(slug); err != nil {
+		return "", false, err
 	}
+	slug = strings.TrimSpace(strings.ToLower(slug))
 
 	// 1. Try finding by unique ID first to avoid duplicate files when name/slug changed
 	var existingPath string
@@ -614,10 +626,10 @@ func (w *Workspace) PullJob(slug, scriptType, id, name, cron, timezone, descript
 }
 
 func (w *Workspace) RemoveJob(slug string) (removedFiles []string, removedFromJSON bool, err error) {
-	slug = strings.TrimSpace(strings.ToLower(slug))
-	if slug == "" {
-		return nil, false, fmt.Errorf("job slug cannot be empty")
+	if err := ValidateSlug(slug); err != nil {
+		return nil, false, err
 	}
+	slug = strings.TrimSpace(strings.ToLower(slug))
 
 	targetFile := filepath.Join(w.JobsDir(), slug)
 	if _, statErr := os.Stat(targetFile); statErr == nil {
@@ -725,10 +737,10 @@ func (w *Workspace) ListJobs() ([]LocalJob, error) {
 }
 
 func (w *Workspace) Resolve(slug string) (argv []string, err error) {
-	slug = strings.TrimSpace(slug)
-	if slug == "" {
-		return nil, fmt.Errorf("job slug is empty")
+	if err := ValidateSlug(slug); err != nil {
+		return nil, err
 	}
+	slug = strings.TrimSpace(slug)
 
 	if spec, ok := w.jobs[slug]; ok && len(spec.Command) > 0 {
 		return w.expandArgv(spec.Command), nil

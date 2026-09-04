@@ -5,7 +5,7 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:john_account)
     @runner = @account.runners.create!(name: "Test-Runner")
     @runner.update_columns(status: "online", last_seen_at: 5.seconds.ago)
-    @runner_token = @runner.raw_token
+    @runner_token = @runner.token
     @job = @runner.jobs.create!(
       name: "Intranet HTTP",
       slug: "intranet-http",
@@ -99,6 +99,39 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
     @job.reload
     assert @job.active?
     assert_not_nil @job.last_run_at
+  end
+
+  test "poll claims pending run from paused job" do
+    @job.update!(status: :paused)
+    run = @job.trigger_run!
+    assert run.pending?
+
+    post "/api/v1/runner/tasks/poll",
+      headers: { "X-Runner-Token" => @runner_token },
+      as: :json
+
+    assert_response :success
+    task = response.parsed_body["task"]
+    assert_equal run.id, task["id"]
+  end
+
+  test "logs scrubs malformed utf8 on truncation" do
+    run = @job.trigger_run!
+    run.claim_for!(@runner)
+
+    # Append multibyte characters that exceed 256KB limit
+    chunk = "你好世界🌟" * 15_000
+    post "/api/v1/runner/tasks/#{run.id}/logs",
+      params: { chunk: chunk },
+      headers: { "X-Runner-Token" => @runner_token },
+      as: :json
+
+    assert_response :success
+    run.reload
+    assert run.log.valid_encoding?
+    assert_nothing_raised do
+      JSON.generate({ log: run.log })
+    end
   end
 
   test "unauthorized request without token is rejected" do

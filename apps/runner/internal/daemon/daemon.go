@@ -105,14 +105,17 @@ func (d *Daemon) execute(job *task.Task) {
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
-	taskCtx, cancel := context.WithTimeout(context.Background(), timeout+5*time.Second)
+	taskCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+
+	reportCtx, reportCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer reportCancel()
 
 	argv, err := d.workspace.Resolve(job.JobSlug)
 	if err != nil {
 		result := task.Error("Unknown local job", err.Error(), nil)
-		_ = d.client.ReportLog(taskCtx, job.LogURL, err.Error()+"\n")
-		if reportErr := d.client.ReportResult(taskCtx, job.ResultURL, result); reportErr != nil {
+		_ = d.client.ReportLog(reportCtx, job.LogURL, err.Error()+"\n")
+		if reportErr := d.client.ReportResult(reportCtx, job.ResultURL, result); reportErr != nil {
 			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error:"), reportErr)
 		}
 		return
@@ -131,7 +134,7 @@ func (d *Daemon) execute(job *task.Task) {
 
 	var logBuf string
 	var logMu sync.Mutex
-	flush := func(force bool) {
+	flush := func(ctx context.Context, force bool) {
 		logMu.Lock()
 		chunk := logBuf
 		if !force && len(chunk) < 256 {
@@ -143,7 +146,7 @@ func (d *Daemon) execute(job *task.Task) {
 		if chunk == "" {
 			return
 		}
-		if err := d.client.ReportLog(taskCtx, job.LogURL, chunk); err != nil {
+		if err := d.client.ReportLog(ctx, job.LogURL, chunk); err != nil {
 			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("log upload:"), err)
 		}
 	}
@@ -153,9 +156,9 @@ func (d *Daemon) execute(job *task.Task) {
 		logMu.Lock()
 		logBuf += line
 		logMu.Unlock()
-		flush(false)
+		flush(taskCtx, false)
 	})
-	flush(true)
+	flush(reportCtx, true)
 
 	if result.Status == task.StatusOk {
 		log.Printf("%s %s %s %s",
@@ -173,7 +176,7 @@ func (d *Daemon) execute(job *task.Task) {
 		)
 	}
 
-	if err := d.client.ReportResult(taskCtx, job.ResultURL, result); err != nil {
+	if err := d.client.ReportResult(reportCtx, job.ResultURL, result); err != nil {
 		log.Printf("%s %s for %s: %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error"), job.ID, err)
 	}
 }

@@ -247,8 +247,8 @@ export function RunnerJobFormDialog({
 								<Input
 									id="job-form-timeout"
 									type="number"
-									min={1}
-									max={3600}
+									min={5}
+									max={300}
 									value={timeoutSeconds}
 									onChange={(e) =>
 										setTimeoutSeconds(Number(e.target.value) || 30)

@@ -1,6 +1,6 @@
 require "test_helper"
 
-class RunnerJobTest < ActiveSupport::TestCase
+class Runner::JobTest < ActiveSupport::TestCase
   setup do
     @account = accounts(:john_account)
     @runner = @account.runners.create!(name: "Office")
@@ -30,7 +30,7 @@ class RunnerJobTest < ActiveSupport::TestCase
     job = @runner.jobs.create!(name: "Check", slug: "check", cron: "*/5 * * * *", timezone: "UTC")
     job.update_columns(next_run_at: 1.minute.ago, status: "active")
 
-    RunnerJob.poll_due_now
+    Runner::Job.poll_due_now
 
     job.reload
     assert job.firing?
@@ -43,7 +43,7 @@ class RunnerJobTest < ActiveSupport::TestCase
     job = @runner.jobs.create!(name: "Check", slug: "check", cron: "*/5 * * * *", timezone: "UTC")
     job.update_columns(next_run_at: 1.minute.ago, status: "active")
 
-    RunnerJob.poll_due_now
+    Runner::Job.poll_due_now
 
     job.reload
     assert job.active?

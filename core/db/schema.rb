@@ -333,8 +333,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_02_112000) do
   create_table "runners", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.string "name", null: false
-    t.string "token_digest", null: false
-    t.string "token_prefix", null: false
+    t.string "token", null: false
     t.string "status", default: "offline", null: false
     t.json "tags", default: [], null: false
     t.boolean "allow_exec", default: false, null: false
@@ -348,7 +347,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_02_112000) do
     t.datetime "updated_at", null: false
     t.index ["account_id", "status"], name: "index_runners_on_account_id_and_status"
     t.index ["account_id"], name: "index_runners_on_account_id"
-    t.index ["token_digest"], name: "index_runners_on_token_digest", unique: true
+    t.index ["token"], name: "index_runners_on_token", unique: true
   end
 
   create_table "sessions", id: :uuid, force: :cascade do |t|

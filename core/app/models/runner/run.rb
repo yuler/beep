@@ -1,10 +1,8 @@
-class RunnerRun < ApplicationRecord
-  self.table_name = "runner_runs"
-
+class Runner::Run < ApplicationRecord
   RESULT_MAX_BYTES = 8.kilobytes
   LOG_MAX_BYTES = 256.kilobytes
 
-  belongs_to :runner_job
+  belongs_to :runner_job, class_name: "Runner::Job", foreign_key: :runner_job_id, inverse_of: :runs
   belongs_to :runner
 
   enum :status, %w[ pending running succeeded failed expired ].index_by(&:itself)
@@ -34,7 +32,7 @@ class RunnerRun < ApplicationRecord
       combined = "#{log}#{text}"
       if combined.bytesize > LOG_MAX_BYTES
         overflow = combined.bytesize - LOG_MAX_BYTES
-        combined = combined.byteslice(overflow, LOG_MAX_BYTES)
+        combined = combined.byteslice(overflow, LOG_MAX_BYTES).scrub("")
       end
       update!(log: combined)
     end

@@ -31,8 +31,8 @@ Use job create / push / pull to manage local check scripts.`,
 		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Default action when no subcommand is given is runDaemon
-		return runDaemon(cmd, args)
+		// Default action when no subcommand is given is runUp
+		return runUp(cmd, args)
 	},
 }
 
@@ -50,8 +50,13 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&flagNoColor, "no-color", false, "Disable colored output")
 	RootCmd.PersistentFlags().BoolVar(&flagNoInteractive, "no-interactive", false, "Disable interactive prompts")
 
+	// Root flags for default action (up)
+	RootCmd.Flags().IntVarP(&flagConcurrency, "concurrency", "c", 0, "Max concurrent jobs (default 5)")
+	RootCmd.Flags().DurationVarP(&flagPollInterval, "poll-interval", "i", 0, "Poll interval (default 3s)")
+	RootCmd.Flags().BoolVarP(&flagDaemon, "daemon", "d", false, "Run runner daemon in background")
+
 	// Register subcommands
-	RootCmd.AddCommand(runCmd)
+	RootCmd.AddCommand(upCmd)
 	RootCmd.AddCommand(pingCmd)
 	RootCmd.AddCommand(versionCmd)
 	RootCmd.AddCommand(configCmd)
