@@ -53,6 +53,67 @@ func (c *Client) Ping(ctx context.Context) (*PingResponse, error) {
 	return &res, nil
 }
 
+type ServerJob struct {
+	ID             string         `json:"id"`
+	RunnerID       string         `json:"runner_id"`
+	Name           string         `json:"name"`
+	Slug           string         `json:"slug"`
+	Cron           string         `json:"cron"`
+	Timezone       string         `json:"timezone"`
+	Status         string         `json:"status"`
+	TimeoutSeconds int            `json:"timeout_seconds"`
+	Config         map[string]any `json:"config,omitempty"`
+	NextRunAt      string         `json:"next_run_at,omitempty"`
+	LastRunAt      string         `json:"last_run_at,omitempty"`
+}
+
+type CreateJobRequest struct {
+	Slug           string         `json:"slug"`
+	Name           string         `json:"name,omitempty"`
+	Cron           string         `json:"cron,omitempty"`
+	Timezone       string         `json:"timezone,omitempty"`
+	TimeoutSeconds int            `json:"timeout_seconds,omitempty"`
+	Config         map[string]any `json:"config,omitempty"`
+}
+
+func (c *Client) CreateJob(ctx context.Context, jobReq *CreateJobRequest) (*ServerJob, error) {
+	url := fmt.Sprintf("%s/api/v1/runner/jobs", c.cfg.ServerURL)
+	var res struct {
+		Job *ServerJob `json:"job"`
+	}
+	if err := c.postJSON(ctx, url, jobReq, http.StatusCreated, &res); err != nil {
+		return nil, err
+	}
+	return res.Job, nil
+}
+
+func (c *Client) SyncJobs(ctx context.Context, jobs []*CreateJobRequest) ([]*ServerJob, error) {
+	url := fmt.Sprintf("%s/api/v1/runner/jobs/sync", c.cfg.ServerURL)
+	payload := map[string]any{
+		"jobs": jobs,
+	}
+	var res struct {
+		Status      string       `json:"status"`
+		SyncedCount int          `json:"synced_count"`
+		Jobs        []*ServerJob `json:"jobs"`
+	}
+	if err := c.postJSON(ctx, url, payload, http.StatusOK, &res); err != nil {
+		return nil, err
+	}
+	return res.Jobs, nil
+}
+
+func (c *Client) ListJobs(ctx context.Context) ([]*ServerJob, error) {
+	url := fmt.Sprintf("%s/api/v1/runner/jobs", c.cfg.ServerURL)
+	var res struct {
+		Jobs []*ServerJob `json:"jobs"`
+	}
+	if err := c.getJSON(ctx, url, http.StatusOK, &res); err != nil {
+		return nil, err
+	}
+	return res.Jobs, nil
+}
+
 type PollResponse struct {
 	Task *task.Task `json:"task"`
 }
@@ -134,6 +195,28 @@ func (c *Client) postJSON(ctx context.Context, url string, payload any, want int
 		if dest == nil && want == http.StatusOK && resp.StatusCode == http.StatusUnprocessableEntity {
 			return nil
 		}
+		return fmt.Errorf("request failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+	if dest == nil {
+		io.Copy(io.Discard, resp.Body)
+		return nil
+	}
+	return json.NewDecoder(resp.Body).Decode(dest)
+}
+
+func (c *Client) getJSON(ctx context.Context, url string, want int, dest any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	c.setHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != want {
+		respBody, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("request failed (status %d): %s", resp.StatusCode, string(respBody))
 	}
 	if dest == nil {

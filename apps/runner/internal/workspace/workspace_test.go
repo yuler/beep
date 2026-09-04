@@ -48,3 +48,48 @@ func TestResolveExecutableAndJSON(t *testing.T) {
 		t.Fatal("expected missing job error")
 	}
 }
+
+func TestCreateScriptAndListJobs(t *testing.T) {
+	root := t.TempDir()
+	ws, err := Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	path, created, err := ws.CreateScript("my-ping", "sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !created {
+		t.Fatalf("expected created to be true")
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("expected script file to exist at %s", path)
+	}
+
+	// Calling again should not overwrite
+	_, created2, err := ws.CreateScript("my-ping", "sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created2 {
+		t.Fatalf("expected created to be false for existing script")
+	}
+
+	// Test Python script creation
+	pyPath, createdPy, err := ws.CreateScript("py-worker", "py")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !createdPy || filepath.Ext(pyPath) != ".py" {
+		t.Fatalf("expected .py script created")
+	}
+
+	jobs, err := ws.ListJobs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(jobs) != 2 {
+		t.Fatalf("expected 2 jobs, got %d", len(jobs))
+	}
+}

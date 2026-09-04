@@ -17,7 +17,7 @@ func TestJobExecutorDisabled(t *testing.T) {
 
 func TestJobExecutorSuccess(t *testing.T) {
 	var logs string
-	result := NewJobExecutor(true).Run(context.Background(), []string{"/bin/echo", "hello-workspace"}, nil, 5*time.Second, func(line string) {
+	result := NewJobExecutor(true).Run(context.Background(), []string{"echo", "hello-workspace"}, nil, 5*time.Second, func(line string) {
 		logs += line
 	})
 	if result.Status != task.StatusOk {
