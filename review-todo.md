@@ -14,9 +14,10 @@
 - **职责边界清晰**：官方 Beeper Apps（Site Uptime, SSL expiry, Heartbeat 等）保持由 Core 云端统一调度执行，不路由给 Runner。
 - **本地工作区 (Local Job Workspace)**：Runner 作为运行在用户本地/内网机器上的常驻 Worker 进程，通过独立模型 `RunnerJob` 关联任务与本地脚本。
 - **纯出站长轮询 (Pull-only HTTP)**：Go Runner 仅对外发起出站请求（GitLab Runner 风格），无需在内网开启任何入站端口。
-- **脚本留在本地**：Core 仅保存任务元信息（`slug`、cron 表达式、时区、超时时间、自定义 `config` JSON）；Runner 节点在本地 `~/.beep-runner/jobs/<slug>` 或 `jobs.json` 中匹配并执行真实脚本。
+- **脚本留在本地**：Core 仅保存任务元信息（`slug`、cron、timezone、超时、`config` JSON）；Runner 在本地按 **文件名 = slug**（`~/.beep-runner/jobs/<slug>.*`）或 `jobs.json` 匹配执行。`@slug` 与文件名一致，同一 runner 下唯一；`@id` 为服务端 UUID，改名后仍可按 id 配对。
+- **Git-style 同步**：本地脚本是执行真相源；`job push` / `job pull` / `job list` 对比本地与服务端（先 slug 再 `@id`）；list 展示 cron / timezone / `@id`；状态 synced / modified / local only / remote only，字段级 diff（含 slug）。
 - **日志与结果一流支持 (Streaming Logs & First-class Results)**：执行过程中实时流式分块上报 stdout/stderr，Core 限制单次执行日志上限（256KB）与结果上限（8KB）。
-- **用户控制工作区**：脚本存储在用户机器上，执行权限和文件安全由用户本地文件系统完全掌控。
+- **用户控制工作区**：脚本存储在用户机器上，执行权限和文件安全由用户本地文件系统完全掌控。默认目录 `~/.beep-runner`；同机双开（生产 + 本地测新功能）用 `-w ~/.beep-runner-dev` / `BEEP_WORKSPACE` 隔离，勿用 cwd 相对路径。
 
 ```mermaid
 sequenceDiagram
@@ -49,9 +50,10 @@ beep monorepo
 │   ├── app/jobs/runner_job_poller_job.rb   # 定时轮询排期任务并回收超时任务
 │   ├── app/controllers/api/v1/
 │   │   ├── runners_controller.rb           # 用户控制台 Runner CRUD 与 Token 重新生成
-│   │   ├── runner_jobs_controller.rb       # Runner Job CRUD
+│   │   ├── runner_jobs_controller.rb       # Runner Job CRUD（含 Web 端编辑）
 │   │   ├── runner_jobs/pauses_controller.rb# Runner Job 暂停与恢复调度
 │   │   ├── runner_job_runs_controller.rb   # Runner Run 历史查询、日志详情与手动触发
+│   │   ├── runner/jobs_controller.rb       # Agent 侧 Job list / create / sync / delete
 │   │   └── runner/tasks_controller.rb      # Runner Agent 通信 API (poll, logs, result)
 │   ├── app/views/api/v1/runner*/           # Jbuilder 视图契约 (runner, job, run, task)
 │   ├── config/recurring.yml                # Solid Queue 定时调度配置 (每 10s poll_due_now)
@@ -59,26 +61,31 @@ beep monorepo
 ├── apps/web/                               # Web 前端控制台 (TanStack Start / React 19)
 │   ├── src/routes/$account_slug/
 │   │   ├── runners.tsx                     # Runner 节点列表管理主页面
-│   │   └── runners_.$runnerId.tsx          # Runner 详情页 (Job 工作区管理、即时触发、日志查看器)
+│   │   └── runners_.$runnerId.tsx          # Runner 详情页 (Job 工作区、编辑、触发、日志)
 │   ├── src/components/runners/
 │   │   ├── runner-list.tsx                 # Runner 节点卡片列表
 │   │   ├── runner-form-dialog.tsx          # 添加/编辑 Runner 弹窗
-│   │   └── runner-token-modal.tsx          # Token 引导弹窗 (多格式一键复制与独立滚动)
+│   │   ├── runner-job-form-dialog.tsx      # 新建/编辑 Runner Job 弹窗
+│   │   └── runner-token-modal.tsx          # Token 引导弹窗 (CLI / Docker 一键复制)
 │   └── src/lib/api/
 │       ├── runners.ts                      # Runner 节点 API Client
 │       └── runner-jobs.ts                  # Runner Job & Run API Client
 ├── apps/runner/                            # Go 客户端 (beep-runner 单二进制与 Dockerfile)
 │   ├── Dockerfile                          # 多架构轻量级镜像打包 (Go 多阶段静态编译)
-│   ├── main.go                             # CLI 命令 (run, ping, config, job create/sync/list, version)
-│   ├── internal/client/                    # HTTP 任务拉取、日志流式传输与结果上报客户端
-│   ├── internal/config/                    # 本地 config.json 配置文件持久化与环境变量加载
+│   ├── main.go                             # 入口 → cmd.Execute()
+│   ├── cmd/                                # Cobra CLI：root, run, ping, version, config, job
+│   ├── internal/client/                    # HTTP 任务拉取、Job sync、日志与结果上报
+│   ├── internal/config/                    # 本地 config.json 与环境变量加载
 │   ├── internal/daemon/                    # 常驻 Worker Pool 与并发调度器
-│   ├── internal/exec/                      # 本地 Shell / 脚本执行与流式捕获引擎
-│   ├── internal/workspace/                 # 本地工作区目录扫描与 jobs.json 映射解析
-│   ├── internal/task/                      # Task 任务流编排
+│   ├── internal/exec/                      # 本地脚本执行与流式捕获
+│   ├── internal/workspace/                 # 工作区扫描、脚本脚手架、@ 元数据解析
+│   ├── internal/ui/                        # 彩色输出 + Huh 交互（create/push/pull/remove）
+│   ├── internal/task/                      # Task 任务结构
 │   └── examples/                           # 官方示例脚本 (heartbeat-ping, intranet-http, jobs.json)
 └── project.inlang/messages/                # 中英文国际化翻译词条
 ```
+
+> 注：`internal/probe/` 为早期内置探活遗留包，当前 daemon 只执行 workspace 脚本，Review 时以 Local Job Workspace 路径为准。
 
 ---
 
@@ -114,10 +121,12 @@ beep monorepo
   - [ ] `POST /poll`：只拉取分配给当前 Runner 的待执行任务，返回 `job_slug`、`config`、`log_url`、`result_url` 等上下文。
   - [ ] `POST /:id/logs`：安全接收文本或 JSON 日志 chunk 并追加至运行记录。
   - [ ] `POST /:id/result`：安全接收 `ok` / `alerting` / `error` 结果指标并更新运行状态。
+- [ ] [`core/app/controllers/api/v1/runner/jobs_controller.rb`](core/app/controllers/api/v1/runner/jobs_controller.rb)
+  - [ ] Agent 侧 Job list / create / sync / delete，严格绑定当前 Runner Token；sync 带 `id` 时按 id 更新（含改名改 slug），避免仅改文件名时新建重复 Job。
 - [ ] [`core/app/controllers/api/v1/runners_controller.rb`](core/app/controllers/api/v1/runners_controller.rb)
   - [ ] 严格按 `Current.account` 租户边界过滤，提供 Runner CRUD 与 Token 重新生成。
 - [ ] [`core/app/controllers/api/v1/runner_jobs_controller.rb`](core/app/controllers/api/v1/runner_jobs_controller.rb) & [`runner_job_runs_controller.rb`](core/app/controllers/api/v1/runner_job_runs_controller.rb)
-  - [ ] 完整提供 Job 列表、新建、详情、删除、暂停/恢复，以及 Run 列表、实时日志查看和手动立即触发。
+  - [ ] 完整提供 Job 列表、新建、**更新**、详情、删除、暂停/恢复，以及 Run 列表、实时日志查看和手动立即触发。
 
 ### 3.3 Web 管理 UI (`apps/web`)
 - [ ] **Runner 控制台与列表** ([`apps/web/src/routes/$account_slug/runners.tsx`](apps/web/src/routes/$account_slug/runners.tsx) & [`runner-list.tsx`](apps/web/src/components/runners/runner-list.tsx))
@@ -126,7 +135,7 @@ beep monorepo
   - [ ] 点击卡片直接下钻到 Runner 详情及 Job 管理页。
 - [ ] **Runner 详情与 Job 工作区管理** ([`apps/web/src/routes/$account_slug/runners_.$runnerId.tsx`](apps/web/src/routes/$account_slug/runners_.$runnerId.tsx))
   - [ ] 左侧展示 Runner 基本信息与所有绑定的 Runner Jobs 列表。
-  - [ ] 支持新建 Job（输入 Name、Slug、Cron 表达式、时区、超时时间）。
+  - [ ] 支持新建与**编辑** Job（Name、Slug、Cron、时区、超时、描述）— [`runner-job-form-dialog.tsx`](apps/web/src/components/runners/runner-job-form-dialog.tsx)。
   - [ ] 支持单个 Job 快捷操作：暂停/恢复调度、立即触发运行、删除 Job。
   - [ ] 右侧展示选中 Job 的历史运行记录列表与状态 Badge。
   - [ ] 下方提供实时日志流查看器（Terminal 风格展示日志文本、执行结果状态与指标 JSON，带一键复制日志功能）。
@@ -134,27 +143,30 @@ beep monorepo
   - [ ] 弹窗容器设置 `overflow-x-hidden min-w-0`，杜绝弹窗自身横向滚动。
   - [ ] 代码块容器具备独立 `overflow-x-auto whitespace-pre` 横向滚动能力。
   - [ ] 在标题栏与代码块右上角均提供快捷复制按钮，并附带即时复制成功状态反馈。
-  - [ ] 启动命令包含 `beep-runner config set` 一键配置说明。
+  - [ ] 启动命令包含 `beep-runner config set --server … --token …` 与 `beep-runner run`。
 
 ### 3.4 Go Runner 客户端与 Docker 打包 (`apps/runner`)
 - [ ] **工作区目录与脚本发现** ([`apps/runner/internal/workspace/workspace.go`](apps/runner/internal/workspace/workspace.go))
-  - [ ] 默认读取 `~/.beep-runner` 工作区目录（可通过 `--workspace` 自定义）。
-  - [ ] 自动发现 `jobs/<slug>` 脚本文件（支持 `.sh`, `.py`, `.js` 或可执行二进制），或由 `jobs.json` 显式配置。
+  - [ ] 默认读取 `~/.beep-runner`（`--workspace` / `-w` / `BEEP_WORKSPACE` 可覆盖）。
+  - [ ] 自动发现 `jobs/<slug>` 脚本（`.sh` / `.py` / `.js` / `.rb` 等）或 `jobs.json` 显式配置。
+  - [ ] 解析脚本头部 `@id` / `@slug` / `@name` / `@schedule` / `@timeout` / `@timezone` / `@description`；create/push 成功后回写 `@id` 与 `@slug`（`@slug` = 文件名不含扩展名，须与路径一致）。
+  - [ ] `@slug` 在同一 runner 下唯一（Core `(runner_id, slug)`）；文件改名但 `@id` 不变视为 slug 变更（`job list` 按 `@id` 配对并显示 slug diff）。
 - [ ] **脚本执行引擎与环境变量注入** ([`apps/runner/internal/exec/exec.go`](apps/runner/internal/exec/exec.go))
-  - [ ] 默认直接执行本地工作区脚本，权限完全由用户本地文件系统控制。
-  - [ ] 执行时自动注入环境参数：`BEEP_SERVER`, `BEEP_RUNNER_TOKEN`, `BEEP_RUN_ID`, `BEEP_JOB_SLUG`, `BEEP_LOG_URL`, `BEEP_RESULT_URL`, `BEEP_CONFIG`, `BEEP_CONFIG_*`。
+  - [ ] 默认直接执行本地工作区脚本，权限完全由用户本地文件系统控制（无额外 `allow_exec` 开关）。
+  - [ ] 执行时自动注入：`BEEP_SERVER`, `BEEP_RUNNER_TOKEN`, `BEEP_RUN_ID`, `BEEP_JOB_SLUG`, `BEEP_LOG_URL`, `BEEP_RESULT_URL`, `BEEP_CONFIG`, `BEEP_CONFIG_*`。
   - [ ] 实时捕获 stdout / stderr 并分块流式上传至 Core。
 - [ ] **Worker Pool 调度器与生命周期** ([`apps/runner/internal/daemon/daemon.go`](apps/runner/internal/daemon/daemon.go))
   - [ ] 基于 channel semaphore 控制并发度 (`--concurrency`)。
   - [ ] 优雅退出处理（监听 `SIGINT` / `SIGTERM`，等待执行中的任务完成后再退出）。
-- [ ] **CLI 配置与任务管理脚手架（Git-style Workflow）** ([`main.go`](apps/runner/main.go) & [`apps/runner/internal/config/`](apps/runner/internal/config/))
-  - [ ] `beep-runner config [show|set|unset|path]`：持久化保存 Server 与 Token。
-  - [ ] `beep-runner job create <slug>`：创建本地脚本脚手架模版，支持在脚本头部 `# @name:`、`# @schedule:`、`# @timeout:`、`# @timezone:`、`# @description:` 配置元数据。
-  - [ ] `beep-runner job push [slug]`：像 `git push` 一样将本地工作区任务元数据推送到 Beep Core 服务端（支持指定单个 slug 或全量 push）。
-  - [ ] `beep-runner job pull [slug]`：像 `git pull` 一样将服务端配置的任务拉取生成本地脚本脚手架（支持 `--force` 覆盖）。
-  - [ ] `beep-runner job remove <slug>`：删除本地脚本并同步删除服务端任务。
-  - [ ] `beep-runner job list`：同时列出本地工作区任务（展示 parsed cron/schedule/timezone）与服务端任务。
-  - [ ] 严格校验子命令，未知子命令（如 `job xxx`）提示命令不存在，杜绝意外创建。
+- [ ] **CLI：Cobra + Huh 交互与 Git-style Workflow** ([`apps/runner/cmd/`](apps/runner/cmd/) & [`internal/ui/`](apps/runner/internal/ui/))
+  - [ ] `beep-runner config [show|set|unset|path]`：持久化 Server / Token / workspace 等。
+  - [ ] `beep-runner job create [slug]`：脚手架模版；省略 slug 时 Huh 向导；默认 sync 服务端（`--no-sync` 可关）。
+  - [ ] `beep-runner job push [slug]`：推送本地元数据；无 slug 时交互多选，选项带 synced / modified / local only 灰色 state（synced 默认不勾选）。
+  - [ ] `beep-runner job pull [slug]`：拉取服务端任务生成本地脚手架；交互多选（无二次覆盖确认）+ `--force`。
+  - [ ] `beep-runner job remove [slug]`：删本地脚本并默认同步删服务端（`--no-sync` 仅本地）。
+  - [ ] `beep-runner job list`：先按 slug、再按 `@id` 配对；展示 cron / timezone / `@id`；状态 synced / modified（含 slug 等字段 diff）/ local only / remote only。
+  - [ ] `--no-interactive`：非 TTY / CI 下跳过 Huh；未知子命令严格报错。
+  - [ ] 同机双开：文档约定生产用默认 `~/.beep-runner`，开发用 `-w ~/.beep-runner-dev`（见架构文档）。
 
 ---
 
@@ -175,18 +187,20 @@ cd apps/runner && go test -v ./...
 
 ### Step 2: 编译与测试 Go Runner CLI
 ```bash
-# 在项目根目录编译
+# 在项目根目录编译（或 mise run runner / 等价任务）
 cd apps/runner && go build -o ../../bin/beep-runner ./main.go && cd ../..
 
 # 1. 查看版本输出与帮助
 ./bin/beep-runner version
 ./bin/beep-runner --help
+./bin/beep-runner job --help
 
 # 2. 本地持久化配置 Server 与 Token
 ./bin/beep-runner config set --server http://core.beep.localhost:3000 --token <YOUR_TOKEN>
 
 # 3. 查看当前有效配置
 ./bin/beep-runner config
+./bin/beep-runner config path
 ```
 
 ### Step 3: Web 端到端管理与本地脚本执行联调
@@ -195,13 +209,15 @@ cd apps/runner && go build -o ../../bin/beep-runner ./main.go && cd ../..
 3. 进入左侧侧边栏 **Runners**（`/$slug/runners`）：
    - 点击 **Add Runner** 创建一个节点（例如 `Office-Mac`，标签 `intranet`）。
    - 弹窗中复制生成的 Token（`beep_rt_xxx`）及快速配置命令。
-4. 使用 CLI 一键配置节点与创建本地 Job：
+4. 使用 CLI 配置节点与创建本地 Job：
    ```bash
-   # 1. 一键保存认证信息与服务端地址
    ./bin/beep-runner config set --server http://core.beep.localhost:3000 --token <YOUR_TOKEN>
 
-   # 2. 一键创建本地脚本并自动注册到服务端
+   # 交互向导，或带参数非交互
    ./bin/beep-runner job create intranet-http --cron "* * * * *" --name "Intranet HTTP Check"
+
+   # 对照本地与服务端
+   ./bin/beep-runner job list
    ```
 5. 启动 Runner 守护进程：
    ```bash
@@ -209,8 +225,18 @@ cd apps/runner && go build -o ../../bin/beep-runner ./main.go && cd ../..
    ```
 6. 刷新 Web 页面：
    - Runner 列表显示状态为 `Online`（绿色脉冲）。
-   - 点击该 Runner 进入详情页（`/$slug/runners/<runner_id>`），可看到已自动注册的 `Intranet HTTP Check` 任务。
+   - 进入详情页（`/$slug/runners/<runner_id>`），可见已注册的 Job；可 **Edit** 改 cron/名称等，再在 CLI 用 `job pull` / `job list` 验证同步状态。
 7. 验证执行与日志查看：
    - 点击 **Trigger Run** 立即触发执行。
    - 在终端可观察到 Runner 领取任务并执行 `~/.beep-runner/jobs/intranet-http.sh`。
    - Web 页面历史运行列表中出现新 Run 记录，点击可即时查看实时输出的日志和执行结果指标。
+
+### Step 4（可选）：同机双开 workspace
+若本机已有指向其他环境的 runner，用第二目录隔离开发：
+
+```bash
+./bin/beep-runner config set -w ~/.beep-runner-dev \
+  --server http://core.beep.localhost:3000 --token <DEV_TOKEN>
+./bin/beep-runner -w ~/.beep-runner-dev job create smoke-check
+./bin/beep-runner -w ~/.beep-runner-dev run
+```

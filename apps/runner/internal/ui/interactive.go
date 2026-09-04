@@ -10,6 +10,7 @@ import (
 
 	"beep-runner/internal/client"
 	"beep-runner/internal/config"
+	"beep-runner/internal/schedule"
 	"beep-runner/internal/workspace"
 
 	"github.com/charmbracelet/huh"
@@ -40,6 +41,7 @@ type JobCreateParams struct {
 func PromptJobCreate(defaults JobCreateParams) (*JobCreateParams, error) {
 	res := defaults
 
+	// 1. Slug
 	if res.Slug == "" {
 		err := huh.NewInput().
 			Title("Job Slug").
@@ -63,10 +65,37 @@ func PromptJobCreate(defaults JobCreateParams) (*JobCreateParams, error) {
 	}
 	res.Slug = strings.TrimSpace(strings.ToLower(res.Slug))
 
+	// 2. Name
+	if res.Name == "" {
+		res.Name = workspace.HumanizeSlug(res.Slug)
+	}
+	err := huh.NewInput().
+		Title("Display Name").
+		Description("Human-readable title for the job").
+		Placeholder("e.g. " + workspace.HumanizeSlug(res.Slug)).
+		Value(&res.Name).
+		Run()
+	if err != nil {
+		return nil, err
+	}
+	res.Name = strings.TrimSpace(res.Name)
 	if res.Name == "" {
 		res.Name = workspace.HumanizeSlug(res.Slug)
 	}
 
+	// 3. Description
+	err = huh.NewInput().
+		Title("Description").
+		Description("Optional summary of what this job checks").
+		Placeholder("e.g. Ping internal health check endpoint").
+		Value(&res.Description).
+		Run()
+	if err != nil {
+		return nil, err
+	}
+	res.Description = strings.TrimSpace(res.Description)
+
+	// 4. Schedule (Cron)
 	cronChoice := "*/5 * * * *"
 	customCron := ""
 	if res.Cron != "" && res.Cron != "*/5 * * * *" {
@@ -74,94 +103,31 @@ func PromptJobCreate(defaults JobCreateParams) (*JobCreateParams, error) {
 		customCron = res.Cron
 	}
 
-	if res.ScriptType == "" {
-		res.ScriptType = "sh"
-	}
-	if res.Timezone == "" {
-		res.Timezone = workspace.DetectTimezone()
-	}
-	if res.TimeoutSeconds <= 0 {
-		res.TimeoutSeconds = 30
-	}
-	if res.Description == "" {
-		res.Description = fmt.Sprintf("Health check job for %s", res.Slug)
-	}
-
-	timeoutStr := strconv.Itoa(res.TimeoutSeconds) + "s"
-
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Display Name").
-				Description("Human-readable title for the job").
-				Value(&res.Name),
-
-			huh.NewSelect[string]().
-				Title("Script Type").
-				Description("Language template for the local executable").
-				Options(
-					huh.NewOption("Bash / Shell (.sh)", "sh"),
-					huh.NewOption("Python 3 (.py)", "py"),
-					huh.NewOption("Node.js (.js)", "js"),
-					huh.NewOption("Ruby (.rb)", "rb"),
-				).
-				Value(&res.ScriptType),
-
-			huh.NewSelect[string]().
-				Title("Schedule (Cron)").
-				Description("Execution frequency").
-				Options(
-					huh.NewOption("Every 5 minutes (*/5 * * * *) - Recommended", "*/5 * * * *"),
-					huh.NewOption("Every minute (* * * * *)", "* * * * *"),
-					huh.NewOption("Every 10 minutes (*/10 * * * *)", "*/10 * * * *"),
-					huh.NewOption("Every hour (0 * * * *)", "0 * * * *"),
-					huh.NewOption("Every day at midnight (0 0 * * *)", "0 0 * * *"),
-					huh.NewOption("Custom cron expression...", "custom"),
-				).
-				Value(&cronChoice),
-
-			huh.NewSelect[string]().
-				Title("Timeout").
-				Description("Max execution time before considering task timed out").
-				Options(
-					huh.NewOption("30 seconds (Default)", "30s"),
-					huh.NewOption("10 seconds (Fast check)", "10s"),
-					huh.NewOption("60 seconds (1 minute)", "60s"),
-					huh.NewOption("120 seconds (2 minutes)", "120s"),
-				).
-				Value(&timeoutStr),
-
-			huh.NewInput().
-				Title("Timezone").
-				Description("IANA timezone for cron evaluation").
-				Value(&res.Timezone),
-
-			huh.NewInput().
-				Title("Description").
-				Description("Optional summary of what this job checks").
-				Value(&res.Description),
-
-			huh.NewConfirm().
-				Title("Register on server now?").
-				Description("Sync and register this job to Beep Core immediately").
-				Value(&res.SyncToServer),
-		),
-	)
-
-	if err := form.Run(); err != nil {
+	err = huh.NewSelect[string]().
+		Title("Schedule (Cron)").
+		Description("Classic cron or Fugit semantic phrases (same as Beep Core)").
+		Options(
+			huh.NewOption("Every 5 minutes (*/5 * * * *) - Recommended", "*/5 * * * *"),
+			huh.NewOption("Every minute (* * * * *)", "* * * * *"),
+			huh.NewOption("Every 10 minutes (*/10 * * * *)", "*/10 * * * *"),
+			huh.NewOption("Every hour (0 * * * *)", "0 * * * *"),
+			huh.NewOption("Every day at midnight (0 0 * * *)", "0 0 * * *"),
+			huh.NewOption("Custom (cron or \"every 5 minutes\")...", "custom"),
+		).
+		Value(&cronChoice).
+		Run()
+	if err != nil {
 		return nil, err
 	}
 
 	if cronChoice == "custom" {
 		err := huh.NewInput().
-			Title("Custom Cron Expression").
-			Placeholder("e.g. */15 * * * *").
+			Title("Custom Schedule").
+			Description("Fugit-compatible: */15 * * * * or every 15 minutes / every day at noon").
+			Placeholder("e.g. every 15 minutes").
 			Value(&customCron).
 			Validate(func(s string) error {
-				if strings.TrimSpace(s) == "" {
-					return errors.New("cron expression cannot be empty")
-				}
-				return nil
+				return schedule.Validate(s)
 			}).
 			Run()
 		if err != nil {
@@ -172,34 +138,166 @@ func PromptJobCreate(defaults JobCreateParams) (*JobCreateParams, error) {
 		res.Cron = cronChoice
 	}
 
+	// 5. Script Runtime / Shebang
+	runtimeChoice := res.ScriptType
+	if runtimeChoice == "" {
+		runtimeChoice = "bash"
+	}
+	customShebang := ""
+	if strings.HasPrefix(runtimeChoice, "#!") || (runtimeChoice != "bash" && runtimeChoice != "node" && runtimeChoice != "bun" && runtimeChoice != "python" && runtimeChoice != "ruby") {
+		customShebang = runtimeChoice
+		runtimeChoice = "custom"
+	}
+
+	err = huh.NewSelect[string]().
+		Title("Script Runtime & Shebang").
+		Description("Select execution interpreter or specify custom shebang").
+		Options(
+			huh.NewOption("Bash (#!/usr/bin/env bash)", "bash"),
+			huh.NewOption("Node.js (#!/usr/bin/env node)", "node"),
+			huh.NewOption("Bun (#!/usr/bin/env bun)", "bun"),
+			huh.NewOption("Python 3 (#!/usr/bin/env python3)", "python"),
+			huh.NewOption("Ruby (#!/usr/bin/env ruby)", "ruby"),
+			huh.NewOption("Custom Shebang / Interpreter...", "custom"),
+		).
+		Value(&runtimeChoice).
+		Run()
+	if err != nil {
+		return nil, err
+	}
+
+	if runtimeChoice == "custom" {
+		if customShebang == "" {
+			customShebang = "#!/usr/bin/env "
+		}
+		err = huh.NewInput().
+			Title("Custom Shebang / Interpreter").
+			Description("Enter full shebang (e.g. #!/usr/bin/env deno) or binary name (e.g. deno, php)").
+			Placeholder("#!/usr/bin/env deno").
+			Value(&customShebang).
+			Validate(func(s string) error {
+				if strings.TrimSpace(s) == "" {
+					return errors.New("shebang cannot be empty")
+				}
+				return nil
+			}).
+			Run()
+		if err != nil {
+			return nil, err
+		}
+		res.ScriptType = strings.TrimSpace(customShebang)
+	} else {
+		res.ScriptType = runtimeChoice
+	}
+
+	// 6. Timeout
+	if res.TimeoutSeconds <= 0 {
+		res.TimeoutSeconds = 30
+	}
+	timeoutStr := strconv.Itoa(res.TimeoutSeconds) + "s"
+	err = huh.NewSelect[string]().
+		Title("Timeout").
+		Description("Max execution time before considering task timed out").
+		Options(
+			huh.NewOption("30 seconds (Default)", "30s"),
+			huh.NewOption("10 seconds (Fast check)", "10s"),
+			huh.NewOption("60 seconds (1 minute)", "60s"),
+			huh.NewOption("120 seconds (2 minutes)", "120s"),
+		).
+		Value(&timeoutStr).
+		Run()
+	if err != nil {
+		return nil, err
+	}
 	res.TimeoutSeconds = workspace.ParseTimeoutSeconds(timeoutStr)
 	if res.TimeoutSeconds <= 0 {
 		res.TimeoutSeconds = 30
+	}
+
+	// 7. Timezone
+	detectedTZ, tzOK := workspace.DetectTimezoneOK()
+	if res.Timezone == "" {
+		if tzOK {
+			res.Timezone = detectedTZ
+		}
+	}
+
+	if res.Timezone == "" {
+		zones := workspace.ListIANATimezones()
+		options := make([]huh.Option[string], 0, len(zones))
+		for _, z := range zones {
+			options = append(options, huh.NewOption(z, z))
+		}
+		err = huh.NewSelect[string]().
+			Title("Timezone").
+			Description("Could not detect host timezone — pick an IANA zone (type to filter)").
+			Options(options...).
+			Value(&res.Timezone).
+			Run()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		tzDesc := "IANA timezone for cron evaluation"
+		if tzOK && res.Timezone == detectedTZ {
+			tzDesc = fmt.Sprintf("Detected from this machine (%s) — edit if needed", detectedTZ)
+		}
+		err = huh.NewInput().
+			Title("Timezone").
+			Description(tzDesc).
+			Value(&res.Timezone).
+			Validate(func(s string) error {
+				s = strings.TrimSpace(s)
+				if s == "" {
+					return errors.New("timezone is required")
+				}
+				if !workspace.ValidIANATimezone(s) {
+					return fmt.Errorf("%q is not a valid IANA timezone", s)
+				}
+				return nil
+			}).
+			Run()
+		if err != nil {
+			return nil, err
+		}
+	}
+	res.Timezone = strings.TrimSpace(res.Timezone)
+
+	// 8. SyncToServer
+	err = huh.NewConfirm().
+		Title("Register on server now?").
+		Description("Sync and register this job to Beep Core immediately").
+		Value(&res.SyncToServer).
+		Run()
+	if err != nil {
+		return nil, err
 	}
 
 	return &res, nil
 }
 
 // PromptJobRemove asks the user to select which job(s) to remove.
-func PromptJobRemove(localJobs []workspace.LocalJob) (slugs []string, syncServer bool, err error) {
+func PromptJobRemove(localJobs []workspace.LocalJob) (slugs []string, err error) {
 	if len(localJobs) == 0 {
-		return nil, false, errors.New("no local jobs found to remove")
+		return nil, errors.New("no local jobs found to remove")
 	}
 
 	options := make([]huh.Option[string], 0, len(localJobs))
 	for _, j := range localJobs {
-		label := fmt.Sprintf("%s (%s, %s)", j.Slug, j.Name, j.Cron)
+		label := j.Slug
+		if j.ID != "" {
+			label = fmt.Sprintf("%s (id: %s)", j.Slug, j.ID)
+		}
 		options = append(options, huh.NewOption(label, j.Slug))
 	}
 
 	var selected []string
-	syncServer = true
 
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("Select Jobs to Remove").
-				Description("Choose one or more local jobs to delete").
+				Description("Choose one or more local jobs to delete (also deletes from server unless --no-sync)").
 				Options(options...).
 				Value(&selected).
 				Validate(func(s []string) error {
@@ -208,19 +306,14 @@ func PromptJobRemove(localJobs []workspace.LocalJob) (slugs []string, syncServer
 					}
 					return nil
 				}),
-
-			huh.NewConfirm().
-				Title("Delete from server as well?").
-				Description("Remove corresponding job definitions from Beep Core").
-				Value(&syncServer),
 		),
 	)
 
 	if err := form.Run(); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return selected, syncServer, nil
+	return selected, nil
 }
 
 type SyncStatus string
@@ -233,6 +326,7 @@ const (
 )
 
 type JobCompareItem struct {
+	ID        string
 	Slug      string
 	Status    SyncStatus
 	LocalJob  *workspace.LocalJob
@@ -241,7 +335,15 @@ type JobCompareItem struct {
 }
 
 func CompareJob(slug string, lj *workspace.LocalJob, sj *client.ServerJob) JobCompareItem {
+	id := ""
+	if lj != nil && lj.ID != "" {
+		id = lj.ID
+	} else if sj != nil && sj.ID != "" {
+		id = sj.ID
+	}
+
 	item := JobCompareItem{
+		ID:        id,
 		Slug:      slug,
 		LocalJob:  lj,
 		ServerJob: sj,
@@ -267,6 +369,9 @@ func CompareJob(slug string, lj *workspace.LocalJob, sj *client.ServerJob) JobCo
 	}
 
 	var diffs []string
+	if lj.Slug != "" && sj.Slug != "" && !strings.EqualFold(lj.Slug, sj.Slug) {
+		diffs = append(diffs, fmt.Sprintf("slug: local %q != server %q", lj.Slug, sj.Slug))
+	}
 	if lj.Name != "" && sj.Name != "" && lj.Name != sj.Name {
 		diffs = append(diffs, fmt.Sprintf("name: local %q != server %q", lj.Name, sj.Name))
 	}
@@ -308,48 +413,140 @@ func CompareJob(slug string, lj *workspace.LocalJob, sj *client.ServerJob) JobCo
 	return item
 }
 
-func formatPushOption(item JobCompareItem) huh.Option[string] {
-	name := ""
-	cron := ""
-	if item.LocalJob != nil {
-		name = item.LocalJob.Name
-		cron = item.LocalJob.Cron
+// PairJobs matches local and server jobs strictly by @id first (unique dimension),
+// and only falls back to slug for local jobs without an assigned ID.
+func PairJobs(localJobs []workspace.LocalJob, serverJobs []*client.ServerJob) []JobCompareItem {
+	type localRef struct {
+		job  workspace.LocalJob
+		used bool
+	}
+	type serverRef struct {
+		job  *client.ServerJob
+		used bool
 	}
 
-	var label string
-	switch item.Status {
-	case StatusModified:
-		label = fmt.Sprintf("%s [modified / out of sync] (%s, %s)", item.Slug, name, cron)
-	case StatusLocalOnly:
-		label = fmt.Sprintf("%s [local only] (%s, %s)", item.Slug, name, cron)
-	case StatusSynced:
-		label = fmt.Sprintf("%s [synced] (%s, %s)", item.Slug, name, cron)
-	default:
-		label = fmt.Sprintf("%s (%s, %s)", item.Slug, name, cron)
+	locals := make([]localRef, 0, len(localJobs))
+	for _, lj := range localJobs {
+		locals = append(locals, localRef{job: lj})
 	}
-	return huh.NewOption(label, item.Slug)
+	servers := make([]serverRef, 0, len(serverJobs))
+	for _, sj := range serverJobs {
+		if sj == nil {
+			continue
+		}
+		servers = append(servers, serverRef{job: sj})
+	}
+
+	var items []JobCompareItem
+
+	// Pass 1: Primary match strictly by @id (unique dimension).
+	for i := range locals {
+		if locals[i].job.ID == "" {
+			continue
+		}
+		for j := range servers {
+			if servers[j].used || servers[j].job.ID == "" {
+				continue
+			}
+			if locals[i].job.ID == servers[j].job.ID {
+				lj := locals[i].job
+				sj := servers[j].job
+				items = append(items, CompareJob(sj.Slug, &lj, sj))
+				locals[i].used = true
+				servers[j].used = true
+				break
+			}
+		}
+	}
+
+	// Pass 2: Fallback match by slug only for remaining local jobs without an ID.
+	for i := range locals {
+		if locals[i].used {
+			continue
+		}
+		slug := strings.ToLower(locals[i].job.Slug)
+		for j := range servers {
+			if servers[j].used {
+				continue
+			}
+			if strings.EqualFold(servers[j].job.Slug, slug) {
+				lj := locals[i].job
+				sj := servers[j].job
+				items = append(items, CompareJob(slug, &lj, sj))
+				locals[i].used = true
+				servers[j].used = true
+				break
+			}
+		}
+	}
+
+	// Pass 3: Remaining unmatched local jobs (local only).
+	for i := range locals {
+		if locals[i].used {
+			continue
+		}
+		lj := locals[i].job
+		items = append(items, CompareJob(lj.Slug, &lj, nil))
+	}
+
+	// Pass 4: Remaining unmatched server jobs (remote only).
+	for j := range servers {
+		if servers[j].used {
+			continue
+		}
+		sj := servers[j].job
+		items = append(items, CompareJob(sj.Slug, nil, sj))
+	}
+
+	return items
+}
+
+func formatPushOption(item JobCompareItem) huh.Option[string] {
+	key := item.ID
+	if key == "" {
+		if item.LocalJob != nil && item.LocalJob.Slug != "" {
+			key = item.LocalJob.Slug
+		} else {
+			key = item.Slug
+		}
+	}
+	label := formatSyncLabel(item)
+	return huh.NewOption(label, key)
 }
 
 func formatPullOption(item JobCompareItem) huh.Option[string] {
-	name := ""
-	cron := ""
-	if item.ServerJob != nil {
-		name = item.ServerJob.Name
-		cron = item.ServerJob.Cron
+	key := item.ID
+	if key == "" {
+		if item.ServerJob != nil && item.ServerJob.ID != "" {
+			key = item.ServerJob.ID
+		} else {
+			key = item.Slug
+		}
+	}
+	label := formatSyncLabel(item)
+	return huh.NewOption(label, key)
+}
+
+func formatSyncLabel(item JobCompareItem) string {
+	id := item.ID
+	if id == "" {
+		if item.LocalJob != nil && item.LocalJob.ID != "" {
+			id = item.LocalJob.ID
+		} else if item.ServerJob != nil && item.ServerJob.ID != "" {
+			id = item.ServerJob.ID
+		}
 	}
 
-	var label string
-	switch item.Status {
-	case StatusModified:
-		label = fmt.Sprintf("%s [modified / out of sync] (%s, %s)", item.Slug, name, cron)
-	case StatusRemoteOnly:
-		label = fmt.Sprintf("%s [remote only] (%s, %s)", item.Slug, name, cron)
-	case StatusSynced:
-		label = fmt.Sprintf("%s [synced] (%s, %s)", item.Slug, name, cron)
-	default:
-		label = fmt.Sprintf("%s (%s, %s)", item.Slug, name, cron)
+	primary := item.Slug
+	if id != "" {
+		primary = fmt.Sprintf("%s (%s)", item.Slug, id)
 	}
-	return huh.NewOption(label, item.Slug)
+
+	state := string(item.Status)
+	if state == "" {
+		state = "unknown"
+	}
+	return fmt.Sprintf("%-36s  %s", primary, Gray(state))
 }
 
 // PromptJobPushSelection asks the user which local job(s) to push.
@@ -361,14 +558,10 @@ func PromptJobPushSelection(items []JobCompareItem) (selectedSlugs []string, err
 	options := make([]huh.Option[string], 0, len(items))
 	var preSelected []string
 	for _, it := range items {
-		options = append(options, formatPushOption(it))
+		opt := formatPushOption(it)
+		options = append(options, opt)
 		if it.Status == StatusModified || it.Status == StatusLocalOnly {
-			preSelected = append(preSelected, it.Slug)
-		}
-	}
-	if len(preSelected) == 0 {
-		for _, it := range items {
-			preSelected = append(preSelected, it.Slug)
+			preSelected = append(preSelected, opt.Value)
 		}
 	}
 
@@ -398,22 +591,18 @@ func PromptJobPushSelection(items []JobCompareItem) (selectedSlugs []string, err
 }
 
 // PromptJobPullSelection asks the user which server job(s) to pull.
-func PromptJobPullSelection(items []JobCompareItem) (selectedSlugs []string, force bool, err error) {
+func PromptJobPullSelection(items []JobCompareItem) (selectedSlugs []string, err error) {
 	if len(items) == 0 {
-		return nil, false, errors.New("no server jobs available to pull")
+		return nil, errors.New("no server jobs available to pull")
 	}
 
 	options := make([]huh.Option[string], 0, len(items))
 	var preSelected []string
 	for _, it := range items {
-		options = append(options, formatPullOption(it))
+		opt := formatPullOption(it)
+		options = append(options, opt)
 		if it.Status == StatusModified || it.Status == StatusRemoteOnly {
-			preSelected = append(preSelected, it.Slug)
-		}
-	}
-	if len(preSelected) == 0 {
-		for _, it := range items {
-			preSelected = append(preSelected, it.Slug)
+			preSelected = append(preSelected, opt.Value)
 		}
 	}
 
@@ -432,19 +621,14 @@ func PromptJobPullSelection(items []JobCompareItem) (selectedSlugs []string, for
 					}
 					return nil
 				}),
-
-			huh.NewConfirm().
-				Title("Overwrite existing local scripts?").
-				Description("If enabled, replaces existing script header and content").
-				Value(&force),
 		),
 	)
 
 	if err := form.Run(); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return selectedSlugs, force, nil
+	return selectedSlugs, nil
 }
 
 // PromptConfigSetWizard asks the user for missing runner configuration.

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -37,6 +37,7 @@ type LocalJob struct {
 
 type JobMetadata struct {
 	ID             string
+	Slug           string
 	Name           string
 	Cron           string
 	Timezone       string
@@ -108,6 +109,8 @@ func ParseTimeoutSeconds(val string) int {
 
 func ParseScriptMetadata(filePath string) (JobMetadata, error) {
 	var meta JobMetadata
+	base := filepath.Base(filePath)
+	meta.Slug = strings.ToLower(base)
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -174,21 +177,245 @@ func ParseScriptMetadata(filePath string) (JobMetadata, error) {
 	return meta, scanner.Err()
 }
 
+// DetectTimezone returns the host IANA timezone, or "UTC" if it cannot be determined.
 func DetectTimezone() string {
-	if tz := os.Getenv("TZ"); tz != "" {
+	if tz, ok := DetectTimezoneOK(); ok {
 		return tz
 	}
+	return "UTC"
+}
+
+// DetectTimezoneOK returns the host IANA timezone when it can be resolved confidently.
+func DetectTimezoneOK() (string, bool) {
+	if tz := strings.TrimSpace(os.Getenv("TZ")); tz != "" && tz != "Local" {
+		if ValidIANATimezone(tz) {
+			return tz, true
+		}
+	}
 	loc := time.Now().Location().String()
-	if loc != "" && loc != "Local" {
-		return loc
+	if loc != "" && loc != "Local" && ValidIANATimezone(loc) {
+		return loc, true
+	}
+	if tz, ok := timezoneFromLocaltime(); ok {
+		return tz, true
 	}
 	if data, err := os.ReadFile("/etc/timezone"); err == nil {
 		tz := strings.TrimSpace(string(data))
-		if tz != "" {
-			return tz
+		if ValidIANATimezone(tz) {
+			return tz, true
 		}
 	}
-	return "UTC"
+	return "", false
+}
+
+// ValidIANATimezone reports whether name is loadable via the system tz database.
+func ValidIANATimezone(name string) bool {
+	name = strings.TrimSpace(name)
+	if name == "" || name == "Local" {
+		return false
+	}
+	_, err := time.LoadLocation(name)
+	return err == nil
+}
+
+// timezoneFromLocaltime resolves /etc/localtime when it is a symlink into zoneinfo.
+func timezoneFromLocaltime() (string, bool) {
+	const localtime = "/etc/localtime"
+	target, err := filepath.EvalSymlinks(localtime)
+	if err != nil {
+		return "", false
+	}
+	target = filepath.ToSlash(target)
+	for _, prefix := range []string{
+		"/usr/share/zoneinfo/",
+		"/var/db/timezone/zoneinfo/",
+		"/etc/zoneinfo/",
+	} {
+		if strings.HasPrefix(target, prefix) {
+			tz := strings.TrimPrefix(target, prefix)
+			tz = strings.TrimPrefix(tz, "posix/")
+			tz = strings.TrimPrefix(tz, "right/")
+			if ValidIANATimezone(tz) {
+				return tz, true
+			}
+		}
+	}
+	return "", false
+}
+
+// ListIANATimezones returns IANA zone names from the system zoneinfo database.
+func ListIANATimezones() []string {
+	roots := []string{
+		"/usr/share/zoneinfo",
+		"/var/db/timezone/zoneinfo",
+		"/etc/zoneinfo",
+	}
+	seen := map[string]struct{}{"UTC": {}}
+	var zones []string
+	zones = append(zones, "UTC")
+
+	skipDir := map[string]struct{}{
+		"posix": {}, "right": {},
+	}
+	for _, root := range roots {
+		_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			rel, err := filepath.Rel(root, path)
+			if err != nil {
+				return nil
+			}
+			rel = filepath.ToSlash(rel)
+			if d.IsDir() {
+				base := filepath.Base(path)
+				if _, skip := skipDir[base]; skip {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if strings.Contains(filepath.Base(rel), ".") {
+				return nil
+			}
+			if !strings.Contains(rel, "/") && (rel == "Factory" || rel == "localtime" || rel == "leapseconds" || rel == "tzdata.zi" || rel == "zone.tab" || rel == "zone1970.tab" || rel == "zonenow.tab" || rel == "iso3166.tab") {
+				return nil
+			}
+			if !ValidIANATimezone(rel) {
+				return nil
+			}
+			if _, ok := seen[rel]; ok {
+				return nil
+			}
+			seen[rel] = struct{}{}
+			zones = append(zones, rel)
+			return nil
+		})
+	}
+
+	if len(zones) == 1 {
+		for _, z := range commonTimezones {
+			if _, ok := seen[z]; !ok && ValidIANATimezone(z) {
+				zones = append(zones, z)
+			}
+		}
+	}
+
+	sort.Strings(zones)
+	// Keep UTC first for quicker selection.
+	for i, z := range zones {
+		if z == "UTC" {
+			zones = append(append([]string{"UTC"}, zones[:i]...), zones[i+1:]...)
+			break
+		}
+	}
+
+	return zones
+}
+
+var commonTimezones = []string{
+	"UTC",
+	"America/New_York",
+	"America/Chicago",
+	"America/Denver",
+	"America/Los_Angeles",
+	"America/Sao_Paulo",
+	"Europe/London",
+	"Europe/Paris",
+	"Europe/Berlin",
+	"Europe/Moscow",
+	"Asia/Shanghai",
+	"Asia/Chongqing",
+	"Asia/Tokyo",
+	"Asia/Singapore",
+	"Asia/Kolkata",
+	"Asia/Dubai",
+	"Australia/Sydney",
+	"Pacific/Auckland",
+}
+
+func GenerateShebang(scriptType string) (shebang string, commentPrefix string, templateBody string) {
+	st := strings.TrimSpace(scriptType)
+	stLower := strings.ToLower(st)
+
+	switch stLower {
+	case "bash", "sh":
+		return "#!/usr/bin/env bash", "# ", `set -euo pipefail
+
+# Environment variables available:
+#   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
+#   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
+
+echo "[%s] Starting health check..."
+
+# Put your check logic here. For example:
+# curl -s -f -m 10 "http://127.0.0.1:8080/health" || exit 1
+
+echo "Check passed successfully."
+exit 0
+`
+	case "node", "nodejs", "node.js", "js":
+		return "#!/usr/bin/env node", "// ", `// Environment variables available:
+//   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
+//   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
+
+console.log("[%s] Starting health check...");
+
+// Put your check logic here.
+// Exit 0 for ok, non-zero for error/alerting.
+console.log("Check passed successfully.");
+process.exit(0);
+`
+	case "bun":
+		return "#!/usr/bin/env bun", "// ", `// Environment variables available:
+//   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
+//   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
+
+console.log("[%s] Starting health check with bun...");
+
+// Put your check logic here.
+console.log("Check passed successfully.");
+process.exit(0);
+`
+	case "python", "python3", "py":
+		return "#!/usr/bin/env python3", "# ", `import os
+import sys
+
+# Environment variables available:
+#   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
+#   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
+
+print(f"[{os.getenv('BEEP_JOB_SLUG', '%s')}] Starting health check...")
+
+# Put your check logic here.
+# Exit 0 for ok, non-zero for error/alerting.
+print("Check passed successfully.")
+sys.exit(0)
+`
+	case "ruby", "rb":
+		return "#!/usr/bin/env ruby", "# ", `puts "[%s] Starting health check..."
+# Put your check logic here.
+puts "Check passed successfully."
+exit 0
+`
+	default:
+		// Custom shebang or executable definition
+		if strings.HasPrefix(st, "#!") {
+			return st, "# ", `echo "[%s] Starting check..."
+exit 0
+`
+		}
+		if st != "" {
+			return "#!/usr/bin/env " + st, "# ", `echo "[%s] Starting check..."
+exit 0
+`
+		}
+		return "#!/usr/bin/env bash", "# ", `set -euo pipefail
+
+echo "[%s] Starting health check..."
+echo "Check passed successfully."
+exit 0
+`
+	}
 }
 
 func (w *Workspace) CreateScript(slug, scriptType, id, name, cron, timezone, description string, timeoutSeconds int) (filePath string, created bool, err error) {
@@ -209,114 +436,27 @@ func (w *Workspace) CreateScript(slug, scriptType, id, name, cron, timezone, des
 	if timezone == "" {
 		timezone = DetectTimezone()
 	}
-	if description == "" {
-		description = fmt.Sprintf("Health check job for %s", slug)
-	}
+	description = strings.TrimSpace(description)
 
-	ext := ".sh"
-	switch strings.ToLower(scriptType) {
-	case "py", "python":
-		ext = ".py"
-	case "js", "node", "javascript":
-		ext = ".js"
-	case "rb", "ruby":
-		ext = ".rb"
-	case "sh", "bash", "":
-		ext = ".sh"
-	default:
-		ext = "." + strings.TrimPrefix(scriptType, ".")
-	}
-
-	targetPath := filepath.Join(w.JobsDir(), slug+ext)
+	targetPath := filepath.Join(w.JobsDir(), slug)
 	if _, err := os.Stat(targetPath); err == nil {
 		return targetPath, false, nil
 	}
 
-	var content string
-	switch ext {
-	case ".py":
-		content = fmt.Sprintf(`#!/usr/bin/env python3
-# @id: %s
-# @name: %s
-# @schedule: %s
-# @timeout: %ds
-# @timezone: %s
-# @description: %s
+	shebang, commentPrefix, templateBody := GenerateShebang(scriptType)
 
-import os
-import sys
+	var sb strings.Builder
+	sb.WriteString(shebang)
+	sb.WriteString("\n")
+	sb.WriteString(fmt.Sprintf("%s@id: %s\n", commentPrefix, id))
+	sb.WriteString(fmt.Sprintf("%s@name: %s\n", commentPrefix, name))
+	sb.WriteString(fmt.Sprintf("%s@schedule: %s\n", commentPrefix, cron))
+	sb.WriteString(fmt.Sprintf("%s@timeout: %ds\n", commentPrefix, timeoutSeconds))
+	sb.WriteString(fmt.Sprintf("%s@timezone: %s\n", commentPrefix, timezone))
+	sb.WriteString(fmt.Sprintf("%s@description: %s\n\n", commentPrefix, description))
+	sb.WriteString(fmt.Sprintf(templateBody, slug))
 
-# Environment variables available:
-#   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
-#   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
-
-print(f"[{os.getenv('BEEP_JOB_SLUG', '%s')}] Starting health check...")
-
-# Put your check logic here.
-# Exit 0 for ok, non-zero for error/alerting.
-print("Check passed successfully.")
-sys.exit(0)
-`, id, name, cron, timeoutSeconds, timezone, description, slug)
-	case ".js":
-		content = fmt.Sprintf(`#!/usr/bin/env node
-// @id: %s
-// @name: %s
-// @schedule: %s
-// @timeout: %ds
-// @timezone: %s
-// @description: %s
-
-// Environment variables available:
-//   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
-//   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
-
-console.log("[%s] Starting health check...");
-
-// Put your check logic here.
-// Exit 0 for ok, non-zero for error/alerting.
-console.log("Check passed successfully.");
-process.exit(0);
-`, id, name, cron, timeoutSeconds, timezone, description, slug)
-	case ".rb":
-		content = fmt.Sprintf(`#!/usr/bin/env ruby
-# @id: %s
-# @name: %s
-# @schedule: %s
-# @timeout: %ds
-# @timezone: %s
-# @description: %s
-
-puts "[%s] Starting health check..."
-# Put your check logic here.
-puts "Check passed successfully."
-exit 0
-`, id, name, cron, timeoutSeconds, timezone, description, slug)
-	default:
-		content = fmt.Sprintf(`#!/usr/bin/env bash
-# @id: %s
-# @name: %s
-# @schedule: %s
-# @timeout: %ds
-# @timezone: %s
-# @description: %s
-
-set -euo pipefail
-
-# Environment variables available:
-#   BEEP_SERVER, BEEP_RUNNER_TOKEN, BEEP_RUN_ID, BEEP_JOB_SLUG
-#   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
-
-echo "[%s] Starting health check..."
-
-# Put your check logic here. For example:
-# curl -s -f -m 10 "http://127.0.0.1:8080/health" || exit 1
-
-echo "Check passed successfully."
-exit 0
-`, id, name, cron, timeoutSeconds, timezone, description, slug)
-	}
-
-	if err := os.WriteFile(targetPath, []byte(content), 0o755); err != nil {
+	if err := os.WriteFile(targetPath, []byte(sb.String()), 0o755); err != nil {
 		return "", false, fmt.Errorf("failed to write script %s: %w", targetPath, err)
 	}
 
@@ -329,14 +469,6 @@ func (w *Workspace) UpdateScriptHeader(filePath, id, name, cron, timezone, descr
 		return err
 	}
 
-	ext := strings.ToLower(filepath.Ext(filePath))
-	commentPrefix := "# "
-	if ext == ".js" || ext == ".ts" {
-		commentPrefix = "// "
-	} else if ext == ".sql" {
-		commentPrefix = "-- "
-	}
-
 	lines := strings.Split(string(data), "\n")
 	var shebang string
 	startIndex := 0
@@ -344,6 +476,14 @@ func (w *Workspace) UpdateScriptHeader(filePath, id, name, cron, timezone, descr
 	if len(lines) > 0 && strings.HasPrefix(lines[0], "#!") {
 		shebang = lines[0]
 		startIndex = 1
+	}
+
+	ext := strings.ToLower(filepath.Ext(filePath))
+	commentPrefix := "# "
+	if ext == ".js" || ext == ".ts" || strings.Contains(shebang, "node") || strings.Contains(shebang, "bun") || strings.Contains(shebang, "deno") {
+		commentPrefix = "// "
+	} else if ext == ".sql" {
+		commentPrefix = "-- "
 	}
 
 	// Skip existing @ comment lines
@@ -404,16 +544,30 @@ func (w *Workspace) UpdateScriptID(filePath string, id string) error {
 
 func (w *Workspace) FindScriptFile(slug string) (string, bool) {
 	slug = strings.TrimSpace(strings.ToLower(slug))
-	candidates := []string{
-		filepath.Join(w.JobsDir(), slug),
-		filepath.Join(w.JobsDir(), slug+".sh"),
-		filepath.Join(w.JobsDir(), slug+".py"),
-		filepath.Join(w.JobsDir(), slug+".rb"),
-		filepath.Join(w.JobsDir(), slug+".js"),
+	target := filepath.Join(w.JobsDir(), slug)
+	if info, err := os.Stat(target); err == nil && !info.IsDir() {
+		return target, true
 	}
-	for _, c := range candidates {
-		if info, err := os.Stat(c); err == nil && !info.IsDir() {
-			return c, true
+	return "", false
+}
+
+func (w *Workspace) FindScriptFileByID(id string) (string, bool) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return "", false
+	}
+	entries, err := os.ReadDir(w.JobsDir())
+	if err != nil {
+		return "", false
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		filePath := filepath.Join(w.JobsDir(), entry.Name())
+		meta, err := ParseScriptMetadata(filePath)
+		if err == nil && strings.TrimSpace(meta.ID) == id {
+			return filePath, true
 		}
 	}
 	return "", false
@@ -425,8 +579,31 @@ func (w *Workspace) PullJob(slug, scriptType, id, name, cron, timezone, descript
 		return "", false, fmt.Errorf("job slug cannot be empty")
 	}
 
-	existingPath, found := w.FindScriptFile(slug)
+	// 1. Try finding by unique ID first to avoid duplicate files when name/slug changed
+	var existingPath string
+	var found bool
+	if id != "" {
+		existingPath, found = w.FindScriptFileByID(id)
+	}
+
+	// 2. Fallback to finding by slug
+	if !found {
+		existingPath, found = w.FindScriptFile(slug)
+	}
+
 	if found {
+		// If local filename does not match server slug, rename to server slug (without extension)
+		targetPath := filepath.Join(w.JobsDir(), slug)
+		if existingPath != targetPath {
+			if _, statErr := os.Stat(targetPath); statErr == nil {
+				_ = os.Remove(targetPath)
+			}
+			if renameErr := os.Rename(existingPath, targetPath); renameErr != nil {
+				return existingPath, false, fmt.Errorf("failed to rename %s to %s: %w", existingPath, targetPath, renameErr)
+			}
+			existingPath = targetPath
+		}
+
 		if err := w.UpdateScriptHeader(existingPath, id, name, cron, timezone, description, timeoutSeconds); err != nil {
 			return existingPath, false, fmt.Errorf("failed to update script header for %s: %w", existingPath, err)
 		}
@@ -442,21 +619,10 @@ func (w *Workspace) RemoveJob(slug string) (removedFiles []string, removedFromJS
 		return nil, false, fmt.Errorf("job slug cannot be empty")
 	}
 
-	entries, readErr := os.ReadDir(w.JobsDir())
-	if readErr == nil {
-		for _, entry := range entries {
-			if entry.IsDir() {
-				continue
-			}
-			name := entry.Name()
-			ext := filepath.Ext(name)
-			fileSlug := strings.TrimSuffix(name, ext)
-			if strings.EqualFold(fileSlug, slug) {
-				fullPath := filepath.Join(w.JobsDir(), name)
-				if rmErr := os.Remove(fullPath); rmErr == nil {
-					removedFiles = append(removedFiles, fullPath)
-				}
-			}
+	targetFile := filepath.Join(w.JobsDir(), slug)
+	if _, statErr := os.Stat(targetFile); statErr == nil {
+		if rmErr := os.Remove(targetFile); rmErr == nil {
+			removedFiles = append(removedFiles, targetFile)
 		}
 	}
 
@@ -485,8 +651,10 @@ func (w *Workspace) ListJobs() ([]LocalJob, error) {
 				continue
 			}
 			name := entry.Name()
-			ext := filepath.Ext(name)
-			slug := strings.TrimSuffix(name, ext)
+			if strings.HasPrefix(name, ".") {
+				continue
+			}
+			slug := strings.ToLower(name)
 			if slug == "" {
 				continue
 			}
@@ -567,30 +735,12 @@ func (w *Workspace) Resolve(slug string) (argv []string, err error) {
 	}
 
 	jobsDir := w.JobsDir()
-	candidates := []string{
-		filepath.Join(jobsDir, slug),
-		filepath.Join(jobsDir, slug+".sh"),
-		filepath.Join(jobsDir, slug+".py"),
-		filepath.Join(jobsDir, slug+".rb"),
-		filepath.Join(jobsDir, slug+".js"),
-	}
-	if runtime.GOOS == "windows" {
-		candidates = append([]string{
-			filepath.Join(jobsDir, slug+".cmd"),
-			filepath.Join(jobsDir, slug+".bat"),
-			filepath.Join(jobsDir, slug+".ps1"),
-		}, candidates...)
+	target := filepath.Join(jobsDir, slug)
+	if info, statErr := os.Stat(target); statErr == nil && !info.IsDir() {
+		return []string{target}, nil
 	}
 
-	for _, path := range candidates {
-		info, statErr := os.Stat(path)
-		if statErr != nil || info.IsDir() {
-			continue
-		}
-		return []string{path}, nil
-	}
-
-	return nil, fmt.Errorf("no local script for job %q in %s (add jobs/%s or jobs.json)", slug, jobsDir, slug)
+	return nil, fmt.Errorf("no local executable for job %q in %s (add jobs/%s or jobs.json)", slug, jobsDir, slug)
 }
 
 func (w *Workspace) loadJobsJSON() error {

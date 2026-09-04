@@ -2,6 +2,7 @@ package exec
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,14 +17,20 @@ func TestJobExecutorMissingCommand(t *testing.T) {
 }
 
 func TestJobExecutorSuccess(t *testing.T) {
+	var mu sync.Mutex
 	var logs string
 	result := NewJobExecutor().Run(context.Background(), []string{"echo", "hello-workspace"}, nil, 5*time.Second, func(line string) {
+		mu.Lock()
+		defer mu.Unlock()
 		logs += line
 	})
 	if result.Status != task.StatusOk {
 		t.Fatalf("expected ok, got %s %s", result.Status, result.Message)
 	}
-	if logs == "" {
+	mu.Lock()
+	captured := logs
+	mu.Unlock()
+	if captured == "" {
 		t.Fatalf("expected captured stdout")
 	}
 }

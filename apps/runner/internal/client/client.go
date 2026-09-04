@@ -67,6 +67,7 @@ type ServerJob struct {
 }
 
 type CreateJobRequest struct {
+	ID             string         `json:"id,omitempty"`
 	Slug           string         `json:"slug"`
 	Name           string         `json:"name,omitempty"`
 	Cron           string         `json:"cron,omitempty"`

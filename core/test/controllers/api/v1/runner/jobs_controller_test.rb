@@ -82,6 +82,37 @@ class Api::V1::Runner::JobsControllerTest < ActionDispatch::IntegrationTest
     assert @runner.jobs.exists?(slug: "job-two")
   end
 
+  test "sync with id renames slug on existing job" do
+    post "/api/v1/runner/jobs/sync",
+      params: {
+        jobs: [
+          {
+            id: @job.id,
+            slug: "renamed-job",
+            name: "Renamed Job",
+            cron: "*/15 * * * *",
+            timezone: "Asia/Shanghai"
+          }
+        ]
+      },
+      headers: { "X-Runner-Token" => @runner_token },
+      as: :json
+
+    assert_response :success
+    body = response.parsed_body
+    assert_equal 1, body["synced_count"]
+    assert_equal @job.id, body["jobs"].first["id"]
+    assert_equal "renamed-job", body["jobs"].first["slug"]
+
+    @job.reload
+    assert_equal "renamed-job", @job.slug
+    assert_equal "Renamed Job", @job.name
+    assert_equal "*/15 * * * *", @job.cron
+    assert_equal "Asia/Shanghai", @job.timezone
+    assert_equal 1, @runner.jobs.count
+    assert_not @runner.jobs.exists?(slug: "existing-job")
+  end
+
   test "destroy removes job by slug" do
     assert @runner.jobs.exists?(slug: "existing-job")
 

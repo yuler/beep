@@ -56,6 +56,28 @@ description = "Run Go runner unit tests"
 dir = "apps/runner"
 run = "go test -v ./..."
 
+[tasks."runner:link"]
+description = "Symlink ~/.beep-runner to .beep-runner in current repo"
+run = """
+mkdir -p "$HOME/.beep-runner"
+ln -sfn "$HOME/.beep-runner" .beep-runner
+echo "Linked ~/.beep-runner -> .beep-runner"
+"""
+
+[tasks."runner:unlink"]
+description = "Unlink .beep-runner from current repo"
+run = """
+if [ -L .beep-runner ]; then
+  rm .beep-runner
+  echo "Unlinked .beep-runner"
+elif [ -e .beep-runner ]; then
+  echo "Error: .beep-runner exists but is not a symlink" >&2
+  exit 1
+else
+  echo ".beep-runner is not linked"
+fi
+"""
+
 [tasks."locale:sort"]
 description = "Sort message keys alphabetically in all locale JSON files"
 run = "node scripts/locale-sort-keys.ts"

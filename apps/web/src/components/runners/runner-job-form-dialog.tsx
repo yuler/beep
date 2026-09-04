@@ -1,5 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+	Combobox,
+	ComboboxContent,
+	ComboboxEmpty,
+	ComboboxInput,
+	ComboboxItem,
+	ComboboxList,
+	ComboboxTrigger,
+} from "@/components/ui/combobox";
 import {
 	Dialog,
 	DialogContent,
@@ -17,7 +26,12 @@ import {
 	updateRunnerJob,
 } from "@/lib/api/runner-jobs";
 import { translateError } from "@/lib/i18n-labels";
-import { browserTimezone } from "@/lib/timezone";
+import {
+	browserTimezone,
+	type TimezoneOption,
+	timezoneOption,
+	timezoneOptions,
+} from "@/lib/timezone";
 import { m } from "@/locale/paraglide/messages";
 
 interface RunnerJobFormDialogProps {
@@ -27,6 +41,22 @@ interface RunnerJobFormDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onSuccess: (job: RunnerJob) => void;
+}
+
+function TimezoneLabel({ option }: { option: TimezoneOption }) {
+	return (
+		<span className="flex min-w-0 flex-1 items-center gap-2">
+			<span className="text-base leading-none" aria-hidden>
+				{option.flag}
+			</span>
+			<span className="truncate font-mono text-sm">{option.value}</span>
+			{option.countryName ? (
+				<span className="truncate text-xs text-muted-foreground">
+					{option.countryName}
+				</span>
+			) : null}
+		</span>
+	);
 }
 
 export function RunnerJobFormDialog({
@@ -46,6 +76,16 @@ export function RunnerJobFormDialog({
 	const [description, setDescription] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	const timezoneItems = useMemo(() => {
+		const options = timezoneOptions();
+		if (timezone && !options.some((item) => item.value === timezone)) {
+			return [timezoneOption(timezone), ...options];
+		}
+		return options;
+	}, [timezone]);
+	const selectedTimezone =
+		timezoneItems.find((item) => item.value === timezone) ?? null;
 
 	useEffect(() => {
 		if (!open) return;
@@ -76,13 +116,15 @@ export function RunnerJobFormDialog({
 		setSubmitting(true);
 		setError(null);
 
+		const tz = timezone.trim() || browserTimezone();
+
 		try {
 			if (isEdit && job) {
 				const res = await updateRunnerJob(slug, runnerId, job.id, {
 					name: name.trim(),
 					slug: jobSlug.trim(),
 					cron: cron.trim(),
-					timezone: timezone.trim() || browserTimezone(),
+					timezone: tz,
 					timeout_seconds: timeoutSeconds,
 					description: description.trim(),
 				});
@@ -93,7 +135,7 @@ export function RunnerJobFormDialog({
 					name: name.trim(),
 					slug: jobSlug.trim(),
 					cron: cron.trim(),
-					timezone: timezone.trim() || browserTimezone(),
+					timezone: tz,
 					timeout_seconds: timeoutSeconds,
 					description: description.trim(),
 				});
@@ -128,6 +170,19 @@ export function RunnerJobFormDialog({
 					</DialogHeader>
 
 					<div className="flex flex-col gap-3 py-2">
+						{isEdit && job ? (
+							<div className="flex flex-col gap-1.5">
+								<Label htmlFor="job-form-id">ID</Label>
+								<Input
+									id="job-form-id"
+									readOnly
+									disabled
+									value={job.id}
+									className="font-mono text-xs bg-muted"
+								/>
+							</div>
+						) : null}
+
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="job-form-name">{m.runners_jobs_name()}</Label>
 							<Input
@@ -149,6 +204,24 @@ export function RunnerJobFormDialog({
 								className="font-mono text-sm"
 								value={jobSlug}
 								onChange={(e) => setJobSlug(e.target.value)}
+								disabled={submitting}
+							/>
+						</div>
+
+						<div className="flex flex-col gap-1.5">
+							<div className="flex items-center justify-between">
+								<Label htmlFor="job-form-desc">
+									{m.runners_jobs_description()}
+								</Label>
+								<span className="text-[11px] text-muted-foreground">
+									{m.common_optional()}
+								</span>
+							</div>
+							<Input
+								id="job-form-desc"
+								placeholder={m.runners_jobs_description_placeholder()}
+								value={description}
+								onChange={(e) => setDescription(e.target.value)}
 								disabled={submitting}
 							/>
 						</div>
@@ -187,32 +260,47 @@ export function RunnerJobFormDialog({
 
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="job-form-tz">{m.runners_jobs_timezone()}</Label>
-							<Input
+							<Combobox
 								id="job-form-tz"
-								placeholder="Asia/Shanghai"
-								className="font-mono text-sm"
-								value={timezone}
-								onChange={(e) => setTimezone(e.target.value)}
+								items={timezoneItems}
+								value={selectedTimezone}
 								disabled={submitting}
-							/>
-						</div>
-
-						<div className="flex flex-col gap-1.5">
-							<div className="flex items-center justify-between">
-								<Label htmlFor="job-form-desc">
-									{m.runners_jobs_description()}
-								</Label>
-								<span className="text-[11px] text-muted-foreground">
-									{m.common_optional()}
-								</span>
-							</div>
-							<Input
-								id="job-form-desc"
-								placeholder={m.runners_jobs_description_placeholder()}
-								value={description}
-								onChange={(e) => setDescription(e.target.value)}
-								disabled={submitting}
-							/>
+								autoHighlight
+								itemToStringLabel={(item) => item.search}
+								isItemEqualToValue={(item, value) => item.value === value.value}
+								onValueChange={(next) => {
+									if (next && typeof next === "object") {
+										setTimezone(next.value);
+									}
+								}}
+							>
+								<ComboboxTrigger className="w-full">
+									{selectedTimezone ? (
+										<TimezoneLabel option={selectedTimezone} />
+									) : (
+										<span className="text-muted-foreground">
+											{m.settings_timezone_not_set()}
+										</span>
+									)}
+								</ComboboxTrigger>
+								<ComboboxContent className="flex flex-col">
+									<div className="border-b border-border p-1.5">
+										<ComboboxInput
+											placeholder={m.settings_timezone_search_placeholder()}
+										/>
+									</div>
+									<ComboboxEmpty>
+										{m.settings_timezone_search_empty()}
+									</ComboboxEmpty>
+									<ComboboxList>
+										{(item: TimezoneOption) => (
+											<ComboboxItem key={item.value} value={item}>
+												<TimezoneLabel option={item} />
+											</ComboboxItem>
+										)}
+									</ComboboxList>
+								</ComboboxContent>
+							</Combobox>
 						</div>
 
 						{error ? (
@@ -231,7 +319,7 @@ export function RunnerJobFormDialog({
 						>
 							{m.common_cancel()}
 						</Button>
-						<Button type="submit" disabled={submitting}>
+						<Button type="submit" disabled={submitting || !timezone}>
 							{submitting
 								? m.common_saving()
 								: isEdit

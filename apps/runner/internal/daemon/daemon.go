@@ -12,6 +12,7 @@ import (
 	"beep-runner/internal/config"
 	"beep-runner/internal/exec"
 	"beep-runner/internal/task"
+	"beep-runner/internal/ui"
 	"beep-runner/internal/workspace"
 )
 
@@ -35,14 +36,23 @@ func New(cfg *config.Config, ws *workspace.Workspace) *Daemon {
 }
 
 func (d *Daemon) Start(ctx context.Context) error {
-	log.Printf("[beep-runner] Connecting to %s workspace=%s concurrency=%d",
-		d.cfg.ServerURL, d.workspace.Root, d.cfg.Concurrency)
+	log.Printf("%s Connecting to %s %s=%s %s=%s",
+		ui.Bold(ui.Cyan("[beep-runner]")),
+		ui.Bold(d.cfg.ServerURL),
+		ui.Dim("workspace"), ui.Dim(d.workspace.Root),
+		ui.Dim("concurrency"), ui.Yellow(fmt.Sprintf("%d", d.cfg.Concurrency)),
+	)
 
 	pingRes, err := d.client.Ping(ctx)
 	if err != nil {
 		return fmt.Errorf("initial handshake failed: %w", err)
 	}
-	log.Printf("[beep-runner] Connected: %s (%s)", pingRes.RunnerID, pingRes.RunnerName)
+	log.Printf("%s %s %s (%s)",
+		ui.Bold(ui.Cyan("[beep-runner]")),
+		ui.Green("Connected:"),
+		ui.Bold(pingRes.RunnerID),
+		ui.Dim(pingRes.RunnerName),
+	)
 
 	ticker := time.NewTicker(d.cfg.PollInterval)
 	defer ticker.Stop()
@@ -50,7 +60,7 @@ func (d *Daemon) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("[beep-runner] Shutting down...")
+			log.Printf("%s %s", ui.Bold(ui.Cyan("[beep-runner]")), ui.Yellow("Shutting down..."))
 			d.wg.Wait()
 			return nil
 		case <-ticker.C:
@@ -63,7 +73,7 @@ func (d *Daemon) pollAndExecute(ctx context.Context) {
 	t, err := d.client.Poll(ctx)
 	if err != nil {
 		if ctx.Err() == nil {
-			log.Printf("[beep-runner] Poll error: %v", err)
+			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("Poll error:"), err)
 		}
 		return
 	}
@@ -83,7 +93,13 @@ func (d *Daemon) pollAndExecute(ctx context.Context) {
 }
 
 func (d *Daemon) execute(job *task.Task) {
-	log.Printf("[beep-runner] Running %s (%s)", job.JobSlug, job.ID)
+	log.Printf("%s %s %s (%s: %s)",
+		ui.Bold(ui.Cyan("[beep-runner]")),
+		ui.Yellow("Running"),
+		ui.Bold(ui.Cyan(job.JobSlug)),
+		ui.Dim("run_id"),
+		ui.Dim(job.ID),
+	)
 
 	timeout := time.Duration(job.TimeoutSeconds) * time.Second
 	if timeout <= 0 {
@@ -97,7 +113,7 @@ func (d *Daemon) execute(job *task.Task) {
 		result := task.Error("Unknown local job", err.Error(), nil)
 		_ = d.client.ReportLog(taskCtx, job.LogURL, err.Error()+"\n")
 		if reportErr := d.client.ReportResult(taskCtx, job.ResultURL, result); reportErr != nil {
-			log.Printf("[beep-runner] result error: %v", reportErr)
+			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error:"), reportErr)
 		}
 		return
 	}
@@ -128,12 +144,12 @@ func (d *Daemon) execute(job *task.Task) {
 			return
 		}
 		if err := d.client.ReportLog(taskCtx, job.LogURL, chunk); err != nil {
-			log.Printf("[beep-runner] log upload: %v", err)
+			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("log upload:"), err)
 		}
 	}
 
 	result := d.executor.Run(taskCtx, argv, env, timeout, func(line string) {
-		log.Print("[job " + job.JobSlug + "] " + line)
+		log.Print(ui.Dim(fmt.Sprintf("[%s]", job.JobSlug)) + " " + line)
 		logMu.Lock()
 		logBuf += line
 		logMu.Unlock()
@@ -141,7 +157,23 @@ func (d *Daemon) execute(job *task.Task) {
 	})
 	flush(true)
 
+	if result.Status == task.StatusOk {
+		log.Printf("%s %s %s %s",
+			ui.Bold(ui.Cyan("[beep-runner]")),
+			ui.Green("✓"),
+			ui.Bold(job.JobSlug),
+			ui.Dim(result.Title),
+		)
+	} else {
+		log.Printf("%s %s %s %s",
+			ui.Bold(ui.Cyan("[beep-runner]")),
+			ui.Red("✗"),
+			ui.Bold(job.JobSlug),
+			ui.Red(result.Title),
+		)
+	}
+
 	if err := d.client.ReportResult(taskCtx, job.ResultURL, result); err != nil {
-		log.Printf("[beep-runner] result error for %s: %v", job.ID, err)
+		log.Printf("%s %s for %s: %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error"), job.ID, err)
 	}
 }

@@ -43,6 +43,50 @@ interface RunnerListProps {
 	onRefresh: () => void;
 }
 
+export function getRunnerStatusBadge(runner: Runner) {
+	const isHealthyOnline = runner.is_online ?? runner.status !== "offline";
+	if (!isHealthyOnline || runner.status === "offline") {
+		return (
+			<Badge
+				variant="outline"
+				className="gap-1.5 border-zinc-500/30 text-muted-foreground"
+			>
+				<span className="size-1.5 rounded-full bg-zinc-400" />
+				{m.runners_status_offline()}
+			</Badge>
+		);
+	}
+
+	if (runner.status === "online") {
+		return (
+			<Badge
+				variant="outline"
+				className="gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+			>
+				<span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+				{m.runners_status_online()}
+			</Badge>
+		);
+	}
+
+	return (
+		<Badge
+			variant="outline"
+			className="gap-1.5 border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400"
+		>
+			<span className="size-1.5 rounded-full bg-sky-500" />
+			{m.runners_status_idle()}
+		</Badge>
+	);
+}
+
+export function formatRunnerLastSeen(lastSeenAt: string | null | undefined) {
+	if (!lastSeenAt) return m.runners_never_seen();
+	return m.runners_last_seen({
+		time: new Date(lastSeenAt).toLocaleString(),
+	});
+}
+
 export function RunnerList({
 	slug,
 	runners,
@@ -98,50 +142,6 @@ export function RunnerList({
 		}
 	}
 
-	function getStatusBadge(runner: Runner) {
-		const isHealthyOnline = runner.is_online ?? runner.status !== "offline";
-		if (!isHealthyOnline || runner.status === "offline") {
-			return (
-				<Badge
-					variant="outline"
-					className="gap-1.5 border-zinc-500/30 text-muted-foreground"
-				>
-					<span className="size-1.5 rounded-full bg-zinc-400" />
-					{m.runners_status_offline()}
-				</Badge>
-			);
-		}
-
-		if (runner.status === "online") {
-			return (
-				<Badge
-					variant="outline"
-					className="gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-				>
-					<span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-					{m.runners_status_online()}
-				</Badge>
-			);
-		}
-
-		return (
-			<Badge
-				variant="outline"
-				className="gap-1.5 border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400"
-			>
-				<span className="size-1.5 rounded-full bg-sky-500" />
-				{m.runners_status_idle()}
-			</Badge>
-		);
-	}
-
-	function formatLastSeen(lastSeenAt: string | null | undefined) {
-		if (!lastSeenAt) return m.runners_never_seen();
-		return m.runners_last_seen({
-			time: new Date(lastSeenAt).toLocaleString(),
-		});
-	}
-
 	return (
 		<div className="flex flex-col gap-4">
 			{actionError ? (
@@ -182,7 +182,7 @@ export function RunnerList({
 									</Link>
 
 									<div className="flex items-center gap-1.5">
-										{getStatusBadge(runner)}
+										{getRunnerStatusBadge(runner)}
 										<DropdownMenu>
 											<DropdownMenuTrigger
 												render={
@@ -279,7 +279,7 @@ export function RunnerList({
 								<div className="flex items-center gap-1.5 text-[11px]">
 									<Clock className="size-3.5 shrink-0" />
 									<span className="truncate">
-										{formatLastSeen(runner.last_seen_at)}
+										{formatRunnerLastSeen(runner.last_seen_at)}
 									</span>
 								</div>
 							</CardContent>

@@ -13,12 +13,12 @@ func TestResolveExecutableAndJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	script := filepath.Join(jobsDir, "intranet-http.sh")
+	script := filepath.Join(jobsDir, "intranet-http")
 	if err := os.WriteFile(script, []byte("#!/bin/sh\necho ok\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
-	jobsJSON := `{"jobs":{"py-check":{"command":["python3","jobs/check.py"]}}}`
+	jobsJSON := `{"jobs":{"py-check":{"command":["python3","jobs/check"]}}}`
 	if err := os.WriteFile(filepath.Join(root, "jobs.json"), []byte(jobsJSON), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, created, err := ws.CreateScript("my-ping", "sh", "job_001", "My Custom Ping", "*/2 * * * *", "Asia/Shanghai", "Health check for ping", 45)
+	path, created, err := ws.CreateScript("my-ping", "bash", "job_001", "My Custom Ping", "*/2 * * * *", "Asia/Shanghai", "Health check for ping", 45)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,6 +66,9 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("expected script file to exist at %s", path)
 	}
+	if filepath.Base(path) != "my-ping" {
+		t.Fatalf("expected extensionless file 'my-ping', got %s", filepath.Base(path))
+	}
 
 	// Verify metadata parsing
 	meta, err := ParseScriptMetadata(path)
@@ -74,6 +77,9 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 	}
 	if meta.ID != "job_001" {
 		t.Fatalf("expected id 'job_001', got %q", meta.ID)
+	}
+	if meta.Slug != "my-ping" {
+		t.Fatalf("expected slug 'my-ping', got %q", meta.Slug)
 	}
 	if meta.Name != "My Custom Ping" {
 		t.Fatalf("expected name 'My Custom Ping', got %q", meta.Name)
@@ -92,7 +98,7 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 	}
 
 	// Calling again should not overwrite
-	_, created2, err := ws.CreateScript("my-ping", "sh", "", "", "", "", "", 0)
+	_, created2, err := ws.CreateScript("my-ping", "bash", "", "", "", "", "", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,21 +106,30 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 		t.Fatalf("expected created to be false for existing script")
 	}
 
-	// Test Python script creation
-	pyPath, createdPy, err := ws.CreateScript("py-worker", "py", "job_002", "", "0 * * * *", "UTC", "", 60)
+	// Test Python script creation (extensionless)
+	pyPath, createdPy, err := ws.CreateScript("py-worker", "python", "job_002", "", "0 * * * *", "UTC", "", 60)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !createdPy || filepath.Ext(pyPath) != ".py" {
-		t.Fatalf("expected .py script created")
+	if !createdPy || filepath.Base(pyPath) != "py-worker" {
+		t.Fatalf("expected extensionless script 'py-worker', got %s", pyPath)
+	}
+
+	// Test Bun script creation (extensionless)
+	bunPath, createdBun, err := ws.CreateScript("bun-worker", "bun", "job_003", "", "0 * * * *", "UTC", "", 60)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !createdBun || filepath.Base(bunPath) != "bun-worker" {
+		t.Fatalf("expected extensionless script 'bun-worker', got %s", bunPath)
 	}
 
 	jobs, err := ws.ListJobs()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(jobs) != 2 {
-		t.Fatalf("expected 2 jobs, got %d", len(jobs))
+	if len(jobs) != 3 {
+		t.Fatalf("expected 3 jobs, got %d", len(jobs))
 	}
 
 	// Test RemoveJob
@@ -133,8 +148,8 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(jobsAfter) != 1 {
-		t.Fatalf("expected 1 job after remove, got %d", len(jobsAfter))
+	if len(jobsAfter) != 2 {
+		t.Fatalf("expected 2 jobs after remove, got %d", len(jobsAfter))
 	}
 }
 
@@ -146,7 +161,7 @@ func TestPullJob(t *testing.T) {
 	}
 
 	// Pull new job
-	filePath, created, err := ws.PullJob("cloud-db-check", "sh", "job_db_1", "Cloud DB Check", "*/10 * * * *", "UTC", "Ping remote DB", 30, false)
+	filePath, created, err := ws.PullJob("cloud-db-check", "bash", "job_db_1", "Cloud DB Check", "*/10 * * * *", "UTC", "Ping remote DB", 30, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,9 +171,12 @@ func TestPullJob(t *testing.T) {
 	if _, err := os.Stat(filePath); err != nil {
 		t.Fatalf("expected file to exist at %s", filePath)
 	}
+	if filepath.Base(filePath) != "cloud-db-check" {
+		t.Fatalf("expected 'cloud-db-check', got %s", filepath.Base(filePath))
+	}
 
 	// Pull existing job updates the header and metadata without losing body
-	_, created2, err := ws.PullJob("cloud-db-check", "sh", "job_db_1_updated", "Cloud DB Check Updated", "0 * * * *", "Asia/Tokyo", "Updated DB check", 60, false)
+	_, created2, err := ws.PullJob("cloud-db-check", "bash", "job_db_1_updated", "Cloud DB Check Updated", "0 * * * *", "Asia/Tokyo", "Updated DB check", 60, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,5 +190,25 @@ func TestPullJob(t *testing.T) {
 	}
 	if meta.ID != "job_db_1_updated" || meta.Name != "Cloud DB Check Updated" || meta.Cron != "0 * * * *" || meta.Timezone != "Asia/Tokyo" || meta.TimeoutSeconds != 60 || meta.Description != "Updated DB check" {
 		t.Fatalf("unexpected pulled metadata: %+v", meta)
+	}
+
+	// Pull with same ID but different slug (server renamed slug):
+	// Should rename local file and not create duplicate
+	renamedPath, created3, err := ws.PullJob("cloud-db-check-v2", "bash", "job_db_1_updated", "Cloud DB Check V2", "0 * * * *", "Asia/Tokyo", "Updated DB check", 60, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created3 {
+		t.Fatalf("expected created to be false for renamed slug with same ID")
+	}
+	if filepath.Base(renamedPath) != "cloud-db-check-v2" {
+		t.Fatalf("expected file renamed to cloud-db-check-v2, got %s", renamedPath)
+	}
+	jobs, err := ws.ListJobs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(jobs) != 1 {
+		t.Fatalf("expected 1 job (no duplicate), got %d jobs", len(jobs))
 	}
 }

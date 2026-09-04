@@ -4,10 +4,24 @@ import {
 	notFound,
 	useRouter,
 } from "@tanstack/react-router";
-import { Edit, Pause, Play, Plus, Trash2 } from "lucide-react";
+import {
+	Check,
+	Clock,
+	Copy,
+	Edit,
+	Pause,
+	Play,
+	Plus,
+	Server,
+	Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { RunnerJobFormDialog } from "@/components/runners/runner-job-form-dialog";
+import {
+	formatRunnerLastSeen,
+	getRunnerStatusBadge,
+} from "@/components/runners/runner-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,11 +31,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/client";
 import {
-	createRunnerJob,
 	deleteRunnerJob,
 	fetchRunnerJobRun,
 	fetchRunnerJobRuns,
@@ -35,7 +46,6 @@ import {
 import { fetchRunner } from "@/lib/api/runners";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { translateError } from "@/lib/i18n-labels";
-import { browserTimezone } from "@/lib/timezone";
 import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
@@ -70,14 +80,28 @@ function RunnerDetailPage() {
 	const [runs, setRuns] = useState<RunnerRun[]>([]);
 	const [selectedRun, setSelectedRun] = useState<RunnerRun | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	const [name, setName] = useState("");
-	const [jobSlug, setJobSlug] = useState("");
-	const [cron, setCron] = useState("*/5 * * * *");
-	const [submitting, setSubmitting] = useState(false);
 	const [isJobDialogOpen, setIsJobDialogOpen] = useState(false);
 	const [editingJob, setEditingJob] = useState<RunnerJob | null>(null);
+	const [copiedJobId, setCopiedJobId] = useState<string | null>(null);
 
 	const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? null;
+
+	function handleCopyJobId(id: string, event: React.MouseEvent) {
+		event.stopPropagation();
+		void navigator.clipboard.writeText(id);
+		setCopiedJobId(id);
+		setTimeout(() => setCopiedJobId(null), 2000);
+	}
+
+	function handleOpenCreateJob() {
+		setEditingJob(null);
+		setIsJobDialogOpen(true);
+	}
+
+	function handleOpenEditJob(job: RunnerJob) {
+		setEditingJob(job);
+		setIsJobDialogOpen(true);
+	}
 
 	useEffect(() => {
 		if (!selectedJob) {
@@ -113,32 +137,6 @@ function RunnerDetailPage() {
 		}, 2000);
 		return () => window.clearInterval(timer);
 	}, [selectedJob, selectedRun, slug, runner.id]);
-
-	async function handleCreateJob(event: React.FormEvent) {
-		event.preventDefault();
-		setSubmitting(true);
-		setError(null);
-		try {
-			const job = await createRunnerJob(slug, runner.id, {
-				name: name.trim(),
-				slug: jobSlug.trim(),
-				cron: cron.trim(),
-				timezone: browserTimezone(),
-			});
-			setName("");
-			setJobSlug("");
-			await router.invalidate();
-			setSelectedJobId(job.id);
-		} catch (err) {
-			setError(
-				err instanceof ApiError
-					? err.message
-					: translateError(err) || m.runners_jobs_create_failed(),
-			);
-		} finally {
-			setSubmitting(false);
-		}
-	}
 
 	async function handleTrigger(job: RunnerJob) {
 		setError(null);
@@ -212,13 +210,39 @@ function RunnerDetailPage() {
 			/>
 
 			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-				<div>
-					<h1 className="font-heading text-2xl font-bold tracking-tight">
-						{runner.name}
-					</h1>
-					<p className="text-sm text-muted-foreground">
-						{m.runners_workspace_hint()}
-					</p>
+				<div className="flex flex-wrap items-center justify-between gap-4">
+					<div className="flex items-center gap-3">
+						<div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+							<Server className="size-5" />
+						</div>
+						<div className="flex flex-col gap-1">
+							<div className="flex items-center gap-2.5">
+								<h1 className="font-heading text-2xl font-bold tracking-tight">
+									{runner.name}
+								</h1>
+								{getRunnerStatusBadge(runner)}
+							</div>
+							<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground font-mono">
+								<span>{runner.token_prefix}••••</span>
+								{runner.hostname ? <span>· {runner.hostname}</span> : null}
+								{runner.version ? <span>· v{runner.version}</span> : null}
+								{runner.os && runner.arch ? (
+									<span>
+										· {runner.os}/{runner.arch}
+									</span>
+								) : null}
+								<span className="flex items-center gap-1 font-sans">
+									<Clock className="size-3 shrink-0" />
+									{formatRunnerLastSeen(runner.last_seen_at)}
+								</span>
+							</div>
+						</div>
+					</div>
+
+					<Button size="sm" onClick={handleOpenCreateJob}>
+						<Plus data-icon="inline-start" />
+						{m.runners_jobs_add()}
+					</Button>
 				</div>
 
 				{error ? (
@@ -227,67 +251,30 @@ function RunnerDetailPage() {
 					</p>
 				) : null}
 
-				<Card>
-					<CardHeader>
-						<CardTitle>{m.runners_jobs_add()}</CardTitle>
-						<CardDescription>{m.runners_jobs_add_hint()}</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<form
-							onSubmit={(event) => void handleCreateJob(event)}
-							className="grid gap-3 sm:grid-cols-4"
-						>
-							<div className="flex flex-col gap-1.5 sm:col-span-1">
-								<Label htmlFor="job-name">{m.runners_jobs_name()}</Label>
-								<Input
-									id="job-name"
-									required
-									value={name}
-									onChange={(e) => setName(e.target.value)}
-									placeholder="Intranet HTTP"
-								/>
-							</div>
-							<div className="flex flex-col gap-1.5 sm:col-span-1">
-								<Label htmlFor="job-slug">{m.runners_jobs_slug()}</Label>
-								<Input
-									id="job-slug"
-									required
-									value={jobSlug}
-									onChange={(e) => setJobSlug(e.target.value)}
-									placeholder="intranet-http"
-									className="font-mono"
-								/>
-							</div>
-							<div className="flex flex-col gap-1.5 sm:col-span-1">
-								<Label htmlFor="job-cron">{m.beeps_cron()}</Label>
-								<Input
-									id="job-cron"
-									required
-									value={cron}
-									onChange={(e) => setCron(e.target.value)}
-									className="font-mono"
-								/>
-							</div>
-							<div className="flex items-end">
-								<Button type="submit" size="sm" disabled={submitting}>
-									<Plus data-icon="inline-start" />
-									{m.runners_jobs_add()}
-								</Button>
-							</div>
-						</form>
-					</CardContent>
-				</Card>
-
 				<div className="grid gap-6 lg:grid-cols-2">
 					<Card>
-						<CardHeader>
+						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
 							<CardTitle>{m.runners_jobs_title()}</CardTitle>
+							<Button size="sm" variant="outline" onClick={handleOpenCreateJob}>
+								<Plus data-icon="inline-start" />
+								{m.runners_jobs_add()}
+							</Button>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-2">
 							{jobs.length === 0 ? (
-								<p className="text-sm text-muted-foreground">
-									{m.runners_jobs_empty()}
-								</p>
+								<div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
+									<p className="text-sm text-muted-foreground">
+										{m.runners_jobs_empty()}
+									</p>
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={handleOpenCreateJob}
+									>
+										<Plus data-icon="inline-start" />
+										{m.runners_jobs_add()}
+									</Button>
+								</div>
 							) : (
 								jobs.map((job) => (
 									<div
@@ -300,17 +287,40 @@ function RunnerDetailPage() {
 									>
 										<button
 											type="button"
-											className="text-left"
+											className="text-left focus-visible:outline-none"
 											onClick={() => setSelectedJobId(job.id)}
 										>
 											<div className="flex items-center justify-between gap-2">
 												<span className="font-medium">{job.name}</span>
 												<Badge variant="outline">{job.status}</Badge>
 											</div>
-											<p className="font-mono text-xs text-muted-foreground">
+											<p className="mt-1 font-mono text-xs text-muted-foreground">
 												{job.slug} · {job.cron}
 											</p>
 										</button>
+
+										<div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+											<span className="text-foreground/80 font-medium">
+												ID:
+											</span>
+											<span className="select-all text-foreground/80">
+												{job.id}
+											</span>
+											<button
+												type="button"
+												className="inline-flex size-4 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none"
+												onClick={(e) => handleCopyJobId(job.id, e)}
+												title="Copy Job ID"
+												aria-label="Copy Job ID"
+											>
+												{copiedJobId === job.id ? (
+													<Check className="size-3 text-emerald-500" />
+												) : (
+													<Copy className="size-3" />
+												)}
+											</button>
+										</div>
+
 										<div className="flex flex-wrap gap-2">
 											<Button
 												size="sm"
@@ -322,10 +332,7 @@ function RunnerDetailPage() {
 											<Button
 												size="sm"
 												variant="outline"
-												onClick={() => {
-													setEditingJob(job);
-													setIsJobDialogOpen(true);
-												}}
+												onClick={() => handleOpenEditJob(job)}
 											>
 												<Edit data-icon="inline-start" />
 												{m.common_edit()}
@@ -361,8 +368,14 @@ function RunnerDetailPage() {
 					<Card>
 						<CardHeader>
 							<CardTitle>{m.runners_runs_title()}</CardTitle>
-							<CardDescription>
-								{selectedJob ? selectedJob.slug : m.runners_runs_select_job()}
+							<CardDescription className="font-mono text-xs">
+								{selectedJob ? (
+									<span>
+										{selectedJob.name} ({selectedJob.id}) · {selectedJob.slug}
+									</span>
+								) : (
+									m.runners_runs_select_job()
+								)}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-3">

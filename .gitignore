@@ -70,5 +70,8 @@ compose.yml
 bin/beep-runner
 bin/runner
 
+# Runner
+.beep-runner
+
 # Docs
 docs/superpowers
