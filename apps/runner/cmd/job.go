@@ -325,97 +325,61 @@ var jobListCmd = &cobra.Command{
 
 		if len(allSlugs) == 0 {
 			fmt.Println(ui.Dim("  (No jobs found locally or on server)"))
-			fmt.Printf("  Create one with: %s\n", ui.Cyan("beep-runner job create <slug>"))
+		fmt.Printf("  Create one with: %s\n", ui.Cyan("beep-runner job create <slug>"))
 			return nil
 		}
 
 		for _, slug := range allSlugs {
-			lj, hasLocal := localMap[slug]
-			sj, hasServer := serverMap[slug]
+			var itemLj *workspace.LocalJob
+			if lj, exists := localMap[slug]; exists {
+				l := lj
+				itemLj = &l
+			}
+			sj := serverMap[slug]
+			item := ui.CompareJob(slug, itemLj, sj)
 
-			if hasLocal && hasServer {
-				serverDesc := ""
-				if sj.Config != nil {
-					if d, ok := sj.Config["description"].(string); ok {
-						serverDesc = d
-					}
+			switch item.Status {
+			case ui.StatusSynced:
+				fmt.Printf("  %s %-18s %s %s\n",
+					ui.Green("✓"),
+					ui.Bold(ui.Cyan(slug)),
+					ui.Green("[synced]"),
+					ui.Dim(fmt.Sprintf("(%s, %s, %s)", item.LocalJob.Name, item.LocalJob.Cron, item.ServerJob.Status)),
+				)
+				fmt.Printf("    %s %s (%s: %s)\n", ui.Dim("File:"), ui.Dim(item.LocalJob.FilePath), ui.Dim("ID"), ui.Dim(item.ServerJob.ID))
+			case ui.StatusModified:
+				fmt.Printf("  %s %-18s %s %s\n",
+					ui.Yellow("!"),
+					ui.Bold(ui.Cyan(slug)),
+					ui.Yellow("[out of sync / modified]"),
+					ui.Dim(fmt.Sprintf("(%s)", item.LocalJob.Name)),
+				)
+				fmt.Printf("    %s %s (%s: %s)\n", ui.Dim("File:"), ui.Dim(item.LocalJob.FilePath), ui.Dim("ID"), ui.Dim(item.ServerJob.ID))
+				for _, d := range item.Diffs {
+					fmt.Printf("    %s %s\n", ui.Yellow("•"), ui.Yellow(d))
 				}
-
-				var diffs []string
-				if lj.Name != "" && sj.Name != "" && lj.Name != sj.Name {
-					diffs = append(diffs, fmt.Sprintf("name: local %q != server %q", lj.Name, sj.Name))
-				}
-				if lj.Cron != "" && sj.Cron != "" && lj.Cron != sj.Cron {
-					diffs = append(diffs, fmt.Sprintf("schedule: local %q != server %q", lj.Cron, sj.Cron))
-				}
-				serverTz := sj.Timezone
-				if serverTz == "" {
-					serverTz = "UTC"
-				}
-				localTz := lj.Timezone
-				if localTz == "" {
-					localTz = "UTC"
-				}
-				if !strings.EqualFold(localTz, serverTz) {
-					diffs = append(diffs, fmt.Sprintf("timezone: local %q != server %q", localTz, serverTz))
-				}
-				serverTimeout := sj.TimeoutSeconds
-				if serverTimeout <= 0 {
-					serverTimeout = 30
-				}
-				localTimeout := lj.TimeoutSeconds
-				if localTimeout <= 0 {
-					localTimeout = 30
-				}
-				if localTimeout != serverTimeout {
-					diffs = append(diffs, fmt.Sprintf("timeout: local %ds != server %ds", localTimeout, serverTimeout))
-				}
-				if lj.Description != "" && serverDesc != "" && lj.Description != serverDesc {
-					diffs = append(diffs, fmt.Sprintf("description: local %q != server %q", lj.Description, serverDesc))
-				}
-
-				if len(diffs) == 0 {
-					fmt.Printf("  %s %-18s %s %s\n",
-						ui.Green("✓"),
-						ui.Bold(ui.Cyan(slug)),
-						ui.Green("[synced]"),
-						ui.Dim(fmt.Sprintf("(%s, %s, %s)", lj.Name, lj.Cron, sj.Status)),
-					)
-					fmt.Printf("    %s %s (%s: %s)\n", ui.Dim("File:"), ui.Dim(lj.FilePath), ui.Dim("ID"), ui.Dim(sj.ID))
-				} else {
-					fmt.Printf("  %s %-18s %s %s\n",
-						ui.Yellow("!"),
-						ui.Bold(ui.Cyan(slug)),
-						ui.Yellow("[out of sync / modified]"),
-						ui.Dim(fmt.Sprintf("(%s)", lj.Name)),
-					)
-					fmt.Printf("    %s %s (%s: %s)\n", ui.Dim("File:"), ui.Dim(lj.FilePath), ui.Dim("ID"), ui.Dim(sj.ID))
-					for _, d := range diffs {
-						fmt.Printf("    %s %s\n", ui.Yellow("•"), ui.Yellow(d))
-					}
-					fmt.Printf("    %s Run %s to push local, or %s to pull server\n",
-						ui.Dim("Tip:"),
-						ui.Cyan(fmt.Sprintf("beep-runner job push %s", slug)),
-						ui.Cyan(fmt.Sprintf("beep-runner job pull %s", slug)),
-					)
-				}
-			} else if hasLocal && !hasServer {
+				fmt.Printf("    %s Run %s to push local, or %s to pull server\n",
+					ui.Dim("Tip:"),
+					ui.Cyan(fmt.Sprintf("beep-runner job push %s", slug)),
+					ui.Cyan(fmt.Sprintf("beep-runner job pull %s", slug)),
+				)
+			case ui.StatusLocalOnly:
 				fmt.Printf("  %s %-18s %s %s\n",
 					ui.Cyan("●"),
 					ui.Bold(ui.Cyan(slug)),
 					ui.Cyan("[local only]"),
-					ui.Dim(fmt.Sprintf("(%s, %s)", lj.Name, lj.Cron)),
+					ui.Dim(fmt.Sprintf("(%s, %s)", item.LocalJob.Name, item.LocalJob.Cron)),
 				)
-				fmt.Printf("    %s %s\n", ui.Dim("File:"), ui.Dim(lj.FilePath))
+				fmt.Printf("    %s %s\n", ui.Dim("File:"), ui.Dim(item.LocalJob.FilePath))
 				fmt.Printf("    %s Run %s to register on server\n", ui.Dim("Tip:"), ui.Cyan(fmt.Sprintf("beep-runner job push %s", slug)))
-			} else if !hasLocal && hasServer {
+			case ui.StatusRemoteOnly:
 				fmt.Printf("  %s %-18s %s %s\n",
 					ui.Magenta("●"),
 					ui.Bold(ui.Cyan(slug)),
 					ui.Magenta("[remote only]"),
-					ui.Dim(fmt.Sprintf("(%s, %s, %s)", sj.Name, sj.Cron, sj.Status)),
+					ui.Dim(fmt.Sprintf("(%s, %s, %s)", item.ServerJob.Name, item.ServerJob.Cron, item.ServerJob.Status)),
 				)
-				fmt.Printf("    %s %s\n", ui.Dim("ID:"), ui.Dim(sj.ID))
+				fmt.Printf("    %s %s\n", ui.Dim("ID:"), ui.Dim(item.ServerJob.ID))
 				fmt.Printf("    %s Run %s to pull script to workspace\n", ui.Dim("Tip:"), ui.Cyan(fmt.Sprintf("beep-runner job pull %s", slug)))
 			}
 			fmt.Println()
@@ -472,11 +436,29 @@ func runJobPushExec(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	var serverJobs []*client.ServerJob
+	if cfg.ServerURL != "" && cfg.RunnerToken != "" {
+		c := client.New(cfg)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		serverJobs, _ = c.ListJobs(ctx)
+		cancel()
+	}
+	serverMap := make(map[string]*client.ServerJob)
+	for _, sj := range serverJobs {
+		serverMap[strings.ToLower(sj.Slug)] = sj
+	}
+
 	var targetSlugs []string
 	if len(args) > 0 {
 		targetSlugs = []string{strings.TrimSpace(strings.ToLower(args[0]))}
-	} else if !flagNoInteractive && ui.IsInteractive() && len(localJobs) > 1 {
-		selected, err := ui.PromptJobPushSelection(localJobs)
+	} else if !flagNoInteractive && ui.IsInteractive() {
+		var items []ui.JobCompareItem
+		for _, lj := range localJobs {
+			slug := strings.ToLower(lj.Slug)
+			itemLj := lj
+			items = append(items, ui.CompareJob(slug, &itemLj, serverMap[slug]))
+		}
+		selected, err := ui.PromptJobPushSelection(items)
 		if err != nil {
 			return err
 		}
@@ -552,9 +534,8 @@ func runJobPullExec(cmd *cobra.Command, args []string) error {
 
 	c := client.New(cfg)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
 	serverJobs, err := c.ListJobs(ctx)
+	cancel()
 	if err != nil {
 		return fmt.Errorf("failed to fetch server jobs: %w", err)
 	}
@@ -564,13 +545,29 @@ func runJobPullExec(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	localJobs, _ := ws.ListJobs()
+	localMap := make(map[string]workspace.LocalJob)
+	for _, lj := range localJobs {
+		localMap[strings.ToLower(lj.Slug)] = lj
+	}
+
 	var targetSlugs []string
 	force := flagJobForce
 
 	if len(args) > 0 {
 		targetSlugs = []string{strings.TrimSpace(strings.ToLower(args[0]))}
-	} else if !flagNoInteractive && ui.IsInteractive() && len(serverJobs) > 1 {
-		selected, f, err := ui.PromptJobPullSelection(serverJobs)
+	} else if !flagNoInteractive && ui.IsInteractive() {
+		var items []ui.JobCompareItem
+		for _, sj := range serverJobs {
+			slug := strings.ToLower(sj.Slug)
+			var itemLj *workspace.LocalJob
+			if lj, exists := localMap[slug]; exists {
+				l := lj
+				itemLj = &l
+			}
+			items = append(items, ui.CompareJob(slug, itemLj, sj))
+		}
+		selected, f, err := ui.PromptJobPullSelection(items)
 		if err != nil {
 			return err
 		}

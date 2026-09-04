@@ -223,63 +223,215 @@ func PromptJobRemove(localJobs []workspace.LocalJob) (slugs []string, syncServer
 	return selected, syncServer, nil
 }
 
-// PromptJobPushSelection asks the user which jobs to push.
-func PromptJobPushSelection(localJobs []workspace.LocalJob) (selectedSlugs []string, err error) {
-	if len(localJobs) == 0 {
-		return nil, errors.New("no local jobs found")
+type SyncStatus string
+
+const (
+	StatusSynced     SyncStatus = "synced"
+	StatusModified   SyncStatus = "modified"
+	StatusLocalOnly  SyncStatus = "local only"
+	StatusRemoteOnly SyncStatus = "remote only"
+)
+
+type JobCompareItem struct {
+	Slug      string
+	Status    SyncStatus
+	LocalJob  *workspace.LocalJob
+	ServerJob *client.ServerJob
+	Diffs     []string
+}
+
+func CompareJob(slug string, lj *workspace.LocalJob, sj *client.ServerJob) JobCompareItem {
+	item := JobCompareItem{
+		Slug:      slug,
+		LocalJob:  lj,
+		ServerJob: sj,
 	}
 
-	options := []huh.Option[string]{
-		huh.NewOption(fmt.Sprintf("Push all jobs (%d total)", len(localJobs)), "__all__"),
+	if lj != nil && sj == nil {
+		item.Status = StatusLocalOnly
+		return item
 	}
-	for _, j := range localJobs {
-		label := fmt.Sprintf("%s (%s)", j.Slug, j.Name)
-		options = append(options, huh.NewOption(label, j.Slug))
+	if lj == nil && sj != nil {
+		item.Status = StatusRemoteOnly
+		return item
+	}
+	if lj == nil && sj == nil {
+		return item
 	}
 
-	var choice string
-	err = huh.NewSelect[string]().
-		Title("Push Jobs to Server").
-		Description("Select which job(s) to push to Beep Core").
-		Options(options...).
-		Value(&choice).
-		Run()
-	if err != nil {
+	serverDesc := ""
+	if sj.Config != nil {
+		if d, ok := sj.Config["description"].(string); ok {
+			serverDesc = d
+		}
+	}
+
+	var diffs []string
+	if lj.Name != "" && sj.Name != "" && lj.Name != sj.Name {
+		diffs = append(diffs, fmt.Sprintf("name: local %q != server %q", lj.Name, sj.Name))
+	}
+	if lj.Cron != "" && sj.Cron != "" && lj.Cron != sj.Cron {
+		diffs = append(diffs, fmt.Sprintf("schedule: local %q != server %q", lj.Cron, sj.Cron))
+	}
+	ltz := lj.Timezone
+	if ltz == "" {
+		ltz = "UTC"
+	}
+	stz := sj.Timezone
+	if stz == "" {
+		stz = "UTC"
+	}
+	if !strings.EqualFold(ltz, stz) {
+		diffs = append(diffs, fmt.Sprintf("timezone: local %q != server %q", ltz, stz))
+	}
+	lt := lj.TimeoutSeconds
+	if lt <= 0 {
+		lt = 30
+	}
+	st := sj.TimeoutSeconds
+	if st <= 0 {
+		st = 30
+	}
+	if lt != st {
+		diffs = append(diffs, fmt.Sprintf("timeout: local %ds != server %ds", lt, st))
+	}
+	if lj.Description != "" && serverDesc != "" && lj.Description != serverDesc {
+		diffs = append(diffs, fmt.Sprintf("description: local %q != server %q", lj.Description, serverDesc))
+	}
+
+	item.Diffs = diffs
+	if len(diffs) > 0 {
+		item.Status = StatusModified
+	} else {
+		item.Status = StatusSynced
+	}
+	return item
+}
+
+func formatPushOption(item JobCompareItem) huh.Option[string] {
+	name := ""
+	cron := ""
+	if item.LocalJob != nil {
+		name = item.LocalJob.Name
+		cron = item.LocalJob.Cron
+	}
+
+	var label string
+	switch item.Status {
+	case StatusModified:
+		label = fmt.Sprintf("%s [modified / out of sync] (%s, %s)", item.Slug, name, cron)
+	case StatusLocalOnly:
+		label = fmt.Sprintf("%s [local only] (%s, %s)", item.Slug, name, cron)
+	case StatusSynced:
+		label = fmt.Sprintf("%s [synced] (%s, %s)", item.Slug, name, cron)
+	default:
+		label = fmt.Sprintf("%s (%s, %s)", item.Slug, name, cron)
+	}
+	return huh.NewOption(label, item.Slug)
+}
+
+func formatPullOption(item JobCompareItem) huh.Option[string] {
+	name := ""
+	cron := ""
+	if item.ServerJob != nil {
+		name = item.ServerJob.Name
+		cron = item.ServerJob.Cron
+	}
+
+	var label string
+	switch item.Status {
+	case StatusModified:
+		label = fmt.Sprintf("%s [modified / out of sync] (%s, %s)", item.Slug, name, cron)
+	case StatusRemoteOnly:
+		label = fmt.Sprintf("%s [remote only] (%s, %s)", item.Slug, name, cron)
+	case StatusSynced:
+		label = fmt.Sprintf("%s [synced] (%s, %s)", item.Slug, name, cron)
+	default:
+		label = fmt.Sprintf("%s (%s, %s)", item.Slug, name, cron)
+	}
+	return huh.NewOption(label, item.Slug)
+}
+
+// PromptJobPushSelection asks the user which local job(s) to push.
+func PromptJobPushSelection(items []JobCompareItem) (selectedSlugs []string, err error) {
+	if len(items) == 0 {
+		return nil, errors.New("no local jobs found to push")
+	}
+
+	options := make([]huh.Option[string], 0, len(items))
+	var preSelected []string
+	for _, it := range items {
+		options = append(options, formatPushOption(it))
+		if it.Status == StatusModified || it.Status == StatusLocalOnly {
+			preSelected = append(preSelected, it.Slug)
+		}
+	}
+	if len(preSelected) == 0 {
+		for _, it := range items {
+			preSelected = append(preSelected, it.Slug)
+		}
+	}
+
+	selectedSlugs = preSelected
+
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewMultiSelect[string]().
+				Title("Push Jobs to Server").
+				Description("Select local job(s) to push to Beep Core (space to toggle, enter to confirm)").
+				Options(options...).
+				Value(&selectedSlugs).
+				Validate(func(s []string) error {
+					if len(s) == 0 {
+						return errors.New("please select at least one job to push")
+					}
+					return nil
+				}),
+		),
+	)
+
+	if err := form.Run(); err != nil {
 		return nil, err
 	}
 
-	if choice == "__all__" {
-		for _, j := range localJobs {
-			selectedSlugs = append(selectedSlugs, j.Slug)
-		}
-		return selectedSlugs, nil
-	}
-
-	return []string{choice}, nil
+	return selectedSlugs, nil
 }
 
-// PromptJobPullSelection asks the user which server jobs to pull.
-func PromptJobPullSelection(serverJobs []*client.ServerJob) (selectedSlugs []string, force bool, err error) {
-	if len(serverJobs) == 0 {
+// PromptJobPullSelection asks the user which server job(s) to pull.
+func PromptJobPullSelection(items []JobCompareItem) (selectedSlugs []string, force bool, err error) {
+	if len(items) == 0 {
 		return nil, false, errors.New("no server jobs available to pull")
 	}
 
-	options := []huh.Option[string]{
-		huh.NewOption(fmt.Sprintf("Pull all jobs (%d total)", len(serverJobs)), "__all__"),
+	options := make([]huh.Option[string], 0, len(items))
+	var preSelected []string
+	for _, it := range items {
+		options = append(options, formatPullOption(it))
+		if it.Status == StatusModified || it.Status == StatusRemoteOnly {
+			preSelected = append(preSelected, it.Slug)
+		}
 	}
-	for _, j := range serverJobs {
-		label := fmt.Sprintf("%s (%s, %s)", j.Slug, j.Name, j.Cron)
-		options = append(options, huh.NewOption(label, j.Slug))
+	if len(preSelected) == 0 {
+		for _, it := range items {
+			preSelected = append(preSelected, it.Slug)
+		}
 	}
 
-	var choice string
+	selectedSlugs = preSelected
+
 	form := huh.NewForm(
 		huh.NewGroup(
-			huh.NewSelect[string]().
+			huh.NewMultiSelect[string]().
 				Title("Pull Jobs from Server").
-				Description("Select which server job(s) to pull to your local workspace").
+				Description("Select server job(s) to pull into your workspace (space to toggle, enter to confirm)").
 				Options(options...).
-				Value(&choice),
+				Value(&selectedSlugs).
+				Validate(func(s []string) error {
+					if len(s) == 0 {
+						return errors.New("please select at least one job to pull")
+					}
+					return nil
+				}),
 
 			huh.NewConfirm().
 				Title("Overwrite existing local scripts?").
@@ -292,14 +444,7 @@ func PromptJobPullSelection(serverJobs []*client.ServerJob) (selectedSlugs []str
 		return nil, false, err
 	}
 
-	if choice == "__all__" {
-		for _, j := range serverJobs {
-			selectedSlugs = append(selectedSlugs, j.Slug)
-		}
-		return selectedSlugs, force, nil
-	}
-
-	return []string{choice}, force, nil
+	return selectedSlugs, force, nil
 }
 
 // PromptConfigSetWizard asks the user for missing runner configuration.
