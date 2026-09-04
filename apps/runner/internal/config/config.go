@@ -203,7 +203,7 @@ func MaskToken(token string) string {
 	if len(token) <= 12 {
 		return "••••••••"
 	}
-	prefix := token[:12]
+	prefix := token[:8]
 	return prefix + "••••••••"
 }
 

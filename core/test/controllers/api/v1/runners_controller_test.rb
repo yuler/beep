@@ -52,7 +52,7 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
       body = response.parsed_body["runner"]
       assert_equal "Office-Gateway", body["name"]
       assert_equal [ "office", "intranet" ], body["tags"]
-      assert body["token"].start_with?("beep_runner_")
+      assert body["token"].start_with?("beep_rt_")
     end
   end
 
@@ -97,7 +97,7 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     body = response.parsed_body["runner"]
-    assert body["token"].start_with?("beep_runner_")
+    assert body["token"].start_with?("beep_rt_")
     runner.reload
     assert_not_equal old_token, runner.token
   end

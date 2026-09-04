@@ -21,7 +21,7 @@ import (
 func TestJobEnvOmitsRunnerToken(t *testing.T) {
 	d := &Daemon{cfg: &config.Config{
 		ServerURL:   "https://core.example.com",
-		RunnerToken: "beep_runner_secret",
+		RunnerToken: "beep_rt_secret",
 	}}
 	env := d.jobEnv(&task.Task{
 		ID:        "run-1",
@@ -31,7 +31,7 @@ func TestJobEnvOmitsRunnerToken(t *testing.T) {
 		Config:    map[string]any{"k": "v"},
 	})
 	for _, item := range env {
-		if strings.Contains(item, "beep_runner_secret") {
+		if strings.Contains(item, "beep_rt_secret") {
 			t.Fatalf("job env must not include runner token, got %s", item)
 		}
 	}
@@ -78,7 +78,7 @@ func TestPollAndExecuteFillsConcurrency(t *testing.T) {
 
 	d := New(&config.Config{
 		ServerURL:    ts.URL,
-		RunnerToken:  "beep_runner_test",
+		RunnerToken:  "beep_rt_test",
 		Concurrency:  2,
 		PollInterval: time.Second,
 	}, ws)

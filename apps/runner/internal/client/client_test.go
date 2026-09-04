@@ -26,7 +26,7 @@ func TestClientPing(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	c := New(&config.Config{ServerURL: ts.URL, RunnerToken: "beep_runner_test"})
+	c := New(&config.Config{ServerURL: ts.URL, RunnerToken: "beep_rt_test"})
 	res, err := c.Ping(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected ping error: %v", err)
@@ -69,7 +69,7 @@ func TestClientPollLogAndResult(t *testing.T) {
 	defer ts.Close()
 	tsURL = ts.URL
 
-	c := New(&config.Config{ServerURL: ts.URL, RunnerToken: "beep_runner_test"})
+	c := New(&config.Config{ServerURL: ts.URL, RunnerToken: "beep_rt_test"})
 	job, err := c.Poll(context.Background())
 	if err != nil || job == nil || job.JobSlug != "intranet-http" {
 		t.Fatalf("poll: %v %#v", err, job)
@@ -87,7 +87,7 @@ func TestClientPollLogAndResult(t *testing.T) {
 }
 
 func TestReportRejectsForeignCallbackURL(t *testing.T) {
-	c := New(&config.Config{ServerURL: "https://core.example.com", RunnerToken: "beep_runner_test"})
+	c := New(&config.Config{ServerURL: "https://core.example.com", RunnerToken: "beep_rt_test"})
 	if err := c.ReportLog(context.Background(), "https://evil.example/api/v1/runner/tasks/x/logs", "leak\n"); err == nil {
 		t.Fatal("expected foreign log URL to be rejected")
 	}

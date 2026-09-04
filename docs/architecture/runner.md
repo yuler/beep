@@ -117,7 +117,7 @@ Interactive TTY prompts (Huh) when args are omitted; use `--no-interactive` for 
 
 ```bash
 # Configure credentials once (stored in <workspace>/config.json)
-beep-runner config set --server https://core.example.com --token beep_runner_xxx
+beep-runner config set --server https://core.example.com --token beep_rt_xxx
 beep-runner config          # show
 beep-runner config path     # print config.json path
 

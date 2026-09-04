@@ -9,7 +9,7 @@ class RunnerTest < ActiveSupport::TestCase
     runner = @account.runners.create!(name: "HQ-Server")
 
     assert runner.persisted?
-    assert runner.token.start_with?("beep_runner_")
+    assert runner.token.start_with?("beep_rt_")
     assert_equal runner.token_prefix, runner.token[0, 12]
     assert_equal "offline", runner.status
   end
@@ -111,6 +111,6 @@ class RunnerTest < ActiveSupport::TestCase
 
     runner.regenerate_token!
     assert_not_equal old_token, runner.token
-    assert runner.token.start_with?("beep_runner_")
+    assert runner.token.start_with?("beep_rt_")
   end
 end
