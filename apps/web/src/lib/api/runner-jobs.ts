@@ -66,10 +66,10 @@ export function createRunnerJob(
 		config?: Record<string, unknown>;
 	},
 ) {
-	return apiFetch<{ job: RunnerJob } | RunnerJob>(
+	return apiFetch<RunnerJob>(
 		`/api/v1/${accountSlug}/runners/${runnerId}/jobs`,
 		{ method: "POST", body },
-	).then((res) => ("job" in res ? res.job : res));
+	);
 }
 
 export function updateRunnerJob(
@@ -86,10 +86,10 @@ export function updateRunnerJob(
 		config?: Record<string, unknown>;
 	},
 ) {
-	return apiFetch<{ job: RunnerJob } | RunnerJob>(
+	return apiFetch<RunnerJob>(
 		`/api/v1/${accountSlug}/runners/${runnerId}/jobs/${jobId}`,
 		{ method: "PATCH", body },
-	).then((res) => ("job" in res ? res.job : res));
+	);
 }
 
 export function deleteRunnerJob(

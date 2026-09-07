@@ -18,7 +18,10 @@ ARG APP_VERSION=0.0.0
 ARG GIT_REVISION=unknown
 
 RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-s -w -X beep/internal/version.Version=${APP_VERSION} -X beep/internal/version.GitCommit=${GIT_REVISION}" \
+    -ldflags="-s -w \
+      -X beep/internal/version.Version=${APP_VERSION} \
+      -X beep/internal/version.GitCommit=${GIT_REVISION} \
+      -X beep/internal/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     -trimpath \
     -o /app/bin/beep \
     ./main.go

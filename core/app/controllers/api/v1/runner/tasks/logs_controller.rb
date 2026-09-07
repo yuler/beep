@@ -1,6 +1,7 @@
 class Api::V1::Runner::Tasks::LogsController < Api::V1::Runner::BaseController
+  before_action :set_run
+
   def create
-    @run = find_run
     unless @run.running? || @run.pending?
       return render_json_error(
         status: :unprocessable_entity,
@@ -19,13 +20,4 @@ class Api::V1::Runner::Tasks::LogsController < Api::V1::Runner::BaseController
     @current_runner.touch_activity(status: "online")
     render :create
   end
-
-  private
-
-    def find_run
-      Runner::Run.joins(:runner_job)
-               .where(runner_jobs: { account_id: @current_runner.account_id })
-               .where(runner_id: @current_runner.id)
-               .find(params[:task_id])
-    end
 end

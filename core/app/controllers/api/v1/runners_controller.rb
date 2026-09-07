@@ -31,7 +31,7 @@ class Api::V1::RunnersController < Api::V1::BaseController
   end
 
   def update
-    if @runner.update(update_params)
+    if @runner.update(runner_params)
       render :show
     else
       render_json_error(
@@ -54,10 +54,6 @@ class Api::V1::RunnersController < Api::V1::BaseController
     end
 
     def runner_params
-      params.require(:runner).permit(:name, tags: [])
-    end
-
-    def update_params
       params.require(:runner).permit(:name, tags: [])
     end
 end
