@@ -56,16 +56,27 @@ description = "Run Go runner unit tests"
 dir = "apps/runner"
 run = "go test -v ./..."
 
-[tasks."runner:link"]
-description = "Symlink ~/.beep-runner to .beep-runner in current repo"
+[tasks."runner:workspace:link"]
+description = "Symlink a beep-runner workspace to .beep-runner in the current repo"
+usage = '''
+arg "<workspace>" help="Workspace directory to link" default=""
+'''
 run = """
-mkdir -p "$HOME/.beep-runner"
-ln -sfn "$HOME/.beep-runner" .beep-runner
-echo "Linked ~/.beep-runner -> .beep-runner"
+workspace="${usage_workspace:-}"
+if [ -z "$workspace" ]; then
+  workspace="$HOME/.beep-runner"
+fi
+case "$workspace" in
+  ~/*) workspace="$HOME/${workspace#~/}" ;;
+  ~) workspace="$HOME" ;;
+esac
+mkdir -p "$workspace"
+ln -sfn "$workspace" .beep-runner
+echo "Linked $workspace -> .beep-runner"
 """
 
-[tasks."runner:unlink"]
-description = "Unlink .beep-runner from current repo"
+[tasks."runner:workspace:unlink"]
+description = "Unlink .beep-runner workspace symlink from the current repo"
 run = """
 if [ -L .beep-runner ]; then
   rm .beep-runner

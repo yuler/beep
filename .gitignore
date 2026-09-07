@@ -68,7 +68,6 @@ compose.yml
 
 # Binaries
 bin/beep-runner
-bin/runner
 
 # Runner
 .beep-runner
