@@ -1,33 +1,24 @@
 class Runner < ApplicationRecord
-  # rt = runner token
-  TOKEN_PREFIX = "beep_rt_"
+  TOKEN_PREFIX = "beep_rt_" # rt = runner token
   OFFLINE_TIMEOUT = 60.seconds
   NAME_MAX_LENGTH = 80
 
   belongs_to :account
-  has_many :jobs, class_name: "Runner::Job", dependent: :destroy
-  has_many :runs, class_name: "Runner::Run", dependent: :destroy
+  has_many :jobs, dependent: :destroy
+  has_many :runs, dependent: :destroy
 
-  enum :status, %w[ online idle offline ].index_by(&:itself), default: "offline"
+  enum :status, %w[ offline online idle ].index_by(&:itself), default: "offline"
 
   has_secure_token prefix: TOKEN_PREFIX
-  self.filter_attributes += [ :token ]
 
   normalizes :name, with: ->(value) { value&.strip.presence }
+  normalizes :tags, with: ->(value) {
+    Array(value).map { |t| t.to_s.strip }.reject(&:blank?).uniq
+  }
 
   validates :name, presence: true, length: { maximum: NAME_MAX_LENGTH }
 
-  before_validation :normalize_tags
-
-  scope :online_or_idle, -> { where(status: %w[ online idle ]).where(last_seen_at: OFFLINE_TIMEOUT.ago..) }
-
   class << self
-    def find_by_raw_token(token)
-      if token.present?
-        find_by(token: token.to_s.strip)
-      end
-    end
-
     def mark_stale_offline
       where(status: %w[ online idle ])
         .where(last_seen_at: ..OFFLINE_TIMEOUT.ago)
@@ -63,10 +54,4 @@ class Runner < ApplicationRecord
   def token_prefix
     token&.first(12)
   end
-
-  private
-
-    def normalize_tags
-      self.tags = Array(tags).map { |t| t.to_s.strip }.reject(&:blank?).uniq
-    end
 end

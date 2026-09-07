@@ -1,7 +1,9 @@
 class Identity::AccessToken < ApplicationRecord
+  TOKEN_PREFIX = "beep_pat_" # pat = personal access token
+
   belongs_to :identity
 
-  has_secure_token :token
+  has_secure_token :token, prefix: TOKEN_PREFIX
 
   enum :permission, %w[ read write ].index_by(&:itself), default: "write"
 

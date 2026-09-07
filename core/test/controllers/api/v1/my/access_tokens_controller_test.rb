@@ -37,7 +37,7 @@ class Api::V1::My::AccessTokensControllerTest < ActionDispatch::IntegrationTest
     body = response.parsed_body
     assert_equal "Raycast Extension", body["access_token"]["description"]
     assert_equal "write", body["access_token"]["permission"]
-    assert body["access_token"]["token"].present?
+    assert body["access_token"]["token"].start_with?("beep_pat_")
   end
 
   test "destroy deletes access token" do
