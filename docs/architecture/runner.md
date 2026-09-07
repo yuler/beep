@@ -17,8 +17,10 @@ sequenceDiagram
   Runner->>Script: exec matching local script (~/.beep/jobs/<slug>)
   Script-->>Runner: stdout / stderr
   Runner->>Core: POST .../tasks/:id/logs (chunks)
+  Core-->>Runner: 204
   Script->>Core: optional SDK/URL POST result
   Runner->>Core: POST .../tasks/:id/result
+  Core-->>Runner: 204
   Core->>Core: store log + result on RunnerRun
 ```
 

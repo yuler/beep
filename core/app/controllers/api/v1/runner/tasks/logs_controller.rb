@@ -18,6 +18,6 @@ class Api::V1::Runner::Tasks::LogsController < Api::V1::Runner::BaseController
 
     @run.append_log(chunk)
     @current_runner.touch_activity(status: "online")
-    render :create
+    head :no_content
   end
 end

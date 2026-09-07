@@ -27,6 +27,6 @@ class Api::V1::Runner::Tasks::ResultsController < Api::V1::Runner::BaseControlle
     end
 
     @current_runner.touch_activity(status: "idle")
-    render :create
+    head :no_content
   end
 end

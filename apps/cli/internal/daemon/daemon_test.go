@@ -60,7 +60,7 @@ func TestPollAndExecuteFillsConcurrency(t *testing.T) {
 				},
 			})
 		default:
-			json.NewEncoder(w).Encode(map[string]any{"status": "acknowledged"})
+			w.WriteHeader(http.StatusNoContent)
 		}
 	}))
 	defer ts.Close()

@@ -76,7 +76,7 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
       headers: { "X-Runner-Token" => @runner_token },
       as: :json
 
-    assert_response :success
+    assert_response :no_content
     run.reload
     assert_equal "checking health\n", run.log
 
@@ -90,7 +90,7 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
       headers: { "X-Runner-Token" => @runner_token },
       as: :json
 
-    assert_response :success
+    assert_response :no_content
     run.reload
     assert_equal "succeeded", run.status
     assert_equal "ok", run.result_status
@@ -126,7 +126,7 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
       headers: { "X-Runner-Token" => @runner_token },
       as: :json
 
-    assert_response :success
+    assert_response :no_content
     run.reload
     assert run.log.valid_encoding?
     assert_nothing_raised do

@@ -183,7 +183,7 @@ func (c *Client) ReportLog(ctx context.Context, logURL, chunk string) error {
 	if err := c.allowedCallbackURL(logURL); err != nil {
 		return err
 	}
-	return c.postJSON(ctx, logURL, map[string]any{"chunk": chunk}, http.StatusOK, nil)
+	return c.postJSON(ctx, logURL, map[string]any{"chunk": chunk}, http.StatusNoContent, nil)
 }
 
 func (c *Client) ReportResult(ctx context.Context, resultURL string, result *task.Result) error {
@@ -196,7 +196,7 @@ func (c *Client) ReportResult(ctx context.Context, resultURL string, result *tas
 		"message": result.Message,
 		"metrics": result.Metrics,
 	}
-	return c.postJSON(ctx, resultURL, payload, http.StatusOK, nil)
+	return c.postJSON(ctx, resultURL, payload, http.StatusNoContent, nil)
 }
 
 func (c *Client) allowedCallbackURL(raw string) error {

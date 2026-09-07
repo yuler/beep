@@ -56,12 +56,10 @@ func TestClientPollLogAndResult(t *testing.T) {
 			})
 		case "/api/v1/runner/tasks/task-1/logs":
 			gotLog = true
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]any{"status": "acknowledged"})
+			w.WriteHeader(http.StatusNoContent)
 		case "/api/v1/runner/tasks/task-1/result":
 			gotResult = true
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]any{"status": "acknowledged"})
+			w.WriteHeader(http.StatusNoContent)
 		default:
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
