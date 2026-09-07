@@ -8,13 +8,13 @@ Official Beeper apps (Site Uptime, SSL expiry, Heartbeat) always execute in Core
 sequenceDiagram
   autonumber
   participant Core as Beep Core
-  participant Runner as beep-runner
+  participant Runner as beep runner
   participant Script as Workspace script
 
   Note over Core: cron claims a RunnerJob → RunnerRun pending
   Runner->>Core: POST /api/v1/runner/tasks/poll
   Core-->>Runner: 200 task (job_slug, config, log_url, result_url)
-  Runner->>Script: exec matching local script (~/.beep-runner/jobs/<slug>)
+  Runner->>Script: exec matching local script (~/.beep/jobs/<slug>)
   Script-->>Runner: stdout / stderr
   Runner->>Core: POST .../tasks/:id/logs (chunks)
   Script->>Core: optional SDK/URL POST result
@@ -27,7 +27,7 @@ sequenceDiagram
 ## Decisions
 
 1. **Pull-only HTTP(S).** The runner opens all connections outbound (GitLab Runner style). No inbound ports.
-2. **Scripts stay on the host.** Core stores `slug`, cron, timezone, timeout, and optional `config`. The runner resolves `slug` to `~/.beep-runner/jobs/<slug>` (extensionless executable; filename is the slug) or `jobs.json`.
+2. **Scripts stay on the host.** Core stores `slug`, cron, timezone, timeout, and optional `config`. The runner resolves `slug` to `~/.beep/jobs/<slug>` (extensionless executable; filename is the slug) or `jobs.json`.
 3. **Logs and results are first-class.** Stdout is uploaded while the job runs. Scripts may also POST to `BEEP_LOG_URL` / `BEEP_RESULT_URL` with `X-Runner-Token`. Local execution logs are rotated daily under `logs/beep-runner-YYYY-MM-DD.log`.
 4. **User-controlled workspace.** Scripts live on the host. Permissions and executable rights are controlled on the machine by the user.
 5. **One runner per workspace**, single instance guaranteed via `.socket`. Concurrent jobs execute via a worker pool. Supports foreground or daemon mode (`-d` / `--daemon`).
@@ -47,10 +47,10 @@ Jobs can be created or edited from the Web UI (`/$slug/runners/<id>`) or from th
 
 ## Workspace & Job Script Metadata
 
-Default workspace: `~/.beep-runner` (override with `--workspace` / `-w` or `BEEP_WORKSPACE`).
+Default workspace: `~/.beep` (override with `--workspace` / `-w` or `BEEP_WORKSPACE`).
 
 ```
-~/.beep-runner/
+~/.beep/
   config.json
   jobs.json
   .socket                   # domain socket for single-instance guarantee
@@ -79,14 +79,14 @@ exit 0
 
 Supported comment directives:
 
-| Directive                      | Meaning                                      |
-| ------------------------------ | -------------------------------------------- |
-| `# @id:` / `// @id:`           | Server job UUID (written after create/push)  |
-| `# @name:` / `// @name:`       | Human-readable job name                      |
-| `# @schedule:` or `# @cron:`   | Cron expression                              |
-| `# @timeout:`                  | Execution timeout (e.g. `30s`, `1m`)         |
-| `# @timezone:` / `# @tz:`      | Timezone (e.g. `UTC`, `Asia/Shanghai`)       |
-| `# @description:` / `# @desc:` | Job description                              |
+| Directive                      | Meaning                                     |
+| ------------------------------ | ------------------------------------------- |
+| `# @id:` / `// @id:`           | Server job UUID (written after create/push) |
+| `# @name:` / `// @name:`       | Human-readable job name                     |
+| `# @schedule:` or `# @cron:`   | Cron expression                             |
+| `# @timeout:`                  | Execution timeout (e.g. `30s`, `1m`)        |
+| `# @timezone:` / `# @tz:`      | Timezone (e.g. `UTC`, `Asia/Shanghai`)      |
+| `# @description:` / `# @desc:` | Job description                             |
 
 ### Slug, `@id`, and rename
 
@@ -117,47 +117,46 @@ Interactive TTY prompts (Huh) when args are omitted; use `--no-interactive` for 
 
 ```bash
 # Configure credentials once (stored in <workspace>/config.json)
-beep-runner config set --server https://core.example.com --token beep_rt_xxx
-beep-runner config          # show
-beep-runner config path     # print config.json path
+beep runner config set --server https://core.example.com --token beep_rt_xxx
+beep runner config          # show
+beep runner config path     # print config.json path
 
 # Create local scaffold (interactive wizard if slug omitted; syncs to Core unless --no-sync)
-beep-runner job create
-beep-runner job create intranet-http --cron "*/5 * * * *" --name "Intranet HTTP"
+beep runner job create
+beep runner job create intranet-http --cron "*/5 * * * *" --name "Intranet HTTP"
 
 # Push / pull like git (interactive multi-select with sync status when no slug given)
-beep-runner job push
-beep-runner job push intranet-http
-beep-runner job pull
-beep-runner job pull --force
+beep runner job push
+beep runner job push intranet-http
+beep runner job pull
+beep runner job pull --force
 
 # Remove local script (+ server job unless --no-sync)
-beep-runner job remove intranet-http
+beep runner job remove intranet-http
 
 # Compare local vs server (shows tz + id; pairs by slug then @id)
-beep-runner job list
+beep runner job list
 
 # Start daemon (foreground)
-beep-runner up
+beep runner up
 
 # Start daemon in background
-beep-runner up -d
-# or: beep-runner -d
+beep runner up -d
 
 # Check daemon running status
-beep-runner status
+beep runner status
 
 # Stop running daemon
-beep-runner stop
-beep-runner stop --force
+beep runner stop
+beep runner stop --force
 ```
 
-Command flags for `beep-runner up`:
+Command flags for `beep runner up`:
 - `-d, --daemon`: Run runner process in background (daemon mode).
 - `-c, --concurrency`: Max concurrent worker jobs (default `5`).
 - `-i, --poll-interval`: Task polling interval (default `3s`).
 
-Command flags for `beep-runner stop`:
+Command flags for `beep runner stop`:
 - `-f, --force`: Forcibly kill (SIGKILL) if graceful shutdown times out.
 - `--timeout`: Timeout duration waiting for shutdown (default `10s`).
 
@@ -167,17 +166,17 @@ Injected env at exec time: `BEEP_SERVER`, `BEEP_RUN_ID`, `BEEP_JOB_SLUG`, `BEEP_
 
 ### Same machine: production + local development
 
-Default workspace stays `~/.beep-runner`. Dev vs prod is normally distinguished by **server URL + token**. If a production runner is already running on the host and you need a second runner pointed at local Core (e.g. testing new runner features), use a separate workspace — never a cwd-relative `./beep-runner-dev`:
+Default workspace stays `~/.beep`. Dev vs prod is normally distinguished by **server URL + token**. If a production runner is already running on the host and you need a second runner pointed at local Core (e.g. testing new runner features), use a separate workspace — never a cwd-relative `./beep-runner-dev`:
 
 ```bash
 # Production (default workspace)
-beep-runner up -d
+beep runner up -d
 
 # Development / feature testing
-beep-runner config set -w ~/.beep-runner-dev \
+beep runner config set -w ~/.beep-dev \
   --server http://core.beep.localhost:3000 --token <dev-token>
-beep-runner -w ~/.beep-runner-dev up -d
+beep runner -w ~/.beep-dev up -d
 ```
 
-Every dev command must pass `-w ~/.beep-runner-dev` (or set `BEEP_WORKSPACE`), or it will read/write the production `config.json`.
+Every dev command must pass `-w ~/.beep-dev` (or set `BEEP_WORKSPACE`), or it will read/write the production `config.json`.
 

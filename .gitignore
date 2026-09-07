@@ -68,9 +68,11 @@ compose.yml
 
 # Binaries
 bin/beep-runner
+bin/beep
 
 # Runner
 .beep-runner
+.beep
 
 # Docs
 docs/superpowers

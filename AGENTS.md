@@ -5,8 +5,9 @@ Guidelines for coding agents in this beep monorepo.
 ## Layout
 
 - [`core/`](core/) — Rails 8.1 backend → [`docs/core/DEVELOP.md`](docs/core/DEVELOP.md), [`docs/core/STYLE.md`](docs/core/STYLE.md), [`docs/core/ACCOUNT.md`](docs/core/ACCOUNT.md)
+- [`apps/cli/`](apps/cli/) — Go CLI and runner binary (`beep`)
 - [`apps/web/`](apps/web/) — TanStack Router → [`.agents/web.md`](.agents/web.md)
-- `apps/` — client apps (web, admin, mobile, desktop)
+- `apps/` — client apps (cli, web, admin, mobile, desktop)
 - `beeper_apps/` — runtime probe mini-apps / manifest templates
 - `packages/` — shared TypeScript packages
 - `scripts/` — monorepo setup / automation

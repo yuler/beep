@@ -97,29 +97,28 @@ export function RunnerTokenModal({
 	}
 
 	const serverUrl = publicApiOrigin();
-	const token = runner.token;
 	const dockerRunCmd = `docker run -d --name beep-runner --restart=always \\
   -e BEEP_SERVER=${serverUrl} \\
   -e BEEP_RUNNER_TOKEN=${token} \\
-  -v beep-runner-workspace:/home/beep/.beep-runner \\
-  ghcr.io/yuler/beep-runner:latest`;
+  -v beep-workspace:/home/beep/.beep \\
+  ghcr.io/yuler/beep:latest`;
 
 	const dockerComposeYaml = `services:
-  beep-runner:
-    image: ghcr.io/yuler/beep-runner:latest
+  beep:
+    image: ghcr.io/yuler/beep:latest
     container_name: beep-runner
     restart: always
     volumes:
-      - beep-runner-workspace:/home/beep/.beep-runner
+      - beep-workspace:/home/beep/.beep
     environment:
       - BEEP_SERVER=${serverUrl}
       - BEEP_RUNNER_TOKEN=${token}
 
 volumes:
-  beep-runner-workspace:`;
+  beep-workspace:`;
 
-	const cliCmd = `beep-runner config set --server ${serverUrl} --token ${token}
-beep-runner up`;
+	const cliCmd = `beep runner config set --server ${serverUrl} --token ${token}
+beep runner up`;
 
 	function copyToClipboard(key: string, text: string) {
 		void navigator.clipboard.writeText(text);

@@ -46,46 +46,46 @@ description = "Build the web app for production"
 dir = "apps/web"
 run = "pnpm run build"
 
-[tasks."runner:build"]
-description = "Build the Go runner binary"
-dir = "apps/runner"
-run = "go build -ldflags=\"-s -w -X beep-runner/internal/version.Version=$(cat ../../VERSION)\" -o ../../bin/beep-runner ."
+[tasks."cli:build"]
+description = "Build the Go beep CLI binary"
+dir = "apps/cli"
+run = "go build -ldflags=\"-s -w -X beep/internal/version.Version=$(cat ../../VERSION)\" -o ../../bin/beep ."
 
-[tasks."runner:test"]
-description = "Run Go runner unit tests"
-dir = "apps/runner"
+[tasks."cli:test"]
+description = "Run Go CLI unit tests"
+dir = "apps/cli"
 run = "go test -v ./..."
 
-[tasks."runner:workspace:link"]
-description = "Symlink a beep-runner workspace to .beep-runner in the current repo"
+[tasks."cli:workspace:link"]
+description = "Symlink a beep workspace to .beep in the current repo"
 usage = '''
 arg "<workspace>" help="Workspace directory to link" default=""
 '''
 run = """
 workspace="${usage_workspace:-}"
 if [ -z "$workspace" ]; then
-  workspace="$HOME/.beep-runner"
+  workspace="$HOME/.beep"
 fi
 case "$workspace" in
   ~/*) workspace="$HOME/${workspace#~/}" ;;
   ~) workspace="$HOME" ;;
 esac
 mkdir -p "$workspace"
-ln -sfn "$workspace" .beep-runner
-echo "Linked $workspace -> .beep-runner"
+ln -sfn "$workspace" .beep
+echo "Linked $workspace -> .beep"
 """
 
-[tasks."runner:workspace:unlink"]
-description = "Unlink .beep-runner workspace symlink from the current repo"
+[tasks."cli:workspace:unlink"]
+description = "Unlink .beep workspace symlink from the current repo"
 run = """
-if [ -L .beep-runner ]; then
-  rm .beep-runner
-  echo "Unlinked .beep-runner"
-elif [ -e .beep-runner ]; then
-  echo "Error: .beep-runner exists but is not a symlink" >&2
+if [ -L .beep ]; then
+  rm .beep
+  echo "Unlinked .beep"
+elif [ -e .beep ]; then
+  echo "Error: .beep exists but is not a symlink" >&2
   exit 1
 else
-  echo ".beep-runner is not linked"
+  echo ".beep is not linked"
 fi
 """
 
