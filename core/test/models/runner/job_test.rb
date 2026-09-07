@@ -52,4 +52,55 @@ class Runner::JobTest < ActiveSupport::TestCase
     assert_equal "error", run.result_status
     assert_equal "Runner offline", run.result["title"]
   end
+
+  test "reclaim does not fail a run that was claimed after pending check" do
+    job = @runner.jobs.create!(name: "Check", slug: "check", cron: "*/5 * * * *", timezone: "UTC")
+    job.update_columns(status: "firing", updated_at: 5.minutes.ago)
+    run = job.runs.create!(scheduled_for: 3.minutes.ago, status: "pending", runner: @runner, created_at: 3.minutes.ago)
+
+    assert run.claim_for(@runner)
+    job.reclaim_stale
+
+    run.reload
+    assert_equal "running", run.status
+    assert_nil run.result_status
+  end
+
+  test "reclaim_stale_firing recovers open runs on paused jobs" do
+    job = @runner.jobs.create!(name: "Check", slug: "check", cron: "*/5 * * * *", timezone: "UTC")
+    job.update_columns(status: "firing")
+    run = job.runs.create!(scheduled_for: 5.minutes.ago, status: "pending", runner: @runner, created_at: 5.minutes.ago)
+    job.pause!
+
+    Runner::Job.reclaim_stale_firing
+
+    run.reload
+    job.reload
+    assert_equal "failed", run.status
+    assert_equal "error", run.result_status
+    assert job.paused?
+  end
+
+  test "timezone change refreshes next_run_at" do
+    job = @runner.jobs.create!(name: "Check", slug: "check", cron: "0 9 * * *", timezone: "UTC")
+    original = job.next_run_at
+
+    job.update!(timezone: "Asia/Shanghai")
+
+    assert_not_equal original, job.next_run_at
+  end
+
+  test "record_result! is atomic and rejects second write" do
+    job = @runner.jobs.create!(name: "Check", slug: "check", cron: "*/5 * * * *", timezone: "UTC")
+    job.update_columns(status: "firing")
+    run = job.runs.create!(scheduled_for: Time.current, status: "running", runner: @runner, claimed_at: Time.current)
+
+    assert run.record_result!(status: :ok, title: "first", run_status: :succeeded)
+    refute run.record_result!(status: :error, title: "second", run_status: :failed)
+
+    run.reload
+    assert_equal "succeeded", run.status
+    assert_equal "ok", run.result_status
+    assert_equal "first", run.result["title"]
+  end
 end

@@ -705,7 +705,7 @@
   "runners_regenerate_failed": "重置 Token 失败",
   "runners_jobs_title": "Jobs",
   "runners_jobs_add": "添加 Job",
-  "runners_jobs_add_hint": "Slug 必须对应本机脚本，例如 ~/.beep/jobs/intranet-http.sh。",
+  "runners_jobs_add_hint": "Slug 必须对应本机脚本，例如 ~/.beep/jobs/intranet-http。",
   "runners_jobs_edit": "编辑 Job",
   "runners_jobs_edit_hint": "修改此 Job 的调度周期、超时或元数据。",
   "runners_jobs_name": "名称",

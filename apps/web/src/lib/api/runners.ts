@@ -89,7 +89,7 @@ export function deleteRunner(accountSlug: string, runnerId: string) {
 
 export function regenerateRunnerToken(accountSlug: string, runnerId: string) {
 	return apiFetch<RunnerWithTokenResponse>(
-		`/api/v1/${accountSlug}/runners/${runnerId}/regenerate_token`,
+		`/api/v1/${accountSlug}/runners/${runnerId}/token`,
 		{
 			method: "POST",
 		},

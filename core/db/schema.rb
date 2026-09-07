@@ -336,7 +336,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_02_112000) do
     t.string "token", null: false
     t.string "status", default: "offline", null: false
     t.json "tags", default: [], null: false
-    t.boolean "allow_exec", default: false, null: false
     t.string "version"
     t.string "os"
     t.string "arch"

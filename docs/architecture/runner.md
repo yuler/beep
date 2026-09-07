@@ -12,7 +12,7 @@ sequenceDiagram
   participant Script as Workspace script
 
   Note over Core: cron claims a RunnerJob → RunnerRun pending
-  Runner->>Core: POST /api/v1/runner/tasks/poll
+  Runner->>Core: POST /api/v1/runner/tasks
   Core-->>Runner: 200 task (job_slug, config, log_url, result_url)
   Runner->>Script: exec matching local script (~/.beep/jobs/<slug>)
   Script-->>Runner: stdout / stderr
@@ -28,10 +28,10 @@ sequenceDiagram
 
 1. **Pull-only HTTP(S).** The runner opens all connections outbound (GitLab Runner style). No inbound ports.
 2. **Scripts stay on the host.** Core stores `slug`, cron, timezone, timeout, and optional `config`. The runner resolves `slug` to `~/.beep/jobs/<slug>` (extensionless executable; filename is the slug) or `jobs.json`.
-3. **Logs and results are first-class.** Stdout is uploaded while the job runs. Scripts may also POST to `BEEP_LOG_URL` / `BEEP_RESULT_URL` with `X-Runner-Token`. Local execution logs are rotated daily under `logs/beep-runner-YYYY-MM-DD.log`.
+3. **Logs and results are first-class.** Stdout is uploaded while the job runs. The runner posts to `BEEP_LOG_URL` / `BEEP_RESULT_URL` using the daemon’s auth header. Job processes do **not** receive `BEEP_RUNNER_TOKEN` (scripts should not impersonate the runner). Local execution logs are rotated daily under `logs/beep-runner-YYYY-MM-DD.log`.
 4. **User-controlled workspace.** Scripts live on the host. Permissions and executable rights are controlled on the machine by the user.
 5. **One runner per workspace**, single instance guaranteed via `.socket`. Concurrent jobs execute via a worker pool. Supports foreground or daemon mode (`-d` / `--daemon`).
-6. **Git-style job sync.** Local scripts are the source of truth for execution; Core holds schedule metadata. Slug is the script filename; `@id` survives renames. `job push` / `job pull` / `job list` compare local vs server (pair by slug, then `@id`).
+6. **Git-style job sync.** Local scripts are the source of truth for execution; Core holds schedule metadata. Slug is the script filename; `@id` survives renames. `job push` / `job pull` / `job list` compare local vs server (pair by `@id`, then slug).
 
 ---
 
@@ -67,7 +67,7 @@ Job scripts are **extensionless executables** under `jobs/`. The filename is the
 #!/usr/bin/env bash
 # @id: <server-job-uuid>
 # @name: Intranet HTTP Health Check
-# @schedule: */5 * * * *
+# @cron: */5 * * * *
 # @timeout: 30s
 # @timezone: Asia/Shanghai
 # @description: Ping internal gateway
@@ -77,16 +77,16 @@ echo "Starting check..."
 exit 0
 ```
 
-Supported comment directives:
+Supported comment directives (prefix is `#`, `//`, or `--` to match the script language — e.g. `#` for bash/python, `//` for node/bun):
 
-| Directive                      | Meaning                                     |
-| ------------------------------ | ------------------------------------------- |
-| `# @id:` / `// @id:`           | Server job UUID (written after create/push) |
-| `# @name:` / `// @name:`       | Human-readable job name                     |
-| `# @schedule:` or `# @cron:`   | Cron expression                             |
-| `# @timeout:`                  | Execution timeout (e.g. `30s`, `1m`)        |
-| `# @timezone:` / `# @tz:`      | Timezone (e.g. `UTC`, `Asia/Shanghai`)      |
-| `# @description:` / `# @desc:` | Job description                             |
+| Directive                   | Meaning                                     |
+| --------------------------- | ------------------------------------------- |
+| `@id:`                      | Server job UUID (written after create/push) |
+| `@name:`                    | Human-readable job name                     |
+| `@cron:`                    | Cron expression                             |
+| `@timeout:`                 | Execution timeout (e.g. `30s`, `1m`)        |
+| `@timezone:`                | Timezone (e.g. `UTC`, `Asia/Shanghai`)      |
+| `@description:`             | Job description                             |
 
 ### Slug, `@id`, and rename
 
@@ -107,7 +107,7 @@ Supported comment directives:
 | `local only`  | Present locally, not on server                                               |
 | `remote only` | Present on server, no local script                                           |
 
-Pairing order: **slug first**, then remaining jobs by **`@id`**. Each listed job shows **cron**, **timezone** (defaults display to `UTC` if unset), and **`@id`** (`(unset)` until synced).
+Pairing order: **`@id` first**, then remaining jobs by **slug**. Each listed job shows **cron**, **timezone** (defaults display to `UTC` if unset), and **`@id`** (`(unset)` until synced).
 
 Push / pull interactive multi-select uses the same statuses (gray state suffix). Synced jobs are not pre-selected. Field-level diffs cover name, schedule, timezone, timeout, description, and slug. After a successful create or push, the CLI writes `# @id:` into the local script header.
 
@@ -134,7 +134,7 @@ beep runner job pull --force
 # Remove local script (+ server job unless --no-sync)
 beep runner job remove intranet-http
 
-# Compare local vs server (shows tz + id; pairs by slug then @id)
+# Compare local vs server (shows tz + id; pairs by @id then slug)
 beep runner job list
 
 # Start daemon (foreground)

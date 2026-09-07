@@ -214,6 +214,42 @@ func TestPullJob(t *testing.T) {
 	}
 }
 
+func TestPullJobRefusesRenameOntoOtherJob(t *testing.T) {
+	root := t.TempDir()
+	ws, err := Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	oldPath, _, err := ws.PullJob("old-slug", "bash", "job_a", "A", "*/5 * * * *", "UTC", "", 30, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherPath, _, err := ws.PullJob("new-slug", "bash", "job_b", "B", "*/5 * * * *", "UTC", "", 30, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, err = ws.PullJob("new-slug", "bash", "job_a", "A", "*/5 * * * *", "UTC", "", 30, false)
+	if err == nil {
+		t.Fatal("expected rename onto occupied slug to fail")
+	}
+	if _, statErr := os.Stat(oldPath); statErr != nil {
+		t.Fatalf("source script should remain: %v", statErr)
+	}
+	kept, err := os.ReadFile(otherPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	meta, err := ParseScriptMetadata(otherPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if meta.ID != "job_b" {
+		t.Fatalf("occupied target must not be overwritten, got id=%s body=%q", meta.ID, kept)
+	}
+}
+
 func TestPullJobForceOverwritesBody(t *testing.T) {
 	root := t.TempDir()
 	ws, err := Open(root)
@@ -293,5 +329,35 @@ func TestListJobsAndResolvePreferFileOverJSON(t *testing.T) {
 	}
 	if len(argv) != 1 || argv[0] != script {
 		t.Fatalf("expected file path argv, got %v", argv)
+	}
+}
+
+func TestResolveWithScriptExtensionFallback(t *testing.T) {
+	root := t.TempDir()
+	jobsDir := filepath.Join(root, "jobs")
+	if err := os.MkdirAll(jobsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	script := filepath.Join(jobsDir, "heartbeat.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho ok\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	ws, err := Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fpath, found := ws.FindScriptFile("heartbeat")
+	if !found || fpath != script {
+		t.Fatalf("expected FindScriptFile to find %s, got %s (found: %v)", script, fpath, found)
+	}
+
+	argv, err := ws.Resolve("heartbeat")
+	if err != nil {
+		t.Fatalf("expected Resolve to find heartbeat.sh, got err: %v", err)
+	}
+	if len(argv) != 1 || argv[0] != script {
+		t.Fatalf("expected [%s], got %v", script, argv)
 	}
 }

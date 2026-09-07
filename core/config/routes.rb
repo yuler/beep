@@ -86,8 +86,11 @@ Rails.application.routes.draw do
           resources :runs, only: :create
         end
       end
+
       resources :runners, only: %i[ index show create update destroy ] do
-        post :regenerate_token, on: :member
+        scope module: :runners do
+          resource :token, only: %i[ create ]
+        end
         resources :jobs, controller: "runner_jobs" do
           scope module: :runner_jobs do
             resource :pause, only: %i[ create destroy ]
@@ -98,15 +101,18 @@ Rails.application.routes.draw do
 
       namespace :runner do
         resource :ping, only: %i[ create ]
-        resources :jobs, only: %i[ index create destroy ] do
-          post :sync, on: :collection
+        resources :jobs, only: %i[ index create destroy ]
+        namespace :jobs do
+          resource :sync, only: %i[ create ]
         end
-        resources :tasks, only: [] do
-          post :poll, on: :collection
-          post :logs, on: :member
-          post :result, on: :member
+        resources :tasks, only: %i[ create ] do
+          scope module: :tasks do
+            resources :logs, only: %i[ create ]
+            resource :result, only: %i[ create ]
+          end
         end
       end
+
       resources :beep_proposals, only: :create
       resources :beeps, only: %i[ index show create update destroy ] do
         scope module: :beeps do

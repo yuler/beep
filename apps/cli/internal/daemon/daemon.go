@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -92,12 +93,12 @@ func (d *Daemon) pollAndExecute(ctx context.Context) {
 				<-d.sem
 				d.wg.Done()
 			}()
-			d.execute(job)
+			d.execute(ctx, job)
 		}(t)
 	}
 }
 
-func (d *Daemon) execute(job *task.Task) {
+func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 	log.Printf("%s %s %s (%s: %s)",
 		ui.Bold(ui.Cyan("[beep-runner]")),
 		ui.Yellow("Running"),
@@ -110,7 +111,7 @@ func (d *Daemon) execute(job *task.Task) {
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
-	taskCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	taskCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	reportCtx, reportCancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -128,33 +129,57 @@ func (d *Daemon) execute(job *task.Task) {
 
 	env := d.jobEnv(job)
 
-	var logBuf string
-	var logMu sync.Mutex
-	flush := func(ctx context.Context, force bool) {
-		logMu.Lock()
-		chunk := logBuf
-		if !force && len(chunk) < 256 {
-			logMu.Unlock()
-			return
+	logChan := make(chan string, 200)
+	var logWg sync.WaitGroup
+	logWg.Add(1)
+
+	go func() {
+		defer logWg.Done()
+		var buf strings.Builder
+		ticker := time.NewTicker(400 * time.Millisecond)
+		defer ticker.Stop()
+
+		flushChunk := func() {
+			if buf.Len() == 0 {
+				return
+			}
+			chunk := buf.String()
+			buf.Reset()
+			if err := d.client.ReportLog(reportCtx, job.LogURL, chunk); err != nil {
+				log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("log upload:"), err)
+			}
 		}
-		logBuf = ""
-		logMu.Unlock()
-		if chunk == "" {
-			return
+
+		for {
+			select {
+			case line, ok := <-logChan:
+				if !ok {
+					flushChunk()
+					return
+				}
+				buf.WriteString(line)
+				if buf.Len() >= 1024 {
+					flushChunk()
+				}
+			case <-ticker.C:
+				flushChunk()
+			}
 		}
-		if err := d.client.ReportLog(ctx, job.LogURL, chunk); err != nil {
-			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("log upload:"), err)
-		}
-	}
+	}()
 
 	result := d.executor.Run(taskCtx, argv, env, timeout, func(line string) {
 		log.Print(ui.Dim(fmt.Sprintf("[%s]", job.JobSlug)) + " " + line)
-		logMu.Lock()
-		logBuf += line
-		logMu.Unlock()
-		flush(taskCtx, false)
+		select {
+		case logChan <- line:
+		default:
+			// Buffer full: write directly to avoid dropping logs
+			go func(l string) {
+				logChan <- l
+			}(line)
+		}
 	})
-	flush(reportCtx, true)
+	close(logChan)
+	logWg.Wait()
 
 	if result.Status == task.StatusOk {
 		log.Printf("%s %s %s %s",

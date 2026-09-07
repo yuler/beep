@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"beep/internal/task"
@@ -30,6 +31,7 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 
 	cmd := exec.CommandContext(execCtx, argv[0], argv[1:]...)
 	cmd.Env = env
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return task.Error("Failed to start job", err.Error(), nil)
@@ -50,12 +52,19 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 	go streamLines(stderr, onLog, &wg)
 
 	waitErr := cmd.Wait()
+	// Ensure the whole process group is reaped (children of the job script).
+	if cmd.Process != nil {
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
 	wg.Wait()
 	durationMs := time.Since(start).Milliseconds()
 	metrics := map[string]any{"duration_ms": durationMs}
 
-	if execCtx.Err() == context.DeadlineExceeded {
-		metrics["timed_out"] = true
+	if execCtx.Err() == context.DeadlineExceeded || ctx.Err() != nil {
+		metrics["timed_out"] = execCtx.Err() == context.DeadlineExceeded
+		if ctx.Err() != nil && execCtx.Err() != context.DeadlineExceeded {
+			return task.Alerting("Job cancelled", "Runner shut down before the job finished", metrics)
+		}
 		return task.Alerting(fmt.Sprintf("Job timed out after %s", timeout), "Execution exceeded the deadline", metrics)
 	}
 
@@ -85,12 +94,29 @@ func streamLines(r io.Reader, onLog func(string), wg *sync.WaitGroup) {
 	}
 }
 
+// blockedJobEnvKeys must never be inherited by job processes.
+var blockedJobEnvKeys = map[string]struct{}{
+	"BEEP_RUNNER_TOKEN": {},
+}
+
 func WithJobEnv(extra []string) []string {
-	env := os.Environ()
+	env := scrubJobEnv(os.Environ())
 	if len(extra) == 0 {
 		return env
 	}
-	return append(env, extra...)
+	return append(env, scrubJobEnv(extra)...)
+}
+
+func scrubJobEnv(env []string) []string {
+	out := make([]string, 0, len(env))
+	for _, item := range env {
+		key, _, _ := strings.Cut(item, "=")
+		if _, blocked := blockedJobEnvKeys[key]; blocked {
+			continue
+		}
+		out = append(out, item)
+	}
+	return out
 }
 
 func ConfigEnv(config map[string]any) []string {

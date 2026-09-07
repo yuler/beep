@@ -37,19 +37,19 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
     assert_equal "linux", @runner.os
   end
 
-  test "poll returns 204 when no tasks are due" do
-    post "/api/v1/runner/tasks/poll",
+  test "create returns 204 when no tasks are due" do
+    post "/api/v1/runner/tasks",
       headers: { "X-Runner-Token" => @runner_token },
       as: :json
 
     assert_response :no_content
   end
 
-  test "poll claims pending job run and exposes log and result urls" do
+  test "create claims pending job run and exposes log and result urls" do
     run = @job.trigger_run!
     assert run.pending?
 
-    post "/api/v1/runner/tasks/poll",
+    post "/api/v1/runner/tasks",
       headers: { "X-Runner-Token" => @runner_token },
       as: :json
 
@@ -101,12 +101,12 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil @job.last_run_at
   end
 
-  test "poll claims pending run from paused job" do
+  test "create claims pending run from paused job" do
     @job.update!(status: :paused)
     run = @job.trigger_run!
     assert run.pending?
 
-    post "/api/v1/runner/tasks/poll",
+    post "/api/v1/runner/tasks",
       headers: { "X-Runner-Token" => @runner_token },
       as: :json
 

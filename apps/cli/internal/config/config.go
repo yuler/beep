@@ -89,8 +89,7 @@ func Load(wsHint string) (*Config, error) {
 	configPath := GetConfigPath(wsHint)
 	fc, err := LoadFile(configPath)
 	if err != nil {
-		// Log or ignore unparseable non-fatal config file error and fallback
-		fc = &FileConfig{}
+		return nil, err
 	}
 
 	ws := wsHint

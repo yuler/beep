@@ -42,7 +42,7 @@ func TestClientPollLogAndResult(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
-		case "/api/v1/runner/tasks/poll":
+		case "/api/v1/runner/tasks":
 			json.NewEncoder(w).Encode(map[string]any{
 				"task": map[string]any{
 					"id":              "task-1",
@@ -93,5 +93,19 @@ func TestReportRejectsForeignCallbackURL(t *testing.T) {
 	}
 	if err := c.ReportResult(context.Background(), "https://core.example.com/not-a-task", task.Ok("ok", "", nil)); err == nil {
 		t.Fatal("expected non-task path to be rejected")
+	}
+}
+
+func TestReportLogRejectsUnprocessableEntity(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_, _ = w.Write([]byte(`{"error":"Run is no longer accepting logs"}`))
+	}))
+	defer ts.Close()
+
+	c := New(&config.Config{ServerURL: ts.URL, RunnerToken: "beep_rt_test"})
+	err := c.ReportLog(context.Background(), ts.URL+"/api/v1/runner/tasks/task-1/logs", "hello\n")
+	if err == nil {
+		t.Fatal("expected 422 log report to fail")
 	}
 }

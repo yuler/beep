@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # @name: Intranet Gateway Health Check
-# @schedule: */5 * * * *
+# @cron: */5 * * * *
 # @timeout: 30s
 # @timezone: Asia/Shanghai
 # @description: Ping internal health check endpoint

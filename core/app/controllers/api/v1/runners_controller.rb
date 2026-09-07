@@ -1,13 +1,18 @@
 class Api::V1::RunnersController < Api::V1::BaseController
-  before_action :set_runner, only: %i[ show update destroy regenerate_token ]
+  before_action :set_runner, only: %i[ show update destroy ]
 
   def index
     Runner.mark_stale_offline
-    @runners = Current.account.runners.order(created_at: :desc)
+    @runners = Current.account.runners
+                              .left_joins(:jobs)
+                              .select("runners.*, COUNT(runner_jobs.id) AS jobs_count")
+                              .group("runners.id")
+                              .order(created_at: :desc)
     render :index
   end
 
   def show
+    Runner.mark_stale_offline
     render :show
   end
 
@@ -40,11 +45,6 @@ class Api::V1::RunnersController < Api::V1::BaseController
   def destroy
     @runner.destroy!
     head :no_content
-  end
-
-  def regenerate_token
-    @runner.regenerate_token
-    render :create
   end
 
   private

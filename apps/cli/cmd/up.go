@@ -110,16 +110,7 @@ func startBackgroundDaemon(cfg *config.Config) error {
 	}
 
 	// Filter out daemon flags from args so child doesn't think it needs to spawn again
-	childArgs := stripDaemonFlags(os.Args[1:])
-
-	var filteredFlags []string
-	for _, a := range childArgs {
-		if a == "runner" || a == "up" || a == "run" {
-			continue
-		}
-		filteredFlags = append(filteredFlags, a)
-	}
-	childArgs = append([]string{"runner", "up"}, filteredFlags...)
+	childArgs := buildChildDaemonArgs(os.Args[1:])
 
 	cmd := exec.Command(exe, childArgs...)
 	cmd.Env = append(os.Environ(), "BEEP_DAEMON_CHILD=1")
@@ -156,6 +147,10 @@ func startBackgroundDaemon(cfg *config.Config) error {
 	}
 
 	if !started {
+		if cmd.Process != nil {
+			_ = cmd.Process.Kill()
+			_, _ = cmd.Process.Wait()
+		}
 		return fmt.Errorf("daemon failed to initialize socket (check logs in %s/logs)", cfg.Workspace)
 	}
 
@@ -171,4 +166,18 @@ func stripDaemonFlags(args []string) []string {
 		out = append(out, a)
 	}
 	return out
+}
+
+func buildChildDaemonArgs(args []string) []string {
+	stripped := stripDaemonFlags(args)
+	i := 0
+	for i < len(stripped) {
+		cmd := stripped[i]
+		if cmd == "runner" || cmd == "up" || cmd == "run" {
+			i++
+		} else {
+			break
+		}
+	}
+	return append([]string{"runner", "up"}, stripped[i:]...)
 }

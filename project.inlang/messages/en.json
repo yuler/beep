@@ -705,7 +705,7 @@
   "runners_regenerate_failed": "Failed to regenerate token",
   "runners_jobs_title": "Jobs",
   "runners_jobs_add": "Add job",
-  "runners_jobs_add_hint": "Slug must match a local script (for example ~/.beep/jobs/intranet-http.sh).",
+  "runners_jobs_add_hint": "Slug must match a local script (for example ~/.beep/jobs/intranet-http).",
   "runners_jobs_edit": "Edit job",
   "runners_jobs_edit_hint": "Update the schedule, timeout, or metadata for this job.",
   "runners_jobs_name": "Name",

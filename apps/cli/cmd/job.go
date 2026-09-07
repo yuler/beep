@@ -220,6 +220,15 @@ var jobRemoveCmd = &cobra.Command{
 		c := client.New(cfg)
 
 		for _, slug := range targetSlugs {
+			// Prefer @id for server delete so a local rename still removes the paired remote job.
+			deleteKey := slug
+			for _, lj := range localJobs {
+				if strings.EqualFold(lj.Slug, slug) && strings.TrimSpace(lj.ID) != "" {
+					deleteKey = strings.TrimSpace(lj.ID)
+					break
+				}
+			}
+
 			removedFiles, removedFromJSON, err := ws.RemoveJob(slug)
 			if err != nil {
 				fmt.Println(ui.Info("%v", err))
@@ -234,7 +243,7 @@ var jobRemoveCmd = &cobra.Command{
 
 			if syncServer && cfg.ServerURL != "" && cfg.RunnerToken != "" {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-				if delErr := c.DeleteJob(ctx, slug); delErr != nil {
+				if delErr := c.DeleteJob(ctx, deleteKey); delErr != nil {
 					fmt.Println(ui.Warn("Failed to delete job on server: %v", delErr))
 				} else {
 					fmt.Println(ui.Success("Deleted job %s from server", ui.Bold(slug)))
@@ -437,8 +446,12 @@ func runJobPushExec(cmd *cobra.Command, args []string) error {
 	if cfg.ServerURL != "" && cfg.RunnerToken != "" {
 		c := client.New(cfg)
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		serverJobs, _ = c.ListJobs(ctx)
+		var serverErr error
+		serverJobs, serverErr = c.ListJobs(ctx)
 		cancel()
+		if serverErr != nil {
+			fmt.Println(ui.Warn("Warning: Could not fetch server jobs: %v", serverErr))
+		}
 	}
 
 	items := ui.PairJobs(localJobs, serverJobs)
@@ -522,9 +535,13 @@ func runJobPushExec(cmd *cobra.Command, args []string) error {
 	fmt.Println(ui.Success("Successfully pushed %d job(s) to server (%s):", len(synced), ui.Dim(cfg.ServerURL)))
 	for _, j := range synced {
 		if fpath, found := ws.FindScriptFileByID(j.ID); found {
-			_ = ws.UpdateScriptID(fpath, j.ID)
+			if updateErr := ws.UpdateScriptID(fpath, j.ID); updateErr != nil {
+				fmt.Println(ui.Warn("Warning: Failed to write @id header to %s: %v", fpath, updateErr))
+			}
 		} else if fpath, found := ws.FindScriptFile(j.Slug); found {
-			_ = ws.UpdateScriptID(fpath, j.ID)
+			if updateErr := ws.UpdateScriptID(fpath, j.ID); updateErr != nil {
+				fmt.Println(ui.Warn("Warning: Failed to write @id header to %s: %v", fpath, updateErr))
+			}
 		}
 		fmt.Printf("  %s %-20s %s: %s  %s: %s\n",
 			ui.Bullet(), ui.Cyan(j.Slug), ui.Dim("ID"), ui.Bold(j.ID), ui.Dim("cron"), ui.Yellow(j.Cron))

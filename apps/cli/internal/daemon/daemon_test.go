@@ -19,6 +19,7 @@ import (
 )
 
 func TestJobEnvOmitsRunnerToken(t *testing.T) {
+	t.Setenv("BEEP_RUNNER_TOKEN", "beep_rt_from_environ")
 	d := &Daemon{cfg: &config.Config{
 		ServerURL:   "https://core.example.com",
 		RunnerToken: "beep_rt_secret",
@@ -31,7 +32,10 @@ func TestJobEnvOmitsRunnerToken(t *testing.T) {
 		Config:    map[string]any{"k": "v"},
 	})
 	for _, item := range env {
-		if strings.Contains(item, "beep_rt_secret") {
+		if strings.HasPrefix(item, "BEEP_RUNNER_TOKEN=") {
+			t.Fatalf("job env must not include BEEP_RUNNER_TOKEN, got %s", item)
+		}
+		if strings.Contains(item, "beep_rt_secret") || strings.Contains(item, "beep_rt_from_environ") {
 			t.Fatalf("job env must not include runner token, got %s", item)
 		}
 	}
@@ -43,7 +47,7 @@ func TestPollAndExecuteFillsConcurrency(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
-		case r.URL.Path == "/api/v1/runner/tasks/poll":
+		case r.URL.Path == "/api/v1/runner/tasks":
 			n := polls.Add(1)
 			json.NewEncoder(w).Encode(map[string]any{
 				"task": map[string]any{

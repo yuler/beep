@@ -206,6 +206,12 @@ export function RunnerJobFormDialog({
 								onChange={(e) => setJobSlug(e.target.value)}
 								disabled={submitting}
 							/>
+							{isEdit && job && jobSlug.trim() !== job.slug ? (
+								<p className="text-[11px] text-amber-600 dark:text-amber-400">
+									Changing the slug requires renaming the local script on the
+									runner host.
+								</p>
+							) : null}
 						</div>
 
 						<div className="flex flex-col gap-1.5">

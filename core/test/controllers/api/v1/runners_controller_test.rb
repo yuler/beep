@@ -91,7 +91,7 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
     runner = @account.runners.create!(name: "Token-Runner")
     old_token = runner.token
 
-    post "/api/v1/#{@account.slug}/runners/#{runner.id}/regenerate_token",
+    post "/api/v1/#{@account.slug}/runners/#{runner.id}/token",
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 

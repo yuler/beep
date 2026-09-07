@@ -22,6 +22,7 @@ import {
 	formatRunnerLastSeen,
 	getRunnerStatusBadge,
 } from "@/components/runners/runner-list";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -124,7 +125,11 @@ function RunnerDetailPage() {
 	}, [selectedJob, slug, runner.id]);
 
 	useEffect(() => {
-		if (!selectedJob || !selectedRun || selectedRun.status !== "running") {
+		if (
+			!selectedJob ||
+			!selectedRun ||
+			(selectedRun.status !== "running" && selectedRun.status !== "pending")
+		) {
 			return;
 		}
 		const timer = window.setInterval(() => {
@@ -133,7 +138,19 @@ function RunnerDetailPage() {
 				runner.id,
 				selectedJob.id,
 				selectedRun.id,
-			).then(setSelectedRun);
+			).then((updatedRun) => {
+				setSelectedRun(updatedRun);
+				if (
+					updatedRun.status !== "running" &&
+					updatedRun.status !== "pending"
+				) {
+					void fetchRunnerJobRuns(slug, runner.id, selectedJob.id).then(
+						(res) => {
+							setRuns(res.runs);
+						},
+					);
+				}
+			});
 		}, 2000);
 		return () => window.clearInterval(timer);
 	}, [selectedJob, selectedRun, slug, runner.id]);
@@ -180,7 +197,8 @@ function RunnerDetailPage() {
 		setError(null);
 		try {
 			await deleteRunnerJob(slug, runner.id, job.id);
-			setSelectedJobId(null);
+			const remaining = jobs.filter((j) => j.id !== job.id);
+			setSelectedJobId(remaining[0]?.id ?? null);
 			await router.invalidate();
 		} catch (err) {
 			setError(
@@ -244,6 +262,14 @@ function RunnerDetailPage() {
 						{m.runners_jobs_add()}
 					</Button>
 				</div>
+
+				{!runner.is_online && runner.status === "offline" ? (
+					<Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+						<AlertDescription className="text-xs">
+							{m.runners_workspace_hint()}
+						</AlertDescription>
+					</Alert>
+				) : null}
 
 				{error ? (
 					<p className="text-sm text-destructive" role="alert">

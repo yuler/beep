@@ -104,6 +104,8 @@ func StopDaemon(workspaceDir string, timeout time.Duration, force bool) (int, er
 	}
 
 	if force {
+		// Daemon was started with Setsid; kill the whole process group.
+		_ = syscall.Kill(-pid, syscall.SIGKILL)
 		_ = proc.Signal(syscall.SIGKILL)
 		time.Sleep(100 * time.Millisecond)
 		_ = os.Remove(SocketPath(workspaceDir))

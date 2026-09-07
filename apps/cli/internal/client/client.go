@@ -141,7 +141,7 @@ type PollResponse struct {
 }
 
 func (c *Client) Poll(ctx context.Context) (*task.Task, error) {
-	url := fmt.Sprintf("%s/api/v1/runner/tasks/poll", c.cfg.ServerURL)
+	url := fmt.Sprintf("%s/api/v1/runner/tasks", c.cfg.ServerURL)
 	payload := map[string]any{
 		"version":  version.Version,
 		"os":       runtime.GOOS,
@@ -233,9 +233,6 @@ func (c *Client) postJSON(ctx context.Context, url string, payload any, want int
 	defer resp.Body.Close()
 	if resp.StatusCode != want {
 		respBody, _ := io.ReadAll(resp.Body)
-		if dest == nil && want == http.StatusOK && resp.StatusCode == http.StatusUnprocessableEntity {
-			return nil
-		}
 		return fmt.Errorf("request failed (status %d): %s", resp.StatusCode, string(respBody))
 	}
 	if dest == nil {

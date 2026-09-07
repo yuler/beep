@@ -96,6 +96,7 @@ export function RunnerTokenModal({
 		return null;
 	}
 
+	const token = runner.token;
 	const serverUrl = publicApiOrigin();
 	const dockerRunCmd = `docker run -d --name beep-runner --restart=always \\
   -e BEEP_SERVER=${serverUrl} \\

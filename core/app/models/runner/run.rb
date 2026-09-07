@@ -38,12 +38,11 @@ class Runner::Run < ApplicationRecord
     end
   end
 
-  def record_result!(status:, title: nil, message: nil, metrics: {}, run_status: :succeeded)
-    return false unless pending? || running?
-
+  def record_result!(status:, title: nil, message: nil, metrics: {}, run_status: :succeeded, from_statuses: %w[ pending running ])
     result_status = status.to_s.downcase
     result_status = "error" unless result_status.in?(%w[ ok alerting error ])
-    run_status = :failed if result_status == "error" && run_status == :succeeded
+    run_status = :failed if result_status == "error" && run_status.to_sym == :succeeded
+    allowed = Array(from_statuses).map(&:to_s)
 
     payload = sanitize_result(
       "status" => result_status,
@@ -52,11 +51,15 @@ class Runner::Run < ApplicationRecord
       "metrics" => metrics.is_a?(Hash) ? metrics : {}
     )
 
-    update!(
+    updated = self.class.where(id: id, status: allowed).update_all(
       result_status: result_status,
       result: payload,
-      status: run_status
+      status: run_status.to_s,
+      updated_at: Time.current
     )
+    return false if updated != 1
+
+    reload
     runner_job.finish_firing(last_run_at: scheduled_for)
     true
   end

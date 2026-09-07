@@ -175,13 +175,13 @@ func ParseScriptMetadata(filePath string) (JobMetadata, error) {
 			meta.ID = val
 		case "name", "title":
 			meta.Name = val
-		case "schedule", "cron":
+		case "cron":
 			meta.Cron = val
-		case "timezone", "tz":
+		case "timezone":
 			meta.Timezone = val
 		case "timeout", "timeout_seconds":
 			meta.TimeoutSeconds = ParseTimeoutSeconds(val)
-		case "description", "desc":
+		case "description":
 			meta.Description = val
 		}
 	}
@@ -462,7 +462,7 @@ func (w *Workspace) CreateScript(slug, scriptType, id, name, cron, timezone, des
 	sb.WriteString("\n")
 	sb.WriteString(fmt.Sprintf("%s@id: %s\n", commentPrefix, id))
 	sb.WriteString(fmt.Sprintf("%s@name: %s\n", commentPrefix, name))
-	sb.WriteString(fmt.Sprintf("%s@schedule: %s\n", commentPrefix, cron))
+	sb.WriteString(fmt.Sprintf("%s@cron: %s\n", commentPrefix, cron))
 	sb.WriteString(fmt.Sprintf("%s@timeout: %ds\n", commentPrefix, timeoutSeconds))
 	sb.WriteString(fmt.Sprintf("%s@timezone: %s\n", commentPrefix, timezone))
 	sb.WriteString(fmt.Sprintf("%s@description: %s\n\n", commentPrefix, description))
@@ -534,7 +534,7 @@ func (w *Workspace) UpdateScriptHeader(filePath, id, name, cron, timezone, descr
 
 	sb.WriteString(fmt.Sprintf("%s@id: %s\n", commentPrefix, id))
 	sb.WriteString(fmt.Sprintf("%s@name: %s\n", commentPrefix, name))
-	sb.WriteString(fmt.Sprintf("%s@schedule: %s\n", commentPrefix, cron))
+	sb.WriteString(fmt.Sprintf("%s@cron: %s\n", commentPrefix, cron))
 	sb.WriteString(fmt.Sprintf("%s@timeout: %ds\n", commentPrefix, timeoutSeconds))
 	sb.WriteString(fmt.Sprintf("%s@timezone: %s\n", commentPrefix, timezone))
 	sb.WriteString(fmt.Sprintf("%s@description: %s\n\n", commentPrefix, description))
@@ -551,6 +551,8 @@ func (w *Workspace) UpdateScriptID(filePath string, id string) error {
 	return w.UpdateScriptHeader(filePath, id, meta.Name, meta.Cron, meta.Timezone, meta.Description, meta.TimeoutSeconds)
 }
 
+var knownScriptExtensions = []string{".sh", ".bash", ".py", ".js", ".ts", ".rb", ".php"}
+
 func (w *Workspace) FindScriptFile(slug string) (string, bool) {
 	if err := ValidateSlug(slug); err != nil {
 		return "", false
@@ -559,6 +561,12 @@ func (w *Workspace) FindScriptFile(slug string) (string, bool) {
 	target := filepath.Join(w.JobsDir(), slug)
 	if info, err := os.Stat(target); err == nil && !info.IsDir() {
 		return target, true
+	}
+	for _, ext := range knownScriptExtensions {
+		withExt := target + ext
+		if info, err := os.Stat(withExt); err == nil && !info.IsDir() {
+			return withExt, true
+		}
 	}
 	return "", false
 }
@@ -607,7 +615,21 @@ func (w *Workspace) PullJob(slug, scriptType, id, name, cron, timezone, descript
 		targetPath := filepath.Join(w.JobsDir(), slug)
 		if existingPath != targetPath {
 			if _, statErr := os.Stat(targetPath); statErr == nil {
-				_ = os.Remove(targetPath)
+				targetMeta, metaErr := ParseScriptMetadata(targetPath)
+				targetID := ""
+				if metaErr == nil {
+					targetID = strings.TrimSpace(targetMeta.ID)
+				}
+				// Never wipe a different local job that already occupies the new slug.
+				if targetID == "" || targetID != id {
+					return "", false, fmt.Errorf(
+						"cannot rename to %q: local script already exists at %s",
+						slug, targetPath,
+					)
+				}
+				if rmErr := os.Remove(targetPath); rmErr != nil {
+					return existingPath, false, fmt.Errorf("failed to clear %s for rename: %w", targetPath, rmErr)
+				}
 			}
 			if renameErr := os.Rename(existingPath, targetPath); renameErr != nil {
 				return existingPath, false, fmt.Errorf("failed to rename %s to %s: %w", existingPath, targetPath, renameErr)
@@ -755,6 +777,12 @@ func (w *Workspace) Resolve(slug string) (argv []string, err error) {
 	target := filepath.Join(jobsDir, slug)
 	if info, statErr := os.Stat(target); statErr == nil && !info.IsDir() {
 		return []string{target}, nil
+	}
+	for _, ext := range knownScriptExtensions {
+		withExt := target + ext
+		if info, statErr := os.Stat(withExt); statErr == nil && !info.IsDir() {
+			return []string{withExt}, nil
+		}
 	}
 
 	if spec, ok := w.jobs[slug]; ok && len(spec.Command) > 0 {

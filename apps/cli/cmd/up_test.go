@@ -36,6 +36,38 @@ func TestStripDaemonFlags(t *testing.T) {
 	}
 }
 
+func TestBuildChildDaemonArgs(t *testing.T) {
+	tests := []struct {
+		input    []string
+		expected []string
+	}{
+		{
+			input:    []string{"up", "-d", "--workspace", "/var/run", "-c", "10"},
+			expected: []string{"runner", "up", "--workspace", "/var/run", "-c", "10"},
+		},
+		{
+			input:    []string{"runner", "up", "--workspace", "runner", "-d"},
+			expected: []string{"runner", "up", "--workspace", "runner"},
+		},
+		{
+			input:    []string{"up", "--daemon=true"},
+			expected: []string{"runner", "up"},
+		},
+	}
+
+	for _, tc := range tests {
+		result := buildChildDaemonArgs(tc.input)
+		if len(result) != len(tc.expected) {
+			t.Fatalf("expected len %d, got %d (result: %v)", len(tc.expected), len(result), result)
+		}
+		for i := range result {
+			if result[i] != tc.expected[i] {
+				t.Errorf("at index %d: expected %s, got %s", i, tc.expected[i], result[i])
+			}
+		}
+	}
+}
+
 func TestUpCommandRegistration(t *testing.T) {
 	cmd, _, err := RootCmd.Find([]string{"runner", "up"})
 	if err != nil {

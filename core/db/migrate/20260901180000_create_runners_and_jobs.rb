@@ -6,7 +6,6 @@ class CreateRunnersAndJobs < ActiveRecord::Migration[8.2]
       t.string :token, null: false
       t.string :status, null: false, default: "offline"
       t.json :tags, null: false, default: []
-      t.boolean :allow_exec, null: false, default: false
       t.string :version
       t.string :os
       t.string :arch

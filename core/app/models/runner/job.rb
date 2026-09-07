@@ -40,6 +40,9 @@ class Runner::Job < ApplicationRecord
 
     def reclaim_stale_firing
       firing.where(updated_at: ..STALE_FIRING_AFTER.ago).find_each(&:reclaim_stale)
+
+      # pause! leaves open pending/running runs outside the firing set — still reclaim them.
+      paused.joins(:runs).where(runner_runs: { status: %w[ pending running ] }).distinct.find_each(&:reclaim_stale)
     end
   end
 
@@ -97,18 +100,22 @@ class Runner::Job < ApplicationRecord
           status: :error,
           title: "Runner offline",
           message: "Assigned runner '#{runner.name}' is offline or did not claim the task",
-          run_status: :failed
+          run_status: :failed,
+          from_statuses: %w[ pending ]
         )
       else
         touch
       end
     elsif run.running?
-      if run.updated_at < RUNNING_STALE_AFTER.ago
+      stale_threshold = (timeout_seconds || 60).seconds + 30.seconds
+      started_at = run.claimed_at || run.created_at
+      if started_at < stale_threshold.ago
         run.record_result!(
           status: :error,
           title: "Runner execution timed out",
-          message: "Runner '#{runner.name}' claimed the task but did not report a result",
-          run_status: :failed
+          message: "Runner '#{runner.name}' claimed the task but did not report a result within #{timeout_seconds || 60}s",
+          run_status: :failed,
+          from_statuses: %w[ running ]
         )
       end
     else
@@ -121,7 +128,7 @@ class Runner::Job < ApplicationRecord
 
     next_time = calculate_next_run_at(from: Time.current)
     if paused?
-      update!(last_run_at: last_run_at, next_run_at: next_time)
+      update!(last_run_at: last_run_at)
     elsif firing?
       update!(status: :active, next_run_at: next_time, last_run_at: last_run_at)
     else
@@ -182,7 +189,7 @@ class Runner::Job < ApplicationRecord
     end
 
     def sync_next_run_at
-      if (new_record? && next_run_at.nil?) || (persisted? && will_save_change_to_cron?)
+      if (new_record? && next_run_at.nil?) || (persisted? && (will_save_change_to_cron? || will_save_change_to_timezone?))
         self.next_run_at = calculate_next_run_at
       end
     end
