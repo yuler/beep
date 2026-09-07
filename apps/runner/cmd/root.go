@@ -57,7 +57,6 @@ func init() {
 
 	// Register subcommands
 	RootCmd.AddCommand(upCmd)
-	RootCmd.AddCommand(pingCmd)
 	RootCmd.AddCommand(versionCmd)
 	RootCmd.AddCommand(configCmd)
 	RootCmd.AddCommand(jobCmd)
