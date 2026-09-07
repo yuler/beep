@@ -63,8 +63,8 @@ class Api::V1::Runner::JobsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "0 * * * *", @job.cron
   end
 
-  test "sync upserts multiple jobs" do
-    post "/api/v1/runner/jobs/sync",
+  test "push upserts multiple jobs" do
+    post "/api/v1/runner/jobs/push",
       params: {
         jobs: [
           { slug: "job-one", name: "Job One", cron: "*/10 * * * *" },
@@ -77,13 +77,13 @@ class Api::V1::Runner::JobsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     body = response.parsed_body
     assert_equal "ok", body["status"]
-    assert_equal 2, body["synced_count"]
+    assert_equal 2, body["pushed_count"]
     assert @runner.jobs.exists?(slug: "job-one")
     assert @runner.jobs.exists?(slug: "job-two")
   end
 
-  test "sync with id renames slug on existing job" do
-    post "/api/v1/runner/jobs/sync",
+  test "push with id renames slug on existing job" do
+    post "/api/v1/runner/jobs/push",
       params: {
         jobs: [
           {
@@ -100,7 +100,7 @@ class Api::V1::Runner::JobsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     body = response.parsed_body
-    assert_equal 1, body["synced_count"]
+    assert_equal 1, body["pushed_count"]
     assert_equal @job.id, body["jobs"].first["id"]
     assert_equal "renamed-job", body["jobs"].first["slug"]
 

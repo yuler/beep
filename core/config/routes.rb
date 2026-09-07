@@ -90,12 +90,12 @@ Rails.application.routes.draw do
       resources :runners, only: %i[ index show create update destroy ] do
         scope module: :runners do
           resource :token, only: %i[ create ]
-        end
-        resources :jobs, controller: "runner_jobs" do
-          scope module: :runner_jobs do
-            resource :pause, only: %i[ create destroy ]
+          resources :jobs do
+            scope module: :jobs do
+              resource :pause, only: %i[ create destroy ]
+            end
+            resources :runs, only: %i[ index show create ]
           end
-          resources :runs, only: %i[ index show create ], controller: "runner_job_runs"
         end
       end
 
@@ -103,7 +103,7 @@ Rails.application.routes.draw do
         resource :ping, only: %i[ create ]
         resources :jobs, only: %i[ index create destroy ]
         namespace :jobs do
-          resource :sync, only: %i[ create ]
+          resource :push, only: %i[ create ]
         end
         resources :tasks, only: %i[ create ] do
           scope module: :tasks do

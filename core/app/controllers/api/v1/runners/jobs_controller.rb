@@ -1,4 +1,4 @@
-class Api::V1::RunnerJobsController < Api::V1::BaseController
+class Api::V1::Runners::JobsController < Api::V1::BaseController
   before_action :set_runner
   before_action :set_job, only: %i[ show update destroy ]
 
@@ -35,7 +35,7 @@ class Api::V1::RunnerJobsController < Api::V1::BaseController
   end
 
   def update
-    attrs = update_params
+    attrs = job_params
     attrs[:timezone] = IanaTimezone.resolve(params[:timezone]) if params.key?(:timezone)
     if params.key?(:description)
       config = (attrs[:config] || @job.config || {}).dup
@@ -70,12 +70,6 @@ class Api::V1::RunnerJobsController < Api::V1::BaseController
     end
 
     def job_params
-      attrs = params.permit(:name, :slug, :cron, :timeout_seconds)
-      attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
-      attrs
-    end
-
-    def update_params
       attrs = params.permit(:name, :slug, :cron, :timeout_seconds)
       attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
       attrs

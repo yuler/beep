@@ -90,14 +90,14 @@ func (c *Client) CreateJob(ctx context.Context, jobReq *CreateJobRequest) (*Serv
 	return res.Job, nil
 }
 
-func (c *Client) SyncJobs(ctx context.Context, jobs []*CreateJobRequest) ([]*ServerJob, error) {
-	url := fmt.Sprintf("%s/api/v1/runner/jobs/sync", c.cfg.ServerURL)
+func (c *Client) PushJobs(ctx context.Context, jobs []*CreateJobRequest) ([]*ServerJob, error) {
+	url := fmt.Sprintf("%s/api/v1/runner/jobs/push", c.cfg.ServerURL)
 	payload := map[string]any{
 		"jobs": jobs,
 	}
 	var res struct {
 		Status      string       `json:"status"`
-		SyncedCount int          `json:"synced_count"`
+		PushedCount int          `json:"pushed_count"`
 		Jobs        []*ServerJob `json:"jobs"`
 	}
 	if err := c.postJSON(ctx, url, payload, http.StatusOK, &res); err != nil {

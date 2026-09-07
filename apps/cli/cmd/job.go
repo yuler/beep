@@ -505,10 +505,10 @@ func runJobPushExec(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	var syncReqs []*client.CreateJobRequest
+	var pushReqs []*client.CreateJobRequest
 	for _, it := range itemsToPush {
 		job := it.LocalJob
-		syncReqs = append(syncReqs, &client.CreateJobRequest{
+		pushReqs = append(pushReqs, &client.CreateJobRequest{
 			ID:             job.ID,
 			Slug:           job.Slug,
 			Name:           job.Name,
@@ -519,7 +519,7 @@ func runJobPushExec(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	if len(syncReqs) == 0 {
+	if len(pushReqs) == 0 {
 		return fmt.Errorf("no matching local jobs found to push")
 	}
 
@@ -527,13 +527,13 @@ func runJobPushExec(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	synced, err := c.SyncJobs(ctx, syncReqs)
+	pushed, err := c.PushJobs(ctx, pushReqs)
 	if err != nil {
 		return fmt.Errorf("failed to push jobs to server: %w", err)
 	}
 
-	fmt.Println(ui.Success("Successfully pushed %d job(s) to server (%s):", len(synced), ui.Dim(cfg.ServerURL)))
-	for _, j := range synced {
+	fmt.Println(ui.Success("Successfully pushed %d job(s) to server (%s):", len(pushed), ui.Dim(cfg.ServerURL)))
+	for _, j := range pushed {
 		if fpath, found := ws.FindScriptFileByID(j.ID); found {
 			if updateErr := ws.UpdateScriptID(fpath, j.ID); updateErr != nil {
 				fmt.Println(ui.Warn("Warning: Failed to write @id header to %s: %v", fpath, updateErr))

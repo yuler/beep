@@ -94,7 +94,7 @@ Supported comment directives (prefix is `#`, `//`, or `--` to match the script l
 - There is **no `# @slug:`** header; the path is the source of truth for the slug.
 - **Uniqueness** is scoped to one runner: Core enforces unique `(runner_id, slug)`. Two files cannot share a slug in the same workspace either (one path per name).
 - **`# @id:`** is the server `runner_jobs` UUID, written after a successful create/push (or pull). It identifies the same job across renames.
-- **Rename = slug change.** If you rename the file but keep the same `@id`, local slug and server slug diverge. `job list` still pairs them by `@id` and reports a field-level `slug:` diff (status `modified`). **`job push` sends `@id` with the new slug**; Core updates that same `RunnerJob` (no duplicate). The old slug is freed. If the new slug collides with another job on the same runner, sync fails validation.
+- **Rename = slug change.** If you rename the file but keep the same `@id`, local slug and server slug diverge. `job list` still pairs them by `@id` and reports a field-level `slug:` diff (status `modified`). **`job push` sends `@id` with the new slug** via `POST /api/v1/runner/jobs/push`; Core updates that same `RunnerJob` (no duplicate). The old slug is freed. If the new slug collides with another job on the same runner, push fails validation.
 
 ### `job list` display and pairing
 

@@ -1,4 +1,4 @@
-class Api::V1::RunnerJobRunsController < Api::V1::BaseController
+class Api::V1::Runners::RunsController < Api::V1::BaseController
   before_action :set_job
 
   def index

@@ -1,6 +1,6 @@
 require "test_helper"
 
-class Api::V1::RunnerJobsControllerTest < ActionDispatch::IntegrationTest
+class Api::V1::Runners::JobsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @identity = identities(:john)
     @account = accounts(:john_account)
