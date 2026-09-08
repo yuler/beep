@@ -10,13 +10,15 @@ class BeepRun < ApplicationRecord
   end
 
   def deliver_now
-    return unless claim_delivery?
+    deliver_notifications_now if claim_delivery?
+  end
 
-    deliver_notifications_now
+  def fail_now
+    update!(status: :failed)
+    beep.finish_firing(last_run_at: scheduled_for)
   end
 
   private
-
     def deliver_notifications_now
       payload_result = stringify_result
       beep.recipient_users.each do |user|
@@ -36,10 +38,6 @@ class BeepRun < ApplicationRecord
       (result || {}).deep_stringify_keys
     end
 
-    def persist_result(payload_result)
-      update_columns(result: payload_result, updated_at: Time.current)
-    end
-
     def deliver_for(user, payload_result)
       channels = Array(beep.notification_channels)
 
@@ -57,6 +55,10 @@ class BeepRun < ApplicationRecord
       end
 
       payload_result
+    end
+
+    def persist_result(payload_result)
+      update_columns(result: payload_result, updated_at: Time.current)
     end
 
     def deliver_web_push(user, payload_result)

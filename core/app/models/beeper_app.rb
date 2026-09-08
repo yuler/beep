@@ -101,14 +101,6 @@ class BeeperApp < ApplicationRecord
     manifest["metrics"] || []
   end
 
-  def receiver_class
-    "BeeperApp::Receivers::#{slug.tr("-", "_").camelize}".safe_constantize
-  end
-
-  def receiver_available?
-    receiver_class.present?
-  end
-
   def produce_signal(config:)
     klass = receiver_class
     if klass
@@ -128,25 +120,32 @@ class BeeperApp < ApplicationRecord
     )
   end
 
-  private
-
-  def validate_manifest_contract
-    return if manifest.blank?
-
-    validator = ManifestValidator.new(manifest)
-    unless validator.valid?
-      validator.errors.each do |err|
-        errors.add(:manifest, err)
-      end
-    end
-
-    if manifest.is_a?(Hash)
-      if slug.present? && manifest["slug"].present? && slug != manifest["slug"]
-        errors.add(:slug, "must match manifest slug '#{manifest['slug']}'")
-      end
-      if version.present? && manifest["version"].present? && version != manifest["version"]
-        errors.add(:version, "must match manifest version '#{manifest['version']}'")
-      end
-    end
+  def receiver_class
+    "BeeperApp::Receivers::#{slug.tr("-", "_").camelize}".safe_constantize
   end
+
+  def receiver_available?
+    receiver_class.present?
+  end
+
+  private
+    def validate_manifest_contract
+      return if manifest.blank?
+
+      validator = ManifestValidator.new(manifest)
+      unless validator.valid?
+        validator.errors.each do |err|
+          errors.add(:manifest, err)
+        end
+      end
+
+      if manifest.is_a?(Hash)
+        if slug.present? && manifest["slug"].present? && slug != manifest["slug"]
+          errors.add(:slug, "must match manifest slug '#{manifest['slug']}'")
+        end
+        if version.present? && manifest["version"].present? && version != manifest["version"]
+          errors.add(:version, "must match manifest version '#{manifest['version']}'")
+        end
+      end
+    end
 end

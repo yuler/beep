@@ -124,6 +124,35 @@ class BeeperPollerTest < ActiveSupport::TestCase
     end
   end
 
+  test "reclaim_stale handles running run that timed out" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Hung Probe",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: { "status" => "ok" },
+      notification_channels: %w[ email ]
+    )
+
+    run = beeper.runs.create!(
+      scheduled_for: 10.minutes.ago,
+      status: "running",
+      created_at: 10.minutes.ago,
+      updated_at: 6.minutes.ago
+    )
+    beeper.update_columns(status: "firing", updated_at: 6.minutes.ago)
+
+    Beeper.reclaim_stale_firing
+
+    beeper.reload
+    assert beeper.active?
+    run.reload
+    assert_equal "failed", run.status
+    assert_equal "error", run.signal_status
+    assert_equal "Probe execution timed out", run.signal_result["title"]
+  end
+
   private
 
   def echo_manifest

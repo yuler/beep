@@ -1,12 +1,12 @@
 class BeeperApp::Receivers::Base
   attr_reader :config
 
-  def initialize(config: {})
-    @config = (config || {}).deep_stringify_keys
-  end
-
   def self.call(config:)
     new(config: config).call
+  end
+
+  def initialize(config: {})
+    @config = (config || {}).deep_stringify_keys
   end
 
   def call

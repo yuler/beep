@@ -18,6 +18,9 @@ class Beep < ApplicationRecord
   normalizes :title, with: ->(value) { value.strip.presence }
   normalizes :body, with: ->(value) { value&.strip.presence }
 
+  before_validation :assign_default_notification_channels, on: :create
+  before_validation :sync_run_attributes
+
   validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }
   validates :body, length: { maximum: BODY_MAX_LENGTH }, allow_nil: true
   validates :timezone, presence: true
@@ -29,8 +32,6 @@ class Beep < ApplicationRecord
   validate :validate_cron_expression, if: :recurring?
   validate :validate_notification_channels
 
-  before_validation :assign_default_notification_channels, on: :create
-  before_validation :sync_run_attributes
   after_create_commit :deliver_if_due_on_create
 
   scope :due, -> { active.where(next_run_at: ..Time.current) }
@@ -155,15 +156,15 @@ class Beep < ApplicationRecord
     [ account.owner_user ]
   end
 
-  def body_text
-    Beep::Plaintext.from_markdown(body)
-  end
-
   def push_payload(run: nil)
     options = { data: { url: web_url, badge: 1 } }
     text = body_text
     options[:body] = text if text.present?
     { title: title, options: options }
+  end
+
+  def body_text
+    Beep::Plaintext.from_markdown(body)
   end
 
   private
@@ -237,8 +238,6 @@ class Beep < ApplicationRecord
     end
 
     def deliver_if_due_on_create
-      return unless once? && active? && next_run_at.present? && next_run_at <= Time.current
-
-      claim_due
+      claim_due if once? && active? && next_run_at.present? && next_run_at <= Time.current
     end
 end

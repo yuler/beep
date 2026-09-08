@@ -23,11 +23,11 @@ class Api::V1::MeController < Api::V1::BaseController
 
   def update_last_account
     account = Current.identity.accounts.find_by(slug: params.require(:slug))
-    unless account
-      return render_json_error(status: :not_found, message: "Account not found", code: "NOT_FOUND")
+    if account
+      write_last_account_slug(account.slug)
+      render_json json: { last_account_slug: account.slug }
+    else
+      render_json_error(status: :not_found, message: "Account not found", code: "NOT_FOUND")
     end
-
-    write_last_account_slug(account.slug)
-    render_json json: { last_account_slug: account.slug }
   end
 end

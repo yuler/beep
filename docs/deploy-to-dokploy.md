@@ -111,7 +111,7 @@ Use Dokploy **Volume Backups** on `core-storage` (named volumes only; bind mount
 
 ## 6. GitHub Actions redeploy
 
-After a successful image publish on `main` (`Core Publish Docker image` or `Web Publish Docker image`), [`.github/workflows/dokploy-deploy.yml`](../.github/workflows/dokploy-deploy.yml) calls Dokploy to redeploy the Compose service. You can also run that workflow manually (`workflow_dispatch`).
+After a successful image publish on `main` (`Core Publish Docker image` or `Web Publish Docker image`), [`.github/workflows/deploy-to-dokploy.yml`](../.github/workflows/deploy-to-dokploy.yml) calls Dokploy to redeploy the Compose service. You can also run that workflow manually (`workflow_dispatch`).
 
 Required repository secrets (same names as typo for URL and API key):
 

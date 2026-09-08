@@ -2,6 +2,7 @@
 ruby = "3.4.7"
 node = "24.17.0"
 pnpm = "10.14.0"
+go = "1.27.0"
 gum = "0.17.0"
 overmind = "2.5.1"
 tmux = "3.7b"
@@ -44,6 +45,33 @@ run = "pnpm run dev -- --port ${WEB_PORT}"
 description = "Build the web app for production"
 dir = "apps/web"
 run = "pnpm run build"
+
+[tasks."cli:build"]
+description = "Build the Go beep CLI binary"
+dir = "apps/cli"
+run = """
+go build -ldflags="-s -w \
+  -X beep/internal/version.Version=$(cat ../../VERSION) \
+  -X beep/internal/version.GitCommit=$(git rev-parse --short HEAD) \
+  -X beep/internal/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -o ../../bin/beep .
+"""
+
+[tasks."cli:test"]
+description = "Run Go CLI unit tests"
+dir = "apps/cli"
+run = "go test -v ./..."
+
+[tasks."cli:workspace:link"]
+description = "Symlink a beep workspace to .beep in the current repo"
+usage = '''
+arg "[workspace]" help="Workspace directory to link" default=""
+'''
+run = "bash scripts/cli-workspace-link.sh \"${usage_workspace:-}\""
+
+[tasks."cli:workspace:unlink"]
+description = "Unlink .beep workspace symlink from the current repo"
+run = "bash scripts/cli-workspace-unlink.sh"
 
 [tasks."locale:sort"]
 description = "Sort message keys alphabetically in all locale JSON files"

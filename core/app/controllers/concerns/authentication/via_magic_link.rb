@@ -7,7 +7,7 @@ module Authentication::ViaMagicLink
 
   private
     def ensure_development_magic_link_not_leaked
-      return unless respond_to?(:flash)
+      return unless flash_available?
 
       if !Rails.env.development? && flash[:magic_link_code].present?
         raise "Leaking magic link via flash in #{Rails.env}?"
@@ -24,7 +24,7 @@ module Authentication::ViaMagicLink
 
     def serve_development_magic_link(magic_link)
       if Rails.env.development? && magic_link.present?
-        flash[:magic_link_code] = magic_link.code if respond_to?(:flash)
+        flash[:magic_link_code] = magic_link.code if flash_available?
         response.set_header("X-Magic-Link-Code", magic_link.code)
       end
     end
@@ -65,5 +65,10 @@ module Authentication::ViaMagicLink
 
     def pending_authentication_token_verifier
       Rails.application.message_verifier(:pending_authentication)
+    end
+
+    # ActionController::Base includes Flash; ActionController::API does not.
+    def flash_available?
+      is_a?(ActionController::Flash)
     end
 end

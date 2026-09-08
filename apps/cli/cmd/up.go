@@ -1,0 +1,195 @@
+package cmd
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"os/exec"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
+	"beep/internal/config"
+	"beep/internal/daemon"
+	"beep/internal/ui"
+	"beep/internal/workspace"
+
+	"github.com/spf13/cobra"
+)
+
+var (
+	flagConcurrency  int
+	flagPollInterval time.Duration
+	flagDaemon       bool
+)
+
+var upCmd = &cobra.Command{
+	Use:     "up",
+	Aliases: []string{"run"},
+	Short:   "Start the runner daemon to poll and execute scheduled tasks",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runUp(cmd, args)
+	},
+}
+
+func init() {
+	upCmd.Flags().IntVarP(&flagConcurrency, "concurrency", "c", 0, "Max concurrent jobs (default 5)")
+	upCmd.Flags().DurationVarP(&flagPollInterval, "poll-interval", "i", 0, "Poll interval (default 3s)")
+	upCmd.Flags().BoolVarP(&flagDaemon, "daemon", "d", false, "Run runner daemon in background")
+}
+
+func runUp(cmd *cobra.Command, args []string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	if flagConcurrency > 0 {
+		cfg.Concurrency = flagConcurrency
+	}
+	if flagPollInterval > 0 {
+		cfg.PollInterval = flagPollInterval
+	}
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("configuration error: %w", err)
+	}
+
+	ws, err := workspace.Open(cfg.Workspace)
+	if err != nil {
+		return fmt.Errorf("workspace error: %w", err)
+	}
+
+	isChild := os.Getenv("BEEP_DAEMON_CHILD") == "1"
+
+	// If background daemon mode requested and not already the spawned child:
+	if flagDaemon && !isChild {
+		return startBackgroundDaemon(cfg)
+	}
+
+	// Single instance control via Unix domain socket
+	sock, err := daemon.AcquireSocket(cfg.Workspace)
+	if err != nil {
+		return err
+	}
+	defer sock.Close()
+
+	// Daily rotating logger in $WORKSPACE/logs
+	logWriter, _, err := daemon.SetupLogger(cfg.Workspace, !isChild)
+	if err != nil {
+		return fmt.Errorf("failed to setup daily logger: %w", err)
+	}
+	defer logWriter.Close()
+
+	d := daemon.New(cfg, ws)
+	d.OnReady = func() {
+		sock.SetRunning()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		log.Println(ui.Dim("[beep-runner] Received termination signal..."))
+		cancel()
+	}()
+
+	return d.Start(ctx)
+}
+
+func startBackgroundDaemon(cfg *config.Config) error {
+	running, pid, _ := daemon.CheckRunning(cfg.Workspace)
+	if running {
+		return fmt.Errorf("runner daemon is already running (PID: %d, socket: %s)", pid, daemon.SocketPath(cfg.Workspace))
+	}
+
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to determine executable path: %w", err)
+	}
+
+	// Filter out daemon flags from args so child doesn't think it needs to spawn again
+	childArgs := buildChildDaemonArgs(os.Args[1:])
+
+	cmd := exec.Command(exe, childArgs...)
+	cmd.Env = append(os.Environ(), "BEEP_DAEMON_CHILD=1")
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setsid: true,
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start background daemon: %w", err)
+	}
+
+	// Wait up to 5s for daemon to acquire socket and complete initial handshake
+	started := false
+	today := time.Now().Format("2006-01-02")
+	logFile := daemon.DailyLogPath(cfg.Workspace, today)
+
+	for i := 0; i < 50; i++ {
+		time.Sleep(100 * time.Millisecond)
+
+		if isReady, childPID, _ := daemon.CheckReady(cfg.Workspace); isReady {
+			started = true
+			if childPID <= 0 {
+				childPID = cmd.Process.Pid
+			}
+
+			fmt.Printf("%s %s (PID: %s)\n",
+				ui.Green("✓"),
+				ui.Bold("Beep runner started in background"),
+				ui.Cyan(fmt.Sprintf("%d", childPID)),
+			)
+			fmt.Printf("  %s %s\n", ui.Dim("Workspace:"), cfg.Workspace)
+			fmt.Printf("  %s %s\n", ui.Dim("Logs:     "), logFile)
+			fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace))
+			return nil
+		}
+
+		// Check if child process has exited early
+		var ws syscall.WaitStatus
+		var ru syscall.Rusage
+		wpid, waitErr := syscall.Wait4(cmd.Process.Pid, &ws, syscall.WNOHANG, &ru)
+		if waitErr == nil && wpid == cmd.Process.Pid {
+			return fmt.Errorf("runner daemon failed to start (exited with status %d, check logs: %s)", ws.ExitStatus(), logFile)
+		}
+	}
+
+	if !started {
+		if cmd.Process != nil {
+			_ = cmd.Process.Kill()
+			_, _ = cmd.Process.Wait()
+		}
+		return fmt.Errorf("daemon failed to complete handshake within 5s (check logs: %s)", logFile)
+	}
+
+	return nil
+}
+
+func stripDaemonFlags(args []string) []string {
+	var out []string
+	for _, a := range args {
+		if a == "-d" || a == "--daemon" || strings.HasPrefix(a, "--daemon=") || strings.HasPrefix(a, "-d=") {
+			continue
+		}
+		out = append(out, a)
+	}
+	return out
+}
+
+func buildChildDaemonArgs(args []string) []string {
+	stripped := stripDaemonFlags(args)
+	i := 0
+	for i < len(stripped) {
+		cmd := stripped[i]
+		if cmd == "runner" || cmd == "up" || cmd == "run" {
+			i++
+		} else {
+			break
+		}
+	}
+	return append([]string{"runner", "up"}, stripped[i:]...)
+}

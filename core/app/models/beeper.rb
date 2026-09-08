@@ -21,6 +21,10 @@ class Beeper < ApplicationRecord
   normalizes :title, with: ->(value) { value.strip.presence }
   normalizes :body, with: ->(value) { value&.strip.presence }
 
+  before_validation :assign_default_notification_channels
+  before_validation :sync_next_run_at
+  before_validation :ensure_ping_token_if_needed
+
   validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }
   validates :body, length: { maximum: BODY_MAX_LENGTH }, allow_nil: true
   validates :cron, presence: true
@@ -33,10 +37,6 @@ class Beeper < ApplicationRecord
   validate :validate_notification_channels
   validate :validate_config_inputs
   validate :validate_beeper_app_has_receiver, on: :create
-
-  before_validation :assign_default_notification_channels
-  before_validation :sync_next_run_at
-  before_validation :ensure_ping_token_if_needed
 
   scope :due, -> { active.where(next_run_at: ..Time.current) }
 
@@ -68,7 +68,7 @@ class Beeper < ApplicationRecord
     rescue ActiveRecord::RecordNotUnique
       runs.find_by!(scheduled_for: scheduled_for)
     end
-    run.deliver_later
+    run.execute_later
     run
   end
 
@@ -112,12 +112,16 @@ class Beeper < ApplicationRecord
         finish_firing(last_run_at: run.scheduled_for)
       else
         touch
-        run.deliver_later
+        run.execute_later
       end
     elsif run.running?
       if run.updated_at < RUNNING_STALE_AFTER.ago
-        run.update!(status: :failed)
-        finish_firing(last_run_at: run.scheduled_for)
+        signal = BeeperApp::Signal.new(
+          status: :error,
+          title: "Probe execution timed out",
+          message: "Beeper run was still running after #{RUNNING_STALE_AFTER.inspect}"
+        )
+        run.record_signal_result!(signal, run_status: :failed)
       end
     else
       finish_firing(last_run_at: run.scheduled_for)
@@ -155,9 +159,11 @@ class Beeper < ApplicationRecord
   def alert_policy_config
     # Precedence: Beeper config["alerting"] > BeeperApp manifest["alerting"] > defaults
     instance_alerting = (config || {})["alerting"]
-    return instance_alerting if instance_alerting.is_a?(Hash) && instance_alerting.present?
-
-    beeper_app&.alert_policy_config || {}
+    if instance_alerting.is_a?(Hash) && instance_alerting.present?
+      instance_alerting
+    else
+      beeper_app&.alert_policy_config || {}
+    end
   end
 
   def failure_threshold
@@ -188,9 +194,7 @@ class Beeper < ApplicationRecord
   end
 
   def expired?(scheduled_for)
-    return false if scheduled_for.nil?
-
-    scheduled_for < EXPIRED_AFTER.ago
+    scheduled_for.present? && scheduled_for < EXPIRED_AFTER.ago
   end
 
   def notify_from!(signal)
@@ -209,132 +213,128 @@ class Beeper < ApplicationRecord
   end
 
   private
-
-  def claim_run(scheduled_for)
-    if expired?(scheduled_for)
-      runs.create!(scheduled_for: scheduled_for, status: :expired)
-      finish_firing(last_run_at: scheduled_for)
-    else
-      run = runs.create!(scheduled_for: scheduled_for, status: :pending)
-      touch
-      run.deliver_later
-    end
-  rescue ActiveRecord::RecordNotUnique
-    run = runs.find_by!(scheduled_for: scheduled_for)
-    run.deliver_later if run.pending?
-    run
-  end
-
-  def assign_default_notification_channels
-    if Array(notification_channels).empty? && account&.owner_user
-      self.notification_channels = account.owner_user.notification_channels
-    end
-  end
-
-  def sync_next_run_at
-    if (new_record? && next_run_at.nil?) || (persisted? && will_save_change_to_cron?)
-      self.next_run_at = calculate_next_run_at
-    end
-  end
-
-  def ensure_ping_token_if_needed
-    return unless beeper_app&.webhook_ping?
-
-    self.ping_token ||= SecureRandom.alphanumeric(32)
-  end
-
-  def timezone_is_iana
-    return if timezone.blank?
-
-    errors.add(:timezone, "is invalid") unless IanaTimezone.valid?(timezone)
-  end
-
-  def validate_cron_expression
-    return if cron.blank?
-
-    tz = timezone.presence || IanaTimezone::DEFAULT
-    parsed = Fugit.parse("#{cron} #{tz}")
-    if parsed.nil?
-      errors.add(:cron, "is invalid")
-      return
+    def claim_run(scheduled_for)
+      if expired?(scheduled_for)
+        runs.create!(scheduled_for: scheduled_for, status: :expired)
+        finish_firing(last_run_at: scheduled_for)
+      else
+        run = runs.create!(scheduled_for: scheduled_for, status: :pending)
+        touch
+        run.execute_later
+        run
+      end
+    rescue ActiveRecord::RecordNotUnique
+      run = runs.find_by!(scheduled_for: scheduled_for)
+      if run.pending?
+        run.execute_later
+      end
+      run
     end
 
-    if beeper_app.present?
-      min_interval = beeper_app.min_interval_seconds.to_i
-      if min_interval > 0
-        t1 = parsed.next_time(Time.current)
-        t2 = t1 ? parsed.next_time(t1) : nil
-        if t1 && t2 && (t2.to_i - t1.to_i) < min_interval
-          errors.add(:cron, "interval cannot be shorter than #{min_interval} seconds")
-        end
+    def assign_default_notification_channels
+      if Array(notification_channels).empty? && account&.owner_user
+        self.notification_channels = account.owner_user.notification_channels
       end
     end
-  end
 
-  def validate_notification_channels
-    return if notification_channels.blank?
-
-    invalid = Array(notification_channels) - User::NOTIFICATION_CHANNELS
-    if invalid.any?
-      errors.add(:notification_channels, "contains unsupported channels: #{invalid.join(', ')}")
+    def sync_next_run_at
+      if (new_record? && next_run_at.nil?) || (persisted? && will_save_change_to_cron?)
+        self.next_run_at = calculate_next_run_at
+      end
     end
-  end
 
-  def validate_beeper_app_has_receiver
-    return if beeper_app.nil?
-    return if beeper_app.receiver_class.present?
+    def ensure_ping_token_if_needed
+      self.ping_token ||= SecureRandom.alphanumeric(32) if beeper_app&.webhook_ping?
+    end
 
-    errors.add(:beeper_app, "is not installable: no receiver implementation is available")
-  end
+    def timezone_is_iana
+      if timezone.present? && !IanaTimezone.valid?(timezone)
+        errors.add(:timezone, "is invalid")
+      end
+    end
 
-  def validate_config_inputs
-    return if beeper_app.nil?
+    def validate_cron_expression
+      return if cron.blank?
 
-    inputs = beeper_app.inputs
-    return if inputs.blank?
-
-    cfg = (config || {}).deep_stringify_keys
-
-    inputs.each do |input|
-      name = input["name"]
-      value = cfg[name]
-      required = input["required"] == true
-      input_type = input["type"]
-      label = input["label"] || name
-
-      if required && (value.nil? || (value.is_a?(String) && value.strip.empty?))
-        errors.add(:config, "#{label} is required")
-        next
+      tz = timezone.presence || IanaTimezone::DEFAULT
+      parsed = Fugit.parse("#{cron} #{tz}")
+      if parsed.nil?
+        errors.add(:cron, "is invalid")
+        return
       end
 
-      next if value.nil? || (value.is_a?(String) && value.strip.empty?)
-
-      case input_type
-      when "number"
-        num = Float(value, exception: false)
-        if num.nil?
-          errors.add(:config, "#{label} must be a number")
-        else
-          min = input["min"]
-          max = input["max"]
-          if min && num < min
-            errors.add(:config, "#{label} must be at least #{min}")
-          end
-          if max && num > max
-            errors.add(:config, "#{label} must be at most #{max}")
+      if beeper_app.present?
+        min_interval = beeper_app.min_interval_seconds.to_i
+        if min_interval > 0
+          t1 = parsed.next_time(Time.current)
+          t2 = t1 ? parsed.next_time(t1) : nil
+          if t1 && t2 && (t2.to_i - t1.to_i) < min_interval
+            errors.add(:cron, "interval cannot be shorter than #{min_interval} seconds")
           end
         end
-      when "url"
-        uri = URI.parse(value.to_s) rescue nil
-        unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
-          errors.add(:config, "#{label} must be a valid http or https URL")
-        end
-      when "enum"
-        options = Array(input["options"]).map(&:to_s)
-        if options.present? && !options.include?(value.to_s)
-          errors.add(:config, "#{label} must be one of: #{options.join(', ')}")
+      end
+    end
+
+    def validate_notification_channels
+      return if notification_channels.blank?
+
+      invalid = Array(notification_channels) - User::NOTIFICATION_CHANNELS
+      if invalid.any?
+        errors.add(:notification_channels, "contains unsupported channels: #{invalid.join(', ')}")
+      end
+    end
+
+    def validate_beeper_app_has_receiver
+      if beeper_app.present? && beeper_app.receiver_class.blank?
+        errors.add(:beeper_app, "is not installable: no receiver implementation is available")
+      end
+    end
+
+    def validate_config_inputs
+      if inputs = beeper_app&.inputs
+        cfg = (config || {}).deep_stringify_keys
+
+        inputs.each do |input|
+          name = input["name"]
+          value = cfg[name]
+          required = input["required"] == true
+          input_type = input["type"]
+          label = input["label"] || name
+
+          if required && (value.nil? || (value.is_a?(String) && value.strip.empty?))
+            errors.add(:config, "#{label} is required")
+            next
+          end
+
+          next if value.nil? || (value.is_a?(String) && value.strip.empty?)
+
+          case input_type
+          when "number"
+            num = Float(value, exception: false)
+            if num.nil?
+              errors.add(:config, "#{label} must be a number")
+            else
+              min = input["min"]
+              max = input["max"]
+              if min && num < min
+                errors.add(:config, "#{label} must be at least #{min}")
+              end
+              if max && num > max
+                errors.add(:config, "#{label} must be at most #{max}")
+              end
+            end
+          when "url"
+            uri = URI.parse(value.to_s) rescue nil
+            unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
+              errors.add(:config, "#{label} must be a valid http or https URL")
+            end
+          when "enum"
+            options = Array(input["options"]).map(&:to_s)
+            if options.present? && !options.include?(value.to_s)
+              errors.add(:config, "#{label} must be one of: #{options.join(', ')}")
+            end
+          end
         end
       end
     end
-  end
 end

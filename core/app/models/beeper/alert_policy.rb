@@ -9,6 +9,8 @@ class Beeper::AlertPolicy
 
   DEFAULT_POLICY = "consecutive_failures".freeze
 
+  attr_reader :beeper
+
   class << self
     def for(beeper)
       policy_name = beeper.alert_policy_name.presence || DEFAULT_POLICY
@@ -28,8 +30,6 @@ class Beeper::AlertPolicy
     end
   end
 
-  attr_reader :beeper
-
   def initialize(beeper)
     @beeper = beeper
   end
@@ -39,8 +39,7 @@ class Beeper::AlertPolicy
   end
 
   protected
-
-  def policy_config
-    beeper.alert_policy_config
-  end
+    def policy_config
+      beeper.alert_policy_config
+    end
 end
