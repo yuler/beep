@@ -4,7 +4,7 @@
 #   docker build -f apps/cli/Dockerfile -t beep .
 #
 
-ARG GO_VERSION=1.27
+ARG GO_VERSION=1.25
 FROM docker.io/library/golang:${GO_VERSION}-alpine AS build
 
 WORKDIR /app

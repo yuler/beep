@@ -641,8 +641,7 @@ func (w *Workspace) RemoveJob(slug string) (removedFiles []string, err error) {
 	}
 	slug = strings.TrimSpace(strings.ToLower(slug))
 
-	targetFile := filepath.Join(w.JobsDir(), slug)
-	if _, statErr := os.Stat(targetFile); statErr == nil {
+	if targetFile, found := w.FindScriptFile(slug); found {
 		if rmErr := os.Remove(targetFile); rmErr == nil {
 			removedFiles = append(removedFiles, targetFile)
 		}
@@ -668,7 +667,14 @@ func (w *Workspace) ListJobs() ([]LocalJob, error) {
 			if strings.HasPrefix(name, ".") {
 				continue
 			}
-			slug := strings.ToLower(name)
+			rawSlug := strings.ToLower(name)
+			slug := rawSlug
+			for _, ext := range knownScriptExtensions {
+				if strings.HasSuffix(rawSlug, ext) {
+					slug = strings.TrimSuffix(rawSlug, ext)
+					break
+				}
+			}
 			if slug == "" {
 				continue
 			}

@@ -1,6 +1,6 @@
 class Api::V1::Runner::JobsController < Api::V1::Runner::BaseController
   def index
-    @jobs = @current_runner.jobs.order(:name)
+    @jobs = @current_runner.jobs.includes(:runner).order(:name)
     render :index
   end
 

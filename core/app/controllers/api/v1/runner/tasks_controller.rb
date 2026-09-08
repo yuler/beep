@@ -1,7 +1,8 @@
 class Api::V1::Runner::TasksController < Api::V1::Runner::BaseController
   def create
+    has_running = @current_runner.runs.where(status: "running").exists?
     @current_runner.touch_activity(
-      status: "idle",
+      status: has_running ? "online" : "idle",
       version: params[:version],
       os: params[:os],
       arch: params[:arch],

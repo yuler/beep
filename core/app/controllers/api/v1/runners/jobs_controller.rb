@@ -3,7 +3,7 @@ class Api::V1::Runners::JobsController < Api::V1::BaseController
   before_action :set_job, only: %i[ show update destroy ]
 
   def index
-    @jobs = @runner.jobs.order(created_at: :desc)
+    @jobs = @runner.jobs.includes(:runner).order(created_at: :desc)
     render :index
   end
 

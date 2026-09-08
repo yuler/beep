@@ -73,6 +73,12 @@ func (d *Daemon) Start(ctx context.Context) error {
 func (d *Daemon) pollAndExecute(ctx context.Context) {
 	for {
 		if len(d.sem) >= cap(d.sem) {
+			pingCtx, pingCancel := context.WithTimeout(ctx, 10*time.Second)
+			_, err := d.client.Ping(pingCtx)
+			pingCancel()
+			if err != nil && ctx.Err() == nil {
+				log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("Heartbeat error:"), err)
+			}
 			return
 		}
 		t, err := d.client.Poll(ctx)
@@ -114,14 +120,13 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 	taskCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	reportCtx, reportCancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer reportCancel()
-
 	argv, err := d.workspace.Resolve(job.JobSlug)
 	if err != nil {
 		result := task.Error("Unknown local job", err.Error(), nil)
-		_ = d.client.ReportLog(reportCtx, job.LogURL, err.Error()+"\n")
-		if reportErr := d.client.ReportResult(reportCtx, job.ResultURL, result); reportErr != nil {
+		errCtx, errCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer errCancel()
+		_ = d.client.ReportLog(errCtx, job.LogURL, err.Error()+"\n")
+		if reportErr := d.client.ReportResult(errCtx, job.ResultURL, result); reportErr != nil {
 			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error:"), reportErr)
 		}
 		return
@@ -129,7 +134,7 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 
 	env := d.jobEnv(job)
 
-	logChan := make(chan string, 200)
+	logChan := make(chan string, 1000)
 	var logWg sync.WaitGroup
 	logWg.Add(1)
 
@@ -145,7 +150,9 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 			}
 			chunk := buf.String()
 			buf.Reset()
-			if err := d.client.ReportLog(reportCtx, job.LogURL, chunk); err != nil {
+			uploadCtx, uploadCancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer uploadCancel()
+			if err := d.client.ReportLog(uploadCtx, job.LogURL, chunk); err != nil {
 				log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("log upload:"), err)
 			}
 		}
@@ -171,11 +178,7 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 		log.Print(ui.Dim(fmt.Sprintf("[%s]", job.JobSlug)) + " " + line)
 		select {
 		case logChan <- line:
-		default:
-			// Buffer full: write directly to avoid dropping logs
-			go func(l string) {
-				logChan <- l
-			}(line)
+		case <-taskCtx.Done():
 		}
 	})
 	close(logChan)
@@ -197,7 +200,9 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 		)
 	}
 
-	if err := d.client.ReportResult(reportCtx, job.ResultURL, result); err != nil {
+	resultCtx, resultCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer resultCancel()
+	if err := d.client.ReportResult(resultCtx, job.ResultURL, result); err != nil {
 		log.Printf("%s %s for %s: %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error"), job.ID, err)
 	}
 }

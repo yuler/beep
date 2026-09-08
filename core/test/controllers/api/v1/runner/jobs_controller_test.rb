@@ -82,6 +82,21 @@ class Api::V1::Runner::JobsControllerTest < ActionDispatch::IntegrationTest
     assert @runner.jobs.exists?(slug: "job-two")
   end
 
+  test "push rejects empty slug with validation error" do
+    post "/api/v1/runner/jobs/push",
+      params: {
+        jobs: [
+          { slug: "", name: "No Slug Job", cron: "*/10 * * * *" }
+        ]
+      },
+      headers: { "X-Runner-Token" => @runner_token },
+      as: :json
+
+    assert_response :unprocessable_entity
+    body = response.parsed_body
+    assert_equal "Job slug cannot be blank", body["message"]
+  end
+
   test "push with id renames slug on existing job" do
     post "/api/v1/runner/jobs/push",
       params: {

@@ -42,11 +42,22 @@ func TestJobEnvOmitsRunnerToken(t *testing.T) {
 }
 
 func TestPollAndExecuteFillsConcurrency(t *testing.T) {
-	var polls atomic.Int32
+	var (
+		polls atomic.Int32
+		pings atomic.Int32
+	)
 	var tsURL string
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
+		case r.URL.Path == "/api/v1/runner/ping":
+			pings.Add(1)
+			json.NewEncoder(w).Encode(map[string]any{
+				"status":      "ok",
+				"runner_id":   "test-runner",
+				"runner_name": "Test Runner",
+				"server_time": "2026-09-01T12:00:00Z",
+			})
 		case r.URL.Path == "/api/v1/runner/tasks":
 			n := polls.Add(1)
 			json.NewEncoder(w).Encode(map[string]any{
@@ -91,4 +102,78 @@ func TestPollAndExecuteFillsConcurrency(t *testing.T) {
 	if got := polls.Load(); got != 2 {
 		t.Fatalf("expected 2 polls to fill concurrency, got %d", got)
 	}
+	if got := pings.Load(); got != 1 {
+		t.Fatalf("expected 1 ping when saturated, got %d", got)
+	}
 }
+
+func TestExecuteReportsLogsAndResult(t *testing.T) {
+	var (
+		gotLogs   strings.Builder
+		gotResult *task.Result
+	)
+	var tsURL string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/runner/tasks/task-run-1/logs":
+			var req struct {
+				Chunk string `json:"chunk"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
+				gotLogs.WriteString(req.Chunk)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		case "/api/v1/runner/tasks/task-run-1/result":
+			var res task.Result
+			if err := json.NewDecoder(r.Body).Decode(&res); err == nil {
+				gotResult = &res
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+	tsURL = ts.URL
+
+	root := t.TempDir()
+	jobsDir := filepath.Join(root, "jobs")
+	if err := os.MkdirAll(jobsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	script := filepath.Join(jobsDir, "slow-check")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho \"step 1\"\necho \"step 2 completed\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ws, err := workspace.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d := New(&config.Config{
+		ServerURL:   tsURL,
+		RunnerToken: "beep_rt_test",
+	}, ws)
+
+	job := &task.Task{
+		ID:             "task-run-1",
+		JobSlug:        "slow-check",
+		Name:           "Slow Check",
+		TimeoutSeconds: 30,
+		LogURL:         tsURL + "/api/v1/runner/tasks/task-run-1/logs",
+		ResultURL:      tsURL + "/api/v1/runner/tasks/task-run-1/result",
+	}
+
+	d.execute(context.Background(), job)
+
+	if !strings.Contains(gotLogs.String(), "step 1") || !strings.Contains(gotLogs.String(), "step 2 completed") {
+		t.Fatalf("expected logs to contain step outputs, got: %q", gotLogs.String())
+	}
+	if gotResult == nil {
+		t.Fatal("expected result report to be called, but got nil")
+	}
+	if gotResult.Status != task.StatusOk {
+		t.Fatalf("expected result status 'ok', got %q (%s)", gotResult.Status, gotResult.Title)
+	}
+}
+

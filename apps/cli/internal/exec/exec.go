@@ -56,16 +56,31 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 	if cmd.Process != nil {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
-	wg.Wait()
+
+	streamDone := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(streamDone)
+	}()
+
+	select {
+	case <-streamDone:
+	case <-time.After(2 * time.Second):
+		// Orphaned setsid grandchild may still hold stdout/stderr pipe open; close pipes to avoid hanging worker.
+		_ = stdout.Close()
+		_ = stderr.Close()
+		<-streamDone
+	}
+
 	durationMs := time.Since(start).Milliseconds()
 	metrics := map[string]any{"duration_ms": durationMs}
 
 	if execCtx.Err() == context.DeadlineExceeded || ctx.Err() != nil {
 		metrics["timed_out"] = execCtx.Err() == context.DeadlineExceeded
 		if ctx.Err() != nil && execCtx.Err() != context.DeadlineExceeded {
-			return task.Alerting("Job cancelled", "Runner shut down before the job finished", metrics)
+			return task.Error("Job cancelled", "Runner shut down before the job finished", metrics)
 		}
-		return task.Alerting(fmt.Sprintf("Job timed out after %s", timeout), "Execution exceeded the deadline", metrics)
+		return task.Error(fmt.Sprintf("Job timed out after %s", timeout), "Execution exceeded the deadline", metrics)
 	}
 
 	if waitErr != nil {

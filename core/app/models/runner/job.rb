@@ -95,11 +95,19 @@ class Runner::Job < ApplicationRecord
       if expired?(run.scheduled_for)
         run.update!(status: :expired)
         finish_firing(last_run_at: run.scheduled_for)
-      elsif !runner.online? || run.created_at < STALE_FIRING_AFTER.ago
+      elsif paused?
+        run.record_result!(
+          status: :error,
+          title: "Job paused",
+          message: "Job '#{name}' was paused before the pending run was claimed",
+          run_status: :failed,
+          from_statuses: %w[ pending ]
+        )
+      elsif !runner.online?
         run.record_result!(
           status: :error,
           title: "Runner offline",
-          message: "Assigned runner '#{runner.name}' is offline or did not claim the task",
+          message: "Assigned runner '#{runner.name}' is offline or unreachable",
           run_status: :failed,
           from_statuses: %w[ pending ]
         )

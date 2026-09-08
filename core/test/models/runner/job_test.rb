@@ -66,6 +66,35 @@ class Runner::JobTest < ActiveSupport::TestCase
     assert_nil run.result_status
   end
 
+  test "reclaim preserves pending runs when runner is online" do
+    job = @runner.jobs.create!(name: "Check", slug: "check", cron: "*/5 * * * *", timezone: "UTC")
+    job.update_columns(status: "firing", updated_at: 5.minutes.ago)
+    run = job.runs.create!(scheduled_for: 5.minutes.ago, status: "pending", runner: @runner, created_at: 5.minutes.ago)
+
+    job.reclaim_stale
+
+    run.reload
+    job.reload
+    assert_equal "pending", run.status
+    assert job.firing?
+  end
+
+  test "reclaim fails pending runs when runner is offline" do
+    @runner.update_columns(status: "offline", last_seen_at: 3.minutes.ago)
+    job = @runner.jobs.create!(name: "Check", slug: "check", cron: "*/5 * * * *", timezone: "UTC")
+    job.update_columns(status: "firing", updated_at: 5.minutes.ago)
+    run = job.runs.create!(scheduled_for: 5.minutes.ago, status: "pending", runner: @runner, created_at: 5.minutes.ago)
+
+    job.reclaim_stale
+
+    run.reload
+    job.reload
+    assert_equal "failed", run.status
+    assert_equal "error", run.result_status
+    assert_equal "Runner offline", run.result["title"]
+    assert job.active?
+  end
+
   test "reclaim_stale_firing recovers open runs on paused jobs" do
     job = @runner.jobs.create!(name: "Check", slug: "check", cron: "*/5 * * * *", timezone: "UTC")
     job.update_columns(status: "firing")

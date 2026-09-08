@@ -6,7 +6,13 @@ class Api::V1::Runner::Jobs::PushesController < Api::V1::Runner::BaseController
     ActiveRecord::Base.transaction do
       jobs_payload.each do |job_data|
         attrs = job_attrs_from(job_data)
-        next if attrs[:slug].blank?
+        if attrs[:slug].blank?
+          return render_json_error(
+            status: :unprocessable_entity,
+            message: "Job slug cannot be blank",
+            code: "VALIDATION_ERROR"
+          )
+        end
 
         job = find_or_build_job(id: job_data[:id], slug: attrs[:slug])
         job.assign_attributes(attrs)
