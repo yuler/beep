@@ -2,7 +2,6 @@ class Api::V1::RunnersController < Api::V1::BaseController
   before_action :set_runner, only: %i[ show update destroy ]
 
   def index
-    Runner.mark_stale_offline
     @runners = Current.account.runners
                               .left_joins(:jobs)
                               .select("runners.*, COUNT(runner_jobs.id) AS jobs_count")
@@ -12,7 +11,6 @@ class Api::V1::RunnersController < Api::V1::BaseController
   end
 
   def show
-    Runner.mark_stale_offline
     render :show
   end
 
