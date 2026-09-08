@@ -3,7 +3,6 @@ class Api::V1::Runners::TokensController < Api::V1::BaseController
 
   def create
     @runner.regenerate_token
-    render template: "api/v1/runners/create"
   end
 
   private

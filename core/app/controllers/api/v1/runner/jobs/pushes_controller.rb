@@ -14,8 +14,6 @@ class Api::V1::Runner::Jobs::PushesController < Api::V1::Runner::BaseController
         @pushed_jobs << job
       end
     end
-
-    render template: "api/v1/runner/jobs/pushes/create"
   rescue ActiveRecord::RecordInvalid => e
     render_json_error(
       status: :unprocessable_entity,

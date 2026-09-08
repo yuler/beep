@@ -73,6 +73,17 @@ Rails.application.routes.draw do
       end
 
       resource :settings, only: %i[ show update ]
+
+      # Beep
+      resources :beep_proposals, only: :create
+      resources :beeps, only: %i[ index show create update destroy ] do
+        scope module: :beeps do
+          resource :pause, only: %i[ create destroy ]
+          resources :runs, only: :create
+        end
+      end
+
+      # Beeper
       resources :beeper_apps, only: %i[ index show ] do
         scope module: :beeper_apps do
           namespace :heartbeat do
@@ -110,14 +121,6 @@ Rails.application.routes.draw do
             resources :logs, only: %i[ create ]
             resource :result, only: %i[ create ]
           end
-        end
-      end
-
-      resources :beep_proposals, only: :create
-      resources :beeps, only: %i[ index show create update destroy ] do
-        scope module: :beeps do
-          resource :pause, only: %i[ create destroy ]
-          resources :runs, only: :create
         end
       end
 
