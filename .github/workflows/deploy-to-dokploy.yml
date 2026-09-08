@@ -1,4 +1,4 @@
-name: dokploy-deploy
+name: deploy-to-dokploy
 
 on:
   workflow_dispatch:
