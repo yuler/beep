@@ -730,5 +730,9 @@
   "runners_runs_clear": "清空",
   "runners_runs_clear_confirm": "删除所有已完成的运行记录及其日志？",
   "runners_runs_delete_failed": "删除运行记录失败",
-  "runners_runs_clear_failed": "清空运行记录失败"
+  "runners_runs_clear_failed": "清空运行记录失败",
+  "runners_install_cli_step": "1. 安装 Beep CLI",
+  "runners_connect_step": "2. 配置并启动 Runner",
+  "runners_install_cli_desc": "在终端中运行此命令，将 Beep CLI Runner 安装到本机。",
+  "runners_current_os": "当前系统"
 }

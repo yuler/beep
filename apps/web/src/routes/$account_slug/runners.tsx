@@ -6,11 +6,18 @@ import {
 import { Plus, Server } from "lucide-react";
 import { useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { CliInstallSnippet } from "@/components/runners/cli-install-snippet";
 import { RunnerFormDialog } from "@/components/runners/runner-form-dialog";
 import { RunnerList } from "@/components/runners/runner-list";
 import { RunnerTokenModal } from "@/components/runners/runner-token-modal";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import {
 	fetchRunners,
 	type Runner,
@@ -88,21 +95,37 @@ function RunnersPage() {
 				</div>
 
 				{runners.length === 0 ? (
-					<Card className="flex flex-col items-center justify-center p-8 text-center border-dashed">
-						<div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-3">
-							<Server className="size-6" />
-						</div>
-						<CardTitle className="text-base font-semibold">
-							{m.runners_no_runners()}
-						</CardTitle>
-						<CardDescription className="mt-1 max-w-sm text-xs leading-relaxed">
-							{m.runners_no_runners_hint()}
-						</CardDescription>
-						<Button size="sm" className="mt-4" onClick={handleOpenAdd}>
-							<Plus data-icon="inline-start" />
-							{m.runners_add_runner()}
-						</Button>
-					</Card>
+					<div className="flex flex-col gap-6">
+						<Card className="flex flex-col items-center justify-center p-8 text-center border-dashed">
+							<div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-3">
+								<Server className="size-6" />
+							</div>
+							<CardTitle className="text-base font-semibold">
+								{m.runners_no_runners()}
+							</CardTitle>
+							<CardDescription className="mt-1 max-w-sm text-xs leading-relaxed">
+								{m.runners_no_runners_hint()}
+							</CardDescription>
+							<Button size="sm" className="mt-4" onClick={handleOpenAdd}>
+								<Plus data-icon="inline-start" />
+								{m.runners_add_runner()}
+							</Button>
+						</Card>
+
+						<Card className="p-4 sm:p-6">
+							<CardHeader className="p-0 pb-3">
+								<CardTitle className="text-sm font-semibold">
+									{m.runners_install_cli_step()}
+								</CardTitle>
+								<CardDescription className="text-xs">
+									{m.runners_install_cli_desc()}
+								</CardDescription>
+							</CardHeader>
+							<CardContent className="p-0">
+								<CliInstallSnippet />
+							</CardContent>
+						</Card>
+					</div>
 				) : (
 					<RunnerList
 						slug={slug}

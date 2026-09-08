@@ -730,5 +730,9 @@
   "runners_runs_clear": "Clear",
   "runners_runs_clear_confirm": "Delete all completed runs and their logs?",
   "runners_runs_delete_failed": "Failed to delete run",
-  "runners_runs_clear_failed": "Failed to clear runs"
+  "runners_runs_clear_failed": "Failed to clear runs",
+  "runners_install_cli_step": "1. Install Beep CLI",
+  "runners_connect_step": "2. Connect & Start Runner",
+  "runners_install_cli_desc": "Run this command in your terminal to install the Beep CLI runner on your machine.",
+  "runners_current_os": "Current OS"
 }
