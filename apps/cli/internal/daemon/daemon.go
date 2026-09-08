@@ -24,6 +24,7 @@ type Daemon struct {
 	executor  *exec.JobExecutor
 	sem       chan struct{}
 	wg        sync.WaitGroup
+	logMu     sync.Mutex
 	OnReady   func()
 }
 
@@ -109,14 +110,6 @@ func (d *Daemon) pollAndExecute(ctx context.Context) {
 }
 
 func (d *Daemon) execute(ctx context.Context, job *task.Task) {
-	log.Printf("%s %s %s (%s: %s)",
-		ui.Bold(ui.Cyan("[beep-runner]")),
-		ui.Yellow("Running"),
-		ui.Bold(ui.Cyan(job.JobSlug)),
-		ui.Dim("run_id"),
-		ui.Dim(job.ID),
-	)
-
 	timeout := time.Duration(job.TimeoutSeconds) * time.Second
 	if timeout <= 0 {
 		timeout = 60 * time.Second
@@ -127,6 +120,7 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 	argv, err := d.workspace.Resolve(job.JobSlug)
 	if err != nil {
 		result := task.Error("Unknown local job", err.Error(), nil)
+		d.logJobBlock(job, []string{err.Error()}, result)
 		errCtx, errCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer errCancel()
 		_ = d.client.ReportLog(errCtx, job.LogURL, err.Error()+"\n")
@@ -178,8 +172,16 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 		}
 	}()
 
+	var localLines []string
+	var localMu sync.Mutex
+
 	result := d.executor.Run(taskCtx, argv, env, timeout, func(line string) {
-		log.Print(ui.Dim(fmt.Sprintf("[%s]", job.JobSlug)) + " " + line)
+		cleanLine := strings.TrimRight(line, "\r\n")
+		if cleanLine != "" {
+			localMu.Lock()
+			localLines = append(localLines, cleanLine)
+			localMu.Unlock()
+		}
 		select {
 		case logChan <- line:
 		case <-taskCtx.Done():
@@ -187,6 +189,31 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 	})
 	close(logChan)
 	logWg.Wait()
+
+	d.logJobBlock(job, localLines, result)
+
+	resultCtx, resultCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer resultCancel()
+	if err := d.client.ReportResult(resultCtx, job.ResultURL, result); err != nil {
+		log.Printf("%s %s for %s: %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error"), job.ID, err)
+	}
+}
+
+func (d *Daemon) logJobBlock(job *task.Task, lines []string, result *task.Result) {
+	d.logMu.Lock()
+	defer d.logMu.Unlock()
+
+	log.Printf("%s %s %s (%s: %s)",
+		ui.Bold(ui.Cyan("[beep-runner]")),
+		ui.Yellow("Running"),
+		ui.Bold(ui.Cyan(job.JobSlug)),
+		ui.Dim("run_id"),
+		ui.Dim(job.ID),
+	)
+
+	for _, line := range lines {
+		log.Printf("%s %s", ui.Dim(fmt.Sprintf("[%s]", job.JobSlug)), line)
+	}
 
 	if result.Status == task.StatusOk {
 		log.Printf("%s %s %s %s",
@@ -202,12 +229,6 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 			ui.Bold(job.JobSlug),
 			ui.Red(result.Title),
 		)
-	}
-
-	resultCtx, resultCancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer resultCancel()
-	if err := d.client.ReportResult(resultCtx, job.ResultURL, result); err != nil {
-		log.Printf("%s %s for %s: %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error"), job.ID, err)
 	}
 }
 

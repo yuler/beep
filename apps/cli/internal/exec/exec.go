@@ -1,10 +1,10 @@
 package exec
 
 import (
-	"bufio"
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -32,59 +32,38 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 	cmd := exec.CommandContext(execCtx, argv[0], argv[1:]...)
 	cmd.Env = env
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return task.Error("Failed to start job", err.Error(), nil)
+	// Kill the whole process group, not just the direct child, on deadline.
+	cmd.Cancel = func() error {
+		if cmd.Process != nil && cmd.Process.Pid > 1 {
+			return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		}
+		return nil
 	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return task.Error("Failed to start job", err.Error(), nil)
-	}
+	// Bound how long Wait may block on I/O pipes after the process exits
+	// (orphaned children keeping them open). Mirror of the old 2s grace.
+	cmd.WaitDelay = 2 * time.Second
+
+	// Stdout/Stderr as writers make Wait wait for all output to be copied
+	// before returning, so no log lines can be lost to a pipe-close race.
+	stdout := &lineWriter{onLog: onLog}
+	stderr := &lineWriter{onLog: onLog}
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	start := time.Now()
 	if err := cmd.Start(); err != nil {
 		return task.Error("Failed to start job", err.Error(), nil)
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go streamLines(stdout, onLog, &wg)
-	go streamLines(stderr, onLog, &wg)
-
-	streamDone := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(streamDone)
-	}()
-
-	waitDone := make(chan error, 1)
-	go func() {
-		waitDone <- cmd.Wait()
-	}()
-
-	var waitErr error
-	select {
-	case waitErr = <-waitDone:
-		// Main process has exited. Wait for remaining output in pipes with a short safety timeout.
-		select {
-		case <-streamDone:
-		case <-time.After(2 * time.Second):
-			_ = stdout.Close()
-			_ = stderr.Close()
-			<-streamDone
-		}
-	case <-execCtx.Done():
-		// Context timed out or cancelled: close pipes and reap process.
-		_ = stdout.Close()
-		_ = stderr.Close()
-		<-streamDone
-		waitErr = <-waitDone
-	}
+	waitErr := cmd.Wait()
 
 	// Ensure the whole process group is reaped (children of the job script).
 	if cmd.Process != nil && cmd.Process.Pid > 1 {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
+
+	stdout.flush()
+	stderr.flush()
 
 	durationMs := time.Since(start).Milliseconds()
 	metrics := map[string]any{"duration_ms": durationMs}
@@ -95,6 +74,12 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 			return task.Error("Job cancelled", "Runner shut down before the job finished", metrics)
 		}
 		return task.Error(fmt.Sprintf("Job timed out after %s", timeout), "Execution exceeded the deadline", metrics)
+	}
+
+	// Wait returns ErrWaitDelay when it force-closed the I/O pipes of an
+	// otherwise successful process (e.g. a daemonized grandchild holding them).
+	if errors.Is(waitErr, exec.ErrWaitDelay) {
+		waitErr = nil
 	}
 
 	if waitErr != nil {
@@ -110,16 +95,41 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 	return task.Ok(fmt.Sprintf("Job succeeded (%dms)", durationMs), "Command exited 0", metrics)
 }
 
-func streamLines(r io.Reader, onLog func(string), wg *sync.WaitGroup) {
-	defer wg.Done()
-	scanner := bufio.NewScanner(r)
-	buf := make([]byte, 0, 64*1024)
-	scanner.Buffer(buf, 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if onLog != nil {
-			onLog(line + "\n")
+// lineWriter splits process output into lines and forwards each to onLog.
+type lineWriter struct {
+	mu    sync.Mutex
+	buf   []byte
+	onLog func(string)
+}
+
+func (w *lineWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	w.buf = append(w.buf, p...)
+	for {
+		i := bytes.IndexByte(w.buf, '\n')
+		if i < 0 {
+			break
 		}
+		w.emit(w.buf[:i+1])
+		w.buf = w.buf[i+1:]
+	}
+	w.mu.Unlock()
+	return len(p), nil
+}
+
+// flush emits any trailing partial line left after the process exited.
+func (w *lineWriter) flush() {
+	w.mu.Lock()
+	if len(w.buf) > 0 {
+		w.emit(append(w.buf, '\n'))
+		w.buf = nil
+	}
+	w.mu.Unlock()
+}
+
+func (w *lineWriter) emit(line []byte) {
+	if w.onLog != nil {
+		w.onLog(string(line))
 	}
 }
 

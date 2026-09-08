@@ -339,7 +339,7 @@ func GenerateShebang(scriptType string) (shebang string, commentPrefix string, t
 #   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
 #   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
 
-echo "[%s] Starting health check..."
+echo "Starting health check..."
 
 # Put your check logic here. For example:
 # curl -s -f -m 10 "http://127.0.0.1:8080/health" || exit 1
@@ -352,7 +352,7 @@ exit 0
 //   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
 //   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
 
-console.log("[%s] Starting health check...");
+console.log("Starting health check...");
 
 // Put your check logic here.
 // Exit 0 for ok, non-zero for error/alerting.
@@ -364,7 +364,7 @@ process.exit(0);
 //   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
 //   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
 
-console.log("[%s] Starting health check with bun...");
+console.log("Starting health check with bun...");
 
 // Put your check logic here.
 console.log("Check passed successfully.");
@@ -378,7 +378,7 @@ import sys
 #   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
 #   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
 
-print(f"[{os.getenv('BEEP_JOB_SLUG', '%s')}] Starting health check...")
+print("Starting health check...")
 
 # Put your check logic here.
 # Exit 0 for ok, non-zero for error/alerting.
@@ -386,7 +386,7 @@ print("Check passed successfully.")
 sys.exit(0)
 `
 	case "ruby", "rb":
-		return "#!/usr/bin/env ruby", "# ", `puts "[%s] Starting health check..."
+		return "#!/usr/bin/env ruby", "# ", `puts "Starting health check..."
 # Put your check logic here.
 puts "Check passed successfully."
 exit 0
@@ -394,18 +394,18 @@ exit 0
 	default:
 		// Custom shebang or executable definition
 		if strings.HasPrefix(st, "#!") {
-			return st, "# ", `echo "[%s] Starting check..."
+			return st, "# ", `echo "Starting check..."
 exit 0
 `
 		}
 		if st != "" {
-			return "#!/usr/bin/env " + st, "# ", `echo "[%s] Starting check..."
+			return "#!/usr/bin/env " + st, "# ", `echo "Starting check..."
 exit 0
 `
 		}
 		return "#!/usr/bin/env bash", "# ", `set -euo pipefail
 
-echo "[%s] Starting health check..."
+echo "Starting health check..."
 echo "Check passed successfully."
 exit 0
 `
@@ -448,7 +448,7 @@ func (w *Workspace) CreateScript(slug, scriptType, id, name, cron, timezone, des
 	sb.WriteString(fmt.Sprintf("%s@timeout: %ds\n", commentPrefix, timeoutSeconds))
 	sb.WriteString(fmt.Sprintf("%s@timezone: %s\n", commentPrefix, timezone))
 	sb.WriteString(fmt.Sprintf("%s@description: %s\n\n", commentPrefix, description))
-	sb.WriteString(fmt.Sprintf(templateBody, slug))
+	sb.WriteString(templateBody)
 
 	if err := os.WriteFile(targetPath, []byte(sb.String()), 0o755); err != nil {
 		return "", false, fmt.Errorf("failed to write script %s: %w", targetPath, err)

@@ -35,6 +35,44 @@ func TestJobExecutorSuccess(t *testing.T) {
 	}
 }
 
+func TestJobExecutorCapturesPartialLine(t *testing.T) {
+	var mu sync.Mutex
+	var logs string
+	result := NewJobExecutor().Run(context.Background(), []string{"/bin/sh", "-c", "printf 'no-newline-tail'"}, nil, 5*time.Second, func(line string) {
+		mu.Lock()
+		defer mu.Unlock()
+		logs += line
+	})
+	if result.Status != task.StatusOk {
+		t.Fatalf("expected ok, got %s %s", result.Status, result.Message)
+	}
+	mu.Lock()
+	captured := logs
+	mu.Unlock()
+	if captured != "no-newline-tail\n" {
+		t.Fatalf("expected trailing partial line, got %q", captured)
+	}
+}
+
+func TestJobExecutorCapturesLargeOutput(t *testing.T) {
+	var mu sync.Mutex
+	var lines int
+	result := NewJobExecutor().Run(context.Background(), []string{"/bin/sh", "-c", "seq 1 20000"}, nil, 5*time.Second, func(line string) {
+		mu.Lock()
+		defer mu.Unlock()
+		lines++
+	})
+	if result.Status != task.StatusOk {
+		t.Fatalf("expected ok, got %s %s", result.Status, result.Message)
+	}
+	mu.Lock()
+	captured := lines
+	mu.Unlock()
+	if captured != 20000 {
+		t.Fatalf("expected 20000 lines, got %d", captured)
+	}
+}
+
 func TestJobExecutorNonZeroExit(t *testing.T) {
 	result := NewJobExecutor().Run(context.Background(), []string{"/bin/sh", "-c", "exit 2"}, nil, 5*time.Second, nil)
 	if result.Status != task.StatusAlerting {
