@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: beep
+
+before:
+  hooks:
+    - go mod tidy -C apps/cli
+
+builds:
+  - id: beep
+    dir: apps/cli
+    main: .
+    binary: beep
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X beep/internal/version.Version={{.Version}}
+      - -X beep/internal/version.GitCommit={{.Commit}}
+      - -X beep/internal/version.BuildDate={{.Date}}
+
+archives:
+  - id: beep
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge branch"
+      - "Merge pull request"

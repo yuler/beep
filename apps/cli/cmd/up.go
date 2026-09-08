@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	"beep/internal/config"
@@ -90,7 +89,7 @@ func runUp(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(sigChan, shutdownSignals...)
 	go func() {
 		<-sigChan
 		log.Println(ui.Dim("[beep-runner] Received termination signal..."))
@@ -116,9 +115,7 @@ func startBackgroundDaemon(cfg *config.Config) error {
 
 	cmd := exec.Command(exe, childArgs...)
 	cmd.Env = append(os.Environ(), "BEEP_DAEMON_CHILD=1")
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setsid: true,
-	}
+	setProcessDetach(cmd)
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start background daemon: %w", err)
@@ -150,11 +147,8 @@ func startBackgroundDaemon(cfg *config.Config) error {
 		}
 
 		// Check if child process has exited early
-		var ws syscall.WaitStatus
-		var ru syscall.Rusage
-		wpid, waitErr := syscall.Wait4(cmd.Process.Pid, &ws, syscall.WNOHANG, &ru)
-		if waitErr == nil && wpid == cmd.Process.Pid {
-			return fmt.Errorf("runner daemon failed to start (exited with status %d, check logs: %s)", ws.ExitStatus(), logFile)
+		if exited, exitStatus := checkChildExited(cmd.Process.Pid); exited {
+			return fmt.Errorf("runner daemon failed to start (exited with status %d, check logs: %s)", exitStatus, logFile)
 		}
 	}
 
