@@ -51,29 +51,14 @@ error() {
   exit 1
 }
 
-# HTTP fetch helper using curl or wget
+# HTTP fetch helper using curl (guaranteed present — the installer itself is piped from curl)
 http_get() {
-  local url="$1"
-  if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$url"
-  elif command -v wget >/dev/null 2>&1; then
-    wget -qO- "$url"
-  else
-    error "Neither curl nor wget was found on your system. Please install one to proceed."
-  fi
+  curl -fsSL "$1"
 }
 
 # Download file to destination
 http_download() {
-  local url="$1"
-  local dest="$2"
-  if command -v curl >/dev/null 2>&1; then
-    curl -fSL --progress-bar "$url" -o "$dest"
-  elif command -v wget >/dev/null 2>&1; then
-    wget --show-progress -qO "$dest" "$url"
-  else
-    error "Neither curl nor wget was found on your system."
-  fi
+  curl -fSL --progress-bar "$1" -o "$2"
 }
 
 detect_os() {
@@ -114,8 +99,12 @@ detect_arch() {
 resolve_version() {
   local target="$1"
   if [[ "$target" != "latest" ]]; then
-    # Return tag as-is, ensuring format
-    echo "$target"
+    # Return tag with leading 'v'
+    if [[ "$target" != v* ]]; then
+      echo "v$target"
+    else
+      echo "$target"
+    fi
     return
   fi
 
@@ -132,14 +121,12 @@ resolve_version() {
   fi
 
   # Fallback to redirect resolution if API was rate-limited
-  if command -v curl >/dev/null 2>&1; then
-    local redirect_url
-    redirect_url=$(curl -fsSL -o /dev/null -w "%{url_effective}" "https://github.com/${REPO}/releases/latest" 2>/dev/null || true)
-    tag="${redirect_url##*/}"
-    if [[ -n "$tag" && "$tag" != "latest" ]]; then
-      echo "$tag"
-      return
-    fi
+  local redirect_url
+  redirect_url=$(curl -fsSL -o /dev/null -w "%{url_effective}" "https://github.com/${REPO}/releases/latest" 2>/dev/null || true)
+  tag="${redirect_url##*/}"
+  if [[ -n "$tag" && "$tag" != "latest" ]]; then
+    echo "$tag"
+    return
   fi
 
   error "Failed to resolve latest version from GitHub releases. Please specify VERSION=vX.Y.Z manually."

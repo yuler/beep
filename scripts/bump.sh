@@ -100,45 +100,16 @@ if ! gum confirm "Apply version $new_version to all components?"; then
   exit 0
 fi
 
-# ── Update all files ──
+# ── Update VERSION file ──
 
-# 1. VERSION file
 echo "$new_version" > "$VERSION_FILE"
 gum_info "Updated VERSION ($new_version)"
-
-# 2. CLI (Go)
-if [[ -f "apps/cli/internal/version/version.go" ]]; then
-  sed -i -E "s/(Version[[:space:]]*=[[:space:]]*)\"[^\"]+\"/\1\"$new_version\"/" apps/cli/internal/version/version.go
-  gum_info "Updated apps/cli/internal/version/version.go"
-fi
-
-# 3. Root package.json
-if [[ -f "package.json" ]]; then
-  node -e "
-    const fs = require('fs');
-    const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-    p.version = '$new_version';
-    fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
-  "
-  gum_info "Updated package.json"
-fi
-
-# 4. Web package.json
-if [[ -f "apps/web/package.json" ]]; then
-  node -e "
-    const fs = require('fs');
-    const p = JSON.parse(fs.readFileSync('apps/web/package.json', 'utf8'));
-    p.version = '$new_version';
-    fs.writeFileSync('apps/web/package.json', JSON.stringify(p, null, 2) + '\n');
-  "
-  gum_info "Updated apps/web/package.json"
-fi
 
 # ── Git tag ──
 
 echo ""
 if gum confirm "Create git commit and tag v$new_version?"; then
-  git add VERSION apps/cli/internal/version/version.go package.json apps/web/package.json
+  git add VERSION
   git commit -m "🚀 [release] Bump version to $new_version"
   git tag "v$new_version"
   gum_info "Created commit & tag v$new_version"

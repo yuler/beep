@@ -1,6 +1,5 @@
 {
   "name": "beep",
-  "version": "0.0.0",
   "private": true,
   "type": "module",
   "description": "Monorepo for the beep project.",
