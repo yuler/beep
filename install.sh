@@ -1,13 +1,13 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Beep CLI Installer Script
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/yuler/beep/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/yuler/beep/main/install.sh | sh
 # Options (via environment variables):
 #   VERSION:     Version to install (e.g. v0.1.0 or latest). Default: latest
 #   INSTALL_DIR: Target installation directory. Default: /usr/local/bin or ~/.local/bin
 #   REPO:        GitHub repository (owner/name). Default: yuler/beep
 
-set -euo pipefail
+set -eu
 
 REPO="${REPO:-yuler/beep}"
 BINARY_NAME="beep"
@@ -15,14 +15,14 @@ REQUESTED_VERSION="${VERSION:-latest}"
 
 # Color output helpers
 setup_colors() {
-  if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
-    BOLD="\033[1m"
-    DIM="\033[2m"
-    GREEN="\033[0;32m"
-    CYAN="\033[0;36m"
-    RED="\033[0;31m"
-    YELLOW="\033[0;33m"
-    RESET="\033[0m"
+  if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    BOLD="$(printf '\033[1m')"
+    DIM="$(printf '\033[2m')"
+    GREEN="$(printf '\033[0;32m')"
+    CYAN="$(printf '\033[0;36m')"
+    RED="$(printf '\033[0;31m')"
+    YELLOW="$(printf '\033[0;33m')"
+    RESET="$(printf '\033[0m')"
   else
     BOLD=""
     DIM=""
@@ -35,19 +35,19 @@ setup_colors() {
 }
 
 info() {
-  printf "${CYAN}info${RESET} %s\n" "$1"
+  printf "%sinfo%s %s\n" "${CYAN}" "${RESET}" "$1"
 }
 
 success() {
-  printf "${GREEN}✓${RESET} ${BOLD}%s${RESET}\n" "$1"
+  printf "%s✓%s %s%s%s\n" "${GREEN}" "${RESET}" "${BOLD}" "$1" "${RESET}"
 }
 
 warn() {
-  printf "${YELLOW}warning${RESET} %s\n" "$1"
+  printf "%swarning%s %s\n" "${YELLOW}" "${RESET}" "$1"
 }
 
 error() {
-  printf "${RED}error${RESET} %s\n" "$1" >&2
+  printf "%serror%s %s\n" "${RED}" "${RESET}" "$1" >&2
   exit 1
 }
 
@@ -62,9 +62,8 @@ http_download() {
 }
 
 detect_os() {
-  local os
-  os="$(uname -s)"
-  case "$os" in
+  _os="$(uname -s)"
+  case "$_os" in
     Linux|linux)
       echo "linux"
       ;;
@@ -75,15 +74,14 @@ detect_os() {
       echo "windows"
       ;;
     *)
-      error "Unsupported operating system: $os"
+      error "Unsupported operating system: $_os"
       ;;
   esac
 }
 
 detect_arch() {
-  local arch
-  arch="$(uname -m)"
-  case "$arch" in
+  _arch="$(uname -m)"
+  case "$_arch" in
     x86_64|amd64)
       echo "amd64"
       ;;
@@ -91,41 +89,43 @@ detect_arch() {
       echo "arm64"
       ;;
     *)
-      error "Unsupported CPU architecture: $arch"
+      error "Unsupported CPU architecture: $_arch"
       ;;
   esac
 }
 
 resolve_version() {
-  local target="$1"
-  if [[ "$target" != "latest" ]]; then
-    # Return tag with leading 'v'
-    if [[ "$target" != v* ]]; then
-      echo "v$target"
-    else
-      echo "$target"
-    fi
+  _target="$1"
+  if [ "$_target" != "latest" ]; then
+    case "$_target" in
+      v*)
+        echo "$_target"
+        ;;
+      *)
+        echo "v$_target"
+        ;;
+    esac
     return
   fi
 
   info "Fetching latest release version for ${REPO}..."
-  local api_url="https://api.github.com/repos/${REPO}/releases/latest"
-  local tag=""
+  _api_url="https://api.github.com/repos/${REPO}/releases/latest"
 
   # Try GitHub API first
-  if tag=$(http_get "$api_url" 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/'); then
-    if [[ -n "$tag" ]]; then
-      echo "$tag"
+  _tag_response="$(http_get "$_api_url" 2>/dev/null || true)"
+  if [ -n "$_tag_response" ]; then
+    _tag="$(printf '%s\n' "$_tag_response" | grep '"tag_name":' | sed -e 's/.*"tag_name": *"//' -e 's/".*//')"
+    if [ -n "$_tag" ]; then
+      echo "$_tag"
       return
     fi
   fi
 
   # Fallback to redirect resolution if API was rate-limited
-  local redirect_url
-  redirect_url=$(curl -fsSL -o /dev/null -w "%{url_effective}" "https://github.com/${REPO}/releases/latest" 2>/dev/null || true)
-  tag="${redirect_url##*/}"
-  if [[ -n "$tag" && "$tag" != "latest" ]]; then
-    echo "$tag"
+  _redirect_url="$(curl -fsSL -o /dev/null -w "%{url_effective}" "https://github.com/${REPO}/releases/latest" 2>/dev/null || true)"
+  _tag="${_redirect_url##*/}"
+  if [ -n "$_tag" ] && [ "$_tag" != "latest" ]; then
+    echo "$_tag"
     return
   fi
 
@@ -133,27 +133,27 @@ resolve_version() {
 }
 
 compute_sha256() {
-  local file="$1"
+  _file="$1"
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$file" | awk '{print $1}'
+    sha256sum "$_file" | awk '{print $1}'
   elif command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$file" | awk '{print $1}'
+    shasum -a 256 "$_file" | awk '{print $1}'
   elif command -v openssl >/dev/null 2>&1; then
-    openssl dgst -sha256 "$file" | awk '{print $NF}'
+    openssl dgst -sha256 "$_file" | awk '{print $NF}'
   else
     echo ""
   fi
 }
 
 determine_install_dir() {
-  if [[ -n "${INSTALL_DIR:-}" ]]; then
+  if [ -n "${INSTALL_DIR:-}" ]; then
     echo "$INSTALL_DIR"
     return
   fi
 
-  if [[ -w "/usr/local/bin" ]]; then
+  if [ -w "/usr/local/bin" ]; then
     echo "/usr/local/bin"
-  elif [[ "$EUID" -eq 0 ]]; then
+  elif [ "$(id -u)" -eq 0 ]; then
     echo "/usr/local/bin"
   else
     echo "$HOME/.local/bin"
@@ -163,69 +163,68 @@ determine_install_dir() {
 main() {
   setup_colors
 
-  local os
-  local arch
   os="$(detect_os)"
   arch="$(detect_arch)"
 
-  local raw_version
   raw_version="$(resolve_version "$REQUESTED_VERSION")"
 
   # Strip leading 'v' for asset archive filenames (e.g. v0.1.0 -> 0.1.0)
-  local version="${raw_version#v}"
+  version="${raw_version#v}"
 
-  local ext="tar.gz"
-  local bin_file="${BINARY_NAME}"
-  if [[ "$os" == "windows" ]]; then
+  ext="tar.gz"
+  bin_file="${BINARY_NAME}"
+  if [ "$os" = "windows" ]; then
     ext="zip"
     bin_file="${BINARY_NAME}.exe"
   fi
 
-  local archive_name="${BINARY_NAME}_${version}_${os}_${arch}.${ext}"
-  local download_url="https://github.com/${REPO}/releases/download/${raw_version}/${archive_name}"
-  local checksum_url="https://github.com/${REPO}/releases/download/${raw_version}/checksums.txt"
+  archive_name="${BINARY_NAME}_${version}_${os}_${arch}.${ext}"
+  download_url="https://github.com/${REPO}/releases/download/${raw_version}/${archive_name}"
+  checksum_url="https://github.com/${REPO}/releases/download/${raw_version}/checksums.txt"
 
-  local install_dir
   install_dir="$(determine_install_dir)"
 
   printf "\n"
-  printf "  ${BOLD}%s${RESET} ${DIM}installer${RESET}\n" "beep"
-  printf "  Version:      ${CYAN}%s${RESET}\n" "${raw_version}"
-  printf "  Platform:     ${CYAN}%s/%s${RESET}\n" "${os}" "${arch}"
-  printf "  Destination:  ${CYAN}%s${RESET}\n\n" "${install_dir}"
+  printf "  %s %s\n" "${BOLD}beep${RESET}" "${DIM}installer${RESET}"
+  printf "  Version:      %s%s%s\n" "${CYAN}" "${raw_version}" "${RESET}"
+  printf "  Platform:     %s%s/%s%s\n" "${CYAN}" "${os}" "${arch}" "${RESET}"
+  printf "  Destination:  %s%s%s\n\n" "${CYAN}" "${install_dir}" "${RESET}"
 
-  local tmpdir
   tmpdir="$(mktemp -d 2>/dev/null || mktemp -d -t 'beep-install')"
   cleanup() {
     rm -rf "$tmpdir"
   }
-  trap cleanup EXIT
+  trap cleanup EXIT INT TERM
 
   info "Downloading ${archive_name}..."
   http_download "$download_url" "$tmpdir/$archive_name"
 
   info "Downloading checksums.txt..."
   if http_get "$checksum_url" > "$tmpdir/checksums.txt" 2>/dev/null; then
-    local expected_hash
-    expected_hash=$(grep -E "${archive_name}\$" "$tmpdir/checksums.txt" | awk '{print $1}' || true)
-    if [[ -n "$expected_hash" ]]; then
-      local actual_hash
-      actual_hash="$(compute_sha256 "$tmpdir/$archive_name")"
-      if [[ -n "$actual_hash" ]]; then
-        if [[ "$expected_hash" != "$actual_hash" ]]; then
-          error "Checksum verification failed!\nExpected: $expected_hash\nActual:   $actual_hash"
-        fi
-        info "Checksum verified (${actual_hash:0:12}...)"
+    # Look up hash by exact archive filename in checksums.txt (matches '<hash>  <filename>' or '<hash> *<filename>')
+    expected_hash="$(awk -v name="$archive_name" '$2 == name || $2 == "*"name { print $1; exit }' "$tmpdir/checksums.txt")"
+    if [ -z "$expected_hash" ]; then
+      error "Could not find checksum for ${archive_name} in checksums.txt"
+    fi
+
+    actual_hash="$(compute_sha256 "$tmpdir/$archive_name")"
+    if [ -n "$actual_hash" ]; then
+      if [ "$expected_hash" != "$actual_hash" ]; then
+        error "Checksum verification failed!\nExpected: $expected_hash\nActual:   $actual_hash"
       fi
+      short_hash="$(printf "%.12s" "$actual_hash")"
+      info "Checksum verified (${short_hash}...)"
+    else
+      warn "No sha256 tool found (sha256sum, shasum, openssl), skipping checksum verification."
     fi
   else
     warn "Could not fetch checksums.txt, skipping verification."
   fi
 
   info "Extracting archive..."
-  if [[ "$ext" == "tar.gz" ]]; then
+  if [ "$ext" = "tar.gz" ]; then
     tar -xzf "$tmpdir/$archive_name" -C "$tmpdir"
-  elif [[ "$ext" == "zip" ]]; then
+  elif [ "$ext" = "zip" ]; then
     if command -v unzip >/dev/null 2>&1; then
       unzip -q -o "$tmpdir/$archive_name" -d "$tmpdir"
     else
@@ -233,15 +232,16 @@ main() {
     fi
   fi
 
-  if [[ ! -f "$tmpdir/$bin_file" ]]; then
+  if [ ! -f "$tmpdir/$bin_file" ]; then
     error "Extracted archive did not contain expected binary: $bin_file"
   fi
 
   chmod +x "$tmpdir/$bin_file"
 
   # Ensure destination directory exists
-  if [[ ! -d "$install_dir" ]]; then
-    if [[ ! -w "$(dirname "$install_dir")" ]] && command -v sudo >/dev/null 2>&1 && [[ "$EUID" -ne 0 ]]; then
+  if [ ! -d "$install_dir" ]; then
+    parent_dir="$(dirname "$install_dir")"
+    if [ ! -w "$parent_dir" ] && command -v sudo >/dev/null 2>&1 && [ "$(id -u)" -ne 0 ]; then
       sudo mkdir -p "$install_dir"
     else
       mkdir -p "$install_dir"
@@ -249,9 +249,9 @@ main() {
   fi
 
   info "Installing ${bin_file} to ${install_dir}..."
-  if [[ -w "$install_dir" ]]; then
+  if [ -w "$install_dir" ]; then
     mv "$tmpdir/$bin_file" "$install_dir/$bin_file"
-  elif command -v sudo >/dev/null 2>&1 && [[ "$EUID" -ne 0 ]]; then
+  elif command -v sudo >/dev/null 2>&1 && [ "$(id -u)" -ne 0 ]; then
     sudo mv "$tmpdir/$bin_file" "$install_dir/$bin_file"
   else
     error "Cannot write to ${install_dir}. Please run with sudo or set INSTALL_DIR to a writable directory."
@@ -260,12 +260,15 @@ main() {
   success "Successfully installed ${BINARY_NAME} to ${install_dir}/${bin_file}"
 
   # Check if installed directory is in PATH
-  if [[ ":$PATH:" != *":$install_dir:"* ]]; then
-    printf "\n"
-    warn "${install_dir} is not in your \$PATH."
-    printf "  Add it to your profile by running:\n"
-    printf "    ${BOLD}export PATH=\"%s:\$PATH\"${RESET}\n\n" "${install_dir}"
-  fi
+  case ":$PATH:" in
+    *":$install_dir:"*) ;;
+    *)
+      printf "\n"
+      warn "${install_dir} is not in your \$PATH."
+      printf "  Add it to your profile by running:\n"
+      printf "    %sexport PATH=\"%s:\$PATH\"%s\n\n" "${BOLD}" "${install_dir}" "${RESET}"
+      ;;
+  esac
 
   if command -v "$install_dir/$bin_file" >/dev/null 2>&1; then
     printf "  Installed version: "
