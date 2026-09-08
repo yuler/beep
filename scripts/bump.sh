@@ -152,7 +152,7 @@ fi
 echo ""
 if gum confirm "Create git commit and tag v$new_version?"; then
   git add VERSION apps/cli/internal/version/version.go package.json apps/web/package.json apps/web/public/version.json
-  git commit -m "🔖 [release] Bump version to $new_version"
+  git commit -m "🚀 [release] Bump version to $new_version"
   git tag "v$new_version"
   gum_info "Created commit & tag v$new_version"
   if gum confirm "Push commit and tag to origin?"; then
