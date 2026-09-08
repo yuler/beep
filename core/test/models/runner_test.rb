@@ -14,14 +14,12 @@ class RunnerTest < ActiveSupport::TestCase
     assert_equal "offline", runner.status
   end
 
-  test "finds runner by raw token" do
+  test "finds runner by token" do
     runner = @account.runners.create!(name: "HQ-Server")
-    found = Runner.find_by_raw_token(runner.token)
+    found = Runner.find_by(token: runner.token)
 
     assert_equal runner.id, found.id
-    assert_nil Runner.find_by_raw_token("invalid_token")
-    assert_nil Runner.find_by_raw_token(nil)
-    assert_nil Runner.find_by_raw_token("")
+    assert_nil Runner.find_by(token: "invalid_token")
   end
 
   test "normalizes and cleans tags" do

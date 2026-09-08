@@ -16,7 +16,7 @@ class Api::V1::Runner::BaseController < ActionController::API
         return
       end
 
-      @current_runner = Runner.find_by_raw_token(token)
+      @current_runner = Runner.find_by(token:)
       unless @current_runner
         render_json_error(
           status: :unauthorized,
@@ -27,12 +27,7 @@ class Api::V1::Runner::BaseController < ActionController::API
     end
 
     def extract_runner_token
-      token = request.headers["X-Runner-Token"].presence
-      if token
-        token
-      elsif (auth_header = request.headers["Authorization"].presence)&.start_with?("Bearer ")
-        auth_header.delete_prefix("Bearer ").strip
-      end
+      request.headers["X-Runner-Token"].to_s.strip.presence
     end
 
     def set_run

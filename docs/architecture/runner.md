@@ -30,7 +30,7 @@ sequenceDiagram
 
 1. **Pull-only HTTP(S).** The runner opens all connections outbound (GitLab Runner style). No inbound ports.
 2. **Scripts stay on the host.** Core stores `slug`, cron, timezone, timeout, and optional `config`. The runner resolves `slug` to `~/.beep/jobs/<slug>` (extensionless executable; filename is the slug) or `jobs.json`.
-3. **Logs and results are first-class.** Stdout is uploaded while the job runs. The runner posts to `BEEP_LOG_URL` / `BEEP_RESULT_URL` using the daemon’s auth header. Job processes do **not** receive `BEEP_RUNNER_TOKEN` (scripts should not impersonate the runner). Local execution logs are rotated daily under `logs/beep-runner-YYYY-MM-DD.log`.
+3. **Logs and results are first-class.** Stdout is uploaded while the job runs. The runner posts to `BEEP_LOG_URL` / `BEEP_RESULT_URL` using the daemon’s `X-Runner-Token` header. Job processes do **not** receive `BEEP_RUNNER_TOKEN` (scripts should not impersonate the runner). Local execution logs are rotated daily under `logs/beep-runner-YYYY-MM-DD.log`.
 4. **User-controlled workspace.** Scripts live on the host. Permissions and executable rights are controlled on the machine by the user.
 5. **One runner per workspace**, single instance guaranteed via `.socket`. Concurrent jobs execute via a worker pool. Supports foreground or daemon mode (`-d` / `--daemon`).
 6. **Git-style job sync.** Local scripts are the source of truth for execution; Core holds schedule metadata. Slug is the script filename; `@id` survives renames. `job push` / `job pull` / `job list` compare local vs server (pair by `@id`, then slug).
