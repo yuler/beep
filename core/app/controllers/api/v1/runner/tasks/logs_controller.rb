@@ -19,7 +19,7 @@ class Api::V1::Runner::Tasks::LogsController < Api::V1::Runner::BaseController
     end
 
     if chunk.bytesize > MAX_CHUNK_BYTES
-      chunk = chunk.byteslice(0, MAX_CHUNK_BYTES)
+      chunk = chunk.truncate_bytes(MAX_CHUNK_BYTES, omission: "")
     end
 
     @run.append_log(chunk)

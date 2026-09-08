@@ -24,6 +24,7 @@ type Daemon struct {
 	executor  *exec.JobExecutor
 	sem       chan struct{}
 	wg        sync.WaitGroup
+	OnReady   func()
 }
 
 func New(cfg *config.Config, ws *workspace.Workspace) *Daemon {
@@ -47,6 +48,9 @@ func (d *Daemon) Start(ctx context.Context) error {
 	pingRes, err := d.client.Ping(ctx)
 	if err != nil {
 		return fmt.Errorf("initial handshake failed: %w", err)
+	}
+	if d.OnReady != nil {
+		d.OnReady()
 	}
 	log.Printf("%s %s %s (%s)",
 		ui.Bold(ui.Cyan("[beep-runner]")),

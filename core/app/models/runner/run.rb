@@ -32,7 +32,7 @@ class Runner::Run < ApplicationRecord
       combined = "#{log}#{text}"
       if combined.bytesize > LOG_MAX_BYTES
         overflow = combined.bytesize - LOG_MAX_BYTES
-        combined = combined.byteslice(overflow, LOG_MAX_BYTES).scrub("")
+        combined = combined.byteslice(overflow..-1)&.scrub("") || ""
       end
       update!(log: combined)
     end

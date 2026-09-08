@@ -105,6 +105,7 @@ function RunnerDetailPage() {
 	}
 
 	useEffect(() => {
+		let active = true;
 		if (!selectedJob) {
 			setRuns([]);
 			setSelectedRun(null);
@@ -112,16 +113,21 @@ function RunnerDetailPage() {
 		}
 		void fetchRunnerJobRuns(slug, runner.id, selectedJob.id)
 			.then((res) => {
+				if (!active) return;
 				setRuns(res.runs);
 				setSelectedRun(res.runs[0] ?? null);
 			})
 			.catch((err) => {
+				if (!active) return;
 				setError(
 					err instanceof ApiError
 						? err.message
 						: translateError(err) || m.runners_jobs_load_failed(),
 				);
 			});
+		return () => {
+			active = false;
+		};
 	}, [selectedJob, slug, runner.id]);
 
 	useEffect(() => {
@@ -132,6 +138,7 @@ function RunnerDetailPage() {
 		) {
 			return;
 		}
+		let active = true;
 		const timer = window.setInterval(() => {
 			void fetchRunnerJobRun(
 				slug,
@@ -139,6 +146,7 @@ function RunnerDetailPage() {
 				selectedJob.id,
 				selectedRun.id,
 			).then((updatedRun) => {
+				if (!active) return;
 				setSelectedRun(updatedRun);
 				if (
 					updatedRun.status !== "running" &&
@@ -146,13 +154,17 @@ function RunnerDetailPage() {
 				) {
 					void fetchRunnerJobRuns(slug, runner.id, selectedJob.id).then(
 						(res) => {
+							if (!active) return;
 							setRuns(res.runs);
 						},
 					);
 				}
 			});
 		}, 2000);
-		return () => window.clearInterval(timer);
+		return () => {
+			active = false;
+			window.clearInterval(timer);
+		};
 	}, [selectedJob, selectedRun, slug, runner.id]);
 
 	async function handleTrigger(job: RunnerJob) {

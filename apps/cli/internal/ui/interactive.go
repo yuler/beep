@@ -369,6 +369,9 @@ func CompareJob(slug string, lj *workspace.LocalJob, sj *client.ServerJob) JobCo
 	}
 
 	var diffs []string
+	if lj.ID != "" && sj.ID != "" && lj.ID != sj.ID {
+		diffs = append(diffs, fmt.Sprintf("id: local %q != server %q", lj.ID, sj.ID))
+	}
 	if lj.Slug != "" && sj.Slug != "" && !strings.EqualFold(lj.Slug, sj.Slug) {
 		diffs = append(diffs, fmt.Sprintf("slug: local %q != server %q", lj.Slug, sj.Slug))
 	}
@@ -461,7 +464,7 @@ func PairJobs(localJobs []workspace.LocalJob, serverJobs []*client.ServerJob) []
 
 	// Pass 2: Fallback match by slug only for remaining local jobs without an ID.
 	for i := range locals {
-		if locals[i].used {
+		if locals[i].used || locals[i].job.ID != "" {
 			continue
 		}
 		slug := strings.ToLower(locals[i].job.Slug)

@@ -128,3 +128,31 @@ func TestPairJobsMatchesRenamedSlugByID(t *testing.T) {
 		t.Fatal("expected both local and server set")
 	}
 }
+
+func TestPairJobsDoesNotPairOutdatedIDBySlug(t *testing.T) {
+	local := []workspace.LocalJob{
+		{Slug: "health", Name: "Health", Cron: "*/5 * * * *", ID: "old-id", Timezone: "UTC"},
+	}
+	server := []*client.ServerJob{
+		{ID: "new-id", Slug: "health", Name: "Health", Cron: "*/5 * * * *", Timezone: "UTC"},
+	}
+	items := PairJobs(local, server)
+	// Because IDs are different, local job should be local-only and server job should be remote-only
+	if len(items) != 2 {
+		t.Fatalf("expected 2 items (1 local only, 1 remote only), got %d", len(items))
+	}
+	hasLocal := false
+	hasRemote := false
+	for _, it := range items {
+		if it.Status == StatusLocalOnly && it.LocalJob != nil && it.LocalJob.ID == "old-id" {
+			hasLocal = true
+		}
+		if it.Status == StatusRemoteOnly && it.ServerJob != nil && it.ServerJob.ID == "new-id" {
+			hasRemote = true
+		}
+	}
+	if !hasLocal || !hasRemote {
+		t.Fatalf("expected 1 local-only with old-id and 1 remote-only with new-id, got: %#v", items)
+	}
+}
+

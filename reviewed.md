@@ -67,16 +67,69 @@
 
 ---
 
-## 已核对、未发现问题的部分
+---
 
-- **认证与租户隔离**：runner agent API 仅凭 `X-Runner-Token` 认证并按 runner 作用域查询；Web 端所有 runners/jobs/runs 控制器均经 `Current.account` 作用域。
-- **Token 安全**：`blockedJobEnvKeys` 严格清洗子进程环境变量，Runner Token 不会泄露给脚本进程。
-- **回调 URL 校验**：CLI 对 log/result URL 做白名单校验，Core 侧回调 base URL 优先采用配置域名。
-- **Slug 防路径穿越**：`ValidateSlug` 严格校验，防止目录遍历。
-- **并发正确性**：状态流转使用原子条件更新，唯一索引保证 poller 实例安全调度。
+## 🟢 第二轮深度审查与修复 (BUG、安全与边缘缺陷)
+
+### 1. 🟢 [已修复] 🔴 BUG（高）— `Api::V1::Runners::JobsController#create` 时区解析参数倒置
+- **位置**：[`core/app/controllers/api/v1/runners/jobs_controller.rb:78`](file:///home/yule/Projects/beep/core/app/controllers/api/v1/runners/jobs_controller.rb#L77-L80)
+- **问题**：`IanaTimezone.resolve` 误将 `Current.user.timezone` 放首位，导致创建 Job 时用户显式选择的时区被强制覆盖为个人默认时区。
+- **修复**：调整为 `IanaTimezone.resolve(params[:timezone], Current.user&.timezone)`，并在控制器测试中加测。
+
+### 2. 🟢 [已修复] 🟠 性能 / BUG（中高）— `reclaim_stale` 运行中任务未超时分支缺少 `touch`
+- **位置**：[`core/app/models/runner/job.rb:117-128`](file:///home/yule/Projects/beep/core/app/models/runner/job.rb#L117-L128)
+- **问题**：running 状态的任务在 2 分钟进入 stale 扫描范围后若未超时，分支直接结束未更新 `updated_at`，导致后续每个 10s tick 反复查询该 Job。
+- **修复**：在 `elsif run.running?` 的未超时分支增加 `else touch`。
+
+### 3. 🟢 [已修复] 🟡 体验 / 一致性（中）— `Workspace#ListJobs` 返回顺序非确定性
+- **位置**：[`apps/cli/internal/workspace/workspace.go:657-715`](file:///home/yule/Projects/beep/apps/cli/internal/workspace/workspace.go#L657-L715)
+- **问题**：从 map 导出切片时迭代顺序随机，导致 CLI 输出顺序跳动。
+- **修复**：在 `ListJobs()` 返回切片前按 `Slug` 稳定排序。
+
+### 4. 🟢 [已修复] 🟡 缺陷（低）— `JobExecutor.Run` 在流式读取完成前提前调用 `cmd.Wait()`
+- **位置**：[`apps/cli/internal/exec/exec.go:54-73`](file:///home/yule/Projects/beep/apps/cli/internal/exec/exec.go#L54-L73)
+- **问题**：提前调用 `cmd.Wait()` 会过早关闭 pipe 读端，可能截断丢失进程末尾输出的几行日志。
+- **修复**：等待 stdout/stderr 流读取完毕后再收割进程退出。
+
+### 5. 🟢 [已修复] 🟡 安全兼容（低）— `StopDaemon` 强制 KILL `-pid` 对 PID 1 的影响
+- **位置**：[`apps/cli/internal/daemon/socket.go:108`](file:///home/yule/Projects/beep/apps/cli/internal/daemon/socket.go#L108) & [`apps/cli/internal/exec/exec.go:57`](file:///home/yule/Projects/beep/apps/cli/internal/exec/exec.go#L57)
+- **问题**：容器环境中以 PID 1 运行时，向 `-1` 广播 `SIGKILL` 会杀掉容器内其它所有进程。
+- **修复**：限制只有当 `pid > 1` 时才执行负进程组 kill。
+
+### 6. 🟢 [已修复] 🟡 数据截断（低）— 日志超长边界 UTF-8 字符截断
+- **位置**：[`core/app/models/runner/run.rb:35`](file:///home/yule/Projects/beep/core/app/models/runner/run.rb#L35) & [`core/app/controllers/api/v1/runner/tasks/logs_controller.rb:22`](file:///home/yule/Projects/beep/core/app/controllers/api/v1/runner/tasks/logs_controller.rb#L22)
+- **修复**：使用 `truncate_bytes(MAX_CHUNK_BYTES, omission: "")` 与 `byteslice(overflow..-1)&.scrub("")`，防止 UTF-8 多字节字符在截断边界损坏。
+
+### 7. 🟢 [已修复] ⚪ 前端竞态（建议）— Web 详情页轮询在快速切换 Job 时的异步状态覆写
+- **位置**：[`apps/web/src/routes/$account_slug/runners_.$runnerId.tsx:135-156`](file:///home/yule/Projects/beep/apps/web/src/routes/$account_slug/runners_.$runnerId.tsx#L135-L156)
+- **修复**：在 `useEffect` cleanup 中增加 active 标志，忽略已失效旧请求的响应。
+
+### 8. 🟢 [已修复] 🔴 BUG（高）— `job remove` 把过期 `@id` 的 404 当成删除成功
+- **位置**：[`apps/cli/internal/client/client.go:120-136`](file:///home/yule/Projects/beep/apps/cli/internal/client/client.go#L120-L136)、[`apps/cli/cmd/job.go:222-247`](file:///home/yule/Projects/beep/apps/cli/cmd/job.go#L222-L247)
+- **修复**：`DeleteJob` 对 404 正常返回错误；CLI 删除时优先尝试 `@id`，若失败则自动回退按 `slug` 尝试删除并准确报告结果。
+
+### 9. 🟢 [已修复] 🔴 BUG（高）— `beep runner up -d` 在握手成功前就报启动成功
+- **位置**：[`apps/cli/cmd/up.go:70-144`](file:///home/yule/Projects/beep/apps/cli/cmd/up.go#L70-L144)、[`apps/cli/internal/daemon/daemon.go:39-50`](file:///home/yule/Projects/beep/apps/cli/internal/daemon/daemon.go#L39-L50)
+- **修复**：Socket 初始置为 `starting` 状态，待首次 `Ping` 握手成功后置为 `running`；后台启动等待 `CheckReady`，并在握手失败或子进程过早退出时返回非零错误码并输出日志路径。
+
+### 10. 🟢 [已修复] 🟠 安全（中）— HTTP 跨主机跳转会带上 `X-Runner-Token`
+- **位置**：[`apps/cli/internal/client/client.go:25-31`](file:///home/yule/Projects/beep/apps/cli/internal/client/client.go#L25-L31)
+- **修复**：在 `http.Client.CheckRedirect` 中检测跨 host 跳转并主动剔除 `X-Runner-Token`，并添加回归测试用例。
+
+### 11. 🟢 [已修复] 🟠 安全（中）— `beep runner stop` 信任 socket 里未认证的 PID
+- **位置**：[`apps/cli/internal/daemon/socket.go:40-116`](file:///home/yule/Projects/beep/apps/cli/internal/daemon/socket.go#L40-L116)
+- **修复**：Workspace 目录权限收敛为 `0700`；通过 `SO_PEERCRED` 校验 Unix domain socket 对端的 UID 与 PID 是否一致。
+
+### 12. 🟢 [已修复] 🟡 BUG（中低）— `PairJobs` 用 slug 兜底会吞掉过期 `@id`
+- **位置**：[`apps/cli/internal/ui/interactive.go:337-414`](file:///home/yule/Projects/beep/apps/cli/internal/ui/interactive.go#L337-L414)、[`apps/cli/internal/ui/interactive.go:462-478`](file:///home/yule/Projects/beep/apps/cli/internal/ui/interactive.go#L462-L478)
+- **修复**：`CompareJob` 增加 ID 差异比较；Pass 2 严格跳过 `ID != ""` 的项，并添加回归测试用例。
 
 ---
 
-## 结论
+## 结论与验证
 
-所有高、中、低风险项与细节问题均已修复并通过单元测试与全量测试套件验证。
+所有两轮审查发现的问题均已修复并通过自动化测试套件验证：
+
+- **Go CLI** (`apps/cli`): `go test ./...`、`go vet ./...`、`go build ./...` 全部通过（包含新增测试用例）。
+- **Rails Core** (`core`): `bin/rails test` 381 runs, 1329 assertions 全部通过（0 failures, 0 errors）。
+- **Web** (`apps/web`): `biome check` 140 files 全部通过。

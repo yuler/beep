@@ -51,25 +51,39 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 	go streamLines(stdout, onLog, &wg)
 	go streamLines(stderr, onLog, &wg)
 
-	waitErr := cmd.Wait()
-	// Ensure the whole process group is reaped (children of the job script).
-	if cmd.Process != nil {
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-	}
-
 	streamDone := make(chan struct{})
 	go func() {
 		wg.Wait()
 		close(streamDone)
 	}()
 
+	waitDone := make(chan error, 1)
+	go func() {
+		waitDone <- cmd.Wait()
+	}()
+
+	var waitErr error
 	select {
-	case <-streamDone:
-	case <-time.After(2 * time.Second):
-		// Orphaned setsid grandchild may still hold stdout/stderr pipe open; close pipes to avoid hanging worker.
+	case waitErr = <-waitDone:
+		// Main process has exited. Wait for remaining output in pipes with a short safety timeout.
+		select {
+		case <-streamDone:
+		case <-time.After(2 * time.Second):
+			_ = stdout.Close()
+			_ = stderr.Close()
+			<-streamDone
+		}
+	case <-execCtx.Done():
+		// Context timed out or cancelled: close pipes and reap process.
 		_ = stdout.Close()
 		_ = stderr.Close()
 		<-streamDone
+		waitErr = <-waitDone
+	}
+
+	// Ensure the whole process group is reaped (children of the job script).
+	if cmd.Process != nil && cmd.Process.Pid > 1 {
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
 
 	durationMs := time.Since(start).Milliseconds()

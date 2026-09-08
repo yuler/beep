@@ -15,6 +15,7 @@ class Api::V1::Runners::JobsControllerTest < ActionDispatch::IntegrationTest
         name: "Intranet HTTP",
         slug: "intranet-http",
         cron: "*/5 * * * *",
+        timezone: "America/New_York",
         timeout_seconds: 20,
         config: { "target_url" => "http://10.0.0.5/health" }
       },
@@ -24,6 +25,7 @@ class Api::V1::Runners::JobsControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
     job = response.parsed_body
     assert_equal "intranet-http", job["slug"]
+    assert_equal "America/New_York", job["timezone"]
     assert_equal 20, job["timeout_seconds"]
 
     get "/api/v1/#{@account.slug}/runners/#{@runner.id}/jobs",

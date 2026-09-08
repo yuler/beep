@@ -125,6 +125,8 @@ class Runner::Job < ApplicationRecord
           run_status: :failed,
           from_statuses: %w[ running ]
         )
+      else
+        touch
       end
     else
       finish_firing(last_run_at: run.scheduled_for)

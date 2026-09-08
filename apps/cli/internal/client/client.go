@@ -27,6 +27,15 @@ func New(cfg *config.Config) *Client {
 		cfg: cfg,
 		httpClient: &http.Client{
 			Timeout: 35 * time.Second,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if len(via) >= 10 {
+					return fmt.Errorf("stopped after 10 redirects")
+				}
+				if len(via) > 0 && !strings.EqualFold(req.URL.Host, via[0].URL.Host) {
+					req.Header.Del("X-Runner-Token")
+				}
+				return nil
+			},
 		},
 	}
 }
@@ -129,7 +138,10 @@ func (c *Client) DeleteJob(ctx context.Context, slug string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("job not found on server (404)")
+	}
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("delete failed (status %d): %s", resp.StatusCode, string(respBody))
 	}

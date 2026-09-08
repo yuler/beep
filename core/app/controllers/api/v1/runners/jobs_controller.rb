@@ -75,6 +75,6 @@ class Api::V1::Runners::JobsController < Api::V1::BaseController
     end
 
     def job_timezone
-      IanaTimezone.resolve(Current.user.timezone, params[:timezone])
+      IanaTimezone.resolve(params[:timezone], Current.user&.timezone)
     end
 end

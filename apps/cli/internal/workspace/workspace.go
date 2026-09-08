@@ -711,6 +711,9 @@ func (w *Workspace) ListJobs() ([]LocalJob, error) {
 	for _, job := range jobsMap {
 		result = append(result, job)
 	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Slug < result[j].Slug
+	})
 	return result, nil
 }
 

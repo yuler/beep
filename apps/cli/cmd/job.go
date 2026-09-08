@@ -240,8 +240,13 @@ var jobRemoveCmd = &cobra.Command{
 
 			if syncServer && cfg.ServerURL != "" && cfg.RunnerToken != "" {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-				if delErr := c.DeleteJob(ctx, deleteKey); delErr != nil {
-					fmt.Println(ui.Warn("Failed to delete job on server: %v", delErr))
+				delErr := c.DeleteJob(ctx, deleteKey)
+				if delErr != nil && deleteKey != slug {
+					// If delete by ID failed (e.g. stale ID), fallback to deleting by slug
+					delErr = c.DeleteJob(ctx, slug)
+				}
+				if delErr != nil {
+					fmt.Println(ui.Warn("Failed to delete job %s on server: %v", ui.Bold(slug), delErr))
 				} else {
 					fmt.Println(ui.Success("Deleted job %s from server", ui.Bold(slug)))
 				}

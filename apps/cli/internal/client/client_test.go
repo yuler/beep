@@ -107,3 +107,42 @@ func TestReportLogRejectsUnprocessableEntity(t *testing.T) {
 		t.Fatal("expected 422 log report to fail")
 	}
 }
+
+func TestCrossHostRedirectStripsRunnerToken(t *testing.T) {
+	var receivedTokenOnTarget string
+	targetServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedTokenOnTarget = r.Header.Get("X-Runner-Token")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"jobs": []any{}})
+	}))
+	defer targetServer.Close()
+
+	originServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, targetServer.URL+"/api/v1/runner/jobs", http.StatusFound)
+	}))
+	defer originServer.Close()
+
+	c := New(&config.Config{ServerURL: originServer.URL, RunnerToken: "secret_runner_token"})
+	_, err := c.ListJobs(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected list jobs error: %v", err)
+	}
+	if receivedTokenOnTarget != "" {
+		t.Fatalf("expected X-Runner-Token to be stripped on cross-host redirect, but got: %q", receivedTokenOnTarget)
+	}
+}
+
+func TestClientDeleteJobNotFound(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"error":"Job not found"}`))
+	}))
+	defer ts.Close()
+
+	c := New(&config.Config{ServerURL: ts.URL, RunnerToken: "beep_rt_test"})
+	err := c.DeleteJob(context.Background(), "non-existent-job")
+	if err == nil {
+		t.Fatal("expected 404 to return error, got nil")
+	}
+}
+

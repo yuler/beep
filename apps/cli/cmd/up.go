@@ -82,6 +82,9 @@ func runUp(cmd *cobra.Command, args []string) error {
 	defer logWriter.Close()
 
 	d := daemon.New(cfg, ws)
+	d.OnReady = func() {
+		sock.SetRunning()
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -121,17 +124,19 @@ func startBackgroundDaemon(cfg *config.Config) error {
 		return fmt.Errorf("failed to start background daemon: %w", err)
 	}
 
-	// Wait up to 3s for daemon to acquire socket
+	// Wait up to 5s for daemon to acquire socket and complete initial handshake
 	started := false
-	for i := 0; i < 30; i++ {
+	today := time.Now().Format("2006-01-02")
+	logFile := daemon.DailyLogPath(cfg.Workspace, today)
+
+	for i := 0; i < 50; i++ {
 		time.Sleep(100 * time.Millisecond)
-		if isRunning, childPID, _ := daemon.CheckRunning(cfg.Workspace); isRunning {
+
+		if isReady, childPID, _ := daemon.CheckReady(cfg.Workspace); isReady {
 			started = true
-			if childPID == 0 {
+			if childPID <= 0 {
 				childPID = cmd.Process.Pid
 			}
-			today := time.Now().Format("2006-01-02")
-			logFile := daemon.DailyLogPath(cfg.Workspace, today)
 
 			fmt.Printf("%s %s (PID: %s)\n",
 				ui.Green("✓"),
@@ -143,6 +148,14 @@ func startBackgroundDaemon(cfg *config.Config) error {
 			fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace))
 			return nil
 		}
+
+		// Check if child process has exited early
+		var ws syscall.WaitStatus
+		var ru syscall.Rusage
+		wpid, waitErr := syscall.Wait4(cmd.Process.Pid, &ws, syscall.WNOHANG, &ru)
+		if waitErr == nil && wpid == cmd.Process.Pid {
+			return fmt.Errorf("runner daemon failed to start (exited with status %d, check logs: %s)", ws.ExitStatus(), logFile)
+		}
 	}
 
 	if !started {
@@ -150,7 +163,7 @@ func startBackgroundDaemon(cfg *config.Config) error {
 			_ = cmd.Process.Kill()
 			_, _ = cmd.Process.Wait()
 		}
-		return fmt.Errorf("daemon failed to initialize socket (check logs in %s/logs)", cfg.Workspace)
+		return fmt.Errorf("daemon failed to complete handshake within 5s (check logs: %s)", logFile)
 	}
 
 	return nil
