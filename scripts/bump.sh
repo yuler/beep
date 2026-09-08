@@ -113,7 +113,7 @@ if gum confirm "Create git commit and tag v$new_version?"; then
   git tag "v$new_version"
   gum_info "Created commit & tag v$new_version"
   if gum confirm "Push commit and tag to origin?"; then
-    git push && git push --tags
+    git push && git push origin "v$new_version"
     gum_info "Pushed to origin."
   fi
 else

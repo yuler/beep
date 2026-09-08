@@ -194,32 +194,33 @@ main() {
   cleanup() {
     rm -rf "$tmpdir"
   }
-  trap cleanup EXIT INT TERM
+  trap cleanup EXIT
+  trap 'exit 1' INT TERM
 
   info "Downloading ${archive_name}..."
   http_download "$download_url" "$tmpdir/$archive_name"
 
   info "Downloading checksums.txt..."
-  if http_get "$checksum_url" > "$tmpdir/checksums.txt" 2>/dev/null; then
-    # Look up hash by exact archive filename in checksums.txt (matches '<hash>  <filename>' or '<hash> *<filename>')
-    expected_hash="$(awk -v name="$archive_name" '$2 == name || $2 == "*"name { print $1; exit }' "$tmpdir/checksums.txt")"
-    if [ -z "$expected_hash" ]; then
-      error "Could not find checksum for ${archive_name} in checksums.txt"
-    fi
-
-    actual_hash="$(compute_sha256 "$tmpdir/$archive_name")"
-    if [ -n "$actual_hash" ]; then
-      if [ "$expected_hash" != "$actual_hash" ]; then
-        error "Checksum verification failed!\nExpected: $expected_hash\nActual:   $actual_hash"
-      fi
-      short_hash="$(printf "%.12s" "$actual_hash")"
-      info "Checksum verified (${short_hash}...)"
-    else
-      warn "No sha256 tool found (sha256sum, shasum, openssl), skipping checksum verification."
-    fi
-  else
-    warn "Could not fetch checksums.txt, skipping verification."
+  if ! http_get "$checksum_url" > "$tmpdir/checksums.txt" 2>/dev/null; then
+    error "Could not fetch checksums.txt — refusing to install an unverified binary."
   fi
+
+  # Look up hash by exact archive filename in checksums.txt (matches '<hash>  <filename>' or '<hash> *<filename>')
+  expected_hash="$(awk -v name="$archive_name" '$2 == name || $2 == "*"name { print $1; exit }' "$tmpdir/checksums.txt")"
+  if [ -z "$expected_hash" ]; then
+    error "Could not find checksum for ${archive_name} in checksums.txt"
+  fi
+
+  actual_hash="$(compute_sha256 "$tmpdir/$archive_name")"
+  if [ -z "$actual_hash" ]; then
+    error "No sha256 tool found (sha256sum, shasum, openssl) — refusing to install an unverified binary."
+  fi
+
+  if [ "$expected_hash" != "$actual_hash" ]; then
+    error "Checksum verification failed!\nExpected: $expected_hash\nActual:   $actual_hash"
+  fi
+  short_hash="$(printf "%.12s" "$actual_hash")"
+  info "Checksum verified (${short_hash}...)"
 
   info "Extracting archive..."
   if [ "$ext" = "tar.gz" ]; then
