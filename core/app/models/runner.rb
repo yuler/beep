@@ -51,7 +51,9 @@ class Runner < ApplicationRecord
     status.in?(%w[ online idle ]) && last_seen_at.present? && last_seen_at >= OFFLINE_TIMEOUT.ago
   end
 
-  def token_prefix
-    token&.first(12)
+  def masked_token
+    return if token.blank?
+
+    "#{token.first(12)}••••"
   end
 end

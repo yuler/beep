@@ -176,7 +176,7 @@ export function RunnerList({
 												{runner.name}
 											</CardTitle>
 											<CardDescription className="font-mono text-xs text-muted-foreground truncate">
-												{runner.token_prefix}••••
+												{runner.masked_token}
 											</CardDescription>
 										</div>
 									</Link>

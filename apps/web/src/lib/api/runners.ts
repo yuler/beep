@@ -5,7 +5,7 @@ export type RunnerStatus = "online" | "idle" | "offline";
 export type Runner = {
 	id: string;
 	name: string;
-	token_prefix: string;
+	masked_token: string;
 	status: RunnerStatus;
 	tags: string[];
 	version?: string | null;

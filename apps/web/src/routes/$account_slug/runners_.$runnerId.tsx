@@ -241,7 +241,7 @@ function RunnerDetailPage() {
 								{getRunnerStatusBadge(runner)}
 							</div>
 							<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground font-mono">
-								<span>{runner.token_prefix}••••</span>
+								<span>{runner.masked_token}</span>
 								{runner.hostname ? <span>· {runner.hostname}</span> : null}
 								{runner.version ? <span>· v{runner.version}</span> : null}
 								{runner.os && runner.arch ? (

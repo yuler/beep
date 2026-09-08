@@ -10,7 +10,7 @@ class RunnerTest < ActiveSupport::TestCase
 
     assert runner.persisted?
     assert runner.token.start_with?("beep_rt_")
-    assert_equal runner.token_prefix, runner.token[0, 12]
+    assert_equal "#{runner.token[0, 12]}••••", runner.masked_token
     assert_equal "offline", runner.status
   end
 
