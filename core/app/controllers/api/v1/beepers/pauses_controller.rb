@@ -24,8 +24,7 @@ class Api::V1::Beepers::PausesController < Api::V1::BaseController
   end
 
   private
-
-  def set_beeper
-    @beeper = Current.account.beepers.find(params[:beeper_id])
-  end
+    def set_beeper
+      @beeper = Current.account.beepers.find(params[:beeper_id])
+    end
 end

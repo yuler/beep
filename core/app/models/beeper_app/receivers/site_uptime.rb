@@ -83,61 +83,60 @@ class BeeperApp::Receivers::SiteUptime < BeeperApp::Receivers::Base
   end
 
   private
-
-  def elapsed_ms_since(start_time)
-    ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) * 1000).round
-  end
-
-  def timeout_signal(host:, elapsed_ms:, timeout_ms:, metrics: nil)
-    BeeperApp::Signal.new(
-      status: :error,
-      title: "Site signal timed out",
-      message: "Connection to #{host} timed out after #{elapsed_ms}ms (threshold: #{timeout_ms}ms)",
-      metrics: metrics || { "latency_ms" => elapsed_ms }
-    )
-  end
-
-  def fetch_with_redirects(uri, timeout:, redirects_remaining:)
-    if redirects_remaining < 0
-      raise StandardError, "Too many HTTP redirects (exceeded limit of #{MAX_REDIRECTS})"
+    def elapsed_ms_since(start_time)
+      ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) * 1000).round
     end
 
-    resolved_ip = SsrfProtection.resolve_public_ip(uri.host)
-    if resolved_ip.nil?
-      raise SsrfProtection::BlockedAddressError, "Host #{uri.host} resolved to a private/disallowed IP address or cannot be resolved"
+    def timeout_signal(host:, elapsed_ms:, timeout_ms:, metrics: nil)
+      BeeperApp::Signal.new(
+        status: :error,
+        title: "Site signal timed out",
+        message: "Connection to #{host} timed out after #{elapsed_ms}ms (threshold: #{timeout_ms}ms)",
+        metrics: metrics || { "latency_ms" => elapsed_ms }
+      )
     end
 
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.ipaddr = resolved_ip
-    http.open_timeout = timeout
-    http.read_timeout = timeout
+    def fetch_with_redirects(uri, timeout:, redirects_remaining:)
+      if redirects_remaining < 0
+        raise StandardError, "Too many HTTP redirects (exceeded limit of #{MAX_REDIRECTS})"
+      end
 
-    if uri.scheme == "https"
-      http.use_ssl = true
-      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-    end
+      resolved_ip = SsrfProtection.resolve_public_ip(uri.host)
+      if resolved_ip.nil?
+        raise SsrfProtection::BlockedAddressError, "Host #{uri.host} resolved to a private/disallowed IP address or cannot be resolved"
+      end
 
-    request = Net::HTTP::Get.new(uri.request_uri)
-    request["Host"] = uri.host
-    request["User-Agent"] = "Beep-Signal-Uptime/1.0"
-    request["Accept-Encoding"] = "identity"
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.ipaddr = resolved_ip
+      http.open_timeout = timeout
+      http.read_timeout = timeout
 
-    response = http.request(request) do |res|
-      bytes_read = 0
-      res.read_body do |chunk|
-        bytes_read += chunk.bytesize
-        break if bytes_read >= MAX_BODY_BYTES
+      if uri.scheme == "https"
+        http.use_ssl = true
+        http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      end
+
+      request = Net::HTTP::Get.new(uri.request_uri)
+      request["Host"] = uri.host
+      request["User-Agent"] = "Beep-Signal-Uptime/1.0"
+      request["Accept-Encoding"] = "identity"
+
+      response = http.request(request) do |res|
+        bytes_read = 0
+        res.read_body do |chunk|
+          bytes_read += chunk.bytesize
+          break if bytes_read >= MAX_BODY_BYTES
+        end
+      end
+
+      if response.is_a?(Net::HTTPRedirection) && response["location"].present?
+        new_uri = URI.join(uri.to_s, response["location"])
+        unless new_uri.is_a?(URI::HTTP) || new_uri.is_a?(URI::HTTPS)
+          raise StandardError, "Redirect destination must be HTTP/HTTPS"
+        end
+        fetch_with_redirects(new_uri, timeout: timeout, redirects_remaining: redirects_remaining - 1)
+      else
+        [ response, uri ]
       end
     end
-
-    if response.is_a?(Net::HTTPRedirection) && response["location"].present?
-      new_uri = URI.join(uri.to_s, response["location"])
-      unless new_uri.is_a?(URI::HTTP) || new_uri.is_a?(URI::HTTPS)
-        raise StandardError, "Redirect destination must be HTTP/HTTPS"
-      end
-      fetch_with_redirects(new_uri, timeout: timeout, redirects_remaining: redirects_remaining - 1)
-    else
-      [ response, uri ]
-    end
-  end
 end

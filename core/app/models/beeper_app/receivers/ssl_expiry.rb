@@ -80,35 +80,34 @@ class BeeperApp::Receivers::SslExpiry < BeeperApp::Receivers::Base
   end
 
   private
-
-  def sanitize_hostname(value)
-    url = value.to_s.strip
-    url = "https://#{url}" unless url.match?(%r{\A[a-zA-Z]+://})
-    parsed = URI.parse(url)
-    (parsed.host || "").delete_prefix("[").delete_suffix("]")
-  rescue URI::InvalidURIError
-    value.to_s.strip.sub(%r{\A[a-zA-Z]+://}, "").split("/").first.to_s.split(":").first.to_s
-  end
-
-  def fetch_peer_certificate(resolved_ip:, hostname:, port:)
-    tcp_socket = nil
-    ssl_socket = nil
-    Timeout.timeout(CONNECT_TIMEOUT) do
-      tcp_socket = Socket.tcp(resolved_ip, port, connect_timeout: CONNECT_TIMEOUT)
-      ctx = OpenSSL::SSL::SSLContext.new
-      ctx.set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
-
-      ssl_socket = OpenSSL::SSL::SSLSocket.new(tcp_socket, ctx)
-      ssl_socket.hostname = hostname # SNI
-      ssl_socket.sync_close = true
-      ssl_socket.connect
-
-      cert = ssl_socket.peer_cert
-      ssl_socket.close
-      cert
+    def sanitize_hostname(value)
+      url = value.to_s.strip
+      url = "https://#{url}" unless url.match?(%r{\A[a-zA-Z]+://})
+      parsed = URI.parse(url)
+      (parsed.host || "").delete_prefix("[").delete_suffix("]")
+    rescue URI::InvalidURIError
+      value.to_s.strip.sub(%r{\A[a-zA-Z]+://}, "").split("/").first.to_s.split(":").first.to_s
     end
-  ensure
-    ssl_socket&.close rescue nil
-    tcp_socket&.close rescue nil
-  end
+
+    def fetch_peer_certificate(resolved_ip:, hostname:, port:)
+      tcp_socket = nil
+      ssl_socket = nil
+      Timeout.timeout(CONNECT_TIMEOUT) do
+        tcp_socket = Socket.tcp(resolved_ip, port, connect_timeout: CONNECT_TIMEOUT)
+        ctx = OpenSSL::SSL::SSLContext.new
+        ctx.set_params(verify_mode: OpenSSL::SSL::VERIFY_PEER)
+
+        ssl_socket = OpenSSL::SSL::SSLSocket.new(tcp_socket, ctx)
+        ssl_socket.hostname = hostname # SNI
+        ssl_socket.sync_close = true
+        ssl_socket.connect
+
+        cert = ssl_socket.peer_cert
+        ssl_socket.close
+        cert
+      end
+    ensure
+      ssl_socket&.close rescue nil
+      tcp_socket&.close rescue nil
+    end
 end

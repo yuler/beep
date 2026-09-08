@@ -24,7 +24,6 @@ class Api::V1::Runners::Jobs::PausesController < Api::V1::BaseController
   end
 
   private
-
     def set_job
       runner = Current.account.runners.find(params[:runner_id])
       @job = runner.jobs.find(params[:job_id])

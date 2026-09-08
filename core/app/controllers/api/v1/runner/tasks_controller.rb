@@ -21,26 +21,26 @@ class Api::V1::Runner::TasksController < Api::V1::Runner::BaseController
       @run = candidate
       @api_base_url = runner_callback_base_url
       render :create
-      return
+    else
+      head :no_content
     end
-
-    head :no_content
   end
 
   private
-
     # Prefer configured Core host over request Host to avoid forged callback URLs.
     def runner_callback_base_url
       opts = Rails.application.config.action_mailer.default_url_options || {}
       host = opts[:host]
-      return request.base_url if host.blank?
-
-      protocol = opts[:protocol].presence || (Rails.env.local? ? "http" : "https")
-      port = opts[:port]
-      if port.present? && ![ 80, 443 ].include?(port.to_i)
-        "#{protocol}://#{host}:#{port}"
+      if host.blank?
+        request.base_url
       else
-        "#{protocol}://#{host}"
+        protocol = opts[:protocol].presence || (Rails.env.local? ? "http" : "https")
+        port = opts[:port]
+        if port.present? && ![ 80, 443 ].include?(port.to_i)
+          "#{protocol}://#{host}:#{port}"
+        else
+          "#{protocol}://#{host}"
+        end
       end
     end
 end

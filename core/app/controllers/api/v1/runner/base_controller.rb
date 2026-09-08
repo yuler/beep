@@ -5,7 +5,6 @@ class Api::V1::Runner::BaseController < ActionController::API
   before_action :authenticate_runner!
 
   private
-
     def authenticate_runner!
       token = extract_runner_token
       if token.blank?

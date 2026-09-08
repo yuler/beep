@@ -17,6 +17,9 @@ class Runner::Job < ApplicationRecord
   normalizes :name, with: ->(value) { value&.strip.presence }
   normalizes :slug, with: ->(value) { value&.strip&.downcase.presence }
 
+  before_validation :sync_next_run_at
+  before_validation :assign_account_from_runner
+
   validates :name, presence: true, length: { maximum: NAME_MAX_LENGTH }
   validates :slug, presence: true, format: { with: SLUG_FORMAT }, uniqueness: { scope: :runner_id }
   validates :cron, presence: true
@@ -25,9 +28,6 @@ class Runner::Job < ApplicationRecord
   validate :timezone_is_iana
   validate :validate_cron_expression
   validate :runner_belongs_to_account
-
-  before_validation :sync_next_run_at
-  before_validation :assign_account_from_runner
 
   scope :due, -> { active.where(next_run_at: ..Time.current) }
 
@@ -148,13 +148,10 @@ class Runner::Job < ApplicationRecord
   end
 
   def expired?(scheduled_for)
-    return false if scheduled_for.nil?
-
-    scheduled_for < EXPIRED_AFTER.ago
+    scheduled_for.present? && scheduled_for < EXPIRED_AFTER.ago
   end
 
   private
-
     def claim_run(scheduled_for)
       if expired?(scheduled_for)
         runs.create!(scheduled_for: scheduled_for, status: :expired, runner: runner)
@@ -182,10 +179,9 @@ class Runner::Job < ApplicationRecord
     end
 
     def runner_belongs_to_account
-      return if runner.blank? || account_id.blank?
-      return if runner.account_id == account_id
-
-      errors.add(:runner, "must belong to the same account")
+      if runner.present? && account_id.present? && runner.account_id != account_id
+        errors.add(:runner, "must belong to the same account")
+      end
     end
 
     def sync_next_run_at
@@ -195,9 +191,9 @@ class Runner::Job < ApplicationRecord
     end
 
     def timezone_is_iana
-      return if timezone.blank?
-
-      errors.add(:timezone, "is invalid") unless IanaTimezone.valid?(timezone)
+      if timezone.present? && !IanaTimezone.valid?(timezone)
+        errors.add(:timezone, "is invalid")
+      end
     end
 
     def validate_cron_expression

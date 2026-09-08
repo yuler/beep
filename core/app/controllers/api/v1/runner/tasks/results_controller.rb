@@ -18,15 +18,15 @@ class Api::V1::Runner::Tasks::ResultsController < Api::V1::Runner::BaseControlle
       metrics: metrics
     )
 
-    unless recorded
-      return render_json_error(
+    if recorded
+      @current_runner.touch_activity(status: "idle")
+      head :no_content
+    else
+      render_json_error(
         status: :unprocessable_entity,
         message: "Run already has a result",
         code: "VALIDATION_ERROR"
       )
     end
-
-    @current_runner.touch_activity(status: "idle")
-    head :no_content
   end
 end

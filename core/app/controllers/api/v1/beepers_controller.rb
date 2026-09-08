@@ -11,29 +11,29 @@ class Api::V1::BeepersController < Api::V1::BaseController
 
   def create
     beeper_app = find_beeper_app
-    unless beeper_app
-      return render_json_error(
-        status: :unprocessable_entity,
-        message: "Beeper app not found",
-        code: "VALIDATION_ERROR"
+    if beeper_app
+      cron = params[:cron].presence || beeper_app.default_cron
+      @beeper = Current.account.beepers.new(
+        beeper_params.merge(
+          beeper_app: beeper_app,
+          cron: cron,
+          timezone: install_timezone
+        )
       )
-    end
 
-    cron = params[:cron].presence || beeper_app.default_cron
-    @beeper = Current.account.beepers.new(
-      beeper_params.merge(
-        beeper_app: beeper_app,
-        cron: cron,
-        timezone: install_timezone
-      )
-    )
-
-    if @beeper.save
-      render :create, status: :created
+      if @beeper.save
+        render :create, status: :created
+      else
+        render_json_error(
+          status: :unprocessable_entity,
+          message: @beeper.errors.full_messages.to_sentence,
+          code: "VALIDATION_ERROR"
+        )
+      end
     else
       render_json_error(
         status: :unprocessable_entity,
-        message: @beeper.errors.full_messages.to_sentence,
+        message: "Beeper app not found",
         code: "VALIDATION_ERROR"
       )
     end
@@ -59,35 +59,34 @@ class Api::V1::BeepersController < Api::V1::BaseController
   end
 
   private
-
-  def find_beeper_app
-    scope = BeeperApp.where(account_id: [ nil, Current.account.id ])
-    if params[:beeper_app_id].present?
-      scope.find_by(id: params[:beeper_app_id])
-    elsif params[:beeper_app_slug].present?
-      scope.find_by(slug: params[:beeper_app_slug])
-    elsif params[:beeper_id].present?
-      # backward compat fallback if needed
-      scope.find_by(id: params[:beeper_id])
-    elsif params[:beeper_slug].present?
-      # backward compat fallback if needed
-      scope.find_by(slug: params[:beeper_slug])
+    def find_beeper_app
+      scope = BeeperApp.where(account_id: [ nil, Current.account.id ])
+      if params[:beeper_app_id].present?
+        scope.find_by(id: params[:beeper_app_id])
+      elsif params[:beeper_app_slug].present?
+        scope.find_by(slug: params[:beeper_app_slug])
+      elsif params[:beeper_id].present?
+        # backward compat fallback if needed
+        scope.find_by(id: params[:beeper_id])
+      elsif params[:beeper_slug].present?
+        # backward compat fallback if needed
+        scope.find_by(slug: params[:beeper_slug])
+      end
     end
-  end
 
-  def beeper_params
-    attrs = params.permit(:title, :body, :cron, notification_channels: [])
-    attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
-    attrs
-  end
+    def beeper_params
+      attrs = params.permit(:title, :body, :cron, notification_channels: [])
+      attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
+      attrs
+    end
 
-  def update_params
-    attrs = params.permit(:title, :body, :cron, notification_channels: [])
-    attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
-    attrs
-  end
+    def update_params
+      attrs = params.permit(:title, :body, :cron, notification_channels: [])
+      attrs[:config] = params[:config].to_unsafe_h if params[:config].respond_to?(:to_unsafe_h)
+      attrs
+    end
 
-  def install_timezone
-    IanaTimezone.resolve(Current.user.timezone, params[:timezone])
-  end
+    def install_timezone
+      IanaTimezone.resolve(Current.user.timezone, params[:timezone])
+    end
 end

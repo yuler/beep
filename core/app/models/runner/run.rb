@@ -57,15 +57,16 @@ class Runner::Run < ApplicationRecord
       status: run_status.to_s,
       updated_at: Time.current
     )
-    return false if updated != 1
-
-    reload
-    runner_job.finish_firing(last_run_at: scheduled_for)
-    true
+    if updated == 1
+      reload
+      runner_job.finish_firing(last_run_at: scheduled_for)
+      true
+    else
+      false
+    end
   end
 
   private
-
     def sanitize_result(hash)
       json_str = hash.to_json
       return hash if json_str.bytesize <= RESULT_MAX_BYTES
