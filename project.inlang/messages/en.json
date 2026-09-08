@@ -724,5 +724,11 @@
   "runners_jobs_delete_failed": "Failed to delete job",
   "runners_runs_title": "Runs & logs",
   "runners_runs_select_job": "Select a job to inspect runs",
-  "runners_runs_no_log": "No log yet."
+  "runners_runs_no_log": "No log yet.",
+  "runners_runs_delete": "Delete run",
+  "runners_runs_delete_confirm": "Delete this run and its log?",
+  "runners_runs_clear": "Clear",
+  "runners_runs_clear_confirm": "Delete all completed runs and their logs?",
+  "runners_runs_delete_failed": "Failed to delete run",
+  "runners_runs_clear_failed": "Failed to clear runs"
 }

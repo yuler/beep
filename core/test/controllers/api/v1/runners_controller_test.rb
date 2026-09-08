@@ -21,6 +21,21 @@ class Api::V1::RunnersControllerTest < ActionDispatch::IntegrationTest
     assert_equal runner.id, runners.first["id"]
     assert_equal "Nas-01", runners.first["name"]
     assert_equal [ "intranet" ], runners.first["tags"]
+    assert_equal 0, runners.first["jobs_count"]
+  end
+
+  test "index counts associated jobs accurately" do
+    runner = @account.runners.create!(name: "Nas-02")
+    runner.jobs.create!(name: "Job 1", slug: "job-1", cron: "* * * * *", timezone: "UTC")
+    runner.jobs.create!(name: "Job 2", slug: "job-2", cron: "* * * * *", timezone: "UTC")
+
+    get "/api/v1/#{@account.slug}/runners",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    runner_data = response.parsed_body["runners"].find { |r| r["id"] == runner.id }
+    assert_equal 2, runner_data["jobs_count"]
   end
 
   test "show returns runner details" do

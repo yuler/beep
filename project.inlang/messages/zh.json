@@ -724,5 +724,11 @@
   "runners_jobs_delete_failed": "删除 Job 失败",
   "runners_runs_title": "运行与日志",
   "runners_runs_select_job": "选择一个 Job 查看运行记录",
-  "runners_runs_no_log": "还没有日志。"
+  "runners_runs_no_log": "还没有日志。",
+  "runners_runs_delete": "删除记录",
+  "runners_runs_delete_confirm": "删除这条运行记录及其日志？",
+  "runners_runs_clear": "清空",
+  "runners_runs_clear_confirm": "删除所有已完成的运行记录及其日志？",
+  "runners_runs_delete_failed": "删除运行记录失败",
+  "runners_runs_clear_failed": "清空运行记录失败"
 }

@@ -105,7 +105,11 @@ Rails.application.routes.draw do
             scope module: :jobs do
               resource :pause, only: %i[ create destroy ]
             end
-            resources :runs, only: %i[ index show create ]
+            resources :runs, only: %i[ index show create destroy ] do
+              collection do
+                delete :clear
+              end
+            end
           end
         end
       end

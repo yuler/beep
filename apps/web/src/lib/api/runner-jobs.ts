@@ -158,3 +158,26 @@ export function triggerRunnerJobRun(
 		{ method: "POST" },
 	);
 }
+
+export function deleteRunnerJobRun(
+	accountSlug: string,
+	runnerId: string,
+	jobId: string,
+	runId: string,
+) {
+	return apiFetch<void>(
+		`/api/v1/${accountSlug}/runners/${runnerId}/jobs/${jobId}/runs/${runId}`,
+		{ method: "DELETE" },
+	);
+}
+
+export function clearRunnerJobRuns(
+	accountSlug: string,
+	runnerId: string,
+	jobId: string,
+) {
+	return apiFetch<void>(
+		`/api/v1/${accountSlug}/runners/${runnerId}/jobs/${jobId}/runs/clear`,
+		{ method: "DELETE" },
+	);
+}

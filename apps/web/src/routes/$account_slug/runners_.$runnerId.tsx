@@ -9,6 +9,7 @@ import {
 	Clock,
 	Copy,
 	Edit,
+	Eraser,
 	Pause,
 	Play,
 	Plus,
@@ -34,7 +35,9 @@ import {
 } from "@/components/ui/card";
 import { ApiError } from "@/lib/api/client";
 import {
+	clearRunnerJobRuns,
 	deleteRunnerJob,
+	deleteRunnerJobRun,
 	fetchRunnerJobRun,
 	fetchRunnerJobRuns,
 	fetchRunnerJobs,
@@ -221,6 +224,52 @@ function RunnerDetailPage() {
 		}
 	}
 
+	async function handleDeleteRun(run: RunnerRun) {
+		if (!selectedJob) {
+			return;
+		}
+		if (!window.confirm(m.runners_runs_delete_confirm())) {
+			return;
+		}
+		setError(null);
+		try {
+			await deleteRunnerJobRun(slug, runner.id, selectedJob.id, run.id);
+			const res = await fetchRunnerJobRuns(slug, runner.id, selectedJob.id);
+			setRuns(res.runs);
+			setSelectedRun((current) =>
+				current?.id === run.id ? (res.runs[0] ?? null) : current,
+			);
+		} catch (err) {
+			setError(
+				err instanceof ApiError
+					? err.message
+					: translateError(err) || m.runners_runs_delete_failed(),
+			);
+		}
+	}
+
+	async function handleClearRuns() {
+		if (!selectedJob) {
+			return;
+		}
+		if (!window.confirm(m.runners_runs_clear_confirm())) {
+			return;
+		}
+		setError(null);
+		try {
+			await clearRunnerJobRuns(slug, runner.id, selectedJob.id);
+			const res = await fetchRunnerJobRuns(slug, runner.id, selectedJob.id);
+			setRuns(res.runs);
+			setSelectedRun(res.runs[0] ?? null);
+		} catch (err) {
+			setError(
+				err instanceof ApiError
+					? err.message
+					: translateError(err) || m.runners_runs_clear_failed(),
+			);
+		}
+	}
+
 	return (
 		<>
 			<DashboardHeader
@@ -403,43 +452,77 @@ function RunnerDetailPage() {
 					</Card>
 
 					<Card>
-						<CardHeader>
-							<CardTitle>{m.runners_runs_title()}</CardTitle>
-							<CardDescription className="font-mono text-xs">
-								{selectedJob ? (
-									<span>
-										{selectedJob.name} ({selectedJob.id}) · {selectedJob.slug}
-									</span>
-								) : (
-									m.runners_runs_select_job()
-								)}
-							</CardDescription>
+						<CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+							<div className="flex flex-col gap-1">
+								<CardTitle>{m.runners_runs_title()}</CardTitle>
+								<CardDescription className="font-mono text-xs">
+									{selectedJob ? (
+										<span>
+											{selectedJob.name} ({selectedJob.id}) · {selectedJob.slug}
+										</span>
+									) : (
+										m.runners_runs_select_job()
+									)}
+								</CardDescription>
+							</div>
+							{selectedJob && runs.length > 0 ? (
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => void handleClearRuns()}
+								>
+									<Eraser data-icon="inline-start" />
+									{m.runners_runs_clear()}
+								</Button>
+							) : null}
 						</CardHeader>
 						<CardContent className="flex flex-col gap-3">
 							<div className="flex flex-col gap-1">
-								{runs.map((run) => (
-									<button
-										key={run.id}
-										type="button"
-										className="flex items-center justify-between rounded-md border px-3 py-2 text-left text-xs"
-										onClick={() => {
-											if (!selectedJob) return;
-											void fetchRunnerJobRun(
-												slug,
-												runner.id,
-												selectedJob.id,
-												run.id,
-											).then(setSelectedRun);
-										}}
-									>
-										<span className="font-mono">
-											{new Date(run.scheduled_for).toLocaleString()}
-										</span>
-										<Badge variant="outline">
-											{run.result_status || run.status}
-										</Badge>
-									</button>
-								))}
+								{runs.map((run) => {
+									const active =
+										run.status === "pending" || run.status === "running";
+									return (
+										<div
+											key={run.id}
+											className={`flex items-center gap-1 rounded-md border pr-1 text-xs ${
+												selectedRun?.id === run.id
+													? "border-primary bg-primary/5"
+													: "border-border hover:border-muted-foreground/40"
+											}`}
+										>
+											<button
+												type="button"
+												className="flex flex-1 cursor-pointer items-center justify-between gap-2 px-3 py-2 text-left focus-visible:outline-none"
+												onClick={() => {
+													if (!selectedJob) return;
+													void fetchRunnerJobRun(
+														slug,
+														runner.id,
+														selectedJob.id,
+														run.id,
+													).then(setSelectedRun);
+												}}
+											>
+												<span className="font-mono">
+													{new Date(run.scheduled_for).toLocaleString()}
+												</span>
+												<Badge variant="outline">
+													{run.result_status || run.status}
+												</Badge>
+											</button>
+											<Button
+												size="icon-sm"
+												variant="ghost"
+												disabled={active}
+												onClick={() => void handleDeleteRun(run)}
+												title={m.runners_runs_delete()}
+												aria-label={m.runners_runs_delete()}
+											>
+												<Trash2 className="size-3" />
+											</Button>
+										</div>
+									);
+								})}
 							</div>
 							<pre className="max-h-80 overflow-auto rounded-lg bg-muted/60 p-3 font-mono text-[11px] whitespace-pre-wrap">
 								{selectedRun?.log ||
