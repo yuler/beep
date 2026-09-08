@@ -14,35 +14,19 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 gum_header() {
-  if command -v gum >/dev/null 2>&1; then
-    gum style --border double --padding "0 2" --border-foreground 212 "$1"
-  else
-    printf "\n=== %s ===\n" "$1"
-  fi
+  gum style --border double --padding "0 2" --border-foreground 212 "$1"
 }
 
 gum_info() {
-  if command -v gum >/dev/null 2>&1; then
-    gum log --level info "$@"
-  else
-    echo "[info] $*"
-  fi
+  gum log --level info "$@"
 }
 
 gum_warn() {
-  if command -v gum >/dev/null 2>&1; then
-    gum log --level warn "$@"
-  else
-    echo "[warn] $*"
-  fi
+  gum log --level warn "$@"
 }
 
 gum_err() {
-  if command -v gum >/dev/null 2>&1; then
-    gum log --level error "$@"
-  else
-    echo "[error] $*" >&2
-  fi
+  gum log --level error "$@"
 }
 
 VERSION_FILE="$ROOT/VERSION"
@@ -93,18 +77,9 @@ if [[ $# -ge 1 ]]; then
   esac
 else
   gum_header "Bump Version"
-  if command -v gum >/dev/null 2>&1; then
-    gum style --foreground 212 "Current: $current"
-    choice=$(gum choose --header "Bump type" "patch" "minor" "major")
-    new_version=$(bump_semver "$choice")
-  else
-    echo "Current: $current"
-    read -r -p "Enter new version (or patch/minor/major): " choice
-    case "$choice" in
-      major|minor|patch) new_version=$(bump_semver "$choice") ;;
-      *) new_version="$choice" ;;
-    esac
-  fi
+  gum style --foreground 212 "Current: $current"
+  choice=$(gum choose --header "Bump type" "patch" "minor" "major")
+  new_version=$(bump_semver "$choice")
 fi
 
 # ── Validate ──
@@ -116,19 +91,13 @@ if [[ "$new_version" == "$current" ]]; then
   exit 0
 fi
 
-if command -v gum >/dev/null 2>&1; then
-  gum style --margin "1 0" --foreground 212 --bold "Bumping $current → $new_version"
-else
-  echo "Bumping $current -> $new_version"
-fi
+gum style --margin "1 0" --foreground 212 --bold "Bumping $current → $new_version"
 
 # ── Confirm ──
 
-if command -v gum >/dev/null 2>&1; then
-  if ! gum confirm "Apply version $new_version to all components?"; then
-    gum_info "Aborted."
-    exit 0
-  fi
+if ! gum confirm "Apply version $new_version to all components?"; then
+  gum_info "Aborted."
+  exit 0
 fi
 
 # ── Update all files ──
@@ -181,24 +150,18 @@ fi
 # ── Git tag ──
 
 echo ""
-if command -v gum >/dev/null 2>&1; then
-  if gum confirm "Create git commit and tag v$new_version?"; then
-    git add VERSION apps/cli/internal/version/version.go package.json apps/web/package.json apps/web/public/version.json
-    git commit -m "🔖 [release] Bump version to $new_version"
-    git tag "v$new_version"
-    gum_info "Created commit & tag v$new_version"
-    if gum confirm "Push commit and tag to origin?"; then
-      git push && git push --tags
-      gum_info "Pushed to origin."
-    fi
-  else
-    gum_warn "Skipped git tag. Changes are unstaged — review with: git diff"
+if gum confirm "Create git commit and tag v$new_version?"; then
+  git add VERSION apps/cli/internal/version/version.go package.json apps/web/package.json apps/web/public/version.json
+  git commit -m "🔖 [release] Bump version to $new_version"
+  git tag "v$new_version"
+  gum_info "Created commit & tag v$new_version"
+  if gum confirm "Push commit and tag to origin?"; then
+    git push && git push --tags
+    gum_info "Pushed to origin."
   fi
+else
+  gum_warn "Skipped git tag. Changes are unstaged — review with: git diff"
 fi
 
 echo ""
-if command -v gum >/dev/null 2>&1; then
-  gum style --foreground 10 --bold "Version bumped successfully: $current → $new_version"
-else
-  echo "Version bumped successfully: $current -> $new_version"
-fi
+gum style --foreground 10 --bold "Version bumped successfully: $current → $new_version"

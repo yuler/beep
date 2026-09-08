@@ -7,35 +7,19 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 gum_header() {
-  if command -v gum >/dev/null 2>&1; then
-    gum style --border double --padding "0 2" --border-foreground 212 "$1"
-  else
-    printf "\n=== %s ===\n" "$1"
-  fi
+  gum style --border double --padding "0 2" --border-foreground 212 "$1"
 }
 
 gum_info() {
-  if command -v gum >/dev/null 2>&1; then
-    gum log --level info "$@"
-  else
-    echo "[info] $*"
-  fi
+  gum log --level info "$@"
 }
 
 gum_warn() {
-  if command -v gum >/dev/null 2>&1; then
-    gum log --level warn "$@"
-  else
-    echo "[warn] $*"
-  fi
+  gum log --level warn "$@"
 }
 
 gum_err() {
-  if command -v gum >/dev/null 2>&1; then
-    gum log --level error "$@"
-  else
-    echo "[error] $*" >&2
-  fi
+  gum log --level error "$@"
 }
 
 # ── Canonical version from VERSION file ──
@@ -47,11 +31,7 @@ fi
 canonical=$(tr -d '[:space:]' < "$VERSION_FILE")
 
 gum_header "Beep Monorepo Versions"
-if command -v gum >/dev/null 2>&1; then
-  gum style --margin "1 0 0 0" --foreground 212 --bold "Canonical version: $canonical"
-else
-  printf "\nCanonical version: %s\n" "$canonical"
-fi
+gum style --margin "1 0 0 0" --foreground 212 --bold "Canonical version: $canonical"
 
 # ── Read component versions ──
 
