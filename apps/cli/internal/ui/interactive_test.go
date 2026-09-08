@@ -155,4 +155,3 @@ func TestPairJobsDoesNotPairOutdatedIDBySlug(t *testing.T) {
 		t.Fatalf("expected 1 local-only with old-id and 1 remote-only with new-id, got: %#v", items)
 	}
 }
-

@@ -5,5 +5,3 @@ import "beep/cmd"
 func main() {
 	cmd.Execute()
 }
-
-

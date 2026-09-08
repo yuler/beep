@@ -145,4 +145,3 @@ func TestClientDeleteJobNotFound(t *testing.T) {
 		t.Fatal("expected 404 to return error, got nil")
 	}
 }
-

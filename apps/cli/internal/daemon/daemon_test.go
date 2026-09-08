@@ -176,4 +176,3 @@ func TestExecuteReportsLogsAndResult(t *testing.T) {
 		t.Fatalf("expected result status 'ok', got %q (%s)", gotResult.Status, gotResult.Title)
 	}
 }
-

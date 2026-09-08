@@ -1,0 +1,90 @@
+name: CLI CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/cli/**"
+      - "VERSION"
+      - ".github/workflows/cli-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/cli/**"
+      - "VERSION"
+      - ".github/workflows/cli-ci.yml"
+
+jobs:
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/cli
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/cli/go.mod
+          cache-dependency-path: apps/cli/go.sum
+
+      - name: Verify formatting (gofmt)
+        run: |
+          diffs=$(gofmt -l .)
+          if [ -n "$diffs" ]; then
+            echo "The following files are not formatted with gofmt:"
+            echo "$diffs"
+            exit 1
+          fi
+
+      - name: Vet code
+        run: go vet ./...
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/cli
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/cli/go.mod
+          cache-dependency-path: apps/cli/go.sum
+
+      - name: Run tests
+        run: go test -v -race ./...
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/cli/go.mod
+          cache-dependency-path: apps/cli/go.sum
+
+      - name: Build CLI binary
+        run: |
+          mkdir -p bin
+          cd apps/cli
+          go build -ldflags="-s -w \
+            -X beep/internal/version.Version=$(cat ../../VERSION) \
+            -X beep/internal/version.GitCommit=${{ github.sha }} \
+            -X beep/internal/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -o ../../bin/beep .
+
+      - name: Verify CLI executable
+        run: |
+          ./bin/beep version
