@@ -24,11 +24,6 @@ class Api::V1::Runners::RunsController < Api::V1::BaseController
     head :no_content
   end
 
-  def clear
-    @job.runs.where(status: terminal_statuses).delete_all
-    head :no_content
-  end
-
   private
     def set_job
       runner = Current.account.runners.find(params[:runner_id])
@@ -37,7 +32,7 @@ class Api::V1::Runners::RunsController < Api::V1::BaseController
 
     def deletable_run
       run = @job.runs.find(params[:id])
-      unless run.status.in?(terminal_statuses)
+      unless run.status.in?(Runner::Run::TERMINAL_STATUSES)
         render_json_error(
           status: :unprocessable_entity,
           message: "Run is still pending or running",
@@ -46,9 +41,5 @@ class Api::V1::Runners::RunsController < Api::V1::BaseController
         return
       end
       run
-    end
-
-    def terminal_statuses
-      %w[ succeeded failed expired ]
     end
 end

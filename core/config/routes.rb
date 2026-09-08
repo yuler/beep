@@ -107,7 +107,9 @@ Rails.application.routes.draw do
             end
             resources :runs, only: %i[ index show create destroy ] do
               collection do
-                delete :clear
+                scope module: :runs do
+                  resource :history, only: :destroy
+                end
               end
             end
           end

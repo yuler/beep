@@ -177,7 +177,7 @@ export function clearRunnerJobRuns(
 	jobId: string,
 ) {
 	return apiFetch<void>(
-		`/api/v1/${accountSlug}/runners/${runnerId}/jobs/${jobId}/runs/clear`,
+		`/api/v1/${accountSlug}/runners/${runnerId}/jobs/${jobId}/runs/history`,
 		{ method: "DELETE" },
 	);
 }

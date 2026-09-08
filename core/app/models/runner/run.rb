@@ -1,12 +1,15 @@
 class Runner::Run < ApplicationRecord
   RESULT_MAX_BYTES = 8.kilobytes
   LOG_MAX_BYTES = 256.kilobytes
+  TERMINAL_STATUSES = %w[ succeeded failed expired ].freeze
 
   belongs_to :runner_job, class_name: "Runner::Job", foreign_key: :runner_job_id, inverse_of: :runs
   belongs_to :runner
 
   enum :status, %w[ pending running succeeded failed expired ].index_by(&:itself)
   enum :result_status, %w[ ok alerting error ].index_by(&:itself)
+
+  scope :terminal, -> { where(status: TERMINAL_STATUSES) }
 
   def claim_for(runner)
     claimed = self.class.where(id: id, status: :pending).update_all(

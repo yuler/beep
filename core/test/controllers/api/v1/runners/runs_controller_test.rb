@@ -46,7 +46,7 @@ class Api::V1::Runners::RunsControllerTest < ActionDispatch::IntegrationTest
     failed.update!(status: :failed)
     pending = @job.trigger_run!
 
-    delete "/api/v1/#{@account.slug}/runners/#{@runner.id}/jobs/#{@job.id}/runs/clear",
+    delete "/api/v1/#{@account.slug}/runners/#{@runner.id}/jobs/#{@job.id}/runs/history",
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 
