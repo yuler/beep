@@ -12,6 +12,7 @@ import (
 
 	"beep/internal/config"
 	"beep/internal/daemon"
+	"beep/internal/proc"
 	"beep/internal/ui"
 	"beep/internal/workspace"
 
@@ -89,7 +90,7 @@ func runUp(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, shutdownSignals...)
+	signal.Notify(sigChan, proc.ShutdownSignals...)
 	go func() {
 		<-sigChan
 		log.Println(ui.Dim("[beep-runner] Received termination signal..."))
@@ -115,7 +116,7 @@ func startBackgroundDaemon(cfg *config.Config) error {
 
 	cmd := exec.Command(exe, childArgs...)
 	cmd.Env = append(os.Environ(), "BEEP_DAEMON_CHILD=1")
-	setProcessDetach(cmd)
+	proc.Detach(cmd)
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start background daemon: %w", err)
@@ -147,7 +148,7 @@ func startBackgroundDaemon(cfg *config.Config) error {
 		}
 
 		// Check if child process has exited early
-		if exited, exitStatus := checkChildExited(cmd.Process.Pid); exited {
+		if exited, exitStatus := proc.Exited(cmd.Process.Pid); exited {
 			return fmt.Errorf("runner daemon failed to start (exited with status %d, check logs: %s)", exitStatus, logFile)
 		}
 	}
