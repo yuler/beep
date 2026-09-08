@@ -21,6 +21,14 @@ run = "bash scripts/setup.sh"
 description = "Clean logs, caches and local env files (interactive)"
 run = "bash scripts/clean.sh"
 
+[tasks.versions]
+description = "Show versions for all Beep components (reads from VERSION file)"
+run = "bash scripts/versions.sh"
+
+[tasks.bump]
+description = "Bump version across all components (patch | minor | major | X.Y.Z)"
+run = "bash scripts/bump.sh"
+
 [tasks."core:dev"]
 description = "Start the Rails development server"
 dir = "core"

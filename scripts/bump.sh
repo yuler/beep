@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+# Bump Beep version across all components.
+#
+# Usage:
+#   ./scripts/bump.sh              # interactive (gum choose)
+#   ./scripts/bump.sh patch        # non-interactive: bump patch
+#   ./scripts/bump.sh minor        # non-interactive: bump minor
+#   ./scripts/bump.sh major        # non-interactive: bump major
+#   ./scripts/bump.sh 1.0.0        # non-interactive: set exact version
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+gum_header() {
+  if command -v gum >/dev/null 2>&1; then
+    gum style --border double --padding "0 2" --border-foreground 212 "$1"
+  else
+    printf "\n=== %s ===\n" "$1"
+  fi
+}
+
+gum_info() {
+  if command -v gum >/dev/null 2>&1; then
+    gum log --level info "$@"
+  else
+    echo "[info] $*"
+  fi
+}
+
+gum_warn() {
+  if command -v gum >/dev/null 2>&1; then
+    gum log --level warn "$@"
+  else
+    echo "[warn] $*"
+  fi
+}
+
+gum_err() {
+  if command -v gum >/dev/null 2>&1; then
+    gum log --level error "$@"
+  else
+    echo "[error] $*" >&2
+  fi
+}
+
+VERSION_FILE="$ROOT/VERSION"
+if [[ ! -f "$VERSION_FILE" ]]; then
+  gum_err "VERSION file not found. Create it with: echo 0.1.0 > VERSION"
+  exit 1
+fi
+
+current=$(tr -d '[:space:]' < "$VERSION_FILE")
+
+# ── SemVer Helpers ──
+
+semver_regex='^([0-9]+)\.([0-9]+)\.([0-9]+)(-([0-9A-Za-z.-]+))?$'
+
+parse_semver() {
+  local v="$1"
+  if [[ ! "$v" =~ $semver_regex ]]; then
+    gum_err "Invalid semver: $v (expected X.Y.Z or X.Y.Z-prerelease)"
+    exit 1
+  fi
+  SEMVER_MAJOR="${BASH_REMATCH[1]}"
+  SEMVER_MINOR="${BASH_REMATCH[2]}"
+  SEMVER_PATCH="${BASH_REMATCH[3]}"
+}
+
+bump_semver() {
+  local type="$1"
+  parse_semver "$current"
+  case "$type" in
+    major) echo "$(( SEMVER_MAJOR + 1 )).0.0" ;;
+    minor) echo "${SEMVER_MAJOR}.$(( SEMVER_MINOR + 1 )).0" ;;
+    patch) echo "${SEMVER_MAJOR}.${SEMVER_MINOR}.$(( SEMVER_PATCH + 1 ))" ;;
+    *)     echo "$type" ;;
+  esac
+}
+
+# ── Choose version ──
+
+if [[ $# -ge 1 ]]; then
+  input="$1"
+  case "$input" in
+    major|minor|patch)
+      new_version=$(bump_semver "$input")
+      ;;
+    *)
+      new_version="$input"
+      ;;
+  esac
+else
+  gum_header "Bump Version"
+  if command -v gum >/dev/null 2>&1; then
+    gum style --foreground 212 "Current: $current"
+    choice=$(gum choose --header "Bump type" "patch" "minor" "major")
+    new_version=$(bump_semver "$choice")
+  else
+    echo "Current: $current"
+    read -r -p "Enter new version (or patch/minor/major): " choice
+    case "$choice" in
+      major|minor|patch) new_version=$(bump_semver "$choice") ;;
+      *) new_version="$choice" ;;
+    esac
+  fi
+fi
+
+# ── Validate ──
+
+parse_semver "$new_version"
+
+if [[ "$new_version" == "$current" ]]; then
+  gum_warn "Version unchanged ($current). Nothing to do."
+  exit 0
+fi
+
+if command -v gum >/dev/null 2>&1; then
+  gum style --margin "1 0" --foreground 212 --bold "Bumping $current → $new_version"
+else
+  echo "Bumping $current -> $new_version"
+fi
+
+# ── Confirm ──
+
+if command -v gum >/dev/null 2>&1; then
+  if ! gum confirm "Apply version $new_version to all components?"; then
+    gum_info "Aborted."
+    exit 0
+  fi
+fi
+
+# ── Update all files ──
+
+# 1. VERSION file
+echo "$new_version" > "$VERSION_FILE"
+gum_info "Updated VERSION ($new_version)"
+
+# 2. CLI (Go)
+if [[ -f "apps/cli/internal/version/version.go" ]]; then
+  sed -i -E "s/(Version[[:space:]]*=[[:space:]]*)\"[^\"]+\"/\1\"$new_version\"/" apps/cli/internal/version/version.go
+  gum_info "Updated apps/cli/internal/version/version.go"
+fi
+
+# 3. Root package.json
+if [[ -f "package.json" ]]; then
+  node -e "
+    const fs = require('fs');
+    const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    p.version = '$new_version';
+    fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+  "
+  gum_info "Updated package.json"
+fi
+
+# 4. Web package.json
+if [[ -f "apps/web/package.json" ]]; then
+  node -e "
+    const fs = require('fs');
+    const p = JSON.parse(fs.readFileSync('apps/web/package.json', 'utf8'));
+    p.version = '$new_version';
+    fs.writeFileSync('apps/web/package.json', JSON.stringify(p, null, 2) + '\n');
+  "
+  gum_info "Updated apps/web/package.json"
+fi
+
+# 5. Web public/version.json
+if [[ -f "apps/web/public/version.json" ]]; then
+  node -e "
+    const fs = require('fs');
+    try {
+      const p = JSON.parse(fs.readFileSync('apps/web/public/version.json', 'utf8'));
+      p.version = '$new_version';
+      fs.writeFileSync('apps/web/public/version.json', JSON.stringify(p) + '\n');
+    } catch (_) {}
+  "
+  gum_info "Updated apps/web/public/version.json"
+fi
+
+# ── Git tag ──
+
+echo ""
+if command -v gum >/dev/null 2>&1; then
+  if gum confirm "Create git commit and tag v$new_version?"; then
+    git add VERSION apps/cli/internal/version/version.go package.json apps/web/package.json apps/web/public/version.json
+    git commit -m "🔖 [release] Bump version to $new_version"
+    git tag "v$new_version"
+    gum_info "Created commit & tag v$new_version"
+    if gum confirm "Push commit and tag to origin?"; then
+      git push && git push --tags
+      gum_info "Pushed to origin."
+    fi
+  else
+    gum_warn "Skipped git tag. Changes are unstaged — review with: git diff"
+  fi
+fi
+
+echo ""
+if command -v gum >/dev/null 2>&1; then
+  gum style --foreground 10 --bold "Version bumped successfully: $current → $new_version"
+else
+  echo "Version bumped successfully: $current -> $new_version"
+fi
