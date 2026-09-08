@@ -2,7 +2,7 @@
 
 A **Beeper App** is a catalog definition (manifest + receiver). A **Beeper** is an account-owned running instance of that Beeper App: config, cron, alert state, and default channels. When the alert state machine says to notify, the Beeper creates a one-shot **Beep**. Beep is only the notification; it never produces a signal.
 
-Terms: [`TERMS.md`](../TERMS.md). Remaining work lives in [`TODO.md`](../../TODO.md), not here.
+Terms: [`TERMS.md`](../TERMS.md)
 
 ```mermaid
 flowchart TD
