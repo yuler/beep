@@ -134,24 +134,11 @@ if [[ -f "apps/web/package.json" ]]; then
   gum_info "Updated apps/web/package.json"
 fi
 
-# 5. Web public/version.json
-if [[ -f "apps/web/public/version.json" ]]; then
-  node -e "
-    const fs = require('fs');
-    try {
-      const p = JSON.parse(fs.readFileSync('apps/web/public/version.json', 'utf8'));
-      p.version = '$new_version';
-      fs.writeFileSync('apps/web/public/version.json', JSON.stringify(p) + '\n');
-    } catch (_) {}
-  "
-  gum_info "Updated apps/web/public/version.json"
-fi
-
 # ── Git tag ──
 
 echo ""
 if gum confirm "Create git commit and tag v$new_version?"; then
-  git add VERSION apps/cli/internal/version/version.go package.json apps/web/package.json apps/web/public/version.json
+  git add VERSION apps/cli/internal/version/version.go package.json apps/web/package.json
   git commit -m "🚀 [release] Bump version to $new_version"
   git tag "v$new_version"
   gum_info "Created commit & tag v$new_version"

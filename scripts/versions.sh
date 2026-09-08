@@ -50,14 +50,6 @@ else
   versions["Web"]="$MISSING"
 fi
 
-# Web Version File (apps/web/public/version.json)
-if [[ -f "apps/web/public/version.json" ]]; then
-  web_pub_ver=$(node -e "console.log(JSON.parse(require('fs').readFileSync('apps/web/public/version.json')).version || '')" 2>/dev/null) || true
-  versions["Web Public"]="${web_pub_ver:-$MISSING}"
-else
-  versions["Web Public"]="$MISSING"
-fi
-
 # Root package.json
 if [[ -f "package.json" ]]; then
   root_pkg_ver=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json')).version || '')" 2>/dev/null) || true
@@ -71,7 +63,7 @@ fi
 printf '\n'
 printf '  \033[1;35m%-16s %-12s %s\033[0m\n' "Component" "Version" "Status"
 printf '  %-16s %-12s %s\n' "────────────────" "────────────" "──────"
-for component in "CLI" "Web" "Web Public" "Root Package"; do
+for component in "CLI" "Web" "Root Package"; do
   ver="${versions[$component]}"
   if [[ "$ver" == "$MISSING" ]]; then
     printf '  \033[0;90m%-16s %-12s missing\033[0m\n' "$component" "$ver"
