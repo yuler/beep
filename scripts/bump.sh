@@ -59,7 +59,6 @@ bump_semver() {
     major) echo "$(( SEMVER_MAJOR + 1 )).0.0" ;;
     minor) echo "${SEMVER_MAJOR}.$(( SEMVER_MINOR + 1 )).0" ;;
     patch) echo "${SEMVER_MAJOR}.${SEMVER_MINOR}.$(( SEMVER_PATCH + 1 ))" ;;
-    *)     echo "$type" ;;
   esac
 }
 
