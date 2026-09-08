@@ -320,12 +320,12 @@ function RunnerDetailPage() {
 										className={`flex flex-col gap-2 rounded-lg border p-3 ${
 											selectedJobId === job.id
 												? "border-primary bg-primary/5"
-												: "border-border"
+												: "border-border hover:border-muted-foreground/40"
 										}`}
 									>
 										<button
 											type="button"
-											className="text-left focus-visible:outline-none"
+											className="cursor-pointer text-left focus-visible:outline-none"
 											onClick={() => setSelectedJobId(job.id)}
 										>
 											<div className="flex items-center justify-between gap-2">
@@ -335,18 +335,20 @@ function RunnerDetailPage() {
 											<p className="mt-1 font-mono text-xs text-muted-foreground">
 												{job.slug} · {job.cron}
 											</p>
+											<div className="mt-1.5 flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+												<span className="text-foreground/80 font-medium">
+													ID:
+												</span>
+												<span className="select-all text-foreground/80">
+													{job.id}
+												</span>
+											</div>
 										</button>
 
-										<div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-											<span className="text-foreground/80 font-medium">
-												ID:
-											</span>
-											<span className="select-all text-foreground/80">
-												{job.id}
-											</span>
-											<button
-												type="button"
-												className="inline-flex size-4 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none"
+										<div className="flex flex-wrap gap-2">
+											<Button
+												size="sm"
+												variant="outline"
 												onClick={(e) => handleCopyJobId(job.id, e)}
 												title="Copy Job ID"
 												aria-label="Copy Job ID"
@@ -356,10 +358,7 @@ function RunnerDetailPage() {
 												) : (
 													<Copy className="size-3" />
 												)}
-											</button>
-										</div>
-
-										<div className="flex flex-wrap gap-2">
+											</Button>
 											<Button
 												size="sm"
 												variant="outline"
