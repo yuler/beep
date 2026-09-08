@@ -98,25 +98,6 @@ export function RunnerTokenModal({
 
 	const token = runner.token;
 	const serverUrl = publicApiOrigin();
-	const dockerRunCmd = `docker run -d --name beep-runner --restart=always \\
-  -e BEEP_SERVER=${serverUrl} \\
-  -e BEEP_RUNNER_TOKEN=${token} \\
-  -v beep-workspace:/home/beep/.beep \\
-  ghcr.io/yuler/beep:latest`;
-
-	const dockerComposeYaml = `services:
-  beep:
-    image: ghcr.io/yuler/beep:latest
-    container_name: beep-runner
-    restart: always
-    volumes:
-      - beep-workspace:/home/beep/.beep
-    environment:
-      - BEEP_SERVER=${serverUrl}
-      - BEEP_RUNNER_TOKEN=${token}
-
-volumes:
-  beep-workspace:`;
 
 	const cliCmd = `beep runner config set --server ${serverUrl} --token ${token}
 beep runner up`;
@@ -195,24 +176,6 @@ beep runner up`;
 							</Button>
 						</div>
 					</div>
-
-					{/* Docker Run Command */}
-					<CodeSnippet
-						label={m.runners_docker_command()}
-						code={dockerRunCmd}
-						snippetKey="docker"
-						copiedKey={copiedKey}
-						onCopy={copyToClipboard}
-					/>
-
-					{/* Docker Compose YAML */}
-					<CodeSnippet
-						label={m.runners_docker_compose()}
-						code={dockerComposeYaml}
-						snippetKey="compose"
-						copiedKey={copiedKey}
-						onCopy={copyToClipboard}
-					/>
 
 					{/* Direct Binary CLI */}
 					<CodeSnippet
