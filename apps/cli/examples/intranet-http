@@ -6,7 +6,7 @@
 # @description: Ping internal health check endpoint
 #
 # Example: intranet HTTP check. Create a Runner Job with slug `intranet-http`.
-# Place this file at ~/.beep/jobs/intranet-http.sh (chmod +x).
+# Place this file at ~/.beep/jobs/intranet-http (chmod +x).
 #
 # Optional job config on the server: { "target_url": "http://10.0.0.5/health" }
 # Scripts can log with stdout (captured by the runner) or POST to $BEEP_LOG_URL.

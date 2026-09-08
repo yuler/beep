@@ -13,7 +13,7 @@ Default workspace: `~/.beep`
 Create a job in the web UI with the same slug, then:
 
 ```bash
-cp examples/intranet-http.sh ~/.beep/jobs/intranet-http
+cp examples/intranet-http ~/.beep/jobs/intranet-http
 chmod +x ~/.beep/jobs/intranet-http
 beep runner config set --server https://core.example.com --token beep_rt_...
 beep runner up
