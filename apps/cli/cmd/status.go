@@ -34,7 +34,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	today := time.Now().Format("2006-01-02")
-	logFile := filepath.Join(cfg.Workspace, "logs", fmt.Sprintf("beep-runner-%s.log", today))
+	logFile := daemon.DailyLogPath(cfg.Workspace, today)
 	socketFile := daemon.SocketPath(cfg.Workspace)
 
 	fmt.Println(ui.Bold(ui.Cyan("Beep Runner Daemon Status:")))

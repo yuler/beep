@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,27 +11,15 @@ import (
 	"time"
 )
 
-type JobSpec struct {
-	Command        []string `json:"command"`
-	Name           string   `json:"name,omitempty"`
-	Cron           string   `json:"cron,omitempty"`
-	Schedule       string   `json:"schedule,omitempty"`
-	Timezone       string   `json:"timezone,omitempty"`
-	TimeoutSeconds int      `json:"timeout_seconds,omitempty"`
-	Description    string   `json:"description,omitempty"`
-}
-
 type LocalJob struct {
-	ID             string   `json:"id,omitempty"`
-	Slug           string   `json:"slug"`
-	Name           string   `json:"name"`
-	Cron           string   `json:"cron"`
-	Timezone       string   `json:"timezone,omitempty"`
-	TimeoutSeconds int      `json:"timeout_seconds,omitempty"`
-	Description    string   `json:"description,omitempty"`
-	FilePath       string   `json:"file_path,omitempty"`
-	Command        []string `json:"command,omitempty"`
-	Source         string   `json:"source"` // "file" or "jobs.json"
+	ID             string `json:"id,omitempty"`
+	Slug           string `json:"slug"`
+	Name           string `json:"name"`
+	Cron           string `json:"cron"`
+	Timezone       string `json:"timezone,omitempty"`
+	TimeoutSeconds int    `json:"timeout_seconds,omitempty"`
+	Description    string `json:"description,omitempty"`
+	FilePath       string `json:"file_path,omitempty"`
 }
 
 type JobMetadata struct {
@@ -47,7 +34,6 @@ type JobMetadata struct {
 
 type Workspace struct {
 	Root string
-	jobs map[string]JobSpec
 }
 
 func Open(root string) (*Workspace, error) {
@@ -67,11 +53,7 @@ func Open(root string) (*Workspace, error) {
 		return nil, err
 	}
 
-	ws := &Workspace{Root: abs, jobs: map[string]JobSpec{}}
-	if err := ws.loadJobsJSON(); err != nil {
-		return nil, err
-	}
-	return ws, nil
+	return &Workspace{Root: abs}, nil
 }
 
 func (w *Workspace) JobsDir() string {
@@ -653,9 +635,9 @@ func (w *Workspace) PullJob(slug, scriptType, id, name, cron, timezone, descript
 	return w.CreateScript(slug, scriptType, id, name, cron, timezone, description, timeoutSeconds)
 }
 
-func (w *Workspace) RemoveJob(slug string) (removedFiles []string, removedFromJSON bool, err error) {
+func (w *Workspace) RemoveJob(slug string) (removedFiles []string, err error) {
 	if err := ValidateSlug(slug); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	slug = strings.TrimSpace(strings.ToLower(slug))
 
@@ -666,19 +648,11 @@ func (w *Workspace) RemoveJob(slug string) (removedFiles []string, removedFromJS
 		}
 	}
 
-	if _, ok := w.jobs[slug]; ok {
-		delete(w.jobs, slug)
-		removedFromJSON = true
-		if saveErr := w.saveJobsJSON(); saveErr != nil {
-			return removedFiles, removedFromJSON, saveErr
-		}
+	if len(removedFiles) == 0 {
+		return nil, fmt.Errorf("job %q not found in workspace %s", slug, w.Root)
 	}
 
-	if len(removedFiles) == 0 && !removedFromJSON {
-		return nil, false, fmt.Errorf("job %q not found in workspace %s", slug, w.Root)
-	}
-
-	return removedFiles, removedFromJSON, nil
+	return removedFiles, nil
 }
 
 func (w *Workspace) ListJobs() ([]LocalJob, error) {
@@ -723,40 +697,7 @@ func (w *Workspace) ListJobs() ([]LocalJob, error) {
 				TimeoutSeconds: timeout,
 				Description:    meta.Description,
 				FilePath:       filePath,
-				Source:         "file",
 			}
-		}
-	}
-
-	for slug, spec := range w.jobs {
-		if _, exists := jobsMap[slug]; exists {
-			continue
-		}
-		jobName := spec.Name
-		if jobName == "" {
-			jobName = HumanizeSlug(slug)
-		}
-		cron := spec.Cron
-		if cron == "" && spec.Schedule != "" {
-			cron = spec.Schedule
-		}
-		if cron == "" {
-			cron = "*/5 * * * *"
-		}
-		timeout := spec.TimeoutSeconds
-		if timeout <= 0 {
-			timeout = 30
-		}
-
-		jobsMap[slug] = LocalJob{
-			Slug:           slug,
-			Name:           jobName,
-			Cron:           cron,
-			Timezone:       spec.Timezone,
-			TimeoutSeconds: timeout,
-			Description:    spec.Description,
-			Command:        spec.Command,
-			Source:         "jobs.json",
 		}
 	}
 
@@ -785,69 +726,5 @@ func (w *Workspace) Resolve(slug string) (argv []string, err error) {
 		}
 	}
 
-	if spec, ok := w.jobs[slug]; ok && len(spec.Command) > 0 {
-		return w.expandArgv(spec.Command), nil
-	}
-
-	return nil, fmt.Errorf("no local executable for job %q in %s (add jobs/%s or jobs.json)", slug, jobsDir, slug)
-}
-
-func (w *Workspace) loadJobsJSON() error {
-	path := filepath.Join(w.Root, "jobs.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-
-	var parsed struct {
-		Jobs map[string]JobSpec `json:"jobs"`
-	}
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		var flat map[string]JobSpec
-		if err2 := json.Unmarshal(data, &flat); err2 != nil {
-			return fmt.Errorf("parse %s: %w", path, err)
-		}
-		parsed.Jobs = flat
-	}
-	for slug, spec := range parsed.Jobs {
-		w.jobs[slug] = spec
-	}
-	return nil
-}
-
-func (w *Workspace) saveJobsJSON() error {
-	path := filepath.Join(w.Root, "jobs.json")
-	if len(w.jobs) == 0 {
-		if _, err := os.Stat(path); err == nil {
-			_ = os.Remove(path)
-		}
-		return nil
-	}
-	payload := map[string]any{
-		"jobs": w.jobs,
-	}
-	data, err := json.MarshalIndent(payload, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0o644)
-}
-
-func (w *Workspace) expandArgv(argv []string) []string {
-	out := make([]string, len(argv))
-	for i, arg := range argv {
-		if strings.HasPrefix(arg, "/") || filepath.IsAbs(arg) {
-			out[i] = arg
-			continue
-		}
-		if strings.Contains(arg, string(filepath.Separator)) || strings.HasPrefix(arg, "jobs/") || strings.HasPrefix(arg, "./") {
-			out[i] = filepath.Join(w.Root, arg)
-			continue
-		}
-		out[i] = arg
-	}
-	return out
+	return nil, fmt.Errorf("no local executable for job %q in %s (add jobs/%s)", slug, jobsDir, slug)
 }

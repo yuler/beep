@@ -229,16 +229,13 @@ var jobRemoveCmd = &cobra.Command{
 				}
 			}
 
-			removedFiles, removedFromJSON, err := ws.RemoveJob(slug)
+			removedFiles, err := ws.RemoveJob(slug)
 			if err != nil {
 				fmt.Println(ui.Info("%v", err))
 				continue
 			}
 			for _, f := range removedFiles {
 				fmt.Println(ui.Success("Removed local job script: %s", ui.Cyan(f)))
-			}
-			if removedFromJSON {
-				fmt.Println(ui.Success("Removed %s from jobs.json", ui.Bold(slug)))
 			}
 
 			if syncServer && cfg.ServerURL != "" && cfg.RunnerToken != "" {
@@ -673,8 +670,6 @@ func printLocalJobLine(j workspace.LocalJob) {
 	fmt.Printf("  %s %-18s %s\n", ui.Bullet(), ui.Cyan(j.Slug), desc)
 	if j.FilePath != "" {
 		fmt.Printf("    %s %s\n", ui.Dim("File:"), ui.Dim(j.FilePath))
-	} else if len(j.Command) > 0 {
-		fmt.Printf("    %s %s\n", ui.Dim("Cmd:"), ui.Dim(strings.Join(j.Command, " ")))
 	}
 	fmt.Printf("    %s %s\n", ui.Dim("ID:"), ui.Dim(displayJobID(j.ID)))
 }

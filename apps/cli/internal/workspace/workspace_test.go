@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestResolveExecutableAndJSON(t *testing.T) {
+func TestResolveExecutable(t *testing.T) {
 	root := t.TempDir()
 	jobsDir := filepath.Join(root, "jobs")
 	if err := os.MkdirAll(jobsDir, 0o755); err != nil {
@@ -16,11 +16,6 @@ func TestResolveExecutableAndJSON(t *testing.T) {
 
 	script := filepath.Join(jobsDir, "intranet-http")
 	if err := os.WriteFile(script, []byte("#!/bin/sh\necho ok\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	jobsJSON := `{"jobs":{"py-check":{"command":["python3","jobs/check"]}}}`
-	if err := os.WriteFile(filepath.Join(root, "jobs.json"), []byte(jobsJSON), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -35,14 +30,6 @@ func TestResolveExecutableAndJSON(t *testing.T) {
 	}
 	if argv[0] != script {
 		t.Fatalf("expected %s, got %v", script, argv)
-	}
-
-	argv, err = ws.Resolve("py-check")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(argv) != 2 || argv[0] != "python3" {
-		t.Fatalf("unexpected argv %v", argv)
 	}
 
 	if _, err := ws.Resolve("missing"); err == nil {
@@ -134,11 +121,11 @@ func TestCreateScriptAndListJobs(t *testing.T) {
 	}
 
 	// Test RemoveJob
-	removedFiles, inJSON, err := ws.RemoveJob("my-ping")
+	removedFiles, err := ws.RemoveJob("my-ping")
 	if err != nil {
 		t.Fatalf("unexpected remove error: %v", err)
 	}
-	if len(removedFiles) != 1 || inJSON {
+	if len(removedFiles) != 1 {
 		t.Fatalf("expected 1 removed file, got %v", removedFiles)
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -290,45 +277,6 @@ func TestPullJobForceOverwritesBody(t *testing.T) {
 	}
 	if strings.Contains(string(rewritten), "echo custom-body") {
 		t.Fatal("expected --force to replace the local script body")
-	}
-}
-
-func TestListJobsAndResolvePreferFileOverJSON(t *testing.T) {
-	root := t.TempDir()
-	jobsDir := filepath.Join(root, "jobs")
-	if err := os.MkdirAll(jobsDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	script := filepath.Join(jobsDir, "same-slug")
-	if err := os.WriteFile(script, []byte("#!/bin/sh\necho from-file\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	jobsJSON := `{"jobs":{"same-slug":{"name":"From JSON","command":["echo","from-json"]}}}`
-	if err := os.WriteFile(filepath.Join(root, "jobs.json"), []byte(jobsJSON), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	ws, err := Open(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	jobs, err := ws.ListJobs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(jobs) != 1 {
-		t.Fatalf("expected 1 job, got %d", len(jobs))
-	}
-	if jobs[0].Source != "file" || jobs[0].FilePath != script {
-		t.Fatalf("expected file-backed job, got %+v", jobs[0])
-	}
-
-	argv, err := ws.Resolve("same-slug")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(argv) != 1 || argv[0] != script {
-		t.Fatalf("expected file path argv, got %v", argv)
 	}
 }
 

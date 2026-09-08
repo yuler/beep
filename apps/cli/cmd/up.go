@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -132,7 +131,7 @@ func startBackgroundDaemon(cfg *config.Config) error {
 				childPID = cmd.Process.Pid
 			}
 			today := time.Now().Format("2006-01-02")
-			logFile := filepath.Join(cfg.Workspace, "logs", fmt.Sprintf("beep-runner-%s.log", today))
+			logFile := daemon.DailyLogPath(cfg.Workspace, today)
 
 			fmt.Printf("%s %s (PID: %s)\n",
 				ui.Green("✓"),

@@ -1,6 +1,6 @@
 # Self-hosted Runner
 
-A **Runner** is a user-controlled workspace on a machine you operate. Beep Core schedules jobs; the runner polls for due work, runs a **local** script you installed, and posts logs plus a result back to Core.
+A **Runner** is a user-controlled workspace on a machine you operate. Beep Core schedules jobs; the runner polls for due work, runs a **local** script you installed, and posts logs plus a result back to Core. The daemon authenticates every request to Core with the `X-Runner-Token` header (the runner token from `config.json` or `BEEP_RUNNER_TOKEN`). That token is not passed to the job process — scripts must not impersonate the runner.
 
 Official Beeper apps (Site Uptime, SSL expiry, Heartbeat) always execute in Core (cloud). They are not routed to runners. Intranet checks are Runner Jobs whose scripts live on the host.
 
@@ -11,14 +11,15 @@ sequenceDiagram
   participant Runner as beep runner
   participant Script as Workspace script
 
-  Note over Core: cron claims a RunnerJob → RunnerRun pending
+  Note over Runner,Core: X-Runner-Token
+  Note over Core: claim due RunnerJob
   Runner->>Core: POST /api/v1/runner/tasks
   Core-->>Runner: 200 task (job_slug, config, log_url, result_url)
   Runner->>Script: exec matching local script (~/.beep/jobs/<slug>)
   Script-->>Runner: stdout / stderr
   Runner->>Core: POST .../tasks/:id/logs (chunks)
   Core-->>Runner: 204
-  Script->>Core: optional SDK/URL POST result
+  Script->>Core: optional POST result
   Runner->>Core: POST .../tasks/:id/result
   Core-->>Runner: 204
   Core->>Core: store log + result on RunnerRun
@@ -29,8 +30,8 @@ sequenceDiagram
 ## Decisions
 
 1. **Pull-only HTTP(S).** The runner opens all connections outbound (GitLab Runner style). No inbound ports.
-2. **Scripts stay on the host.** Core stores `slug`, cron, timezone, timeout, and optional `config`. The runner resolves `slug` to `~/.beep/jobs/<slug>` (extensionless executable; filename is the slug) or `jobs.json`.
-3. **Logs and results are first-class.** Stdout is uploaded while the job runs. The runner posts to `BEEP_LOG_URL` / `BEEP_RESULT_URL` using the daemon’s `X-Runner-Token` header. Job processes do **not** receive `BEEP_RUNNER_TOKEN` (scripts should not impersonate the runner). Local execution logs are rotated daily under `logs/beep-runner-YYYY-MM-DD.log`.
+2. **Scripts stay on the host.** Core stores `slug`, cron, timezone, timeout, and optional `config`. The runner resolves `slug` to `~/.beep/jobs/<slug>` (extensionless executable; filename is the slug).
+3. **Logs and results are first-class.** Stdout is uploaded while the job runs. The daemon posts those to the task’s log and result URLs. Local execution logs are rotated daily under `logs/YYYY-MM-DD.log`.
 4. **User-controlled workspace.** Scripts live on the host. Permissions and executable rights are controlled on the machine by the user.
 5. **One runner per workspace**, single instance guaranteed via `.socket`. Concurrent jobs execute via a worker pool. Supports foreground or daemon mode (`-d` / `--daemon`).
 6. **Git-style job sync.** Local scripts are the source of truth for execution; Core holds schedule metadata. Slug is the script filename; `@id` survives renames. `job push` / `job pull` / `job list` compare local vs server (pair by `@id`, then slug).
@@ -39,7 +40,7 @@ sequenceDiagram
 
 ## Data model
 
-- **`runners`**: account node, token, last seen, tags (organizational).
+- **`runners`**: account node, token (sent as `X-Runner-Token`), last seen, tags (organizational).
 - **`runner_jobs`**: name, slug (unique per `runner_id`), cron, timezone, timeout, config, bound to one runner.
 - **`runner_runs`**: pending → running → succeeded/failed, `result` JSON, appended `log`.
 
@@ -54,12 +55,11 @@ Default workspace: `~/.beep` (override with `--workspace` / `-w` or `BEEP_WORKSP
 ```
 ~/.beep/
   config.json
-  jobs.json
-  .socket                   # domain socket for single-instance guarantee
+  .socket             # domain socket for single-instance guarantee
   logs/
-    beep-runner-2026-09-04.log # daily rotated logs (ANSI stripped)
+    2026-09-04.log    # daily rotated logs (ANSI stripped)
   jobs/
-    intranet-http           # no .sh / .py — filename is the slug
+    intranet-http     # no .sh / .py — filename is the slug
     backup-check
 ```
 
@@ -92,7 +92,7 @@ Supported comment directives (prefix is `#`, `//`, or `--` to match the script l
 
 ### Slug, `@id`, and rename
 
-- **Slug is the filename** (no extension). `jobs/intranet-http` → slug `intranet-http`. The runner resolves a due task’s `job_slug` to that file (or an entry in `jobs.json`).
+- **Slug is the filename** (no extension). `jobs/intranet-http` → slug `intranet-http`. The runner resolves a due task’s `job_slug` to that file.
 - There is **no `# @slug:`** header; the path is the source of truth for the slug.
 - **Uniqueness** is scoped to one runner: Core enforces unique `(runner_id, slug)`. Two files cannot share a slug in the same workspace either (one path per name).
 - **`# @id:`** is the server `runner_jobs` UUID, written after a successful create/push (or pull). It identifies the same job across renames.
@@ -164,7 +164,7 @@ Command flags for `beep runner stop`:
 
 Global flags: `--workspace` / `-w`, `--server`, `--token`, `--no-color`, `--no-interactive`.
 
-Injected env at exec time: `BEEP_SERVER`, `BEEP_RUN_ID`, `BEEP_JOB_SLUG`, `BEEP_LOG_URL`, `BEEP_RESULT_URL`, `BEEP_CONFIG`, `BEEP_CONFIG_*`.
+Injected env at exec time: `BEEP_SERVER`, `BEEP_RUN_ID`, `BEEP_JOB_SLUG`, `BEEP_LOG_URL`, `BEEP_RESULT_URL`, `BEEP_CONFIG`, `BEEP_CONFIG_*`. Not injected: `BEEP_RUNNER_TOKEN`.
 
 ### Same machine: production + local development
 

@@ -23,6 +23,18 @@ type DailyLogWriter struct {
 	currentFile *os.File
 }
 
+// DailyLogPath returns the workspace log file for the given day (YYYY-MM-DD).
+func DailyLogPath(workspaceDir, day string) string {
+	return filepath.Join(workspaceDir, "logs", dailyLogName("", day))
+}
+
+func dailyLogName(prefix, day string) string {
+	if prefix == "" {
+		return day + ".log"
+	}
+	return prefix + "-" + day + ".log"
+}
+
 // NewDailyLogWriter creates a new DailyLogWriter for the given directory and filename prefix.
 func NewDailyLogWriter(dir, prefix string) (*DailyLogWriter, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -46,7 +58,7 @@ func (w *DailyLogWriter) CurrentLogFilePath() string {
 		return w.currentFile.Name()
 	}
 	day := time.Now().Format("2006-01-02")
-	return filepath.Join(w.dir, fmt.Sprintf("%s-%s.log", w.prefix, day))
+	return filepath.Join(w.dir, dailyLogName(w.prefix, day))
 }
 
 func (w *DailyLogWriter) rotateIfNeeded(now time.Time) error {
@@ -58,7 +70,7 @@ func (w *DailyLogWriter) rotateIfNeeded(now time.Time) error {
 		_ = w.currentFile.Close()
 		w.currentFile = nil
 	}
-	filename := filepath.Join(w.dir, fmt.Sprintf("%s-%s.log", w.prefix, day))
+	filename := filepath.Join(w.dir, dailyLogName(w.prefix, day))
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open log file %s: %w", filename, err)
@@ -102,7 +114,7 @@ func (w *DailyLogWriter) Close() error {
 // and optionally also to os.Stdout if toStdout is true.
 func SetupLogger(workspaceDir string, toStdout bool) (*DailyLogWriter, string, error) {
 	logsDir := filepath.Join(workspaceDir, "logs")
-	writer, err := NewDailyLogWriter(logsDir, "beep-runner")
+	writer, err := NewDailyLogWriter(logsDir, "")
 	if err != nil {
 		return nil, "", err
 	}

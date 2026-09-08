@@ -67,11 +67,11 @@ description = "Symlink a beep workspace to .beep in the current repo"
 usage = '''
 arg "[workspace]" help="Workspace directory to link" default=""
 '''
-run = "bash scripts/workspace-link.sh \"${usage_workspace:-}\""
+run = "bash scripts/cli-workspace-link.sh \"${usage_workspace:-}\""
 
 [tasks."cli:workspace:unlink"]
 description = "Unlink .beep workspace symlink from the current repo"
-run = "bash scripts/workspace-unlink.sh"
+run = "bash scripts/cli-workspace-unlink.sh"
 
 [tasks."locale:sort"]
 description = "Sort message keys alphabetically in all locale JSON files"

@@ -6,7 +6,6 @@ Default workspace: `~/.beep`
 
 ```
 ~/.beep/
-  jobs.json                 # optional command map
   jobs/
     intranet-http           # extensionless executable named after the job slug
 ```
