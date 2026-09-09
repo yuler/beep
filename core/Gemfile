@@ -24,7 +24,7 @@ gem "turbo-rails"
 gem "stimulus-rails"
 
 # Media handling
-gem "image_processing", "~> 2.0"
+gem "image_processing", "~> 2.1"
 
 # Some dashboard engines
 gem "mission_control-jobs"
