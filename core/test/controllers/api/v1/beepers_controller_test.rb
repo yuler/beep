@@ -34,6 +34,56 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "site-uptime", beepers.first["beeper_app"]["slug"]
   end
 
+  test "index returns run stats and only the most recent runs, newest first" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "My Uptime",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
+    )
+    7.times do |i|
+      beeper.runs.create!(
+        scheduled_for: (i + 1).minutes.ago,
+        status: i.even? ? :succeeded : :failed,
+        signal_status: "ok"
+      )
+    end
+
+    get "/api/v1/#{@account.slug}/beepers",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    body = response.parsed_body["beepers"].first
+    assert_equal({ "total" => 7, "succeeded" => 4 }, body["run_stats"])
+    assert_equal 5, body["runs"].size
+    scheduled = body["runs"].map { |run| Time.zone.parse(run["scheduled_for"]) }
+    assert_equal scheduled.max, scheduled.first
+    assert_equal scheduled.sort.reverse, scheduled
+  end
+
+  test "index returns empty run stats and runs for a beeper without runs" do
+    Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "No Runs Yet",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
+    )
+
+    get "/api/v1/#{@account.slug}/beepers",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    body = response.parsed_body["beepers"].first
+    assert_equal({ "total" => 0, "succeeded" => 0 }, body["run_stats"])
+    assert_empty body["runs"]
+  end
+
   test "show returns beeper details" do
     beeper = Beeper.create!(
       account: @account,
@@ -53,6 +103,47 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_equal beeper.id, body["id"]
     assert_equal "My Uptime", body["title"]
     assert_equal "site-uptime", body["beeper_app"]["slug"]
+  end
+
+  test "show omits runs" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "My Uptime",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
+    )
+    beeper.runs.create!(scheduled_for: 1.minute.ago, status: :succeeded)
+
+    get "/api/v1/#{@account.slug}/beepers/#{beeper.id}",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_nil response.parsed_body["runs"]
+  end
+
+  test "update response omits runs" do
+    beeper = Beeper.create!(
+      account: @account,
+      beeper_app: @beeper_app,
+      title: "Old Title",
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      config: { "target_url" => "https://example.com" }
+    )
+    beeper.runs.create!(scheduled_for: 1.minute.ago, status: :succeeded)
+
+    patch "/api/v1/#{@account.slug}/beepers/#{beeper.id}",
+      params: { title: "New Title" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    body = response.parsed_body
+    assert_equal "New Title", body["title"]
+    assert_nil body["runs"]
   end
 
   test "create creates a new beeper via beeper_app_slug" do
@@ -75,6 +166,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Check customer checkout gateway", body["body"]
     assert_equal "site-uptime", body["beeper_app"]["slug"]
     assert_nil body["kind"]
+    assert_nil body["runs"]
   end
 
   test "update modifies beeper properties including notification_channels" do
@@ -193,6 +285,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal "paused", response.parsed_body["status"]
+    assert_nil response.parsed_body["runs"]
     assert beeper.reload.paused?
 
     delete "/api/v1/#{@account.slug}/beepers/#{beeper.id}/pause",

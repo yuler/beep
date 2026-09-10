@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_02_112000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_10_000000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "subscription_id"
@@ -195,6 +195,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_02_112000) do
     t.datetime "updated_at", null: false
     t.index ["beeper_id", "scheduled_for"], name: "index_beeper_runs_on_beeper_id_and_scheduled_for", unique: true
     t.index ["beeper_id"], name: "index_beeper_runs_on_beeper_id"
+    t.index ["scheduled_for"], name: "index_beeper_runs_on_scheduled_for"
   end
 
   create_table "beepers", id: :uuid, force: :cascade do |t|

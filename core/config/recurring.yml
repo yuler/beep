@@ -10,6 +10,10 @@ runner_job_poller: &runner_job_poller
   class: RunnerJobPollerJob
   schedule: every 10 seconds
 
+prune_beeper_runs: &prune_beeper_runs
+  class: PruneBeeperRunsJob
+  schedule: every day at 03:00
+
 development:
   beep_poller:
     <<: *beep_poller
@@ -17,6 +21,8 @@ development:
     <<: *beeper_poller
   runner_job_poller:
     <<: *runner_job_poller
+  prune_beeper_runs:
+    <<: *prune_beeper_runs
 
 test:
   beep_poller:
@@ -25,6 +31,8 @@ test:
     <<: *beeper_poller
   runner_job_poller:
     <<: *runner_job_poller
+  prune_beeper_runs:
+    <<: *prune_beeper_runs
 
 production:
   beep_poller:
@@ -33,6 +41,8 @@ production:
     <<: *beeper_poller
   runner_job_poller:
     <<: *runner_job_poller
+  prune_beeper_runs:
+    <<: *prune_beeper_runs
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every day at 00:00

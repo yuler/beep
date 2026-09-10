@@ -24,7 +24,7 @@ import {
 	healthStatusLabel,
 } from "@/lib/i18n-labels";
 import type { NotificationChannel } from "@/lib/notification-channels";
-import { runSuccessRate } from "@/lib/run-success-rate";
+import { beeperRunCount, beeperRunSuccessRate } from "@/lib/run-success-rate";
 import { shortId } from "@/lib/short-id";
 import { m } from "@/locale/paraglide/messages";
 
@@ -169,23 +169,23 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 						enableSorting: false,
 					},
 				),
-				columnHelper.accessor((row) => runSuccessRate(row.runs ?? []), {
+				columnHelper.accessor((row) => beeperRunSuccessRate(row), {
 					id: "run_success",
 					header: ({ column }) => (
 						<SortableHeader column={column} label={m.beepers_run_success()} />
 					),
 					cell: ({ row }) => (
-						<ProgressBar value={runSuccessRate(row.original.runs ?? [])} />
+						<ProgressBar value={beeperRunSuccessRate(row.original)} />
 					),
 				}),
-				columnHelper.accessor((row) => row.runs?.length ?? 0, {
+				columnHelper.accessor((row) => beeperRunCount(row), {
 					id: "runs",
 					header: ({ column }) => (
 						<SortableHeader column={column} label={m.beepers_runs()} />
 					),
 					cell: ({ row }) => (
 						<span className="tabular-nums text-sm">
-							{row.original.runs?.length ?? 0}
+							{beeperRunCount(row.original)}
 						</span>
 					),
 				}),
@@ -272,7 +272,7 @@ export function BeeperList({
 				) : (
 					beepers.map((beeper) => {
 						const channels = beeper.notification_channels ?? [];
-						const successRate = runSuccessRate(beeper.runs ?? []);
+						const successRate = beeperRunSuccessRate(beeper);
 
 						return (
 							<div
@@ -345,7 +345,7 @@ export function BeeperList({
 									</div>
 									<div>
 										<span className="block text-[11px] text-muted-foreground/80">
-											{m.beepers_run_success()} ({beeper.runs?.length ?? 0})
+											{m.beepers_run_success()} ({beeperRunCount(beeper)})
 										</span>
 										<div className="mt-1">
 											<ProgressBar value={successRate} />

@@ -4,6 +4,14 @@ if beeper.beeper_app
     json.extract! beeper.beeper_app, :id, :slug, :name, :version, :description, :inputs, :metrics
   end
 end
-json.runs beeper.runs.sort_by(&:scheduled_for).reverse do |run|
-  json.partial! "api/v1/beepers/run", run: run
+if local_assigns[:run_stats]
+  json.run_stats do
+    json.total run_stats[:total]
+    json.succeeded run_stats[:succeeded]
+  end
+end
+if local_assigns.key?(:runs)
+  json.runs runs do |run|
+    json.partial! "api/v1/beepers/run", run: run
+  end
 end

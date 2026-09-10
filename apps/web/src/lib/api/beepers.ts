@@ -60,6 +60,11 @@ export type BeeperRun = {
 	created_at: string;
 };
 
+export type BeeperRunStats = {
+	total: number;
+	succeeded: number;
+};
+
 export type Beeper = {
 	id: string;
 	title: string;
@@ -87,6 +92,7 @@ export type Beeper = {
 		inputs?: BeeperAppInput[];
 		metrics?: BeeperAppMetric[];
 	};
+	run_stats?: BeeperRunStats;
 	runs?: BeeperRun[];
 };
 
@@ -116,6 +122,13 @@ export function fetchBeeper(accountSlug: string, beeperId: string) {
 	return apiFetch<Beeper>(`/api/v1/${accountSlug}/beepers/${beeperId}`, {
 		method: "GET",
 	});
+}
+
+export function fetchBeeperRuns(accountSlug: string, beeperId: string) {
+	return apiFetch<{ runs: BeeperRun[] }>(
+		`/api/v1/${accountSlug}/beepers/${beeperId}/runs`,
+		{ method: "GET" },
+	);
 }
 
 export function createBeeper(
