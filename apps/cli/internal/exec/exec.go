@@ -138,21 +138,33 @@ var blockedJobEnvKeys = map[string]struct{}{
 }
 
 func WithJobEnv(extra []string) []string {
-	env := scrubJobEnv(os.Environ())
-	if len(extra) == 0 {
-		return env
-	}
-	return append(env, scrubJobEnv(extra)...)
-}
+	merged := make(map[string]string)
+	var order []string
 
-func scrubJobEnv(env []string) []string {
-	out := make([]string, 0, len(env))
-	for _, item := range env {
-		key, _, _ := strings.Cut(item, "=")
-		if _, blocked := blockedJobEnvKeys[key]; blocked {
-			continue
+	set := func(item string) {
+		key, val, found := strings.Cut(item, "=")
+		if !found {
+			return
 		}
-		out = append(out, item)
+		if _, blocked := blockedJobEnvKeys[key]; blocked {
+			return
+		}
+		if _, exists := merged[key]; !exists {
+			order = append(order, key)
+		}
+		merged[key] = val
+	}
+
+	for _, item := range os.Environ() {
+		set(item)
+	}
+	for _, item := range extra {
+		set(item)
+	}
+
+	out := make([]string, 0, len(order))
+	for _, k := range order {
+		out = append(out, fmt.Sprintf("%s=%s", k, merged[k]))
 	}
 	return out
 }

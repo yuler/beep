@@ -41,6 +41,61 @@ func TestJobEnvOmitsRunnerToken(t *testing.T) {
 	}
 }
 
+func TestJobEnvLoadsWorkspaceEnvAndPrecedence(t *testing.T) {
+	root := t.TempDir()
+	ws, err := workspace.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	envFile := filepath.Join(root, ".env")
+	envContent := `
+API_KEY=local_workspace_secret
+OVERRIDDEN_BY_SERVER=from_workspace_env
+DEFAULT_TIMEOUT=15
+`
+	if err := os.WriteFile(envFile, []byte(envContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	d := &Daemon{
+		cfg: &config.Config{
+			ServerURL: "https://core.example.com",
+		},
+		workspace: ws,
+	}
+
+	job := &task.Task{
+		ID:        "run-123",
+		JobSlug:   "custom-job",
+		LogURL:    "https://core.example.com/api/v1/runner/tasks/run-123/logs",
+		ResultURL: "https://core.example.com/api/v1/runner/tasks/run-123/result",
+		Config: map[string]any{
+			"overridden_by_server": "from_server_config",
+		},
+	}
+
+	env := d.jobEnv(job)
+	envMap := make(map[string]string)
+	for _, item := range env {
+		k, v, _ := strings.Cut(item, "=")
+		envMap[k] = v
+	}
+
+	if envMap["API_KEY"] != "local_workspace_secret" {
+		t.Fatalf("expected API_KEY from .env, got %q", envMap["API_KEY"])
+	}
+	if envMap["DEFAULT_TIMEOUT"] != "15" {
+		t.Fatalf("expected DEFAULT_TIMEOUT=15 from .env, got %q", envMap["DEFAULT_TIMEOUT"])
+	}
+	if envMap["BEEP_CONFIG_OVERRIDDEN_BY_SERVER"] != "from_server_config" {
+		t.Fatalf("expected server config BEEP_CONFIG_OVERRIDDEN_BY_SERVER, got %q", envMap["BEEP_CONFIG_OVERRIDDEN_BY_SERVER"])
+	}
+	if envMap["BEEP_JOB_SLUG"] != "custom-job" {
+		t.Fatalf("expected BEEP_JOB_SLUG=custom-job, got %q", envMap["BEEP_JOB_SLUG"])
+	}
+}
+
 func TestPollAndExecuteFillsConcurrency(t *testing.T) {
 	var (
 		polls atomic.Int32

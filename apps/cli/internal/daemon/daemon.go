@@ -234,12 +234,20 @@ func (d *Daemon) logJobBlock(job *task.Task, lines []string, result *task.Result
 
 func (d *Daemon) jobEnv(job *task.Task) []string {
 	configJSON, _ := json.Marshal(job.Config)
-	return exec.WithJobEnv(append(exec.ConfigEnv(job.Config),
+
+	var extras []string
+	if d.workspace != nil {
+		extras = append(extras, d.workspace.LoadEnv()...)
+	}
+	extras = append(extras, exec.ConfigEnv(job.Config)...)
+	extras = append(extras,
 		"BEEP_SERVER="+d.cfg.ServerURL,
 		"BEEP_RUN_ID="+job.ID,
 		"BEEP_JOB_SLUG="+job.JobSlug,
 		"BEEP_LOG_URL="+job.LogURL,
 		"BEEP_RESULT_URL="+job.ResultURL,
 		"BEEP_CONFIG="+string(configJSON),
-	))
+	)
+
+	return exec.WithJobEnv(extras)
 }
