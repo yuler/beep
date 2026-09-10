@@ -1,11 +1,13 @@
 class Api::V1::BeepersController < Api::V1::BaseController
   def index
-    @beepers = Current.account.beepers.includes(:beeper_app, :runs).order(created_at: :desc)
+    @beepers = Current.account.beepers.includes(:beeper_app).order(created_at: :desc)
+    @run_stats = BeeperRun.stats_by_beeper(@beepers.ids)
+    @recent_runs = BeeperRun.recent_by_beeper(@beepers.ids)
     render :index
   end
 
   def show
-    @beeper = Current.account.beepers.includes(:beeper_app, :runs).find(params[:id])
+    @beeper = Current.account.beepers.includes(:beeper_app).find(params[:id])
     render :show
   end
 
@@ -22,7 +24,7 @@ class Api::V1::BeepersController < Api::V1::BaseController
       )
 
       if @beeper.save
-        render :create, status: :created
+        render :summary, status: :created
       else
         render_json_error(
           status: :unprocessable_entity,
@@ -43,7 +45,7 @@ class Api::V1::BeepersController < Api::V1::BaseController
     @beeper = Current.account.beepers.find(params[:id])
 
     if @beeper.update(update_params)
-      render :show
+      render :summary
     else
       render_json_error(
         status: :unprocessable_entity,

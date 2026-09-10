@@ -28,6 +28,11 @@ module BeepCore
       g.orm :active_record, primary_key_type: :uuid
     end
 
+    # Compress dynamic responses (JSON API, mission-control pages) with gzip
+    # when the client accepts it. Static assets are served before this and
+    # already ship precompressed.
+    config.middleware.use Rack::Deflater
+
     # Mission dashboard
     config.mission_control.jobs.http_basic_auth_enabled = false
   end

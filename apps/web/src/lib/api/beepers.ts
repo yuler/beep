@@ -60,6 +60,11 @@ export type BeeperRun = {
 	created_at: string;
 };
 
+export type BeeperRunStats = {
+	total: number;
+	succeeded: number;
+};
+
 export type Beeper = {
 	id: string;
 	title: string;
@@ -87,6 +92,7 @@ export type Beeper = {
 		inputs?: BeeperAppInput[];
 		metrics?: BeeperAppMetric[];
 	};
+	run_stats?: BeeperRunStats;
 	runs?: BeeperRun[];
 };
 
