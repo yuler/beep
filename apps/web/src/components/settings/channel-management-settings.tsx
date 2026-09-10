@@ -1,5 +1,5 @@
-import { Monitor, Trash2, Plus } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { Monitor, Plus, Trash2 } from "lucide-react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { CopyButton } from "@/components/ui/copy-button";
+import { CopyableCode, useCopyToClipboard } from "@/components/ui/copy-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,12 +25,12 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 	const [channels, setChannels] = useState<Channel[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [name, setName] = useState("");
-	const [kind, setKind] = useState("device");
 	const [creating, setCreating] = useState(false);
 	const [createdChannel, setCreatedChannel] = useState<Channel | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const { copied, copy } = useCopyToClipboard();
 
-	async function load() {
+	const load = useCallback(async () => {
 		try {
 			const data = await fetchChannels(slug);
 			setChannels(data);
@@ -39,11 +39,11 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 		} finally {
 			setLoading(false);
 		}
-	}
+	}, [slug]);
 
 	useEffect(() => {
 		void load();
-	}, [slug]);
+	}, [load]);
 
 	async function handleCreate(e: FormEvent) {
 		e.preventDefault();
@@ -52,7 +52,10 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 		setError(null);
 		setCreating(true);
 		try {
-			const ch = await createChannel(slug, { name: name.trim(), kind });
+			const ch = await createChannel(slug, {
+				name: name.trim(),
+				kind: "device",
+			});
 			setCreatedChannel(ch);
 			setName("");
 			await load();
@@ -81,7 +84,8 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 					Device Channels
 				</CardTitle>
 				<CardDescription>
-					Connect your desktop machines and CLI daemons to receive notifications and trigger local actions.
+					Connect your desktop machines and CLI daemons to receive notifications
+					and trigger local actions.
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-6">
@@ -110,14 +114,22 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 							Device Channel Created: {createdChannel.name}
 						</div>
 						<p className="mt-1 text-xs text-muted-foreground">
-							Copy this token and configure it on your machine using the Beep CLI:
+							Copy this token and configure it on your machine using the Beep
+							CLI:
 						</p>
-						<div className="mt-2 flex items-center justify-between rounded bg-muted p-2 font-mono text-xs">
-							<span className="truncate">{createdChannel.token}</span>
-							<CopyButton text={createdChannel.token} />
+						<div className="mt-2">
+							<CopyableCode
+								code={createdChannel.token}
+								copied={copied}
+								onCopy={() => copy(createdChannel.token ?? "")}
+								label="Copy device token"
+							/>
 						</div>
 						<div className="mt-2 text-xs text-muted-foreground">
-							Run: <code className="rounded bg-muted px-1">beep config set device_token {createdChannel.token}</code>
+							Run:{" "}
+							<code className="rounded bg-muted px-1">
+								beep config set device_token {createdChannel.token}
+							</code>
 						</div>
 					</div>
 				) : null}
@@ -158,7 +170,10 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 									<div className="text-xs text-muted-foreground">
 										Token: {ch.masked_token}
 										{ch.last_seen_at ? (
-											<span> • Seen: {new Date(ch.last_seen_at).toLocaleString()}</span>
+											<span>
+												{" "}
+												• Seen: {new Date(ch.last_seen_at).toLocaleString()}
+											</span>
 										) : null}
 									</div>
 								</div>
