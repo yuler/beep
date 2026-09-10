@@ -99,9 +99,9 @@ OVERRIDDEN_BY_LOCAL=from_local
 		key  string
 		want string
 	}{
-		{"API_KEY", "from_workspace_env"},                          // workspace .env overrides host env
-		{"OVERRIDDEN_BY_LOCAL", "from_local"},                      // .env.local overrides .env
-		{"OVERRIDDEN_BY_SERVER", "from_workspace_env"},             // non-colliding .env var survives
+		{"API_KEY", "from_workspace_env"},                                 // workspace .env overrides host env
+		{"OVERRIDDEN_BY_LOCAL", "from_local"},                             // .env.local overrides .env
+		{"OVERRIDDEN_BY_SERVER", "from_workspace_env"},                    // non-colliding .env var survives
 		{"BEEP_RUNNER_CONFIG_OVERRIDDEN_BY_SERVER", "from_server_config"}, // server config overrides .env
 		{"BEEP_RUNNER_RUN_ID", "run-123"},                                 // runtime context overrides .env
 		{"BEEP_RUNNER_JOB_SLUG", "custom-job"},
