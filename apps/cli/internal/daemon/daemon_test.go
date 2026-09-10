@@ -41,20 +41,33 @@ func TestJobEnvOmitsRunnerToken(t *testing.T) {
 	}
 }
 
-func TestJobEnvLoadsWorkspaceEnvAndPrecedence(t *testing.T) {
+func TestJobEnvPrecedence(t *testing.T) {
 	root := t.TempDir()
 	ws, err := workspace.Open(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// Base host environment must be overridden by the workspace .env.
+	t.Setenv("API_KEY", "from_host_env")
+
 	envFile := filepath.Join(root, ".env")
 	envContent := `
-API_KEY=local_workspace_secret
+API_KEY=from_workspace_env
+OVERRIDDEN_BY_LOCAL=from_env
 OVERRIDDEN_BY_SERVER=from_workspace_env
-DEFAULT_TIMEOUT=15
+BEEP_CONFIG_OVERRIDDEN_BY_SERVER=from_workspace_env
+BEEP_RUN_ID=from_workspace_env
 `
 	if err := os.WriteFile(envFile, []byte(envContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// .env.local overrides .env.
+	envLocalContent := `
+OVERRIDDEN_BY_LOCAL=from_local
+`
+	if err := os.WriteFile(filepath.Join(root, ".env.local"), []byte(envLocalContent), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -82,17 +95,21 @@ DEFAULT_TIMEOUT=15
 		envMap[k] = v
 	}
 
-	if envMap["API_KEY"] != "local_workspace_secret" {
-		t.Fatalf("expected API_KEY from .env, got %q", envMap["API_KEY"])
+	tests := []struct {
+		key  string
+		want string
+	}{
+		{"API_KEY", "from_workspace_env"},                          // workspace .env overrides host env
+		{"OVERRIDDEN_BY_LOCAL", "from_local"},                      // .env.local overrides .env
+		{"OVERRIDDEN_BY_SERVER", "from_workspace_env"},             // non-colliding .env var survives
+		{"BEEP_CONFIG_OVERRIDDEN_BY_SERVER", "from_server_config"}, // server config overrides .env
+		{"BEEP_RUN_ID", "run-123"},                                 // runtime context overrides .env
+		{"BEEP_JOB_SLUG", "custom-job"},
 	}
-	if envMap["DEFAULT_TIMEOUT"] != "15" {
-		t.Fatalf("expected DEFAULT_TIMEOUT=15 from .env, got %q", envMap["DEFAULT_TIMEOUT"])
-	}
-	if envMap["BEEP_CONFIG_OVERRIDDEN_BY_SERVER"] != "from_server_config" {
-		t.Fatalf("expected server config BEEP_CONFIG_OVERRIDDEN_BY_SERVER, got %q", envMap["BEEP_CONFIG_OVERRIDDEN_BY_SERVER"])
-	}
-	if envMap["BEEP_JOB_SLUG"] != "custom-job" {
-		t.Fatalf("expected BEEP_JOB_SLUG=custom-job, got %q", envMap["BEEP_JOB_SLUG"])
+	for _, tc := range tests {
+		if envMap[tc.key] != tc.want {
+			t.Errorf("expected %s=%q, got %q", tc.key, tc.want, envMap[tc.key])
+		}
 	}
 }
 

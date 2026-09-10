@@ -19,7 +19,7 @@ EMPTY=
 SPACED = trimmed 
 `
 
-	got := ParseEnv(input)
+	got := parseEnv(input)
 	expected := []string{
 		"FOO=bar",
 		"BAZ=hello world",

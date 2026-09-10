@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"beep/internal/envx"
 	"beep/internal/proc"
 	"beep/internal/task"
 )
@@ -138,21 +139,14 @@ var blockedJobEnvKeys = map[string]struct{}{
 }
 
 func WithJobEnv(extra []string) []string {
-	merged := make(map[string]string)
-	var order []string
+	merged := envx.New()
 
 	set := func(item string) {
-		key, val, found := strings.Cut(item, "=")
-		if !found {
-			return
-		}
+		key, val, _ := strings.Cut(item, "=")
 		if _, blocked := blockedJobEnvKeys[key]; blocked {
 			return
 		}
-		if _, exists := merged[key]; !exists {
-			order = append(order, key)
-		}
-		merged[key] = val
+		merged.Set(key, val)
 	}
 
 	for _, item := range os.Environ() {
@@ -162,11 +156,7 @@ func WithJobEnv(extra []string) []string {
 		set(item)
 	}
 
-	out := make([]string, 0, len(order))
-	for _, k := range order {
-		out = append(out, fmt.Sprintf("%s=%s", k, merged[k]))
-	}
-	return out
+	return merged.Slice()
 }
 
 func ConfigEnv(config map[string]any) []string {

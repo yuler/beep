@@ -2,68 +2,55 @@ package workspace
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"beep/internal/envx"
 )
 
-// LoadEnv loads environment variables from <Root>/.env and <Root>/.env.local (if present).
-// Later files (.env.local) override earlier files (.env).
+// LoadEnv loads environment variables from <Root>/.env and <Root>/.env.local
+// (if present). Later files (.env.local) override earlier files (.env).
 func (w *Workspace) LoadEnv() []string {
 	if w == nil || w.Root == "" {
 		return nil
 	}
 
-	envFile := filepath.Join(w.Root, ".env")
-	envLocalFile := filepath.Join(w.Root, ".env.local")
-
-	merged := make(map[string]string)
-	var order []string
-
-	applyFile := func(path string) {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return
-		}
-		pairs := ParseEnv(string(data))
-		for _, pair := range pairs {
-			key, val, ok := strings.Cut(pair, "=")
-			if !ok {
-				continue
-			}
-			if _, exists := merged[key]; !exists {
-				order = append(order, key)
-			}
-			merged[key] = val
-		}
-	}
-
-	applyFile(envFile)
-	applyFile(envLocalFile)
-
-	if len(order) == 0 {
+	merged := envx.New()
+	applyFile(merged, filepath.Join(w.Root, ".env"))
+	applyFile(merged, filepath.Join(w.Root, ".env.local"))
+	if merged.Len() == 0 {
 		return nil
 	}
-
-	out := make([]string, 0, len(order))
-	for _, k := range order {
-		out = append(out, fmt.Sprintf("%s=%s", k, merged[k]))
-	}
-	return out
+	return merged.Slice()
 }
 
-// ParseEnv parses standard .env file content into KEY=VALUE pairs.
+func applyFile(dst *envx.Ordered, path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	parseInto(dst, string(data))
+}
+
+// parseEnv parses .env content into KEY=VALUE pairs in file order, where a
+// later assignment to the same key wins.
+//
 // Supports:
 //   - KEY=VALUE and export KEY=VALUE
 //   - Single and double quotes (with escape sequences in double quotes)
 //   - Comments (#) and inline comments (e.g. KEY=VAL # comment)
 //   - Empty lines and leading/trailing whitespace
-func ParseEnv(content string) []string {
-	var results []string
-	seen := make(map[string]int) // key -> index in results
+//
+// Multi-line values are not supported; each KEY=VALUE must fit on one line.
+func parseEnv(content string) []string {
+	o := envx.New()
+	parseInto(o, content)
+	return o.Slice()
+}
 
+func parseInto(dst *envx.Ordered, content string) {
 	scanner := bufio.NewScanner(strings.NewReader(content))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -85,18 +72,8 @@ func ParseEnv(content string) []string {
 			continue
 		}
 
-		parsedVal := parseEnvValue(strings.TrimSpace(val))
-
-		item := fmt.Sprintf("%s=%s", key, parsedVal)
-		if idx, exists := seen[key]; exists {
-			results[idx] = item
-		} else {
-			seen[key] = len(results)
-			results = append(results, item)
-		}
+		dst.Set(key, parseEnvValue(strings.TrimSpace(val)))
 	}
-
-	return results
 }
 
 func parseEnvValue(raw string) string {

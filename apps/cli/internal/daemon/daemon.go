@@ -236,9 +236,7 @@ func (d *Daemon) jobEnv(job *task.Task) []string {
 	configJSON, _ := json.Marshal(job.Config)
 
 	var extras []string
-	if d.workspace != nil {
-		extras = append(extras, d.workspace.LoadEnv()...)
-	}
+	extras = append(extras, d.workspace.LoadEnv()...)
 	extras = append(extras, exec.ConfigEnv(job.Config)...)
 	extras = append(extras,
 		"BEEP_SERVER="+d.cfg.ServerURL,
