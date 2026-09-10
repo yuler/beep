@@ -130,7 +130,18 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 		return
 	}
 
-	env := d.jobEnv(job)
+	env, err := d.jobEnv(job)
+	if err != nil {
+		result := task.Error("Workspace environment", err.Error(), nil)
+		d.logJobBlock(job, []string{err.Error()}, result)
+		errCtx, errCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer errCancel()
+		_ = d.client.ReportLog(errCtx, job.LogURL, err.Error()+"\n")
+		if reportErr := d.client.ReportResult(errCtx, job.ResultURL, result); reportErr != nil {
+			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error:"), reportErr)
+		}
+		return
+	}
 
 	logChan := make(chan string, 1000)
 	var logWg sync.WaitGroup
@@ -232,11 +243,16 @@ func (d *Daemon) logJobBlock(job *task.Task, lines []string, result *task.Result
 	}
 }
 
-func (d *Daemon) jobEnv(job *task.Task) []string {
+func (d *Daemon) jobEnv(job *task.Task) ([]string, error) {
 	configJSON, _ := json.Marshal(job.Config)
 
+	wsEnv, err := d.workspace.LoadEnv()
+	if err != nil {
+		return nil, err
+	}
+
 	var extras []string
-	extras = append(extras, d.workspace.LoadEnv()...)
+	extras = append(extras, wsEnv...)
 	extras = append(extras, exec.ConfigEnv(job.Config)...)
 	extras = append(extras,
 		"BEEP_RUNNER_SERVER="+d.cfg.ServerURL,
@@ -247,5 +263,5 @@ func (d *Daemon) jobEnv(job *task.Task) []string {
 		"BEEP_RUNNER_CONFIG="+string(configJSON),
 	)
 
-	return exec.WithJobEnv(extras)
+	return exec.WithJobEnv(extras), nil
 }

@@ -24,13 +24,16 @@ func TestJobEnvOmitsRunnerToken(t *testing.T) {
 		ServerURL:   "https://core.example.com",
 		RunnerToken: "beep_rt_secret",
 	}}
-	env := d.jobEnv(&task.Task{
+	env, err := d.jobEnv(&task.Task{
 		ID:        "run-1",
 		JobSlug:   "check",
 		LogURL:    "https://core.example.com/api/v1/runner/tasks/run-1/logs",
 		ResultURL: "https://core.example.com/api/v1/runner/tasks/run-1/result",
 		Config:    map[string]any{"k": "v"},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, item := range env {
 		if strings.HasPrefix(item, "BEEP_RUNNER_TOKEN=") {
 			t.Fatalf("job env must not include BEEP_RUNNER_TOKEN, got %s", item)
@@ -38,6 +41,77 @@ func TestJobEnvOmitsRunnerToken(t *testing.T) {
 		if strings.Contains(item, "beep_rt_secret") || strings.Contains(item, "beep_rt_from_environ") {
 			t.Fatalf("job env must not include runner token, got %s", item)
 		}
+	}
+}
+
+func TestJobEnvOmitsRunnerTokenFromWorkspace(t *testing.T) {
+	root := t.TempDir()
+	ws, err := workspace.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("BEEP_RUNNER_TOKEN=beep_rt_from_env\nAPI_KEY=from_workspace\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	d := &Daemon{
+		cfg:       &config.Config{ServerURL: "https://core.example.com"},
+		workspace: ws,
+	}
+	env, err := d.jobEnv(&task.Task{
+		ID:        "run-1",
+		JobSlug:   "check",
+		LogURL:    "https://core.example.com/api/v1/runner/tasks/run-1/logs",
+		ResultURL: "https://core.example.com/api/v1/runner/tasks/run-1/result",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	envMap := make(map[string]string)
+	for _, item := range env {
+		k, v, _ := strings.Cut(item, "=")
+		envMap[k] = v
+		if k == "BEEP_RUNNER_TOKEN" || strings.Contains(item, "beep_rt_from_env") {
+			t.Fatalf("job env must not include BEEP_RUNNER_TOKEN from workspace .env, got %s", item)
+		}
+	}
+	if envMap["API_KEY"] != "from_workspace" {
+		t.Fatalf("expected API_KEY=from_workspace, got %q", envMap["API_KEY"])
+	}
+}
+
+func TestJobEnvUnreadableWorkspaceEnv(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root can read chmod 0 files")
+	}
+
+	root := t.TempDir()
+	ws, err := workspace.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, ".env")
+	if err := os.WriteFile(path, []byte("API_KEY=secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
+
+	d := &Daemon{
+		cfg:       &config.Config{ServerURL: "https://core.example.com"},
+		workspace: ws,
+	}
+	env, err := d.jobEnv(&task.Task{
+		ID:        "run-1",
+		JobSlug:   "check",
+		LogURL:    "https://core.example.com/api/v1/runner/tasks/run-1/logs",
+		ResultURL: "https://core.example.com/api/v1/runner/tasks/run-1/result",
+	})
+	if err == nil {
+		t.Fatalf("expected error for unreadable workspace .env, got env %v", env)
 	}
 }
 
@@ -88,7 +162,10 @@ OVERRIDDEN_BY_LOCAL=from_local
 		},
 	}
 
-	env := d.jobEnv(job)
+	env, err := d.jobEnv(job)
+	if err != nil {
+		t.Fatal(err)
+	}
 	envMap := make(map[string]string)
 	for _, item := range env {
 		k, v, _ := strings.Cut(item, "=")

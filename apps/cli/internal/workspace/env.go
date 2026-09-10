@@ -2,7 +2,7 @@ package workspace
 
 import (
 	"errors"
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,32 +13,38 @@ import (
 
 // LoadEnv loads environment variables from <Root>/.env and <Root>/.env.local
 // (if present). Later files (.env.local) override earlier files (.env).
-func (w *Workspace) LoadEnv() []string {
+// Missing files are skipped. A file that exists but cannot be read is an error.
+func (w *Workspace) LoadEnv() ([]string, error) {
 	if w == nil || w.Root == "" {
-		return nil
+		return nil, nil
 	}
 
 	merged := envx.New()
-	applyFile(merged, filepath.Join(w.Root, ".env"))
-	applyFile(merged, filepath.Join(w.Root, ".env.local"))
-	if merged.Len() == 0 {
-		return nil
+	if err := applyFile(merged, filepath.Join(w.Root, ".env")); err != nil {
+		return nil, err
 	}
-	return merged.Slice()
+	if err := applyFile(merged, filepath.Join(w.Root, ".env.local")); err != nil {
+		return nil, err
+	}
+	if merged.Len() == 0 {
+		return nil, nil
+	}
+	return merged.Slice(), nil
 }
 
-func applyFile(dst *envx.Ordered, path string) {
+func applyFile(dst *envx.Ordered, path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			log.Printf("workspace: ignoring %s: %v", path, err)
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
 		}
-		return
+		return fmt.Errorf("read %s: %w", path, err)
 	}
 	parseInto(dst, string(data))
+	return nil
 }
 
-// parseEnv parses .env content into KEY=VALUE pairs in file order, where a
+// parseInto parses .env content into KEY=VALUE pairs in file order, where a
 // later assignment to the same key wins.
 //
 // Supports:
@@ -51,12 +57,6 @@ func applyFile(dst *envx.Ordered, path string) {
 // Lines with invalid keys ([A-Za-z_][A-Za-z0-9_]* required), unterminated
 // quotes, or trailing content after a closing quote (other than whitespace
 // or a # comment) are skipped.
-func parseEnv(content string) []string {
-	o := envx.New()
-	parseInto(o, content)
-	return o.Slice()
-}
-
 func parseInto(dst *envx.Ordered, content string) {
 	// strings.Split (not bufio.Scanner) so a single very long line can't
 	// silently truncate the rest of the file (Scanner caps tokens at 64KB).
