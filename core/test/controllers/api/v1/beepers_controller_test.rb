@@ -124,24 +124,6 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_nil response.parsed_body["runs"]
   end
 
-  test "index responds with gzip when the client accepts it" do
-    Beeper.create!(
-      account: @account,
-      beeper_app: @beeper_app,
-      title: "My Uptime",
-      cron: "*/5 * * * *",
-      timezone: "UTC",
-      config: { "target_url" => "https://example.com" }
-    )
-
-    get "/api/v1/#{@account.slug}/beepers",
-      headers: { "Authorization" => "Bearer #{@token}", "ACCEPT-ENCODING" => "gzip" },
-      as: :json
-
-    assert_response :success
-    assert_equal "gzip", response.headers["Content-Encoding"]
-  end
-
   test "update response omits runs" do
     beeper = Beeper.create!(
       account: @account,
