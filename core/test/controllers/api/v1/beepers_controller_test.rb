@@ -105,7 +105,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "site-uptime", body["beeper_app"]["slug"]
   end
 
-  test "show returns all runs ordered newest first" do
+  test "show omits runs" do
     beeper = Beeper.create!(
       account: @account,
       beeper_app: @beeper_app,
@@ -114,35 +114,14 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
       timezone: "UTC",
       config: { "target_url" => "https://example.com" }
     )
-    7.times { |i| beeper.runs.create!(scheduled_for: (i + 1).minutes.ago, status: :succeeded) }
+    beeper.runs.create!(scheduled_for: 1.minute.ago, status: :succeeded)
 
     get "/api/v1/#{@account.slug}/beepers/#{beeper.id}",
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 
     assert_response :success
-    body = response.parsed_body
-    assert_equal 7, body["runs"].size
-    scheduled = body["runs"].map { |run| Time.zone.parse(run["scheduled_for"]) }
-    assert_equal scheduled.sort.reverse, scheduled
-  end
-
-  test "show returns empty runs for a beeper without runs" do
-    beeper = Beeper.create!(
-      account: @account,
-      beeper_app: @beeper_app,
-      title: "No Runs Yet",
-      cron: "*/5 * * * *",
-      timezone: "UTC",
-      config: { "target_url" => "https://example.com" }
-    )
-
-    get "/api/v1/#{@account.slug}/beepers/#{beeper.id}",
-      headers: { "Authorization" => "Bearer #{@token}" },
-      as: :json
-
-    assert_response :success
-    assert_empty response.parsed_body["runs"]
+    assert_nil response.parsed_body["runs"]
   end
 
   test "index responds with gzip when the client accepts it" do

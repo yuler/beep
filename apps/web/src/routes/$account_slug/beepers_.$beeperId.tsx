@@ -33,6 +33,7 @@ import {
 	type BeeperRun,
 	deleteBeeper,
 	fetchBeeper,
+	fetchBeeperRuns,
 	pauseBeeper,
 	resumeBeeper,
 	triggerBeeperRun,
@@ -59,11 +60,14 @@ const accountRoute = getRouteApi("/$account_slug");
 
 export const Route = createFileRoute("/$account_slug/beepers_/$beeperId")({
 	loader: withAuthRedirects(async ({ params }) => {
+		const slug = params?.account_slug ?? "";
+		const beeperId = params?.beeperId ?? "";
 		try {
-			return await fetchBeeper(
-				params?.account_slug ?? "",
-				params?.beeperId ?? "",
-			);
+			const [beeper, { runs }] = await Promise.all([
+				fetchBeeper(slug, beeperId),
+				fetchBeeperRuns(slug, beeperId),
+			]);
+			return { beeper, runs };
 		} catch (err) {
 			if (err instanceof ApiError && err.status === 404) {
 				throw notFound();
@@ -103,7 +107,7 @@ const SIGNAL_STATUS_VARIANT: Record<
 function BeeperDetailPage() {
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
-	const beeper = Route.useLoaderData();
+	const { beeper, runs } = Route.useLoaderData();
 	const [deleting, setDeleting] = useState(false);
 	const [triggering, setTriggering] = useState(false);
 	const [togglingStatus, setTogglingStatus] = useState(false);
@@ -184,7 +188,7 @@ function BeeperDetailPage() {
 		}
 	}
 
-	const runs = beeper.runs ?? [];
+	const healthBeeper = { ...beeper, runs };
 	const inputs = beeper.beeper_app?.inputs ?? [];
 	const configEntries = Object.entries(beeper.config ?? {});
 
@@ -215,12 +219,14 @@ function BeeperDetailPage() {
 							</h1>
 							<Badge
 								variant={
-									beeperHealthIsDestructive(beeper) ? "destructive" : "outline"
+									beeperHealthIsDestructive(healthBeeper)
+										? "destructive"
+										: "outline"
 								}
 							>
-								{healthStatusLabel(beeperHealthLabel(beeper))}
+								{healthStatusLabel(beeperHealthLabel(healthBeeper))}
 							</Badge>
-							{isBeeperProbeBroken(beeper.runs) ? (
+							{isBeeperProbeBroken(runs) ? (
 								<p className="text-sm text-muted-foreground">
 									{m.beepers_probe_broken()}
 								</p>

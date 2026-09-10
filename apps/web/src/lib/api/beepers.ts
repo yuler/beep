@@ -124,6 +124,13 @@ export function fetchBeeper(accountSlug: string, beeperId: string) {
 	});
 }
 
+export function fetchBeeperRuns(accountSlug: string, beeperId: string) {
+	return apiFetch<{ runs: BeeperRun[] }>(
+		`/api/v1/${accountSlug}/beepers/${beeperId}/runs`,
+		{ method: "GET" },
+	);
+}
+
 export function createBeeper(
 	accountSlug: string,
 	body: {

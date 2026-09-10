@@ -2,6 +2,10 @@ class BeeperRun < ApplicationRecord
   self.table_name = "beeper_runs"
 
   SIGNAL_RESULT_MAX_BYTES = 8.kilobytes
+  RECENT_LIMIT = 5
+  LIST_LIMIT = 50
+  RETENTION = 30.days
+
   belongs_to :beeper
 
   enum :status, %w[ pending running succeeded failed skipped expired ].index_by(&:itself)
@@ -13,6 +17,21 @@ class BeeperRun < ApplicationRecord
       .group(:beeper_id)
       .pluck(:beeper_id, Arel.sql("COUNT(*)"), Arel.sql("SUM(CASE WHEN status = 'succeeded' THEN 1 ELSE 0 END)"))
       .to_h { |beeper_id, total, succeeded| [ beeper_id, { total: total, succeeded: succeeded || 0 } ] }
+  end
+
+  # { beeper_id => [newest-first runs] } capped at RECENT_LIMIT runs per beeper, in one windowed query.
+  def self.recent_by_beeper(beeper_ids, limit: RECENT_LIMIT)
+    ranked = where(beeper_id: beeper_ids)
+      .select("beeper_runs.*, ROW_NUMBER() OVER (PARTITION BY beeper_id ORDER BY scheduled_for DESC) AS run_rank")
+    from(ranked, :beeper_runs)
+      .where(run_rank: 1..limit)
+      .group_by(&:beeper_id)
+  end
+
+  def self.prune_expired_now
+    where(scheduled_for: ..RETENTION.ago).in_batches(of: 1_000) do |batch|
+      batch.delete_all
+    end
   end
 
   def execute_later
