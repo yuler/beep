@@ -73,6 +73,16 @@ Rails.application.routes.draw do
       end
 
       resource :settings, only: %i[ show update ]
+      resources :channels, only: %i[ index create destroy ]
+
+      namespace :device do
+        resource :inbox, only: %i[ show ]
+        resources :deliveries, only: [] do
+          member do
+            post :ack
+          end
+        end
+      end
 
       # Beep
       resources :beep_proposals, only: :create
