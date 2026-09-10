@@ -34,7 +34,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "site-uptime", beepers.first["beeper_app"]["slug"]
   end
 
-  test "index returns run stats and omits runs" do
+  test "index returns run stats and only the most recent runs, newest first" do
     beeper = Beeper.create!(
       account: @account,
       beeper_app: @beeper_app,
@@ -58,10 +58,13 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     body = response.parsed_body["beepers"].first
     assert_equal({ "total" => 7, "succeeded" => 4 }, body["run_stats"])
-    assert_nil body["runs"]
+    assert_equal 5, body["runs"].size
+    scheduled = body["runs"].map { |run| Time.zone.parse(run["scheduled_for"]) }
+    assert_equal scheduled.max, scheduled.first
+    assert_equal scheduled.sort.reverse, scheduled
   end
 
-  test "index returns empty run stats for a beeper without runs" do
+  test "index returns empty run stats and runs for a beeper without runs" do
     Beeper.create!(
       account: @account,
       beeper_app: @beeper_app,
@@ -78,7 +81,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     body = response.parsed_body["beepers"].first
     assert_equal({ "total" => 0, "succeeded" => 0 }, body["run_stats"])
-    assert_nil body["runs"]
+    assert_empty body["runs"]
   end
 
   test "show returns beeper details" do
@@ -160,7 +163,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "gzip", response.headers["Content-Encoding"]
   end
 
-  test "update modifies beeper properties" do
+  test "update response omits runs" do
     beeper = Beeper.create!(
       account: @account,
       beeper_app: @beeper_app,
@@ -179,6 +182,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     body = response.parsed_body
     assert_equal "New Title", body["title"]
+    assert_nil body["runs"]
   end
 
   test "create creates a new beeper via beeper_app_slug" do
@@ -201,6 +205,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Check customer checkout gateway", body["body"]
     assert_equal "site-uptime", body["beeper_app"]["slug"]
     assert_nil body["kind"]
+    assert_nil body["runs"]
   end
 
   test "update modifies beeper properties including notification_channels" do
@@ -319,6 +324,7 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal "paused", response.parsed_body["status"]
+    assert_nil response.parsed_body["runs"]
     assert beeper.reload.paused?
 
     delete "/api/v1/#{@account.slug}/beepers/#{beeper.id}/pause",

@@ -26,7 +26,7 @@ class PruneBeeperRunsJobTest < ActiveJob::TestCase
   end
 
   test "keeps runs exactly within the retention period" do
-    boundary = @beeper.runs.create!(scheduled_for: PruneBeeperRunsJob::RETENTION.ago + 1.minute, status: :succeeded)
+    boundary = @beeper.runs.create!(scheduled_for: BeeperRun::RETENTION.ago + 1.minute, status: :succeeded)
 
     PruneBeeperRunsJob.perform_now
 
