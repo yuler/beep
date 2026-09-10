@@ -14,7 +14,7 @@ class BeeperRun < ApplicationRecord
     where(beeper_id: beeper_ids)
       .group(:beeper_id)
       .pluck(:beeper_id, Arel.sql("COUNT(*)"), Arel.sql("SUM(CASE WHEN status = 'succeeded' THEN 1 ELSE 0 END)"))
-      .to_h { |beeper_id, total, succeeded| [beeper_id, { total: total, succeeded: succeeded || 0 }] }
+      .to_h { |beeper_id, total, succeeded| [ beeper_id, { total: total, succeeded: succeeded || 0 } ] }
   end
 
   # { beeper_id => [newest-first runs] } capped at RECENT_LIMIT runs per beeper, in one windowed query.
