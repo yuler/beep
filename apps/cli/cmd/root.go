@@ -40,5 +40,7 @@ func init() {
 
 	// Register top-level subcommands
 	RootCmd.AddCommand(runnerCmd)
+	RootCmd.AddCommand(channelCmd)
+	RootCmd.AddCommand(configCmd)
 	RootCmd.AddCommand(versionCmd)
 }

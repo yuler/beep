@@ -76,6 +76,8 @@ func (d *Daemon) Start(ctx context.Context) error {
 }
 
 func (d *Daemon) pollAndExecute(ctx context.Context) {
+	d.pollDeviceInbox(ctx)
+
 	for {
 		if len(d.sem) >= cap(d.sem) {
 			pingCtx, pingCancel := context.WithTimeout(ctx, 10*time.Second)
@@ -264,4 +266,50 @@ func (d *Daemon) jobEnv(job *task.Task) ([]string, error) {
 	)
 
 	return exec.WithJobEnv(extras), nil
+}
+
+func (d *Daemon) pollDeviceInbox(ctx context.Context) {
+	if d.cfg.DeviceToken == "" {
+		return
+	}
+
+	deliveries, err := d.client.FetchDeviceInbox(ctx)
+	if err != nil {
+		if ctx.Err() == nil {
+			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-device]")), ui.Red("Inbox error:"), err)
+		}
+		return
+	}
+
+	for _, delivery := range deliveries {
+		if delivery.ExpiresAt != nil && time.Now().After(*delivery.ExpiresAt) {
+			log.Printf("%s %s %s (expired at %s)",
+				ui.Bold(ui.Cyan("[beep-device]")),
+				ui.Yellow("Dropped expired delivery:"),
+				ui.Bold(delivery.ID),
+				delivery.ExpiresAt.Format(time.RFC3339),
+			)
+			_ = d.client.AckDeviceDelivery(ctx, delivery.ID, "failed", "expired")
+			continue
+		}
+
+		title, _ := delivery.Payload["title"].(string)
+		log.Printf("%s %s %s (%s)",
+			ui.Bold(ui.Cyan("[beep-device]")),
+			ui.Green("Received notification:"),
+			ui.Bold(delivery.ID),
+			ui.Dim(title),
+		)
+
+		out, hookErr := exec.DispatchOnBeepHook(ctx, d.workspace.Root, delivery)
+		if hookErr != nil {
+			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-device]")), ui.Red("Hook execution failed:"), hookErr)
+			_ = d.client.AckDeviceDelivery(ctx, delivery.ID, "failed", hookErr.Error())
+		} else {
+			if strings.TrimSpace(out) != "" {
+				log.Printf("%s %s %s", ui.Bold(ui.Cyan("[beep-device]")), ui.Dim("Hook output:"), strings.TrimSpace(out))
+			}
+			_ = d.client.AckDeviceDelivery(ctx, delivery.ID, "succeeded", "")
+		}
+	}
 }

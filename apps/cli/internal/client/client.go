@@ -279,8 +279,170 @@ func (c *Client) getJSON(ctx context.Context, url string, want int, dest any) er
 func (c *Client) setHeaders(req *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("X-Runner-Token", c.cfg.RunnerToken)
+	if c.cfg.RunnerToken != "" {
+		req.Header.Set("X-Runner-Token", c.cfg.RunnerToken)
+	}
+	if c.cfg.DeviceToken != "" {
+		req.Header.Set("X-Device-Token", c.cfg.DeviceToken)
+	}
 	req.Header.Set("User-Agent", fmt.Sprintf("Beep-Runner/%s (%s; %s)", version.Version, runtime.GOOS, runtime.GOARCH))
+}
+
+type DeviceDelivery struct {
+	ID        string         `json:"id"`
+	BeepRunID *string        `json:"beep_run_id"`
+	Status    string         `json:"status"`
+	Payload   map[string]any `json:"payload"`
+	ExpiresAt *time.Time     `json:"expires_at"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
+type DeviceInboxResponse struct {
+	Deliveries []DeviceDelivery `json:"deliveries"`
+}
+
+func (c *Client) FetchDeviceInbox(ctx context.Context) ([]DeviceDelivery, error) {
+	if c.cfg.DeviceToken == "" {
+		return nil, nil
+	}
+	url := fmt.Sprintf("%s/api/v1/device/inbox", c.cfg.ServerURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	c.setHeaders(req)
+	req.Header.Set("X-Device-Token", c.cfg.DeviceToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("fetch device inbox failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var inboxRes DeviceInboxResponse
+	if err := json.NewDecoder(resp.Body).Decode(&inboxRes); err != nil {
+		return nil, err
+	}
+	return inboxRes.Deliveries, nil
+}
+
+func (c *Client) AckDeviceDelivery(ctx context.Context, deliveryID string, status string, errorMsg string) error {
+	url := fmt.Sprintf("%s/api/v1/device/deliveries/%s/ack", c.cfg.ServerURL, deliveryID)
+	payload := map[string]any{
+		"status": status,
+	}
+	if errorMsg != "" {
+		payload["error"] = errorMsg
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))
+	if err != nil {
+		return err
+	}
+	c.setHeaders(req)
+	req.Header.Set("X-Device-Token", c.cfg.DeviceToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("ack device delivery failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+	return nil
+}
+
+type ChannelUser struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type Channel struct {
+	ID          string       `json:"id"`
+	Name        string       `json:"name"`
+	Kind        string       `json:"kind"`
+	Status      string       `json:"status"`
+	Token       string       `json:"token,omitempty"`
+	MaskedToken string       `json:"masked_token"`
+	User        *ChannelUser `json:"user,omitempty"`
+	LastSeenAt  *time.Time   `json:"last_seen_at"`
+	CreatedAt   time.Time    `json:"created_at"`
+}
+
+func (c *Client) ListChannels(ctx context.Context, accountSlug, authToken string) ([]Channel, error) {
+	url := fmt.Sprintf("%s/api/v1/%s/channels", c.cfg.ServerURL, accountSlug)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	c.setHeaders(req)
+	if authToken != "" {
+		req.Header.Set("Authorization", "Bearer "+authToken)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("list channels failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var res struct {
+		Channels []Channel `json:"channels"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return res.Channels, nil
+}
+
+func (c *Client) CreateChannel(ctx context.Context, accountSlug, authToken, name, kind string) (*Channel, error) {
+	url := fmt.Sprintf("%s/api/v1/%s/channels", c.cfg.ServerURL, accountSlug)
+	payload := map[string]any{
+		"channel": map[string]any{
+			"name": name,
+			"kind": kind,
+		},
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setHeaders(req)
+	if authToken != "" {
+		req.Header.Set("Authorization", "Bearer "+authToken)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("create channel failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var res struct {
+		Channel Channel `json:"channel"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return &res.Channel, nil
 }
 
 func mustJSON(payload any) *bytes.Reader {
