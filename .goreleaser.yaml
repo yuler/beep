@@ -48,3 +48,4 @@ changelog:
     exclude:
       - "Merge branch"
       - "Merge pull request"
+      - '\[release\]'
