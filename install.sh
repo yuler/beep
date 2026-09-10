@@ -35,7 +35,7 @@ setup_colors() {
 }
 
 info() {
-  printf "%sinfo%s %s\n" "${CYAN}" "${RESET}" "$1"
+  printf "%sinfo%s %s\n" "${CYAN}" "${RESET}" "$1" >&2
 }
 
 success() {
@@ -43,7 +43,7 @@ success() {
 }
 
 warn() {
-  printf "%swarning%s %s\n" "${YELLOW}" "${RESET}" "$1"
+  printf "%swarning%s %s\n" "${YELLOW}" "${RESET}" "$1" >&2
 }
 
 error() {
