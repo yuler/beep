@@ -1,7 +1,8 @@
 package workspace
 
 import (
-	"bufio"
+	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +30,9 @@ func (w *Workspace) LoadEnv() []string {
 func applyFile(dst *envx.Ordered, path string) {
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Printf("workspace: ignoring %s: %v", path, err)
+		}
 		return
 	}
 	parseInto(dst, string(data))
@@ -44,6 +48,9 @@ func applyFile(dst *envx.Ordered, path string) {
 //   - Empty lines and leading/trailing whitespace
 //
 // Multi-line values are not supported; each KEY=VALUE must fit on one line.
+// Lines with invalid keys ([A-Za-z_][A-Za-z0-9_]* required), unterminated
+// quotes, or trailing content after a closing quote (other than whitespace
+// or a # comment) are skipped.
 func parseEnv(content string) []string {
 	o := envx.New()
 	parseInto(o, content)
@@ -51,9 +58,10 @@ func parseEnv(content string) []string {
 }
 
 func parseInto(dst *envx.Ordered, content string) {
-	scanner := bufio.NewScanner(strings.NewReader(content))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+	// strings.Split (not bufio.Scanner) so a single very long line can't
+	// silently truncate the rest of the file (Scanner caps tokens at 64KB).
+	for _, rawLine := range strings.Split(content, "\n") {
+		line := strings.TrimSpace(rawLine)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
@@ -68,17 +76,35 @@ func parseInto(dst *envx.Ordered, content string) {
 		}
 
 		key = strings.TrimSpace(key)
-		if key == "" || strings.HasPrefix(key, "#") {
+		if !isValidEnvKey(key) {
 			continue
 		}
 
-		dst.Set(key, parseEnvValue(strings.TrimSpace(val)))
+		parsed, ok := parseEnvValue(strings.TrimSpace(val))
+		if !ok {
+			continue
+		}
+		dst.Set(key, parsed)
 	}
 }
 
-func parseEnvValue(raw string) string {
+func isValidEnvKey(key string) bool {
+	if key == "" {
+		return false
+	}
+	for i := 0; i < len(key); i++ {
+		c := key[i]
+		valid := c == '_' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || i > 0 && c >= '0' && c <= '9'
+		if !valid {
+			return false
+		}
+	}
+	return true
+}
+
+func parseEnvValue(raw string) (string, bool) {
 	if raw == "" {
-		return ""
+		return "", true
 	}
 
 	// Double-quoted string: "hello world"
@@ -86,6 +112,7 @@ func parseEnvValue(raw string) string {
 		var sb strings.Builder
 		escaped := false
 		closed := false
+		end := -1
 
 		for i := 1; i < len(raw); i++ {
 			ch := raw[i]
@@ -110,22 +137,31 @@ func parseEnvValue(raw string) string {
 				escaped = true
 			} else if ch == '"' {
 				closed = true
+				end = i
 				break
 			} else {
 				sb.WriteByte(ch)
 			}
 		}
-		if closed {
-			return sb.String()
+		if !closed {
+			return "", false
 		}
+		if !validQuotedRemainder(raw[end+1:]) {
+			return "", false
+		}
+		return sb.String(), true
 	}
 
 	// Single-quoted string: 'hello world' (literal)
 	if strings.HasPrefix(raw, "'") {
 		idx := strings.Index(raw[1:], "'")
-		if idx != -1 {
-			return raw[1 : 1+idx]
+		if idx == -1 {
+			return "", false
 		}
+		if !validQuotedRemainder(raw[1+idx+1:]) {
+			return "", false
+		}
+		return raw[1 : 1+idx], true
 	}
 
 	// Unquoted: strip trailing comments (space followed by #)
@@ -136,5 +172,12 @@ func parseEnvValue(raw string) string {
 		}
 	}
 
-	return strings.TrimSpace(raw)
+	return strings.TrimSpace(raw), true
+}
+
+// validQuotedRemainder reports whether the text after a closing quote is
+// empty or just a trailing comment.
+func validQuotedRemainder(rest string) bool {
+	rest = strings.TrimSpace(rest)
+	return rest == "" || strings.HasPrefix(rest, "#")
 }
