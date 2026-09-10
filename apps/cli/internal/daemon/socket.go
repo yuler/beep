@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
+	"beep/internal/proc"
 	"beep/internal/version"
 )
 
@@ -95,13 +95,13 @@ func StopDaemon(workspaceDir string, timeout time.Duration, force bool) (int, er
 		return 0, nil
 	}
 
-	proc, err := os.FindProcess(pid)
+	p, err := os.FindProcess(pid)
 	if err != nil {
 		return 0, fmt.Errorf("process %d not found: %w", pid, err)
 	}
 
-	// Send SIGTERM to initiate graceful shutdown
-	if err := proc.Signal(syscall.SIGTERM); err != nil {
+	// Send termination signal to initiate graceful shutdown
+	if err := proc.Terminate(p); err != nil {
 		if errors.Is(err, os.ErrProcessDone) || strings.Contains(err.Error(), "process already finished") {
 			_ = os.Remove(SocketPath(workspaceDir))
 			return pid, nil
@@ -119,11 +119,8 @@ func StopDaemon(workspaceDir string, timeout time.Duration, force bool) (int, er
 	}
 
 	if force {
-		// Daemon was started with Setsid; kill the whole process group if pid > 1.
-		if pid > 1 {
-			_ = syscall.Kill(-pid, syscall.SIGKILL)
-		}
-		_ = proc.Signal(syscall.SIGKILL)
+		// Force kill the process and any process group
+		_ = proc.Kill(p, pid)
 		time.Sleep(100 * time.Millisecond)
 		_ = os.Remove(SocketPath(workspaceDir))
 		return pid, nil

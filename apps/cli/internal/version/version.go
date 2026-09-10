@@ -1,8 +1,9 @@
 package version
 
 var (
-	// Version is overridden at build time using -ldflags
-	Version   = "0.0.0"
+	// Version is injected at build time using -ldflags.
+	// Defaults to "dev" when run without build flags.
+	Version   = "dev"
 	GitCommit = "unknown"
 	BuildDate = "unknown"
 )

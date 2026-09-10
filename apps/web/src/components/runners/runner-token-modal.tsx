@@ -1,7 +1,12 @@
 import { Check, Copy, Terminal } from "lucide-react";
-import { useState } from "react";
+import { CliInstallSnippet } from "@/components/runners/cli-install-snippet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+	CopyableCode,
+	CopyButton,
+	useCopyToClipboard,
+} from "@/components/ui/copy-button";
 import {
 	Dialog,
 	DialogContent,
@@ -23,20 +28,11 @@ interface RunnerTokenModalProps {
 interface CodeSnippetProps {
 	label: string;
 	code: string;
-	snippetKey: string;
-	copiedKey: string | null;
-	onCopy: (key: string, text: string) => void;
+	copied: boolean;
+	onCopy: () => void;
 }
 
-function CodeSnippet({
-	label,
-	code,
-	snippetKey,
-	copiedKey,
-	onCopy,
-}: CodeSnippetProps) {
-	const isCopied = copiedKey === snippetKey;
-
+function CodeSnippet({ label, code, copied, onCopy }: CodeSnippetProps) {
 	return (
 		<div className="flex flex-col gap-1.5 min-w-0 max-w-full">
 			<div className="flex items-center justify-between gap-2">
@@ -47,9 +43,9 @@ function CodeSnippet({
 					variant="ghost"
 					size="sm"
 					className="h-7 px-2 text-xs gap-1 shrink-0"
-					onClick={() => onCopy(snippetKey, code)}
+					onClick={onCopy}
 				>
-					{isCopied ? (
+					{copied ? (
 						<>
 							<Check className="size-3.5 text-emerald-500" />
 							<span className="text-emerald-500">{m.runners_copied()}</span>
@@ -62,25 +58,12 @@ function CodeSnippet({
 					)}
 				</Button>
 			</div>
-			<div className="relative group min-w-0 max-w-full rounded-lg border bg-muted/60">
-				<pre className="overflow-x-auto p-3 font-mono text-xs text-foreground whitespace-pre select-all min-w-0 max-w-full">
-					{code}
-				</pre>
-				<Button
-					variant="outline"
-					size="icon-xs"
-					className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity bg-background/90 hover:bg-background border shadow-xs"
-					onClick={() => onCopy(snippetKey, code)}
-					aria-label={m.runners_copy()}
-					title={m.runners_copy()}
-				>
-					{isCopied ? (
-						<Check className="size-3 text-emerald-500" />
-					) : (
-						<Copy className="size-3" />
-					)}
-				</Button>
-			</div>
+			<CopyableCode
+				code={code}
+				copied={copied}
+				onCopy={onCopy}
+				label={m.runners_copy()}
+			/>
 		</div>
 	);
 }
@@ -90,7 +73,8 @@ export function RunnerTokenModal({
 	open,
 	onOpenChange,
 }: RunnerTokenModalProps) {
-	const [copiedKey, setCopiedKey] = useState<string | null>(null);
+	const tokenCopy = useCopyToClipboard();
+	const cliCopy = useCopyToClipboard();
 
 	if (!runner || !runner.token) {
 		return null;
@@ -101,12 +85,6 @@ export function RunnerTokenModal({
 
 	const cliCmd = `beep runner config set --server ${serverUrl} --token ${token}
 beep runner up`;
-
-	function copyToClipboard(key: string, text: string) {
-		void navigator.clipboard.writeText(text);
-		setCopiedKey(key);
-		setTimeout(() => setCopiedKey(null), 2000);
-	}
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -121,7 +99,7 @@ beep runner up`;
 					<DialogDescription>{m.runners_token_modal_desc()}</DialogDescription>
 				</DialogHeader>
 
-				<div className="flex flex-col gap-5 py-2 min-w-0 max-w-full overflow-x-hidden">
+				<div className="flex flex-col gap-6 py-2 min-w-0 max-w-full overflow-x-hidden">
 					<Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
 						<AlertTitle className="text-xs font-semibold uppercase tracking-wider">
 							{m.common_tips()}
@@ -131,60 +109,73 @@ beep runner up`;
 						</AlertDescription>
 					</Alert>
 
-					{/* Token Block */}
-					<div className="flex flex-col gap-1.5 min-w-0 max-w-full">
-						<div className="flex items-center justify-between gap-2">
-							<span className="text-xs font-semibold text-foreground uppercase tracking-wider truncate">
-								Token
+					{/* Step 1: Install Beep CLI */}
+					<div className="flex flex-col gap-2 min-w-0 max-w-full">
+						<div className="flex flex-col gap-0.5">
+							<span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+								{m.runners_install_cli_step()}
 							</span>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-7 px-2 text-xs gap-1 shrink-0"
-								onClick={() => copyToClipboard("token", token)}
-							>
-								{copiedKey === "token" ? (
-									<>
-										<Check className="size-3.5 text-emerald-500" />
-										<span className="text-emerald-500">
-											{m.runners_copied()}
-										</span>
-									</>
-								) : (
-									<>
-										<Copy className="size-3.5" />
-										<span>{m.runners_copy()}</span>
-									</>
-								)}
-							</Button>
+							<p className="text-xs text-muted-foreground">
+								{m.runners_install_cli_desc()}
+							</p>
 						</div>
-						<div className="relative group min-w-0 max-w-full rounded-lg border bg-muted/60 px-3 py-2 font-mono text-xs text-foreground select-all break-all pr-9">
-							{token}
-							<Button
-								variant="outline"
-								size="icon-xs"
-								className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity bg-background/90 hover:bg-background border shadow-xs"
-								onClick={() => copyToClipboard("token", token)}
-								aria-label={m.runners_copy()}
-								title={m.runners_copy()}
-							>
-								{copiedKey === "token" ? (
-									<Check className="size-3 text-emerald-500" />
-								) : (
-									<Copy className="size-3" />
-								)}
-							</Button>
-						</div>
+						<CliInstallSnippet />
 					</div>
 
-					{/* Direct Binary CLI */}
-					<CodeSnippet
-						label={m.runners_cli_command()}
-						code={cliCmd}
-						snippetKey="cli"
-						copiedKey={copiedKey}
-						onCopy={copyToClipboard}
-					/>
+					{/* Step 2: Configure & Start Runner */}
+					<div className="flex flex-col gap-4 min-w-0 max-w-full border-t pt-4">
+						<div className="flex flex-col gap-0.5">
+							<span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+								{m.runners_connect_step()}
+							</span>
+						</div>
+
+						{/* Token Block */}
+						<div className="flex flex-col gap-1.5 min-w-0 max-w-full">
+							<div className="flex items-center justify-between gap-2">
+								<span className="text-xs font-semibold text-foreground uppercase tracking-wider truncate">
+									Token
+								</span>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="h-7 px-2 text-xs gap-1 shrink-0"
+									onClick={() => tokenCopy.copy(token)}
+								>
+									{tokenCopy.copied ? (
+										<>
+											<Check className="size-3.5 text-emerald-500" />
+											<span className="text-emerald-500">
+												{m.runners_copied()}
+											</span>
+										</>
+									) : (
+										<>
+											<Copy className="size-3.5" />
+											<span>{m.runners_copy()}</span>
+										</>
+									)}
+								</Button>
+							</div>
+							<div className="relative group min-w-0 max-w-full rounded-lg border bg-muted/60 px-3 py-2 font-mono text-xs text-foreground select-all break-all pr-9">
+								{token}
+								<CopyButton
+									copied={tokenCopy.copied}
+									onCopy={() => tokenCopy.copy(token)}
+									label={m.runners_copy()}
+									className="top-1.5 right-1.5"
+								/>
+							</div>
+						</div>
+
+						{/* Direct Binary CLI */}
+						<CodeSnippet
+							label={m.runners_cli_command()}
+							code={cliCmd}
+							copied={cliCopy.copied}
+							onCopy={() => cliCopy.copy(cliCmd)}
+						/>
+					</div>
 				</div>
 
 				<DialogFooter>

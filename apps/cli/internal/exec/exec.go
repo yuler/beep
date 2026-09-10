@@ -9,9 +9,9 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
+	"beep/internal/proc"
 	"beep/internal/task"
 )
 
@@ -31,13 +31,12 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 
 	cmd := exec.CommandContext(execCtx, argv[0], argv[1:]...)
 	cmd.Env = env
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	// Kill the whole process group, not just the direct child, on deadline.
+	proc.Setpgid(cmd)
 	cmd.Cancel = func() error {
-		if cmd.Process != nil && cmd.Process.Pid > 1 {
-			return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		if cmd.Process == nil {
+			return nil
 		}
-		return nil
+		return proc.Kill(cmd.Process, cmd.Process.Pid)
 	}
 	// Bound how long Wait may block on I/O pipes after the process exits
 	// (orphaned children keeping them open). Mirror of the old 2s grace.
@@ -58,8 +57,8 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 	waitErr := cmd.Wait()
 
 	// Ensure the whole process group is reaped (children of the job script).
-	if cmd.Process != nil && cmd.Process.Pid > 1 {
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	if cmd.Process != nil {
+		_ = proc.Kill(cmd.Process, cmd.Process.Pid)
 	}
 
 	stdout.flush()
