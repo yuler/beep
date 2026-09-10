@@ -47,7 +47,8 @@ warn() {
 }
 
 error() {
-  printf "%serror%s %s\n" "${RED}" "${RESET}" "$1" >&2
+  # %b expands backslash escapes (\n) in the message argument
+  printf "%serror%s %b\n" "${RED}" "${RESET}" "$1" >&2
   exit 1
 }
 

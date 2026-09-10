@@ -108,8 +108,8 @@ gum_info "Updated VERSION ($new_version)"
 
 echo ""
 if gum confirm "Create git commit and tag v$new_version?"; then
-  git add VERSION
-  git commit -m "🚀 [release] Bump version to $new_version"
+  # Commit only VERSION — leave any unrelated staged changes staged.
+  git commit -m "🚀 [release] Bump version to $new_version" -- VERSION
   git tag "v$new_version"
   gum_info "Created commit & tag v$new_version"
   if gum confirm "Push commit and tag to origin?"; then

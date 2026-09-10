@@ -1,8 +1,8 @@
 import { CopyableCode, useCopyToClipboard } from "@/components/ui/copy-button";
+import { GITHUB_REPO } from "@/config";
 import { m } from "@/locale/paraglide/messages";
 
-const INSTALL_COMMAND =
-	"curl -fsSL https://raw.githubusercontent.com/yuler/beep/main/install.sh | sh";
+const INSTALL_COMMAND = `curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPO}/main/install.sh | sh`;
 
 export function CliInstallSnippet() {
 	const { copied, copy } = useCopyToClipboard();

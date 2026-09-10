@@ -5,7 +5,8 @@ project_name: beep
 
 before:
   hooks:
-    - go mod tidy -C apps/cli
+    # Download (not tidy) — never mutate go.mod/go.sum during a release.
+    - go mod download -C apps/cli
 
 builds:
   - id: beep
