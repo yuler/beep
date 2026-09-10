@@ -19,7 +19,7 @@ beep runner config set --server https://core.example.com --token beep_rt_...
 beep runner up
 ```
 
-The process injects `BEEP_LOG_URL`, `BEEP_RESULT_URL`, and `BEEP_CONFIG_*` from the job config. Stdout/stderr is uploaded as the run log. Exit `0` is `ok`; any other exit is `alerting`. Scripts may also `POST` JSON to `$BEEP_RESULT_URL`:
+The process injects `BEEP_RUNNER_LOG_URL`, `BEEP_RUNNER_RESULT_URL`, and `BEEP_RUNNER_CONFIG_*` from the job config. Stdout/stderr is uploaded as the run log. Exit `0` is `ok`; any other exit is `alerting`. Scripts may also `POST` JSON to `$BEEP_RUNNER_RESULT_URL`:
 
 ```json
 { "status": "ok", "title": "healthy", "message": "...", "metrics": { "latency_ms": 12 } }

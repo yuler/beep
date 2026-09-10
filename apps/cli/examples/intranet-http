@@ -9,11 +9,11 @@
 # Place this file at ~/.beep/jobs/intranet-http (chmod +x).
 #
 # Optional job config on the server: { "target_url": "http://10.0.0.5/health" }
-# Scripts can log with stdout (captured by the runner) or POST to $BEEP_LOG_URL.
+# Scripts can log with stdout (captured by the runner) or POST to $BEEP_RUNNER_LOG_URL.
 
 set -euo pipefail
 
-URL="${BEEP_CONFIG_TARGET_URL:-http://127.0.0.1/health}"
+URL="${BEEP_RUNNER_CONFIG_TARGET_URL:-http://127.0.0.1/health}"
 
 echo "checking ${URL}"
 

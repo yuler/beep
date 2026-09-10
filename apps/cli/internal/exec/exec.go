@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"beep/internal/envx"
 	"beep/internal/proc"
 	"beep/internal/task"
 )
@@ -138,23 +139,24 @@ var blockedJobEnvKeys = map[string]struct{}{
 }
 
 func WithJobEnv(extra []string) []string {
-	env := scrubJobEnv(os.Environ())
-	if len(extra) == 0 {
-		return env
-	}
-	return append(env, scrubJobEnv(extra)...)
-}
+	merged := envx.New()
 
-func scrubJobEnv(env []string) []string {
-	out := make([]string, 0, len(env))
-	for _, item := range env {
-		key, _, _ := strings.Cut(item, "=")
+	set := func(item string) {
+		key, val, _ := strings.Cut(item, "=")
 		if _, blocked := blockedJobEnvKeys[key]; blocked {
-			continue
+			return
 		}
-		out = append(out, item)
+		merged.Set(key, val)
 	}
-	return out
+
+	for _, item := range os.Environ() {
+		set(item)
+	}
+	for _, item := range extra {
+		set(item)
+	}
+
+	return merged.Slice()
 }
 
 func ConfigEnv(config map[string]any) []string {
@@ -164,7 +166,7 @@ func ConfigEnv(config map[string]any) []string {
 	var out []string
 	for key, val := range config {
 		name := strings.ToUpper(strings.ReplaceAll(key, "-", "_"))
-		out = append(out, fmt.Sprintf("BEEP_CONFIG_%s=%v", name, val))
+		out = append(out, fmt.Sprintf("BEEP_RUNNER_CONFIG_%s=%v", name, val))
 	}
 	return out
 }
