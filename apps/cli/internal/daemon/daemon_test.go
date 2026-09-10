@@ -56,8 +56,8 @@ func TestJobEnvPrecedence(t *testing.T) {
 API_KEY=from_workspace_env
 OVERRIDDEN_BY_LOCAL=from_env
 OVERRIDDEN_BY_SERVER=from_workspace_env
-BEEP_CONFIG_OVERRIDDEN_BY_SERVER=from_workspace_env
-BEEP_RUN_ID=from_workspace_env
+BEEP_RUNNER_CONFIG_OVERRIDDEN_BY_SERVER=from_workspace_env
+BEEP_RUNNER_RUN_ID=from_workspace_env
 `
 	if err := os.WriteFile(envFile, []byte(envContent), 0o600); err != nil {
 		t.Fatal(err)
@@ -102,9 +102,9 @@ OVERRIDDEN_BY_LOCAL=from_local
 		{"API_KEY", "from_workspace_env"},                          // workspace .env overrides host env
 		{"OVERRIDDEN_BY_LOCAL", "from_local"},                      // .env.local overrides .env
 		{"OVERRIDDEN_BY_SERVER", "from_workspace_env"},             // non-colliding .env var survives
-		{"BEEP_CONFIG_OVERRIDDEN_BY_SERVER", "from_server_config"}, // server config overrides .env
-		{"BEEP_RUN_ID", "run-123"},                                 // runtime context overrides .env
-		{"BEEP_JOB_SLUG", "custom-job"},
+		{"BEEP_RUNNER_CONFIG_OVERRIDDEN_BY_SERVER", "from_server_config"}, // server config overrides .env
+		{"BEEP_RUNNER_RUN_ID", "run-123"},                                 // runtime context overrides .env
+		{"BEEP_RUNNER_JOB_SLUG", "custom-job"},
 	}
 	for _, tc := range tests {
 		if envMap[tc.key] != tc.want {

@@ -166,7 +166,7 @@ func ConfigEnv(config map[string]any) []string {
 	var out []string
 	for key, val := range config {
 		name := strings.ToUpper(strings.ReplaceAll(key, "-", "_"))
-		out = append(out, fmt.Sprintf("BEEP_CONFIG_%s=%v", name, val))
+		out = append(out, fmt.Sprintf("BEEP_RUNNER_CONFIG_%s=%v", name, val))
 	}
 	return out
 }

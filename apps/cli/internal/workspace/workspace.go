@@ -336,8 +336,8 @@ func GenerateShebang(scriptType string) (shebang string, commentPrefix string, t
 		return "#!/usr/bin/env bash", "# ", `set -euo pipefail
 
 # Environment variables available:
-#   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
-#   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
+#   BEEP_RUNNER_SERVER, BEEP_RUNNER_RUN_ID, BEEP_RUNNER_JOB_SLUG
+#   BEEP_RUNNER_LOG_URL, BEEP_RUNNER_RESULT_URL, BEEP_RUNNER_CONFIG, BEEP_RUNNER_CONFIG_*
 
 echo "Starting health check..."
 
@@ -349,8 +349,8 @@ exit 0
 `
 	case "node", "nodejs", "node.js", "js":
 		return "#!/usr/bin/env node", "// ", `// Environment variables available:
-//   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
-//   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
+//   BEEP_RUNNER_SERVER, BEEP_RUNNER_RUN_ID, BEEP_RUNNER_JOB_SLUG
+//   BEEP_RUNNER_LOG_URL, BEEP_RUNNER_RESULT_URL, BEEP_RUNNER_CONFIG, BEEP_RUNNER_CONFIG_*
 
 console.log("Starting health check...");
 
@@ -361,8 +361,8 @@ process.exit(0);
 `
 	case "bun":
 		return "#!/usr/bin/env bun", "// ", `// Environment variables available:
-//   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
-//   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
+//   BEEP_RUNNER_SERVER, BEEP_RUNNER_RUN_ID, BEEP_RUNNER_JOB_SLUG
+//   BEEP_RUNNER_LOG_URL, BEEP_RUNNER_RESULT_URL, BEEP_RUNNER_CONFIG, BEEP_RUNNER_CONFIG_*
 
 console.log("Starting health check with bun...");
 
@@ -375,8 +375,8 @@ process.exit(0);
 import sys
 
 # Environment variables available:
-#   BEEP_SERVER, BEEP_RUN_ID, BEEP_JOB_SLUG
-#   BEEP_LOG_URL, BEEP_RESULT_URL, BEEP_CONFIG, BEEP_CONFIG_*
+#   BEEP_RUNNER_SERVER, BEEP_RUNNER_RUN_ID, BEEP_RUNNER_JOB_SLUG
+#   BEEP_RUNNER_LOG_URL, BEEP_RUNNER_RESULT_URL, BEEP_RUNNER_CONFIG, BEEP_RUNNER_CONFIG_*
 
 print("Starting health check...")
 

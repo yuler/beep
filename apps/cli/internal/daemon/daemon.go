@@ -239,12 +239,12 @@ func (d *Daemon) jobEnv(job *task.Task) []string {
 	extras = append(extras, d.workspace.LoadEnv()...)
 	extras = append(extras, exec.ConfigEnv(job.Config)...)
 	extras = append(extras,
-		"BEEP_SERVER="+d.cfg.ServerURL,
-		"BEEP_RUN_ID="+job.ID,
-		"BEEP_JOB_SLUG="+job.JobSlug,
-		"BEEP_LOG_URL="+job.LogURL,
-		"BEEP_RESULT_URL="+job.ResultURL,
-		"BEEP_CONFIG="+string(configJSON),
+		"BEEP_RUNNER_SERVER="+d.cfg.ServerURL,
+		"BEEP_RUNNER_RUN_ID="+job.ID,
+		"BEEP_RUNNER_JOB_SLUG="+job.JobSlug,
+		"BEEP_RUNNER_LOG_URL="+job.LogURL,
+		"BEEP_RUNNER_RESULT_URL="+job.ResultURL,
+		"BEEP_RUNNER_CONFIG="+string(configJSON),
 	)
 
 	return exec.WithJobEnv(extras)

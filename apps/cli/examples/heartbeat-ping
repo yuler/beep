@@ -7,9 +7,9 @@
 
 set -euo pipefail
 
-PING_URL="${BEEP_CONFIG_PING_URL:-}"
+PING_URL="${BEEP_RUNNER_CONFIG_PING_URL:-}"
 if [ -z "$PING_URL" ]; then
-  echo "BEEP_CONFIG_PING_URL (job config ping_url) is required"
+  echo "BEEP_RUNNER_CONFIG_PING_URL (job config ping_url) is required"
   exit 1
 fi
 
