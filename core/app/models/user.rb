@@ -1,5 +1,5 @@
 class User < ApplicationRecord
-  NOTIFICATION_CHANNELS = %w[ email web_push ].freeze
+  NOTIFICATION_CHANNELS = %w[ email web_push device ].freeze
   DEFAULT_NOTIFICATION_CHANNELS = %w[ email ].freeze
 
   include Role
@@ -8,6 +8,8 @@ class User < ApplicationRecord
   belongs_to :identity, optional: true
 
   has_many :push_subscriptions, class_name: "Push::Subscription", dependent: :delete_all
+  has_many :channels, dependent: :destroy
+  has_many :channel_deliveries, through: :channels, source: :deliveries
 
   enum :timezone_source, %w[ detected manual ].index_by(&:itself)
 

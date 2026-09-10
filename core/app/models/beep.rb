@@ -231,7 +231,9 @@ class Beep < ApplicationRecord
     def validate_notification_channels
       return if notification_channels.blank?
 
-      invalid = Array(notification_channels) - User::NOTIFICATION_CHANNELS
+      invalid = Array(notification_channels).reject do |channel|
+        channel.in?(User::NOTIFICATION_CHANNELS) || channel.to_s.start_with?("device:")
+      end
       if invalid.any?
         errors.add(:notification_channels, "contains unsupported channels: #{invalid.join(', ')}")
       end

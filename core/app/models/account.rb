@@ -10,6 +10,7 @@ class Account < ApplicationRecord
   has_many :runners, dependent: :destroy
   has_many :runner_jobs, class_name: "Runner::Job", dependent: :destroy
   has_many :push_subscriptions, class_name: "Push::Subscription", dependent: :destroy
+  has_many :channels, dependent: :destroy
   has_many :invitations, dependent: :destroy
   has_many :slug_holds, class_name: "Account::SlugHold", dependent: :delete_all
   has_one :join_code, dependent: :destroy

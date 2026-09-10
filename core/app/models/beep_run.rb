@@ -54,6 +54,11 @@ class BeepRun < ApplicationRecord
         end
       end
 
+      if channels.include?("device") || channels.any? { |c| c.to_s.start_with?("device:") }
+        payload_result = deliver_device(user, channels, payload_result)
+        persist_result(payload_result)
+      end
+
       payload_result
     end
 
@@ -109,5 +114,52 @@ class BeepRun < ApplicationRecord
       payload_result.merge("email" => { "status" => "sent" })
     rescue StandardError => error
       payload_result.merge("email" => { "status" => "error", "error" => error.class.name })
+    end
+
+    def deliver_device(user, channels, payload_result)
+      if payload_result.key?("device")
+        payload_result
+      else
+        payload_result.merge(device_payload(user, channels))
+      end
+    end
+
+    def device_payload(user, channels)
+      target_channels = user.channels.active.where(kind: :device)
+      specific_names = channels.select { |c| c.to_s.start_with?("device:") }.map { |c| c.to_s.delete_prefix("device:") }
+      if specific_names.any?
+        target_channels = target_channels.where(name: specific_names)
+      end
+
+      if target_channels.empty?
+        { "device" => { "reason" => "no_channels" } }
+      else
+        {
+          "device" => {
+            "deliveries" => target_channels.map { |channel| deliver_to_channel(channel) }
+          }
+        }
+      end
+    end
+
+    def deliver_to_channel(channel)
+      expires = (scheduled_for || Time.current) + ChannelDelivery::DEFAULT_TTL
+      delivery = channel.deliveries.create!(
+        beep_run: self,
+        payload: {
+          id: id,
+          event: "beep.fired",
+          beep_id: beep.id,
+          title: beep.title,
+          body: beep.body_text,
+          scheduled_for: (scheduled_for || Time.current).iso8601,
+          expires_at: expires.iso8601,
+          metadata: {}
+        },
+        expires_at: expires
+      )
+      { "channel_id" => channel.id, "channel_name" => channel.name, "delivery_id" => delivery.id, "status" => "queued" }
+    rescue StandardError => error
+      { "channel_id" => channel.id, "channel_name" => channel.name, "status" => "error", "error" => error.class.name }
     end
 end

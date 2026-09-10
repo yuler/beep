@@ -224,6 +224,49 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
       beep
     end
 
+  test "deliver queues deliveries for recipient user device channels" do
+    channel = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :device,
+      name: "laptop"
+    )
+    @beep.update!(notification_channels: %w[ device ])
+
+    @run.deliver_now
+    @run.reload
+
+    assert @run.succeeded?
+    assert_equal 1, channel.deliveries.count
+    delivery = channel.deliveries.sole
+    assert_equal "pending", delivery.status
+    assert_equal @beep.title, delivery.payload["title"]
+    assert_equal "queued", @run.result.dig("device", "deliveries", 0, "status")
+  end
+
+  test "deliver targets specific device channel by name" do
+    laptop = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :device,
+      name: "laptop"
+    )
+    desktop = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :device,
+      name: "desktop"
+    )
+    @beep.update!(notification_channels: %w[ device:laptop ])
+
+    @run.deliver_now
+    @run.reload
+
+    assert @run.succeeded?
+    assert_equal 1, laptop.deliveries.count
+    assert_equal 0, desktop.deliveries.count
+  end
+
     def subscribe(endpoint, user: users(:john))
       Push::Subscription.new(
         user: user,
