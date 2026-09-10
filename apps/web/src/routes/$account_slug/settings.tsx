@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-router";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { ChannelManagementSettings } from "@/components/settings/channel-management-settings";
 import { NotificationChannelSettings } from "@/components/settings/notification-channel-settings";
 import { TimezoneSettings } from "@/components/settings/timezone-settings";
 import { WebPushSettings } from "@/components/settings/web-push-settings";
@@ -60,6 +61,7 @@ function SettingsPage() {
 					channels={settings.notification_channels}
 					onChanged={() => router.invalidate()}
 				/>
+				<ChannelManagementSettings slug={slug} />
 				<WebPushSettings slug={slug} />
 			</div>
 		</>
