@@ -36,6 +36,7 @@ Local CORS for web → core `/api/v1` is development-only: [`core/config/initial
 - All version strings must come from the [`VERSION`](VERSION) file at the repo root (`APP_VERSION` build arg in Docker/CI overrides it).
 - Markdown tables must be auto-aligned (pad columns so pipes line up).
 - Do not use superpower or other speculative-driven skills unless explicitly declared.
+- Do not add speculative backwards compatibility or legacy fallback code without asking first; confirm with the user to avoid unnecessary complexity.
 - If something is unclear, ask questions. Keep everything from design to code as simple as possible.
 
 ## Core

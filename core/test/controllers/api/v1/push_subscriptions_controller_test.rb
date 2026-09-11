@@ -50,7 +50,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :created
-    subscription = users(:john).push_subscriptions.find_by!(endpoint: @endpoint)
+    subscription = users(:john).push_subscriptions.for_endpoint(@endpoint).sole
     assert_equal "new-key", subscription.p256dh_key
     assert_equal "new-auth", subscription.auth_key
   end

@@ -74,6 +74,25 @@ Rails.application.routes.draw do
 
       resource :settings, only: %i[ show update ]
 
+      resources :channels, only: %i[ index create destroy ] do
+        post :test, on: :member
+      end
+      namespace :channels do
+        namespace :cli do
+          resource :inbox, only: %i[ show ]
+          resource :disconnect, only: %i[ destroy ]
+          resources :deliveries, only: [] do
+            scope module: :deliveries do
+              resource :ack, only: :create
+            end
+          end
+          resources :authorizations, param: :user_code, only: %i[ create show update destroy ]
+          namespace :authorizations do
+            resource :token, only: :create
+          end
+        end
+      end
+
       # Beep
       resources :beep_proposals, only: :create
       resources :beeps, only: %i[ index show create update destroy ] do

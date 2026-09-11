@@ -32,6 +32,10 @@ class Identity < ApplicationRecord
     @personal_account ||= accounts.personal.first!
   end
 
+  def personal_user
+    users.find_by(account: personal_account)
+  end
+
   def send_magic_link(**attributes)
     attributes[:purpose] = attributes.delete(:for) if attributes.key?(:for)
 

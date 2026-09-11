@@ -15,18 +15,20 @@ var (
 	flagStopTimeout time.Duration
 )
 
-var stopCmd = &cobra.Command{
-	Use:   "stop",
-	Short: "Stop the running runner daemon",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runStop(cmd, args)
-	},
+func newStopCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "stop",
+		Short: "Stop the running daemon",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runStop(cmd, args)
+		},
+	}
+	cmd.Flags().BoolVarP(&flagStopForce, "force", "f", false, "Forcibly kill the daemon process if graceful stop times out")
+	cmd.Flags().DurationVar(&flagStopTimeout, "timeout", 10*time.Second, "Timeout waiting for daemon to stop")
+	return cmd
 }
 
-func init() {
-	stopCmd.Flags().BoolVarP(&flagStopForce, "force", "f", false, "Forcibly kill the daemon process if graceful stop times out")
-	stopCmd.Flags().DurationVar(&flagStopTimeout, "timeout", 10*time.Second, "Timeout waiting for daemon to stop")
-}
+var stopCmd = newStopCmd()
 
 func runStop(cmd *cobra.Command, args []string) error {
 	cfg, err := loadConfig()

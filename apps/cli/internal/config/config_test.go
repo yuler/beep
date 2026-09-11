@@ -119,3 +119,13 @@ func TestMaskToken(t *testing.T) {
 		t.Errorf("unexpected masked token: %s", MaskToken("beep_rt_12345678abcdefgh"))
 	}
 }
+
+func TestDefaultWorkspace(t *testing.T) {
+	ws := DefaultWorkspace()
+	if !filepath.IsAbs(ws) && ws != DefaultWorkspaceName {
+		t.Errorf("expected absolute path or fallback, got %s", ws)
+	}
+	if DefaultWorkspaceDisplay() != "~/"+DefaultWorkspaceName {
+		t.Errorf("expected ~/%s, got %s", DefaultWorkspaceName, DefaultWorkspaceDisplay())
+	}
+}

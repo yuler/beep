@@ -39,26 +39,39 @@ func New(cfg *config.Config, ws *workspace.Workspace) *Daemon {
 }
 
 func (d *Daemon) Start(ctx context.Context) error {
+	hasRunner := d.cfg.RunnerToken != ""
+	hasChannel := d.cfg.ChannelToken != "" || d.cfg.CliToken != ""
+
 	log.Printf("%s Connecting to %s %s=%s %s=%s",
-		ui.Bold(ui.Cyan("[beep-runner]")),
+		ui.Bold(ui.Cyan("[beep-daemon]")),
 		ui.Bold(d.cfg.ServerURL),
 		ui.Dim("workspace"), ui.Dim(d.workspace.Root),
 		ui.Dim("concurrency"), ui.Yellow(fmt.Sprintf("%d", d.cfg.Concurrency)),
 	)
 
-	pingRes, err := d.client.Ping(ctx)
-	if err != nil {
-		return fmt.Errorf("initial handshake failed: %w", err)
+	if hasRunner {
+		pingRes, err := d.client.Ping(ctx)
+		if err != nil {
+			return fmt.Errorf("runner handshake failed: %w", err)
+		}
+		log.Printf("%s %s %s (%s)",
+			ui.Bold(ui.Cyan("[beep-runner]")),
+			ui.Green("Connected:"),
+			ui.Bold(pingRes.RunnerID),
+			ui.Dim(pingRes.RunnerName),
+		)
 	}
+
+	if hasChannel {
+		log.Printf("%s %s",
+			ui.Bold(ui.Cyan("[beep-cli]")),
+			ui.Green("Channel listening active"),
+		)
+	}
+
 	if d.OnReady != nil {
 		d.OnReady()
 	}
-	log.Printf("%s %s %s (%s)",
-		ui.Bold(ui.Cyan("[beep-runner]")),
-		ui.Green("Connected:"),
-		ui.Bold(pingRes.RunnerID),
-		ui.Dim(pingRes.RunnerName),
-	)
 
 	ticker := time.NewTicker(d.cfg.PollInterval)
 	defer ticker.Stop()
@@ -66,7 +79,7 @@ func (d *Daemon) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("%s %s", ui.Bold(ui.Cyan("[beep-runner]")), ui.Yellow("Shutting down..."))
+			log.Printf("%s %s", ui.Bold(ui.Cyan("[beep-daemon]")), ui.Yellow("Shutting down..."))
 			d.wg.Wait()
 			return nil
 		case <-ticker.C:
@@ -76,6 +89,14 @@ func (d *Daemon) Start(ctx context.Context) error {
 }
 
 func (d *Daemon) pollAndExecute(ctx context.Context) {
+	if d.cfg.ChannelToken != "" || d.cfg.CliToken != "" {
+		d.pollCliInbox(ctx)
+	}
+
+	if d.cfg.RunnerToken == "" {
+		return
+	}
+
 	for {
 		if len(d.sem) >= cap(d.sem) {
 			pingCtx, pingCancel := context.WithTimeout(ctx, 10*time.Second)
@@ -264,4 +285,70 @@ func (d *Daemon) jobEnv(job *task.Task) ([]string, error) {
 	)
 
 	return exec.WithJobEnv(extras), nil
+}
+
+func (d *Daemon) pollCliInbox(ctx context.Context) {
+	token := d.cfg.ChannelToken
+	if token == "" {
+		token = d.cfg.CliToken
+	}
+	if token == "" {
+		token = d.cfg.DeviceToken
+	}
+	if token == "" {
+		return
+	}
+
+	deliveries, err := d.client.FetchCliInbox(ctx)
+	if err != nil {
+		if ctx.Err() == nil {
+			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-cli]")), ui.Red("Inbox error:"), err)
+		}
+		return
+	}
+
+	for _, delivery := range deliveries {
+		if delivery.ExpiresAt != nil && time.Now().After(*delivery.ExpiresAt) {
+			log.Printf("%s %s %s (expired at %s)",
+				ui.Bold(ui.Cyan("[beep-cli]")),
+				ui.Yellow("Dropped expired delivery:"),
+				ui.Bold(delivery.ID),
+				delivery.ExpiresAt.Format(time.RFC3339),
+			)
+			_ = d.client.AckCliDelivery(ctx, delivery.ID, "failed", "expired")
+			continue
+		}
+
+		title, _ := delivery.Payload["title"].(string)
+		body, _ := delivery.Payload["body"].(string)
+		if body == "" {
+			body, _ = delivery.Payload["message"].(string)
+		}
+
+		log.Printf("%s %s %s (%s)",
+			ui.Bold(ui.Cyan("[beep-cli]")),
+			ui.Green("Received notification:"),
+			ui.Bold(delivery.ID),
+			ui.Dim(title),
+		)
+
+		if title != "" || body != "" {
+			notifTitle := title
+			if notifTitle == "" {
+				notifTitle = "Beep Notification"
+			}
+			exec.NotifyDesktop(notifTitle, body)
+		}
+
+		out, hookErr := exec.DispatchOnBeepHook(ctx, d.workspace.Root, delivery)
+		if hookErr != nil {
+			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-cli]")), ui.Red("Hook execution failed:"), hookErr)
+			_ = d.client.AckCliDelivery(ctx, delivery.ID, "failed", hookErr.Error())
+		} else {
+			if strings.TrimSpace(out) != "" {
+				log.Printf("%s %s %s", ui.Bold(ui.Cyan("[beep-cli]")), ui.Dim("Hook output:"), strings.TrimSpace(out))
+			}
+			_ = d.client.AckCliDelivery(ctx, delivery.ID, "succeeded", "")
+		}
+	}
 }

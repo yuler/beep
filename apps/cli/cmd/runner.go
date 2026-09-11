@@ -26,13 +26,9 @@ Use runner job create / push / pull to manage local check scripts.`,
 }
 
 func init() {
-	runnerCmd.PersistentFlags().StringVarP(&flagWorkspace, "workspace", "w", "", "Local job workspace directory (default ~/.beep, env: BEEP_WORKSPACE)")
-	runnerCmd.PersistentFlags().StringVarP(&flagServer, "server", "s", "", "Beep server URL (env: BEEP_SERVER)")
-	runnerCmd.PersistentFlags().StringVarP(&flagToken, "token", "t", "", "Runner authentication token (env: BEEP_RUNNER_TOKEN)")
-
-	runnerCmd.AddCommand(upCmd)
-	runnerCmd.AddCommand(stopCmd)
-	runnerCmd.AddCommand(statusCmd)
+	runnerCmd.AddCommand(newUpCmd())
+	runnerCmd.AddCommand(newStopCmd())
+	runnerCmd.AddCommand(newStatusCmd())
 	runnerCmd.AddCommand(configCmd)
 	runnerCmd.AddCommand(jobCmd)
 }

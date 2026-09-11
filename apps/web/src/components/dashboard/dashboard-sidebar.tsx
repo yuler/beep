@@ -6,8 +6,9 @@ import {
 	KeyRound,
 	LayoutDashboard,
 	Mail,
+	Radio,
 	Server,
-	Settings,
+	SlidersHorizontal,
 	User,
 } from "lucide-react";
 import { AccountSwitcher } from "@/components/dashboard/account-switcher";
@@ -51,8 +52,11 @@ export function DashboardSidebar({
 	const isMy = pathname.startsWith("/my");
 	const homePath = `/${slug}`;
 	const beepsPath = `/${slug}/beeps`;
+	const beepersPath = `/${slug}/beepers`;
 	const runnersPath = `/${slug}/runners`;
 	const settingsPath = `/${slug}/settings`;
+	const settingsGeneralPath = `/${slug}/settings/general`;
+	const settingsChannelsPath = `/${slug}/settings/channels`;
 	const lettersPath = "/dev/letters";
 	const jobsPath = "/admin/jobs";
 	const statsPath = "/admin/stats";
@@ -191,8 +195,8 @@ export function DashboardSidebar({
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											isActive={
-												pathname === `/${slug}/beepers` ||
-												pathname.startsWith(`/${slug}/beepers/`)
+												pathname === beepersPath ||
+												pathname.startsWith(`${beepersPath}/`)
 											}
 											tooltip={m.nav_beepers()}
 											render={
@@ -226,23 +230,53 @@ export function DashboardSidebar({
 											<span>{m.nav_runners()}</span>
 										</SidebarMenuButton>
 									</SidebarMenuItem>
+								</SidebarMenu>
+							</SidebarGroupContent>
+						</SidebarGroup>
+
+						<SidebarGroup>
+							<SidebarGroupLabel>{m.nav_settings()}</SidebarGroupLabel>
+							<SidebarGroupContent>
+								<SidebarMenu>
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											isActive={
+												pathname === settingsGeneralPath ||
+												pathname.startsWith(`${settingsGeneralPath}/`) ||
 												pathname === settingsPath ||
-												pathname.startsWith(`${settingsPath}/`)
+												pathname === `${settingsPath}/`
 											}
-											tooltip={m.nav_settings()}
+											tooltip={m.settings_general_title()}
 											render={
 												<Link
-													to="/$account_slug/settings"
+													to="/$account_slug/settings/general"
 													params={{ account_slug: slug }}
 													onClick={closeMobileSidebar}
 												/>
 											}
 										>
-											<Settings />
-											<span>{m.nav_settings()}</span>
+											<SlidersHorizontal />
+											<span>{m.settings_general_title()}</span>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											isActive={
+												pathname === settingsChannelsPath ||
+												pathname.startsWith(`${settingsChannelsPath}/`) ||
+												pathname === `/${slug}/settings/notifications`
+											}
+											tooltip={m.settings_channels_title()}
+											render={
+												<Link
+													to="/$account_slug/settings/channels"
+													params={{ account_slug: slug }}
+													onClick={closeMobileSidebar}
+												/>
+											}
+										>
+											<Radio />
+											<span>{m.settings_channels_title()}</span>
 										</SidebarMenuButton>
 									</SidebarMenuItem>
 								</SidebarMenu>

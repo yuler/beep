@@ -63,14 +63,23 @@ func (w *DailyLogWriter) CurrentLogFilePath() string {
 
 func (w *DailyLogWriter) rotateIfNeeded(now time.Time) error {
 	day := now.Format("2006-01-02")
+	filename := filepath.Join(w.dir, dailyLogName(w.prefix, day))
+
 	if w.currentDay == day && w.currentFile != nil {
-		return nil
+		if _, err := os.Stat(filename); err == nil {
+			return nil
+		}
 	}
+
 	if w.currentFile != nil {
 		_ = w.currentFile.Close()
 		w.currentFile = nil
 	}
-	filename := filepath.Join(w.dir, dailyLogName(w.prefix, day))
+
+	if err := os.MkdirAll(w.dir, 0o755); err != nil {
+		return fmt.Errorf("failed to create log directory %s: %w", w.dir, err)
+	}
+
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open log file %s: %w", filename, err)

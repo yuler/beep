@@ -331,4 +331,69 @@ class BeepTest < ActiveSupport::TestCase
     end
     assert beep.reload.completed?
   end
+
+  test "polymorphic source supports Beeper and Runner::Job" do
+    app = BeeperApp.create!(
+      slug: "echo",
+      version: "1.0.0",
+      manifest: {
+        "manifest_version" => 1,
+        "slug" => "echo",
+        "name" => "Echo Monitor",
+        "version" => "1.0.0",
+        "author" => "Beep",
+        "schedule" => { "default_cron" => "*/5 * * * *" }
+      }
+    )
+    beeper = @account.beepers.create!(
+      beeper_app: app,
+      cron: "*/5 * * * *",
+      timezone: "UTC",
+      title: "Test Monitor"
+    )
+
+    beeper_beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Beeper Alert",
+      source: beeper,
+      intent: "alert"
+    )
+
+    assert_equal "beeper", beeper_beep.source_slug
+    assert_equal beeper, beeper_beep.source
+    assert_equal beeper.id, beeper_beep.beeper_id
+    assert_includes beeper.beeps, beeper_beep
+
+    runner = @account.runners.create!(
+      name: "Office Server"
+    )
+    job = runner.jobs.create!(
+      account: @account,
+      name: "Check Offwork",
+      slug: "check-offwork",
+      cron: "0 9 * * *",
+      timezone: "Asia/Shanghai"
+    )
+    job_beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Job Done",
+      source: job,
+      intent: "get_off_work",
+      metadata: { "first_checkin_time" => "09:12:30" }
+    )
+
+    assert_equal "runner_job", job_beep.source_slug
+    assert_equal job, job_beep.source
+    assert_includes job.beeps, job_beep
+
+    standalone_beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Pure Reminder"
+    )
+    assert_equal "beep", standalone_beep.source_slug
+    assert_nil standalone_beep.source
+  end
 end
