@@ -65,9 +65,24 @@ func DispatchOnBeepHook(ctx context.Context, workspaceRoot string, delivery clie
 		}
 	}
 
+	source, _ := delivery.Payload["source"].(string)
+	if source == "" {
+		source = "beep"
+	}
+	sourceType, _ := delivery.Payload["source_type"].(string)
+	sourceID, _ := delivery.Payload["source_id"].(string)
+	intent, _ := delivery.Payload["intent"].(string)
+	if intent == "" {
+		intent = actionHint
+	}
+
 	env := os.Environ()
 	env = append(env,
 		fmt.Sprintf("BEEP_EVENT=%s", eventName),
+		fmt.Sprintf("BEEP_EVENT_SOURCE=%s", source),
+		fmt.Sprintf("BEEP_EVENT_SOURCE_TYPE=%s", sourceType),
+		fmt.Sprintf("BEEP_EVENT_SOURCE_ID=%s", sourceID),
+		fmt.Sprintf("BEEP_EVENT_INTENT=%s", intent),
 		fmt.Sprintf("BEEP_EVENT_JSON=%s", string(payloadBytes)),
 		fmt.Sprintf("BEEP_EVENT_ID=%s", delivery.ID),
 		fmt.Sprintf("BEEP_EVENT_TITLE=%s", title),

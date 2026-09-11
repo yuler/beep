@@ -175,12 +175,16 @@ class BeepRun < ApplicationRecord
         payload: {
           id: id,
           event: "beep.fired",
+          source: beep.source_slug,
+          source_type: beep.source_type,
+          source_id: beep.source_id,
+          intent: beep.intent,
           beep_id: beep.id,
           title: beep.title,
           body: beep.body_text,
           scheduled_for: (scheduled_for || Time.current).iso8601,
           expires_at: expires.iso8601,
-          metadata: {}
+          metadata: beep.metadata || {}
         },
         expires_at: expires
       )

@@ -48,14 +48,17 @@ flowchart TD
 {
   "id": "del_01j7abc123",
   "event": "beep.fired",
+  "source": "runner_job",
+  "source_type": "Runner::Job",
+  "source_id": "03guanm47qmcg5i3srht9ppps",
+  "intent": "get_off_work",
   "beep_id": "03guanm47qmcg5i3srht9ppps",
   "title": "下班啦",
   "body": "今日打卡时间 09:12，已满 9 小时，准备下班！",
   "scheduled_for": "2026-09-10T18:12:00+08:00",
   "expires_at": "2026-09-10T18:42:00+08:00",
   "metadata": {
-    "first_checkin_time": "09:12:30",
-    "action_hint": "get_off_work"
+    "first_checkin_time": "09:12:30"
   }
 }
 ```
@@ -63,21 +66,34 @@ flowchart TD
 ### Local Hook (`.beep/hooks/on_beep_fired`)
 When `beep up` pulls a pending delivery, it executes `$WORKSPACE/.beep/hooks/on_beep_fired` (with fallback to `on_beep`) with environment variables:
 - `BEEP_EVENT`: Event type string (e.g. `beep.fired`).
+- `BEEP_EVENT_SOURCE`: Origin source slug (`runner_job`, `beeper`, `beep`).
+- `BEEP_EVENT_SOURCE_TYPE`: Polymorphic origin class (e.g. `Runner::Job`, `Beeper`, or empty).
+- `BEEP_EVENT_SOURCE_ID`: Unique ID of the trigger source.
+- `BEEP_EVENT_INTENT`: Business intent tag (e.g. `get_off_work`, `alert`, `recovery`, `reminder`).
 - `BEEP_EVENT_JSON`: Complete event payload JSON string.
 - `BEEP_EVENT_ID`: Unique delivery ID.
 - `BEEP_EVENT_TITLE`: Notification title.
-- `BEEP_EVENT_ACTION_HINT`: Action hint from metadata (if present).
+- `BEEP_EVENT_ACTION_HINT`: Legacy fallback action hint (if present in metadata).
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Trigger custom system action or script based on hint / title
-if [[ "${BEEP_EVENT_ACTION_HINT:-}" == "get_off_work" ]] || [[ "$BEEP_EVENT_TITLE" =~ "下班" ]]; then
-  echo "[on_beep_fired] Triggering local system action..."
-  # e.g., notify-send, audio cue, or custom script:
-  ~/.local/bin/offwork-action.sh &
-fi
+# Route by trigger source and intent
+case "${BEEP_EVENT_SOURCE:-beep}" in
+  runner_job)
+    if [[ "${BEEP_EVENT_INTENT:-}" == "get_off_work" ]]; then
+      echo "[on_beep_fired] Triggering offwork local action..."
+      ~/.local/bin/offwork-action.sh &
+    fi
+    ;;
+  beeper)
+    echo "[on_beep_fired] Beeper alert/recovery received: $BEEP_EVENT_TITLE"
+    ;;
+  beep)
+    echo "[on_beep_fired] Standard reminder: $BEEP_EVENT_TITLE"
+    ;;
+esac
 ```
 
 ---

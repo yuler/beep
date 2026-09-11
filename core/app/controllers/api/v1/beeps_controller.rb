@@ -45,7 +45,7 @@ class Api::V1::BeepsController < Api::V1::BaseController
 
   private
     def beep_params
-      params.permit(:title, :body, :run_at, :cron, :kind, notification_channels: [])
+      params.permit(:title, :body, :run_at, :cron, :kind, :intent, :source_type, :source_id, notification_channels: [], metadata: {})
     end
 
     def beep_timezone

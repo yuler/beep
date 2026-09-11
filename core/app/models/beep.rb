@@ -9,6 +9,7 @@ class Beep < ApplicationRecord
   BODY_MAX_LENGTH = 2000
 
   belongs_to :account
+  belongs_to :source, polymorphic: true, optional: true
   belongs_to :beeper, optional: true
   has_many :runs, class_name: "BeepRun", dependent: :destroy
 
@@ -18,6 +19,7 @@ class Beep < ApplicationRecord
   normalizes :title, with: ->(value) { value.strip.presence }
   normalizes :body, with: ->(value) { value&.strip.presence }
 
+  before_validation :sync_source_and_beeper
   before_validation :assign_default_notification_channels, on: :create
   before_validation :sync_run_attributes
 
@@ -163,11 +165,29 @@ class Beep < ApplicationRecord
     { title: title, options: options }
   end
 
+  def source_slug
+    case source_type
+    when "Beeper" then "beeper"
+    when "Runner::Job", "Runner::Run" then "runner_job"
+    else "beep"
+    end
+  end
+
   def body_text
     Beep::Plaintext.from_markdown(body)
   end
 
   private
+    def sync_source_and_beeper
+      if source.present?
+        if source.is_a?(Beeper)
+          self.beeper_id = source_id
+        end
+      elsif beeper_id.present?
+        self.source_type = "Beeper"
+        self.source_id = beeper_id
+      end
+    end
     def claim_run(scheduled_for)
       if expired?(scheduled_for)
         runs.create!(scheduled_for: scheduled_for, status: :expired)

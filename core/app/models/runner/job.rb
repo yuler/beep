@@ -11,6 +11,7 @@ class Runner::Job < ApplicationRecord
   belongs_to :account
   belongs_to :runner
   has_many :runs, class_name: "Runner::Run", foreign_key: :runner_job_id, inverse_of: :runner_job, dependent: :destroy
+  has_many :beeps, as: :source, dependent: :nullify
 
   enum :status, %w[ active paused firing ].index_by(&:itself), default: "active"
 

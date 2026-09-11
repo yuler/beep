@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_11_110000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_11_140000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "subscription_id"
@@ -236,8 +236,13 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_11_110000) do
     t.text "body"
     t.json "notification_channels", default: [], null: false
     t.uuid "beeper_id"
+    t.string "source_type"
+    t.uuid "source_id"
+    t.string "intent"
+    t.json "metadata", default: {}, null: false
     t.index ["account_id"], name: "index_beeps_on_account_id"
     t.index ["beeper_id"], name: "index_beeps_on_beeper_id"
+    t.index ["source_type", "source_id"], name: "index_beeps_on_source"
     t.index ["status", "next_run_at"], name: "index_beeps_on_status_and_next_run_at"
   end
 
