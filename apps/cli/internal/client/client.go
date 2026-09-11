@@ -309,7 +309,7 @@ func (c *Client) FetchCliInbox(ctx context.Context) ([]CliDelivery, error) {
 	if c.cfg.CliToken == "" {
 		return nil, nil
 	}
-	url := fmt.Sprintf("%s/api/v1/cli/inbox", c.cfg.ServerURL)
+	url := fmt.Sprintf("%s/api/v1/channels/cli/inbox", c.cfg.ServerURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -340,7 +340,7 @@ func (c *Client) FetchDeviceInbox(ctx context.Context) ([]CliDelivery, error) {
 }
 
 func (c *Client) AckCliDelivery(ctx context.Context, deliveryID string, status string, errorMsg string) error {
-	url := fmt.Sprintf("%s/api/v1/cli/deliveries/%s/ack", c.cfg.ServerURL, deliveryID)
+	url := fmt.Sprintf("%s/api/v1/channels/cli/deliveries/%s/ack", c.cfg.ServerURL, deliveryID)
 	payload := map[string]any{
 		"status": status,
 	}

@@ -1,4 +1,4 @@
-class Api::V1::Cli::DeliveriesController < Api::V1::Cli::BaseController
+class Api::V1::Channels::Cli::DeliveriesController < Api::V1::Channels::Cli::BaseController
   def ack
     delivery = @current_channel.deliveries.find(params[:id])
     status = params[:status].to_s

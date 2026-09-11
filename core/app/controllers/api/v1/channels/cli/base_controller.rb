@@ -1,4 +1,4 @@
-class Api::V1::Cli::BaseController < ActionController::API
+class Api::V1::Channels::Cli::BaseController < ActionController::API
   include ActionController::Cookies
   include Api::V1::Responses
 

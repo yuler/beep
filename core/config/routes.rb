@@ -73,13 +73,15 @@ Rails.application.routes.draw do
       end
 
       resource :settings, only: %i[ show update ]
-      resources :channels, only: %i[ index create destroy ]
 
-      namespace :cli do
-        resource :inbox, only: %i[ show ]
-        resources :deliveries, only: [] do
-          member do
-            post :ack
+      resources :channels, only: %i[ index create destroy ]
+      namespace :channels do
+        namespace :cli do
+          resource :inbox, only: %i[ show ]
+          resources :deliveries, only: [] do
+            member do
+              post :ack
+            end
           end
         end
       end

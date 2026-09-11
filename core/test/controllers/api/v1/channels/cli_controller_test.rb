@@ -1,6 +1,6 @@
 require "test_helper"
 
-class Api::V1::CliControllerTest < ActionDispatch::IntegrationTest
+class Api::V1::Channels::CliControllerTest < ActionDispatch::IntegrationTest
   setup do
     @account = accounts(:john_account)
     @user = users(:john)
@@ -23,7 +23,7 @@ class Api::V1::CliControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "inbox returns pending deliveries and claims them" do
-    get "/api/v1/cli/inbox",
+    get "/api/v1/channels/cli/inbox",
       headers: { "X-CLI-Token" => @channel.token },
       as: :json
 
@@ -38,7 +38,7 @@ class Api::V1::CliControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "inbox rejects unauthorized request" do
-    get "/api/v1/cli/inbox",
+    get "/api/v1/channels/cli/inbox",
       headers: { "X-CLI-Token" => "invalid_token" },
       as: :json
 
@@ -46,7 +46,7 @@ class Api::V1::CliControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "ack marks delivery succeeded" do
-    post "/api/v1/cli/deliveries/#{@delivery.id}/ack",
+    post "/api/v1/channels/cli/deliveries/#{@delivery.id}/ack",
       params: { status: "succeeded" },
       headers: { "X-CLI-Token" => @channel.token },
       as: :json
@@ -56,7 +56,7 @@ class Api::V1::CliControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "ack marks delivery failed" do
-    post "/api/v1/cli/deliveries/#{@delivery.id}/ack",
+    post "/api/v1/channels/cli/deliveries/#{@delivery.id}/ack",
       params: { status: "failed", error: "Execution error" },
       headers: { "X-CLI-Token" => @channel.token },
       as: :json
