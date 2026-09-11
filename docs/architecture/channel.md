@@ -19,7 +19,7 @@ flowchart TD
     Daemon["beep up"] -->|"Pull (Short/Long Polling)"| CliInbox
     Daemon -->|"Validate TTL <= 30m"| HookRunner[Local Hook Dispatcher]
     HookRunner -->|exec| Hook[".beep/hooks/on_beep"]
-    Hook -->|trigger| Action["System Action / omarchy / checkin-blank.sh"]
+    Hook -->|trigger| Action["System Actions / Local Scripts (e.g. desktop notify, screen lock, audio cue)"]
   end
 ```
 
@@ -71,10 +71,11 @@ When `beep up` pulls a pending delivery, it executes `$WORKSPACE/.beep/hooks/on_
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Trigger off-work screen blank & lock
+# Trigger custom system action or script based on hint / title
 if [[ "${BEEP_EVENT_ACTION_HINT:-}" == "get_off_work" ]] || [[ "$BEEP_EVENT_TITLE" =~ "下班" ]]; then
-  echo "[on_beep] Triggering off-work screen blank & lock..."
-  /home/yule/Projects/id5.cn/scripts/checkin-blank.sh offwork &
+  echo "[on_beep] Triggering local system action..."
+  # e.g., notify-send, audio cue, or custom script:
+  ~/.local/bin/offwork-action.sh &
 fi
 ```
 
@@ -84,7 +85,7 @@ fi
 
 1. **Morning fetch (09:30 Cloud Job)**: Runs `.beep/jobs/get-off-work`, queries `wgkq.id5.cn` for `firstCheckinTime` (`09:12:30`), calculates off-work time (`18:12:30`), and creates a `once` Beep scheduled for `18:12:30` targeting the user's CLI Channel (`my-laptop`) and Web Push Channels.
 2. **Due trigger (18:12:30 Core Scheduler)**: `Beep.poll_due_now` fires and creates `channel_deliveries` with `expires_at = 18:42:30`.
-3. **Local execution (Host PC)**: `beep up` pulls the delivery, checks `expires_at >= Time.now`, and runs `.beep/hooks/on_beep` → `checkin-blank.sh offwork` (screensaver slogan → 120s hold → `omarchy system lock` + DPMS off), then ACKs the delivery.
+3. **Local execution (Host PC)**: `beep up` pulls the delivery, checks `expires_at >= Time.now`, and runs `.beep/hooks/on_beep` → executes the configured local script or system action (e.g. desktop notification, screen lock/blank, audio cue), then ACKs the delivery.
 
 ---
 
