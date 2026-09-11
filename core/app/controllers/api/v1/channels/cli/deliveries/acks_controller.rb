@@ -1,6 +1,6 @@
-class Api::V1::Channels::Cli::DeliveriesController < Api::V1::Channels::Cli::BaseController
-  def ack
-    delivery = @current_channel.deliveries.find(params[:id])
+class Api::V1::Channels::Cli::Deliveries::AcksController < Api::V1::Channels::Cli::BaseController
+  def create
+    delivery = @current_channel.deliveries.find(params[:delivery_id])
     status = params[:status].to_s
 
     if status == "succeeded"

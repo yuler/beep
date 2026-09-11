@@ -79,8 +79,8 @@ Rails.application.routes.draw do
         namespace :cli do
           resource :inbox, only: %i[ show ]
           resources :deliveries, only: [] do
-            member do
-              post :ack
+            scope module: :deliveries do
+              resource :ack, only: :create
             end
           end
         end
