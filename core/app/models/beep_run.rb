@@ -169,27 +169,6 @@ class BeepRun < ApplicationRecord
     end
 
     def deliver_to_channel(channel)
-      expires = (scheduled_for || Time.current) + ChannelDelivery::DEFAULT_TTL
-      delivery = channel.deliveries.create!(
-        beep_run: self,
-        payload: {
-          id: id,
-          event: "beep.fired",
-          source: beep.source_slug,
-          source_type: beep.source_type,
-          source_id: beep.source_id,
-          intent: beep.intent,
-          beep_id: beep.id,
-          title: beep.title,
-          body: beep.body_text,
-          scheduled_for: (scheduled_for || Time.current).iso8601,
-          expires_at: expires.iso8601,
-          metadata: beep.metadata || {}
-        },
-        expires_at: expires
-      )
-      { "channel_id" => channel.id, "channel_name" => channel.name, "delivery_id" => delivery.id, "status" => "queued" }
-    rescue StandardError => error
-      { "channel_id" => channel.id, "channel_name" => channel.name, "status" => "error", "error" => error.class.name }
+      channel.deliver_beep(beep, run: self)
     end
 end
