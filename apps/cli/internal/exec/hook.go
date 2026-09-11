@@ -13,13 +13,24 @@ import (
 	"beep/internal/proc"
 )
 
-func FindOnBeepHook(workspaceRoot string) string {
-	candidates := []string{
+func FindHook(workspaceRoot string, event string) string {
+	candidates := []string{}
+	if event == "beep.fired" || event == "beep_fired" || event == "" {
+		candidates = append(candidates,
+			filepath.Join(workspaceRoot, ".beep", "hooks", "on_beep_fired"),
+			filepath.Join(workspaceRoot, "hooks", "on_beep_fired"),
+			filepath.Join(workspaceRoot, ".beep", "hooks", "on-beep-fired"),
+			filepath.Join(workspaceRoot, "hooks", "on-beep-fired"),
+		)
+	}
+
+	// Fallback to legacy/generic on_beep hook
+	candidates = append(candidates,
 		filepath.Join(workspaceRoot, ".beep", "hooks", "on_beep"),
 		filepath.Join(workspaceRoot, "hooks", "on_beep"),
 		filepath.Join(workspaceRoot, ".beep", "hooks", "on-beep"),
 		filepath.Join(workspaceRoot, "hooks", "on-beep"),
-	}
+	)
 
 	for _, c := range candidates {
 		info, err := os.Stat(c)
@@ -30,8 +41,17 @@ func FindOnBeepHook(workspaceRoot string) string {
 	return ""
 }
 
+func FindOnBeepHook(workspaceRoot string) string {
+	return FindHook(workspaceRoot, "beep.fired")
+}
+
 func DispatchOnBeepHook(ctx context.Context, workspaceRoot string, delivery client.CliDelivery) (string, error) {
-	hookPath := FindOnBeepHook(workspaceRoot)
+	eventName, _ := delivery.Payload["event"].(string)
+	if eventName == "" {
+		eventName = "beep.fired"
+	}
+
+	hookPath := FindHook(workspaceRoot, eventName)
 	if hookPath == "" {
 		return "", nil
 	}
@@ -47,6 +67,7 @@ func DispatchOnBeepHook(ctx context.Context, workspaceRoot string, delivery clie
 
 	env := os.Environ()
 	env = append(env,
+		fmt.Sprintf("BEEP_EVENT=%s", eventName),
 		fmt.Sprintf("BEEP_EVENT_JSON=%s", string(payloadBytes)),
 		fmt.Sprintf("BEEP_EVENT_ID=%s", delivery.ID),
 		fmt.Sprintf("BEEP_EVENT_TITLE=%s", title),

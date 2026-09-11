@@ -18,7 +18,7 @@ flowchart TD
   subgraph Host ["Beep CLI: beep up"]
     Daemon["beep up"] -->|"Pull (Short/Long Polling)"| CliInbox
     Daemon -->|"Validate TTL <= 30m"| HookRunner[Local Hook Dispatcher]
-    HookRunner -->|exec| Hook[".beep/hooks/on_beep"]
+    HookRunner -->|exec| Hook[".beep/hooks/on_beep_fired"]
     Hook -->|trigger| Action["System Actions / Local Scripts (e.g. desktop notify, screen lock, audio cue)"]
   end
 ```
@@ -29,7 +29,7 @@ flowchart TD
 
 1. **User-scoped ownership**: Channels belong to a `User` (`belongs_to :user`, `belongs_to :account`). A Beep, including on a team account, targets only that user's Channels. Team is the tenant, not a fan-out of members' destinations.
 2. **Pull-only HTTP transport**: CLI Channels connect outbound via HTTP polling / long-polling (`beep up`). Zero open ports, zero firewall config. Resilient to sleep/wake, network switches, and server restarts.
-3. **Declarative local hooks**: Core transmits structured event payloads only (`event: "beep.fired"`, metadata). The local host controls execution via `$WORKSPACE/.beep/hooks/on_beep`.
+3. **Declarative local hooks**: Core transmits structured event payloads only (`event: "beep.fired"`, metadata). The local host controls execution via `$WORKSPACE/.beep/hooks/on_beep_fired`.
 4. **TTL safety window**: Notification payloads carry an `expires_at` cutoff (default 30m TTL). Stale events pulled after waking from sleep skip disruptive actions (e.g. screen blanking / locking).
 
 ---
@@ -60,8 +60,9 @@ flowchart TD
 }
 ```
 
-### Local Hook (`.beep/hooks/on_beep`)
-When `beep up` pulls a pending delivery, it executes `$WORKSPACE/.beep/hooks/on_beep` with environment variables:
+### Local Hook (`.beep/hooks/on_beep_fired`)
+When `beep up` pulls a pending delivery, it executes `$WORKSPACE/.beep/hooks/on_beep_fired` (with fallback to `on_beep`) with environment variables:
+- `BEEP_EVENT`: Event type string (e.g. `beep.fired`).
 - `BEEP_EVENT_JSON`: Complete event payload JSON string.
 - `BEEP_EVENT_ID`: Unique delivery ID.
 - `BEEP_EVENT_TITLE`: Notification title.
@@ -73,7 +74,7 @@ set -euo pipefail
 
 # Trigger custom system action or script based on hint / title
 if [[ "${BEEP_EVENT_ACTION_HINT:-}" == "get_off_work" ]] || [[ "$BEEP_EVENT_TITLE" =~ "下班" ]]; then
-  echo "[on_beep] Triggering local system action..."
+  echo "[on_beep_fired] Triggering local system action..."
   # e.g., notify-send, audio cue, or custom script:
   ~/.local/bin/offwork-action.sh &
 fi
@@ -81,11 +82,14 @@ fi
 
 ---
 
-## 5. End-to-End Workflow: `get-off-work`
+## 5. Example End-to-End Workflow: `get-off-work`
 
-1. **Morning fetch (09:30 Cloud Job)**: Runs `.beep/jobs/get-off-work`, queries `wgkq.id5.cn` for `firstCheckinTime` (`09:12:30`), calculates off-work time (`18:12:30`), and creates a `once` Beep scheduled for `18:12:30` targeting the user's CLI Channel (`my-laptop`) and Web Push Channels.
+> [!NOTE]
+> **Example Scenario**: The following walkthrough illustrates a concrete end-to-end example where a scheduled job sets up a dynamic notification, which is then routed via Channels and executed locally by the CLI hook.
+
+1. **Morning fetch (09:30 Cloud Job)**: Runs `.beep/jobs/get-off-work`, queries external attendance data for `firstCheckinTime` (`09:12:30`), calculates off-work time (`18:12:30`), and creates a `once` Beep scheduled for `18:12:30` targeting the user's CLI Channel (`my-laptop`) and Web Push Channels.
 2. **Due trigger (18:12:30 Core Scheduler)**: `Beep.poll_due_now` fires and creates `channel_deliveries` with `expires_at = 18:42:30`.
-3. **Local execution (Host PC)**: `beep up` pulls the delivery, checks `expires_at >= Time.now`, and runs `.beep/hooks/on_beep` → executes the configured local script or system action (e.g. desktop notification, screen lock/blank, audio cue), then ACKs the delivery.
+3. **Local execution (Host PC)**: `beep up` pulls the delivery, checks `expires_at >= Time.now`, and runs `.beep/hooks/on_beep_fired` → executes the configured local script or system action (e.g. desktop notification, screen lock/blank, audio cue), then ACKs the delivery.
 
 ---
 

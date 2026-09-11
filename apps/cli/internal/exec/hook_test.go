@@ -22,9 +22,9 @@ func TestDispatchOnBeepHook(t *testing.T) {
 		t.Fatalf("failed to create hook dir: %v", err)
 	}
 
-	hookPath := filepath.Join(hookDir, "on_beep")
+	hookPath := filepath.Join(hookDir, "on_beep_fired")
 	hookScript := `#!/bin/sh
-echo "Hook received event: $BEEP_EVENT_ID title: $BEEP_EVENT_TITLE"
+echo "Hook received event: $BEEP_EVENT id: $BEEP_EVENT_ID title: $BEEP_EVENT_TITLE"
 `
 	if err := os.WriteFile(hookPath, []byte(hookScript), 0o755); err != nil {
 		t.Fatalf("failed to write hook script: %v", err)
@@ -33,6 +33,7 @@ echo "Hook received event: $BEEP_EVENT_ID title: $BEEP_EVENT_TITLE"
 	delivery := client.CliDelivery{
 		ID: "del_12345",
 		Payload: map[string]any{
+			"event": "beep.fired",
 			"title": "Off work notification",
 			"metadata": map[string]any{
 				"action_hint": "get_off_work",
@@ -45,7 +46,10 @@ echo "Hook received event: $BEEP_EVENT_ID title: $BEEP_EVENT_TITLE"
 		t.Fatalf("DispatchOnBeepHook returned unexpected error: %v", err)
 	}
 
-	if !strings.Contains(out, "Hook received event: del_12345") {
+	if !strings.Contains(out, "event: beep.fired") {
+		t.Errorf("expected hook output to contain event name, got: %s", out)
+	}
+	if !strings.Contains(out, "id: del_12345") {
 		t.Errorf("expected hook output to contain delivery ID, got: %s", out)
 	}
 	if !strings.Contains(out, "title: Off work notification") {
