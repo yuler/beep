@@ -78,3 +78,38 @@ func TestDailyLogWriterEmptyPrefix(t *testing.T) {
 		t.Fatalf("DailyLogPath = %s", got)
 	}
 }
+
+func TestDailyLogWriterRecreatesOnDeletion(t *testing.T) {
+	tempDir := t.TempDir()
+
+	w, err := NewDailyLogWriter(tempDir, "daemon")
+	if err != nil {
+		t.Fatalf("failed to create DailyLogWriter: %v", err)
+	}
+	defer w.Close()
+
+	if _, err := w.Write([]byte("entry 1\n")); err != nil {
+		t.Fatalf("write error: %v", err)
+	}
+
+	today := time.Now().Format("2006-01-02")
+	expectedFile := filepath.Join(tempDir, "daemon-"+today+".log")
+
+	// Delete the log file and directory
+	if err := os.RemoveAll(tempDir); err != nil {
+		t.Fatalf("failed to remove dir: %v", err)
+	}
+
+	// Write again — should automatically recreate directory and file
+	if _, err := w.Write([]byte("entry 2\n")); err != nil {
+		t.Fatalf("write error after deletion: %v", err)
+	}
+
+	data, err := os.ReadFile(expectedFile)
+	if err != nil {
+		t.Fatalf("failed to read recreated log file: %v", err)
+	}
+	if string(data) != "entry 2\n" {
+		t.Fatalf("expected 'entry 2\\n', got %q", string(data))
+	}
+}

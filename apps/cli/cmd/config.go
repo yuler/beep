@@ -18,7 +18,7 @@ var (
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Manage local runner configuration (~/.beep/config.json)",
+	Short: fmt.Sprintf("Manage local runner configuration (%s/config.json)", config.DefaultWorkspaceDisplay()),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runConfigShow(cmd, args)
 	},

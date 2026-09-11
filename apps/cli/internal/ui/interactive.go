@@ -656,7 +656,12 @@ func PromptConfigSetWizard(fc *config.FileConfig) error {
 			huh.NewInput().
 				Title("Beep Server URL").
 				Description("API URL of your Beep instance").
-				Placeholder("https://core.example.com or http://core.beep.localhost:3000").
+				Placeholder(func() string {
+					if config.DefaultServerURL != "" {
+						return config.DefaultServerURL
+					}
+					return "https://core.example.com"
+				}()).
 				Value(&server).
 				Validate(func(s string) error {
 					if strings.TrimSpace(s) == "" {
@@ -680,8 +685,8 @@ func PromptConfigSetWizard(fc *config.FileConfig) error {
 
 			huh.NewInput().
 				Title("Local Workspace Directory").
-				Description("Where job scripts and configs are stored (default ~/.beep)").
-				Placeholder("~/.beep").
+				Description(fmt.Sprintf("Where job scripts and configs are stored (default %s)", config.DefaultWorkspaceDisplay())).
+				Placeholder(config.DefaultWorkspaceDisplay()).
 				Value(&workspaceDir),
 
 			huh.NewInput().

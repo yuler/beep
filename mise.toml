@@ -51,7 +51,7 @@ dir = "apps/web"
 run = "pnpm run build"
 
 [tasks."cli:build"]
-description = "Build the Go beep CLI binary"
+description = "Build the Go beep CLI binary for production"
 dir = "apps/cli"
 run = """
 go build -ldflags="-s -w \
@@ -59,6 +59,19 @@ go build -ldflags="-s -w \
   -X beep/internal/version.GitCommit=$(git rev-parse --short HEAD) \
   -X beep/internal/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -o ../../bin/beep .
+"""
+
+[tasks."cli:build:local"]
+description = "Build the Go beep CLI binary for local development"
+dir = "apps/cli"
+run = """
+go build -ldflags="-s -w \
+  -X beep/internal/version.Version=$(cat ../../VERSION) \
+  -X beep/internal/version.GitCommit=$(git rev-parse --short HEAD) \
+  -X beep/internal/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  -X beep/internal/config.DefaultWorkspaceName=.beep.local \
+  -X beep/internal/config.DefaultServerURL=http://core.${APP_HOST:-beep.localhost}:${CORE_PORT:-3001}" \
+  -o ../../bin/beep-local .
 """
 
 [tasks."cli:test"]
@@ -71,11 +84,22 @@ description = "Symlink a beep workspace to .beep in the current repo"
 usage = '''
 arg "[workspace]" help="Workspace directory to link" default=""
 '''
-run = "bash scripts/cli-workspace-link.sh \"${usage_workspace:-}\""
+run = "bash scripts/cli-workspace-link.sh \"${usage_workspace:-}\" .beep"
+
+[tasks."cli:workspace:link:local"]
+description = "Symlink a beep workspace to .beep.local in the current repo"
+usage = '''
+arg "[workspace]" help="Workspace directory to link" default=""
+'''
+run = "bash scripts/cli-workspace-link.sh \"${usage_workspace:-}\" .beep.local"
 
 [tasks."cli:workspace:unlink"]
 description = "Unlink .beep workspace symlink from the current repo"
-run = "bash scripts/cli-workspace-unlink.sh"
+run = "bash scripts/cli-workspace-unlink.sh .beep"
+
+[tasks."cli:workspace:unlink:local"]
+description = "Unlink .beep.local workspace symlink from the current repo"
+run = "bash scripts/cli-workspace-unlink.sh .beep.local"
 
 [tasks."locale:sort"]
 description = "Sort message keys alphabetically in all locale JSON files"

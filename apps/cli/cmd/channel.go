@@ -136,7 +136,7 @@ var channelCreateCmd = &cobra.Command{
 
 var channelSetTokenCmd = &cobra.Command{
 	Use:   "set-token <token>",
-	Short: "Configure CLI token for local machine in ~/.beep/config.json",
+	Short: fmt.Sprintf("Configure CLI token for local machine in %s/config.json", config.DefaultWorkspaceDisplay()),
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := args[0]

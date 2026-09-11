@@ -34,12 +34,26 @@ type Config struct {
 	ConfigFile   string
 }
 
+var (
+	// DefaultServerURL is injected at build time using -ldflags.
+	DefaultServerURL = ""
+	// DefaultWorkspaceName is injected at build time using -ldflags (e.g. ".beep" or ".beep.local").
+	DefaultWorkspaceName = ".beep"
+)
+
 func DefaultWorkspace() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".beep"
+		return DefaultWorkspaceName
 	}
-	return filepath.Join(home, ".beep")
+	return filepath.Join(home, DefaultWorkspaceName)
+}
+
+func DefaultWorkspaceDisplay() string {
+	if strings.HasPrefix(DefaultWorkspaceName, "/") {
+		return DefaultWorkspaceName
+	}
+	return "~/" + DefaultWorkspaceName
 }
 
 func GetConfigPath(ws string) string {
@@ -106,7 +120,7 @@ func Load(wsHint string) (*Config, error) {
 
 	serverURL := getEnv("BEEP_SERVER", fc.ServerURL)
 	if serverURL == "" {
-		serverURL = "http://core.localhost:3000"
+		serverURL = DefaultServerURL
 	}
 	serverURL = strings.TrimRight(serverURL, "/")
 
