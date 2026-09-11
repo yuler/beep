@@ -83,6 +83,10 @@ Rails.application.routes.draw do
               resource :ack, only: :create
             end
           end
+          resources :authorizations, param: :user_code, only: %i[ create show update destroy ]
+          namespace :authorizations do
+            resource :token, only: :create
+          end
         end
       end
 

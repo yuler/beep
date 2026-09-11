@@ -47,3 +47,47 @@ export async function deleteChannel(
 		method: "DELETE",
 	});
 }
+
+export interface DeviceAuthInfo {
+	user_code: string;
+	channel_name: string | null;
+	status: string;
+	expires_in: number;
+}
+
+export async function verifyDeviceCode(code: string): Promise<DeviceAuthInfo> {
+	return apiFetch<DeviceAuthInfo>(
+		`/api/v1/channels/cli/authorizations/${encodeURIComponent(code)}`,
+		{
+			method: "GET",
+		},
+	);
+}
+
+export async function approveDeviceAuth(data: {
+	user_code: string;
+	channel_name?: string;
+}): Promise<{
+	status: string;
+	channel: { id: string; name: string; kind: string; status: string };
+}> {
+	return apiFetch<{
+		status: string;
+		channel: { id: string; name: string; kind: string; status: string };
+	}>(
+		`/api/v1/channels/cli/authorizations/${encodeURIComponent(data.user_code)}`,
+		{
+			method: "PATCH",
+			body: { channel_name: data.channel_name },
+		},
+	);
+}
+
+export async function denyDeviceAuth(user_code: string): Promise<void> {
+	await apiFetch(
+		`/api/v1/channels/cli/authorizations/${encodeURIComponent(user_code)}`,
+		{
+			method: "DELETE",
+		},
+	);
+}

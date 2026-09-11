@@ -5,8 +5,6 @@ import {
 	BriefcaseBusiness,
 	KeyRound,
 	LayoutDashboard,
-	Mail,
-	Server,
 	Settings,
 	User,
 } from "lucide-react";

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_11_140000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_11_160000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "subscription_id"
@@ -246,6 +246,24 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_11_140000) do
     t.index ["status", "next_run_at"], name: "index_beeps_on_status_and_next_run_at"
   end
 
+  create_table "channel_authorizations", id: :uuid, force: :cascade do |t|
+    t.uuid "user_id"
+    t.uuid "channel_id"
+    t.string "device_code", null: false
+    t.string "user_code", null: false
+    t.string "channel_name"
+    t.string "status", default: "pending", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "last_polled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["channel_id"], name: "index_channel_authorizations_on_channel_id"
+    t.index ["device_code"], name: "index_channel_authorizations_on_device_code", unique: true
+    t.index ["expires_at"], name: "index_channel_authorizations_on_expires_at"
+    t.index ["user_code"], name: "index_channel_authorizations_on_user_code", unique: true
+    t.index ["user_id"], name: "index_channel_authorizations_on_user_id"
+  end
+
   create_table "channel_deliveries", id: :uuid, force: :cascade do |t|
     t.uuid "channel_id", null: false
     t.uuid "beep_run_id"
@@ -427,6 +445,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_11_140000) do
   add_foreign_key "beepers", "beeper_apps"
   add_foreign_key "beeps", "accounts"
   add_foreign_key "beeps", "beepers"
+  add_foreign_key "channel_authorizations", "channels"
+  add_foreign_key "channel_authorizations", "users"
   add_foreign_key "channel_deliveries", "beep_runs"
   add_foreign_key "channel_deliveries", "channels"
   add_foreign_key "channels", "accounts"

@@ -457,6 +457,91 @@ func (c *Client) CreateChannel(ctx context.Context, accountSlug, authToken, name
 	return &res.Channel, nil
 }
 
+type DeviceAuthorizationResponse struct {
+	DeviceCode              string `json:"device_code"`
+	UserCode                string `json:"user_code"`
+	VerificationURI         string `json:"verification_uri"`
+	VerificationURIComplete string `json:"verification_uri_complete"`
+	ExpiresIn               int    `json:"expires_in"`
+	Interval                int    `json:"interval"`
+}
+
+type DeviceTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ChannelID   string `json:"channel_id"`
+	ChannelName string `json:"channel_name"`
+}
+
+type OAuthErrorResponse struct {
+	ErrorCode        string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
+func (e *OAuthErrorResponse) Error() string {
+	if e.ErrorDescription != "" {
+		return fmt.Sprintf("%s: %s", e.ErrorCode, e.ErrorDescription)
+	}
+	return e.ErrorCode
+}
+
+const (
+	OAuthErrAuthorizationPending = "authorization_pending"
+	OAuthErrSlowDown             = "slow_down"
+	OAuthErrExpiredToken         = "expired_token"
+	OAuthErrAccessDenied         = "access_denied"
+)
+
+func (c *Client) RequestDeviceAuthorization(ctx context.Context, channelName string) (*DeviceAuthorizationResponse, error) {
+	url := fmt.Sprintf("%s/api/v1/channels/cli/authorizations", c.cfg.ServerURL)
+	payload := map[string]any{
+		"channel_name": channelName,
+	}
+
+	var res DeviceAuthorizationResponse
+	if err := c.postJSON(ctx, url, payload, http.StatusCreated, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) PollDeviceToken(ctx context.Context, deviceCode string) (*DeviceTokenResponse, error) {
+	reqURL := fmt.Sprintf("%s/api/v1/channels/cli/authorizations/token", c.cfg.ServerURL)
+	payload := map[string]any{
+		"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
+		"device_code": deviceCode,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK {
+		var tokenRes DeviceTokenResponse
+		if err := json.Unmarshal(respBody, &tokenRes); err != nil {
+			return nil, err
+		}
+		return &tokenRes, nil
+	}
+
+	var oauthErr OAuthErrorResponse
+	if err := json.Unmarshal(respBody, &oauthErr); err == nil && oauthErr.ErrorCode != "" {
+		return nil, &oauthErr
+	}
+
+	return nil, fmt.Errorf("token request failed (status %d): %s", resp.StatusCode, string(respBody))
+}
+
 func mustJSON(payload any) *bytes.Reader {
 	bodyBytes, _ := json.Marshal(payload)
 	return bytes.NewReader(bodyBytes)

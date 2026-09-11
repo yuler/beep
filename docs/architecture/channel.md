@@ -37,11 +37,37 @@ flowchart TD
 ## 3. Data model
 
 - **`channels`**: `account_id`, `user_id`, `kind` (`cli`, `email`, `web_push`, `webhook`), `name`, `token` (CLI token / `beep_ct_`), `status` (`active`, `disabled`), `last_seen_at`.
+- **`channel_authorizations`**: `user_id`, `channel_id`, `device_code`, `user_code`, `channel_name`, `status` (`pending`, `approved`, `access_denied`, `expired`), `expires_at`, `last_polled_at` (RFC 8628 OAuth 2.0 Device Flow).
 - **`channel_deliveries`**: `beep_run_id`, `channel_id`, `status` (`pending` → `claimed` → `succeeded` / `failed` / `expired`), `payload` (JSON), `expires_at`.
 
 ---
 
-## 4. CLI Delivery & Action Protocol
+## 4. CLI Channel Connection & Device Flow (RFC 8628)
+
+Beep CLI supports instant authentication and Channel token binding via the standard **OAuth 2.0 Device Authorization Grant ([RFC 8628](https://www.rfc-editor.org/info/rfc8628/))**:
+
+```bash
+# Connect the current workspace to your Beep user account
+beep channel connect
+
+# Disconnect and clear CLI token from workspace config
+beep channel disconnect
+```
+
+1. **`beep channel connect`**:
+   - Requests a device authorization session from Core (`POST /api/v1/channels/cli/authorizations`).
+   - Receives a user code (`WDJB-MJHT`) and verification URL (`http://web.../device?code=WDJB-MJHT`).
+   - Auto-opens the default browser and enters token polling loop (`POST /api/v1/channels/cli/authorizations/token`).
+2. **Web Authorization (`/device`)**:
+   - User verifies code (`GET /api/v1/channels/cli/authorizations/:user_code`), confirms/renames device name (defaulted from hostname), and clicks "Authorize" (`PATCH /api/v1/channels/cli/authorizations/:user_code`).
+   - Backend creates a new CLI Channel row under the user's personal account and approves the authorization.
+3. **Workspace Persistence**:
+   - CLI receives `access_token` (`beep_ct_...`) and persists it into `$WORKSPACE/config.json` (`cli_token`).
+
+
+---
+
+## 5. CLI Delivery & Action Protocol
 
 ### Event Payload Schema
 ```json
@@ -97,7 +123,7 @@ esac
 
 ---
 
-## 5. Example End-to-End Workflow: `get-off-work`
+## 6. Example End-to-End Workflow: `get-off-work`
 
 > [!NOTE]
 > **Example Scenario**: The following walkthrough illustrates a concrete end-to-end example where a scheduled job sets up a dynamic notification, which is then routed via Channels and executed locally by the CLI hook.
@@ -108,7 +134,7 @@ esac
 
 ---
 
-## 6. Future / Multi-Platform Roadmap
+## 7. Future / Multi-Platform Roadmap
 
 The primary motivation for establishing the **Channel** abstraction is extensibility: the core scheduling engine remains completely platform-agnostic, while new notification targets and client endpoints can be plugged in as first-class adapters:
 

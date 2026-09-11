@@ -14,6 +14,7 @@ import { Route as Account_slugRouteImport } from './routes/$account_slug'
 import { Route as AccountsRouteImport } from './routes/accounts'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as DevRouteImport } from './routes/dev'
+import { Route as DeviceRouteImport } from './routes/device'
 import { Route as MyRouteImport } from './routes/my'
 import { Route as SignRouteImport } from './routes/sign'
 import { Route as Account_slugIndexRouteImport } from './routes/$account_slug/index'
@@ -55,6 +56,11 @@ const AdminRoute = AdminRouteImport.update({
 const DevRoute = DevRouteImport.update({
   id: '/dev',
   path: '/dev',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeviceRoute = DeviceRouteImport.update({
+  id: '/device',
+  path: '/device',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MyRoute = MyRouteImport.update({
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/accounts': typeof AccountsRoute
   '/admin': typeof AdminRouteWithChildren
   '/dev': typeof DevRouteWithChildren
+  '/device': typeof DeviceRoute
   '/my': typeof MyRouteWithChildren
   '/sign': typeof SignRouteWithChildren
   '/$account_slug/beepers': typeof Account_slugBeepersRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/accounts': typeof AccountsRoute
   '/admin': typeof AdminRouteWithChildren
   '/dev': typeof DevRouteWithChildren
+  '/device': typeof DeviceRoute
   '/my': typeof MyRouteWithChildren
   '/$account_slug/beepers': typeof Account_slugBeepersRoute
   '/$account_slug/beeps': typeof Account_slugBeepsRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/accounts': typeof AccountsRoute
   '/admin': typeof AdminRouteWithChildren
   '/dev': typeof DevRouteWithChildren
+  '/device': typeof DeviceRoute
   '/my': typeof MyRouteWithChildren
   '/sign': typeof SignRouteWithChildren
   '/$account_slug/beepers': typeof Account_slugBeepersRoute
@@ -224,6 +233,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/admin'
     | '/dev'
+    | '/device'
     | '/my'
     | '/sign'
     | '/$account_slug/beepers'
@@ -247,6 +257,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/admin'
     | '/dev'
+    | '/device'
     | '/my'
     | '/$account_slug/beepers'
     | '/$account_slug/beeps'
@@ -270,6 +281,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/admin'
     | '/dev'
+    | '/device'
     | '/my'
     | '/sign'
     | '/$account_slug/beepers'
@@ -295,6 +307,7 @@ export interface RootRouteChildren {
   AccountsRoute: typeof AccountsRoute
   AdminRoute: typeof AdminRouteWithChildren
   DevRoute: typeof DevRouteWithChildren
+  DeviceRoute: typeof DeviceRoute
   MyRoute: typeof MyRouteWithChildren
   SignRoute: typeof SignRouteWithChildren
 }
@@ -334,6 +347,13 @@ declare module '@tanstack/react-router' {
       path: '/dev'
       fullPath: '/dev'
       preLoaderRoute: typeof DevRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/device': {
+      id: '/device'
+      path: '/device'
+      fullPath: '/device'
+      preLoaderRoute: typeof DeviceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/my': {
@@ -536,6 +556,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountsRoute: AccountsRoute,
   AdminRoute: AdminRouteWithChildren,
   DevRoute: DevRouteWithChildren,
+  DeviceRoute: DeviceRoute,
   MyRoute: MyRouteWithChildren,
   SignRoute: SignRouteWithChildren,
 }

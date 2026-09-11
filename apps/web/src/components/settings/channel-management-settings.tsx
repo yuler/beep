@@ -85,7 +85,11 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 				</CardTitle>
 				<CardDescription>
 					Connect your Beep CLI daemons to receive notifications and trigger
-					local actions.
+					local actions. Run{" "}
+					<code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+						beep channel connect
+					</code>{" "}
+					in your terminal to connect instantly.
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-6">
