@@ -113,10 +113,7 @@ function DeviceAuthPage() {
 
 	return (
 		<AuthLayout>
-			<AuthCard
-				title="Connect Beep CLI"
-				description="Authorize a Beep CLI notification channel on your device."
-			>
+			<AuthCard description="Authorize a Beep CLI notification channel on your device.">
 				{status === "approved" ? (
 					<div className="flex flex-col items-center gap-4 py-4 text-center">
 						<div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">

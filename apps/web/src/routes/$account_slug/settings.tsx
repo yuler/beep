@@ -1,69 +1,15 @@
-import {
-	createFileRoute,
-	getRouteApi,
-	useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { ChannelManagementSettings } from "@/components/settings/channel-management-settings";
-import { NotificationChannelSettings } from "@/components/settings/notification-channel-settings";
-import { TimezoneSettings } from "@/components/settings/timezone-settings";
-import { WebPushSettings } from "@/components/settings/web-push-settings";
 import { fetchSettings } from "@/lib/api/settings";
 import { withAuthRedirects } from "@/lib/auth/guards";
-import { m } from "@/locale/paraglide/messages";
-
-const accountRoute = getRouteApi("/$account_slug");
 
 export const Route = createFileRoute("/$account_slug/settings")({
 	loader: withAuthRedirects(({ params }) =>
 		fetchSettings(params?.account_slug ?? ""),
 	),
-	component: SettingsPage,
+	component: SettingsLayout,
 });
 
-function SettingsPage() {
-	const { account_slug: slug } = accountRoute.useParams();
-	const settings = Route.useLoaderData();
-	const router = useRouter();
-
-	return (
-		<>
-			<DashboardHeader
-				breadcrumbs={[
-					{
-						label: m.nav_home(),
-						to: "/$account_slug",
-						params: { account_slug: slug },
-					},
-					{ label: m.nav_settings(), isCurrentPage: true },
-				]}
-			/>
-
-			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-				<div>
-					<h1 className="font-heading text-2xl font-semibold tracking-tight">
-						{m.settings_title()}
-					</h1>
-					<p className="mt-1 text-sm text-muted-foreground">
-						{m.settings_description()}
-					</p>
-				</div>
-
-				<TimezoneSettings
-					slug={slug}
-					timezone={settings.timezone}
-					timezoneSource={settings.timezone_source}
-					onChanged={() => router.invalidate()}
-				/>
-				<NotificationChannelSettings
-					slug={slug}
-					channels={settings.notification_channels}
-					onChanged={() => router.invalidate()}
-				/>
-				<ChannelManagementSettings slug={slug} />
-				<WebPushSettings slug={slug} />
-			</div>
-		</>
-	);
+function SettingsLayout() {
+	return <Outlet />;
 }

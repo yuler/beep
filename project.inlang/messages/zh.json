@@ -604,6 +604,8 @@
   "push_turning_off": "关闭中…",
   "push_unsupported": "此浏览器不支持 Web Push。",
   "settings_description": "此工作区的通知、时区和设备偏好。",
+  "settings_general_description": "此工作区的时区与通用偏好设置。",
+  "settings_general_title": "通用",
   "settings_notifications_description": "此工作区中 beep 到期时的接收方式。您可通过每封提醒邮件中的链接关闭邮件通知。",
   "settings_notifications_title": "通知",
   "settings_timezone_browser": "浏览器时区：{timezone}",

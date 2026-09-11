@@ -31,10 +31,22 @@ func TestChannelCommandsRegistration(t *testing.T) {
 }
 
 func TestDisconnectCommandClearsToken(t *testing.T) {
+	var gotMethod, gotPath, gotToken string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath = r.Method, r.URL.Path
+		gotToken = r.Header.Get("X-CLI-Token")
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	t.Setenv("BEEP_SERVER", server.URL)
+	t.Setenv("BEEP_CLI_TOKEN", "")
+	t.Setenv("BEEP_DEVICE_TOKEN", "")
+
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.json")
 	fc := &config.FileConfig{
-		ServerURL:   "https://example.com",
+		ServerURL:   server.URL,
 		CliToken:    "beep_ct_test123",
 		DeviceToken: "beep_ct_test123",
 	}
@@ -47,6 +59,50 @@ func TestDisconnectCommandClearsToken(t *testing.T) {
 
 	err := channelDisconnectCmd.RunE(channelDisconnectCmd, nil)
 	if err != nil {
+		t.Fatalf("channel disconnect failed: %v", err)
+	}
+
+	if gotMethod != http.MethodDelete || gotPath != "/api/v1/channels/cli/disconnect" {
+		t.Errorf("expected DELETE /api/v1/channels/cli/disconnect, got %s %s", gotMethod, gotPath)
+	}
+	if gotToken != "beep_ct_test123" {
+		t.Errorf("expected X-CLI-Token header to be sent, got %q", gotToken)
+	}
+
+	updated, err := config.LoadFile(configPath)
+	if err != nil {
+		t.Fatalf("failed to load updated config: %v", err)
+	}
+	if updated.CliToken != "" || updated.DeviceToken != "" {
+		t.Errorf("expected tokens to be cleared, got cli_token=%q, device_token=%q", updated.CliToken, updated.DeviceToken)
+	}
+}
+
+func TestDisconnectCommandClearsTokenWhenServerGone(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	t.Setenv("BEEP_SERVER", server.URL)
+	t.Setenv("BEEP_CLI_TOKEN", "")
+	t.Setenv("BEEP_DEVICE_TOKEN", "")
+
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.json")
+	fc := &config.FileConfig{
+		ServerURL:   server.URL,
+		CliToken:    "beep_ct_test123",
+		DeviceToken: "beep_ct_test123",
+	}
+	if err := config.SaveFile(configPath, fc); err != nil {
+		t.Fatalf("failed to save test config: %v", err)
+	}
+
+	flagWorkspace = tmpDir
+	defer func() { flagWorkspace = "" }()
+
+	if err := channelDisconnectCmd.RunE(channelDisconnectCmd, nil); err != nil {
 		t.Fatalf("channel disconnect failed: %v", err)
 	}
 

@@ -26,6 +26,7 @@ class ChannelAuthorizationTest < ActiveSupport::TestCase
     assert_equal "cli", auth.channel.kind
     assert_equal @user, auth.channel.user
     assert_equal @user.account, auth.channel.account
+    assert_equal @user.account, auth.account
     assert_match /\Abeep_ct_/, auth.channel.token
   end
 

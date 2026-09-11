@@ -78,6 +78,7 @@ Rails.application.routes.draw do
       namespace :channels do
         namespace :cli do
           resource :inbox, only: %i[ show ]
+          resource :disconnect, only: %i[ destroy ]
           resources :deliveries, only: [] do
             scope module: :deliveries do
               resource :ack, only: :create

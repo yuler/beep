@@ -19,6 +19,8 @@ export type DashboardBreadcrumbItem = {
 	to?:
 		| "/$account_slug"
 		| "/$account_slug/settings"
+		| "/$account_slug/settings/general"
+		| "/$account_slug/settings/notifications"
 		| "/$account_slug/beeps"
 		| "/$account_slug/beepers"
 		| "/$account_slug/runners"

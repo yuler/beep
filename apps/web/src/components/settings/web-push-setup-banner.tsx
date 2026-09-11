@@ -38,7 +38,7 @@ export function WebPushSetupBanner() {
 	});
 	const matchSettings = useMatchRoute();
 	const onSettings = Boolean(
-		matchSettings({ to: "/$account_slug/settings", fuzzy: false }),
+		matchSettings({ to: "/$account_slug/settings", fuzzy: true }),
 	);
 
 	if (!slug || onSettings) return null;
@@ -67,7 +67,10 @@ function WebPushSetupBannerInner({ slug }: { slug: string }) {
 	const denied = status.permission === "denied";
 
 	function openSettings() {
-		navigate({ to: "/$account_slug/settings", params: { account_slug: slug } });
+		navigate({
+			to: "/$account_slug/settings/notifications",
+			params: { account_slug: slug },
+		});
 	}
 
 	function handleClick() {

@@ -3,6 +3,7 @@ class ChannelAuthorization < ApplicationRecord
   DEFAULT_INTERVAL = 5 # seconds
   USER_CODE_CHARSET = "BCDFGHJKMNPQRSTVWXYZ23456789".freeze
 
+  belongs_to :account, optional: true
   belongs_to :user, optional: true
   belongs_to :channel, optional: true
 
@@ -38,6 +39,7 @@ class ChannelAuthorization < ApplicationRecord
     )
 
     update!(
+      account: user.account,
       user: user,
       channel: new_channel,
       channel_name: target_name,

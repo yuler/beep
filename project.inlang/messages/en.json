@@ -604,6 +604,8 @@
   "push_turning_off": "Turning off…",
   "push_unsupported": "This browser does not support web push.",
   "settings_description": "Notifications, timezone, and device preferences for this workspace.",
+  "settings_general_description": "Timezone and general preferences for this workspace.",
+  "settings_general_title": "General",
   "settings_notifications_description": "How you receive due beeps in this workspace. You can turn email off from the link in each reminder.",
   "settings_notifications_title": "Notifications",
   "settings_timezone_browser": "Browser timezone: {timezone}",

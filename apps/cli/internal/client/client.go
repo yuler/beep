@@ -372,89 +372,32 @@ func (c *Client) AckDeviceDelivery(ctx context.Context, deliveryID string, statu
 	return c.AckCliDelivery(ctx, deliveryID, status, errorMsg)
 }
 
-type ChannelUser struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type Channel struct {
-	ID          string       `json:"id"`
-	Name        string       `json:"name"`
-	Kind        string       `json:"kind"`
-	Status      string       `json:"status"`
-	Token       string       `json:"token,omitempty"`
-	MaskedToken string       `json:"masked_token"`
-	User        *ChannelUser `json:"user,omitempty"`
-	LastSeenAt  *time.Time   `json:"last_seen_at"`
-	CreatedAt   time.Time    `json:"created_at"`
-}
-
-func (c *Client) ListChannels(ctx context.Context, accountSlug, authToken string) ([]Channel, error) {
-	url := fmt.Sprintf("%s/api/v1/%s/channels", c.cfg.ServerURL, accountSlug)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func (c *Client) DisconnectChannel(ctx context.Context) error {
+	url := fmt.Sprintf("%s/api/v1/channels/cli/disconnect", c.cfg.ServerURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	c.setHeaders(req)
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+authToken)
-	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("list channels failed (status %d): %s", resp.StatusCode, string(respBody))
+	// Treat already-gone as success so disconnect stays idempotent
+	// (e.g. channel was deleted from the web settings page).
+	if resp.StatusCode == http.StatusNoContent ||
+		resp.StatusCode == http.StatusOK ||
+		resp.StatusCode == http.StatusUnauthorized ||
+		resp.StatusCode == http.StatusNotFound {
+		io.Copy(io.Discard, resp.Body)
+		return nil
 	}
 
-	var res struct {
-		Channels []Channel `json:"channels"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return nil, err
-	}
-	return res.Channels, nil
-}
-
-func (c *Client) CreateChannel(ctx context.Context, accountSlug, authToken, name, kind string) (*Channel, error) {
-	url := fmt.Sprintf("%s/api/v1/%s/channels", c.cfg.ServerURL, accountSlug)
-	payload := map[string]any{
-		"channel": map[string]any{
-			"name": name,
-			"kind": kind,
-		},
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))
-	if err != nil {
-		return nil, err
-	}
-	c.setHeaders(req)
-	if authToken != "" {
-		req.Header.Set("Authorization", "Bearer "+authToken)
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("create channel failed (status %d): %s", resp.StatusCode, string(respBody))
-	}
-
-	var res struct {
-		Channel Channel `json:"channel"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return nil, err
-	}
-	return &res.Channel, nil
+	respBody, _ := io.ReadAll(resp.Body)
+	return fmt.Errorf("disconnect channel failed (status %d): %s", resp.StatusCode, string(respBody))
 }
 
 type DeviceAuthorizationResponse struct {

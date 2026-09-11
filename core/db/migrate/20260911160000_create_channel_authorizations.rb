@@ -1,6 +1,7 @@
 class CreateChannelAuthorizations < ActiveRecord::Migration[8.2]
   def change
     create_table :channel_authorizations, id: :uuid do |t|
+      t.references :account, foreign_key: true, type: :uuid
       t.references :user, foreign_key: true, type: :uuid
       t.references :channel, foreign_key: true, type: :uuid
       t.string :device_code, null: false

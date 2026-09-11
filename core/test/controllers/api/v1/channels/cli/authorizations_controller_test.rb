@@ -61,6 +61,7 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
     assert_equal "cli", response.parsed_body.dig("channel", "kind")
 
     assert_equal "approved", auth.reload.status
+    assert_equal @user.account, auth.account
     assert_equal "Renamed-Laptop", auth.channel.name
   end
 

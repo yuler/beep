@@ -247,6 +247,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_11_160000) do
   end
 
   create_table "channel_authorizations", id: :uuid, force: :cascade do |t|
+    t.uuid "account_id"
     t.uuid "user_id"
     t.uuid "channel_id"
     t.string "device_code", null: false
@@ -257,6 +258,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_11_160000) do
     t.datetime "last_polled_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_channel_authorizations_on_account_id"
     t.index ["channel_id"], name: "index_channel_authorizations_on_channel_id"
     t.index ["device_code"], name: "index_channel_authorizations_on_device_code", unique: true
     t.index ["expires_at"], name: "index_channel_authorizations_on_expires_at"
@@ -445,6 +447,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_11_160000) do
   add_foreign_key "beepers", "beeper_apps"
   add_foreign_key "beeps", "accounts"
   add_foreign_key "beeps", "beepers"
+  add_foreign_key "channel_authorizations", "accounts"
   add_foreign_key "channel_authorizations", "channels"
   add_foreign_key "channel_authorizations", "users"
   add_foreign_key "channel_deliveries", "beep_runs"
