@@ -9,17 +9,17 @@ The **Channel** system is Beep's notification and device action delivery infrast
 ```mermaid
 flowchart TD
   subgraph Cloud [Beep Core]
-    Beep[Beep / Beeper Fired] --> Router[Channel Delivery Router]
+    Beep["Beep / Beeper Fired"] --> Router[Channel Delivery Router]
     Router -->|Email| Mail[BeepMailer]
     Router -->|WebPush| FCM[WebPush Protocol]
     Router -->|Device Channel| DeviceInbox[Device Channel Queue]
   end
 
-  subgraph Host [Device CLI: beep up]
-    Daemon[beep up CLI Daemon] -->|Pull (Short/Long Polling)| DeviceInbox
-    Daemon -->|Validate TTL <= 30m| HookRunner[Local Hook Dispatcher]
-    HookRunner -->|exec| Hook[.beep/hooks/on_beep]
-    Hook -->|trigger| Action[System Action / omarchy / checkin-blank.sh]
+  subgraph Host ["Device CLI: beep up"]
+    Daemon["beep up CLI Daemon"] -->|"Pull (Short/Long Polling)"| DeviceInbox
+    Daemon -->|"Validate TTL <= 30m"| HookRunner[Local Hook Dispatcher]
+    HookRunner -->|exec| Hook[".beep/hooks/on_beep"]
+    Hook -->|trigger| Action["System Action / omarchy / checkin-blank.sh"]
   end
 ```
 
