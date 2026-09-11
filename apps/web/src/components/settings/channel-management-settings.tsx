@@ -54,7 +54,7 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 		try {
 			const ch = await createChannel(slug, {
 				name: name.trim(),
-				kind: "device",
+				kind: "cli",
 			});
 			setCreatedChannel(ch);
 			setName("");
@@ -81,18 +81,18 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
 					<Monitor className="size-5" />
-					Device Channels
+					CLI Channels
 				</CardTitle>
 				<CardDescription>
-					Connect your desktop machines and CLI daemons to receive notifications
-					and trigger local actions.
+					Connect your Beep CLI daemons to receive notifications and trigger
+					local actions.
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-6">
 				<form onSubmit={handleCreate} className="flex items-end gap-3">
 					<div className="flex-1">
 						<Label htmlFor="channel-name" className="text-xs">
-							Device / Channel Name
+							CLI Channel Name
 						</Label>
 						<Input
 							id="channel-name"
@@ -104,14 +104,14 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 					</div>
 					<Button type="submit" disabled={creating || !name.trim()}>
 						<Plus className="mr-1 size-4" />
-						Add Device
+						Add CLI
 					</Button>
 				</form>
 
 				{createdChannel?.token ? (
 					<div className="rounded-lg border border-primary/40 bg-primary/5 p-4 text-sm">
 						<div className="font-semibold text-foreground">
-							Device Channel Created: {createdChannel.name}
+							CLI Channel Created: {createdChannel.name}
 						</div>
 						<p className="mt-1 text-xs text-muted-foreground">
 							Copy this token and configure it on your machine using the Beep
@@ -122,13 +122,13 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 								code={createdChannel.token}
 								copied={copied}
 								onCopy={() => copy(createdChannel.token ?? "")}
-								label="Copy device token"
+								label="Copy CLI token"
 							/>
 						</div>
 						<div className="mt-2 text-xs text-muted-foreground">
 							Run:{" "}
 							<code className="rounded bg-muted px-1">
-								beep config set device_token {createdChannel.token}
+								beep config set cli_token {createdChannel.token}
 							</code>
 						</div>
 					</div>
@@ -143,11 +143,11 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 				<div className="flex flex-col divide-y rounded-lg border">
 					{loading ? (
 						<div className="p-4 text-center text-sm text-muted-foreground">
-							Loading devices...
+							Loading channels...
 						</div>
 					) : channels.length === 0 ? (
 						<div className="p-4 text-center text-sm text-muted-foreground">
-							No devices or custom channels registered yet.
+							No CLI channels registered yet.
 						</div>
 					) : (
 						channels.map((ch) => (

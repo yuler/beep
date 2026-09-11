@@ -1,6 +1,6 @@
-class Api::V1::Device::DeliveriesController < Api::V1::Device::BaseController
+class Api::V1::Cli::DeliveriesController < Api::V1::Cli::BaseController
   def ack
-    delivery = @current_device.deliveries.find(params[:id])
+    delivery = @current_channel.deliveries.find(params[:id])
     status = params[:status].to_s
 
     if status == "succeeded"

@@ -10,7 +10,7 @@ class ChannelTest < ActiveSupport::TestCase
     channel = Channel.create!(
       account: @account,
       user: @user,
-      kind: :device,
+      kind: :cli,
       name: "my-laptop"
     )
 
@@ -24,7 +24,7 @@ class ChannelTest < ActiveSupport::TestCase
     channel = Channel.new(
       account: other_account,
       user: @user,
-      kind: :device,
+      kind: :cli,
       name: "laptop"
     )
 
@@ -36,7 +36,7 @@ class ChannelTest < ActiveSupport::TestCase
     channel = Channel.create!(
       account: @account,
       user: @user,
-      kind: :device,
+      kind: :cli,
       name: "my-laptop"
     )
 
@@ -49,7 +49,7 @@ class ChannelTest < ActiveSupport::TestCase
     channel = Channel.create!(
       account: @account,
       user: @user,
-      kind: :device,
+      kind: :cli,
       name: "my-laptop"
     )
 

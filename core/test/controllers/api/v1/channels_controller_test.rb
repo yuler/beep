@@ -12,7 +12,7 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
   test "index returns account channels" do
     channel = @account.channels.create!(
       user: @user,
-      kind: :device,
+      kind: :cli,
       name: "laptop"
     )
 
@@ -25,7 +25,7 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, channels.size
     assert_equal channel.id, channels.first["id"]
     assert_equal "laptop", channels.first["name"]
-    assert_equal "device", channels.first["kind"]
+    assert_equal "cli", channels.first["kind"]
     assert_equal @user.id, channels.first.dig("user", "id")
   end
 
@@ -35,7 +35,7 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
         params: {
           channel: {
             name: "home-desktop",
-            kind: "device"
+            kind: "cli"
           }
         },
         headers: { "Authorization" => "Bearer #{@token}" },
@@ -45,7 +45,7 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
     body = response.parsed_body["channel"]
     assert_equal "home-desktop", body["name"]
-    assert_equal "device", body["kind"]
+    assert_equal "cli", body["kind"]
     assert_predicate body["token"], :present?
     assert body["token"].start_with?(Channel::TOKEN_PREFIX)
   end
@@ -53,7 +53,7 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
   test "destroy removes the channel" do
     channel = @account.channels.create!(
       user: @user,
-      kind: :device,
+      kind: :cli,
       name: "laptop"
     )
 

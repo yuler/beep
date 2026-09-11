@@ -224,14 +224,14 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
       beep
     end
 
-  test "deliver queues deliveries for recipient user device channels" do
+  test "deliver queues deliveries for recipient user cli channels" do
     channel = Channel.create!(
       account: @account,
       user: users(:john),
-      kind: :device,
+      kind: :cli,
       name: "laptop"
     )
-    @beep.update!(notification_channels: %w[ device ])
+    @beep.update!(notification_channels: %w[ cli ])
 
     @run.deliver_now
     @run.reload
@@ -241,23 +241,23 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     delivery = channel.deliveries.sole
     assert_equal "pending", delivery.status
     assert_equal @beep.title, delivery.payload["title"]
-    assert_equal "queued", @run.result.dig("device", "deliveries", 0, "status")
+    assert_equal "queued", @run.result.dig("cli", "deliveries", 0, "status")
   end
 
-  test "deliver targets specific device channel by name" do
+  test "deliver targets specific cli channel by name" do
     laptop = Channel.create!(
       account: @account,
       user: users(:john),
-      kind: :device,
+      kind: :cli,
       name: "laptop"
     )
     desktop = Channel.create!(
       account: @account,
       user: users(:john),
-      kind: :device,
+      kind: :cli,
       name: "desktop"
     )
-    @beep.update!(notification_channels: %w[ device:laptop ])
+    @beep.update!(notification_channels: %w[ cli:laptop ])
 
     @run.deliver_now
     @run.reload
@@ -265,6 +265,31 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     assert @run.succeeded?
     assert_equal 1, laptop.deliveries.count
     assert_equal 0, desktop.deliveries.count
+  end
+
+  test "deliver targets specific channel by direct channel ID" do
+    laptop = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :cli,
+      name: "laptop"
+    )
+    desktop = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :cli,
+      name: "desktop"
+    )
+    @beep.update!(notification_channels: [ laptop.id ])
+
+    @run.deliver_now
+    @run.reload
+
+    assert @run.succeeded?
+    assert_equal 1, laptop.deliveries.count
+    assert_equal 0, desktop.deliveries.count
+    assert_equal "queued", @run.result.dig("cli", "deliveries", 0, "status")
+    assert_equal laptop.id, @run.result.dig("cli", "deliveries", 0, "channel_id")
   end
 
     def subscribe(endpoint, user: users(:john))

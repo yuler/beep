@@ -188,10 +188,9 @@ class Beep < ApplicationRecord
 
     def assign_default_notification_channels
       if Array(notification_channels).empty?
-        self.notification_channels = if Current.user
-          Current.user.notification_channels
-        elsif account&.owner_user
-          account.owner_user.notification_channels
+        target_user = Current.user || account&.owner_user
+        self.notification_channels = if target_user
+          target_user.notification_channels.presence || target_user.channels.active.pluck(:id)
         else
           []
         end
@@ -232,7 +231,9 @@ class Beep < ApplicationRecord
       return if notification_channels.blank?
 
       invalid = Array(notification_channels).reject do |channel|
-        channel.in?(User::NOTIFICATION_CHANNELS) || channel.to_s.start_with?("device:")
+        channel.in?(User::NOTIFICATION_CHANNELS) ||
+          channel.to_s.start_with?("cli:") ||
+          channel.to_s.match?(/\A[0-9a-zA-Z_-]{10,40}\z/)
       end
       if invalid.any?
         errors.add(:notification_channels, "contains unsupported channels: #{invalid.join(', ')}")

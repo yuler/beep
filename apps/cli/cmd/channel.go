@@ -23,7 +23,7 @@ var (
 var channelCmd = &cobra.Command{
 	Use:     "channel",
 	Aliases: []string{"channels"},
-	Short:   "Manage notification channels and device tokens",
+	Short:   "Manage notification channels and CLI tokens",
 }
 
 var channelListCmd = &cobra.Command{
@@ -90,7 +90,7 @@ var channelListCmd = &cobra.Command{
 
 var channelCreateCmd = &cobra.Command{
 	Use:   "create <name>",
-	Short: "Create a new notification channel (default: device)",
+	Short: "Create a new notification channel (default: cli)",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -127,8 +127,8 @@ var channelCreateCmd = &cobra.Command{
 			ui.Cyan(ch.Kind),
 		)
 		if ch.Token != "" {
-			fmt.Printf("  %s %s\n", ui.Dim("Device Token:"), ui.Yellow(ch.Token))
-			fmt.Printf("  %s %s\n", ui.Dim("To configure on this machine:"), ui.Cyan(fmt.Sprintf("beep config set device_token %s", ch.Token)))
+			fmt.Printf("  %s %s\n", ui.Dim("CLI Token:"), ui.Yellow(ch.Token))
+			fmt.Printf("  %s %s\n", ui.Dim("To configure on this machine:"), ui.Cyan(fmt.Sprintf("beep config set cli_token %s", ch.Token)))
 		}
 		return nil
 	},
@@ -136,7 +136,7 @@ var channelCreateCmd = &cobra.Command{
 
 var channelSetTokenCmd = &cobra.Command{
 	Use:   "set-token <token>",
-	Short: "Configure device token for local machine in ~/.beep/config.json",
+	Short: "Configure CLI token for local machine in ~/.beep/config.json",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token := args[0]
@@ -146,18 +146,19 @@ var channelSetTokenCmd = &cobra.Command{
 			fc = &config.FileConfig{}
 		}
 
+		fc.CliToken = token
 		fc.DeviceToken = token
 		if err := config.SaveFile(configPath, fc); err != nil {
 			return fmt.Errorf("failed to save config: %w", err)
 		}
 
-		fmt.Println(ui.Success("Configured local device token in %s", ui.Dim(configPath)))
+		fmt.Println(ui.Success("Configured local CLI token in %s", ui.Dim(configPath)))
 		return nil
 	},
 }
 
 func init() {
-	channelCreateCmd.Flags().StringVar(&flagChannelKind, "kind", "device", "Channel kind (device, webhook, email)")
+	channelCreateCmd.Flags().StringVar(&flagChannelKind, "kind", "cli", "Channel kind (cli, webhook, email)")
 	channelCmd.PersistentFlags().StringVar(&flagAccountSlug, "account", "", "Account slug")
 	channelCmd.PersistentFlags().StringVar(&flagAuthToken, "auth-token", "", "User authentication token")
 

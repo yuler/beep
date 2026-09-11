@@ -1,12 +1,12 @@
 require "test_helper"
 
-class Api::V1::DeviceControllerTest < ActionDispatch::IntegrationTest
+class Api::V1::CliControllerTest < ActionDispatch::IntegrationTest
   setup do
     @account = accounts(:john_account)
     @user = users(:john)
     @channel = @account.channels.create!(
       user: @user,
-      kind: :device,
+      kind: :cli,
       name: "laptop"
     )
     @beep = Beep.create!(
@@ -23,8 +23,8 @@ class Api::V1::DeviceControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "inbox returns pending deliveries and claims them" do
-    get "/api/v1/device/inbox",
-      headers: { "X-Device-Token" => @channel.token },
+    get "/api/v1/cli/inbox",
+      headers: { "X-CLI-Token" => @channel.token },
       as: :json
 
     assert_response :success
@@ -38,17 +38,17 @@ class Api::V1::DeviceControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "inbox rejects unauthorized request" do
-    get "/api/v1/device/inbox",
-      headers: { "X-Device-Token" => "invalid_token" },
+    get "/api/v1/cli/inbox",
+      headers: { "X-CLI-Token" => "invalid_token" },
       as: :json
 
     assert_response :unauthorized
   end
 
   test "ack marks delivery succeeded" do
-    post "/api/v1/device/deliveries/#{@delivery.id}/ack",
+    post "/api/v1/cli/deliveries/#{@delivery.id}/ack",
       params: { status: "succeeded" },
-      headers: { "X-Device-Token" => @channel.token },
+      headers: { "X-CLI-Token" => @channel.token },
       as: :json
 
     assert_response :no_content
@@ -56,9 +56,9 @@ class Api::V1::DeviceControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "ack marks delivery failed" do
-    post "/api/v1/device/deliveries/#{@delivery.id}/ack",
+    post "/api/v1/cli/deliveries/#{@delivery.id}/ack",
       params: { status: "failed", error: "Execution error" },
-      headers: { "X-Device-Token" => @channel.token },
+      headers: { "X-CLI-Token" => @channel.token },
       as: :json
 
     assert_response :no_content

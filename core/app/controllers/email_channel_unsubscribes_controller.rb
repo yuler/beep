@@ -9,6 +9,7 @@ class EmailChannelUnsubscribesController < ApplicationController
   end
 
   def create
+    @user.channels.where(kind: :email).destroy_all
     if @user.notification_channel?("email")
       @user.update!(notification_channels: Array(@user.notification_channels) - %w[ email ])
     end

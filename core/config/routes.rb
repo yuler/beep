@@ -75,7 +75,7 @@ Rails.application.routes.draw do
       resource :settings, only: %i[ show update ]
       resources :channels, only: %i[ index create destroy ]
 
-      namespace :device do
+      namespace :cli do
         resource :inbox, only: %i[ show ]
         resources :deliveries, only: [] do
           member do

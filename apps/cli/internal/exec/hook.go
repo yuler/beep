@@ -30,7 +30,7 @@ func FindOnBeepHook(workspaceRoot string) string {
 	return ""
 }
 
-func DispatchOnBeepHook(ctx context.Context, workspaceRoot string, delivery client.DeviceDelivery) (string, error) {
+func DispatchOnBeepHook(ctx context.Context, workspaceRoot string, delivery client.CliDelivery) (string, error) {
 	hookPath := FindOnBeepHook(workspaceRoot)
 	if hookPath == "" {
 		return "", nil

@@ -14,6 +14,7 @@ import (
 type FileConfig struct {
 	ServerURL    string `json:"server_url,omitempty"`
 	RunnerToken  string `json:"runner_token,omitempty"`
+	CliToken     string `json:"cli_token,omitempty"`
 	DeviceToken  string `json:"device_token,omitempty"`
 	Workspace    string `json:"workspace,omitempty"`
 	Concurrency  int    `json:"concurrency,omitempty"`
@@ -24,6 +25,7 @@ type FileConfig struct {
 type Config struct {
 	ServerURL    string
 	RunnerToken  string
+	CliToken     string
 	DeviceToken  string
 	Concurrency  int
 	PollInterval time.Duration
@@ -109,7 +111,10 @@ func Load(wsHint string) (*Config, error) {
 	serverURL = strings.TrimRight(serverURL, "/")
 
 	runnerToken := getEnv("BEEP_RUNNER_TOKEN", fc.RunnerToken)
-	deviceToken := getEnv("BEEP_DEVICE_TOKEN", fc.DeviceToken)
+	cliToken := getEnv("BEEP_CLI_TOKEN", fc.CliToken)
+	if cliToken == "" {
+		cliToken = getEnv("BEEP_DEVICE_TOKEN", fc.DeviceToken)
+	}
 
 	concurrency := 5
 	if fc.Concurrency > 0 {
@@ -137,7 +142,8 @@ func Load(wsHint string) (*Config, error) {
 	cfg := &Config{
 		ServerURL:    serverURL,
 		RunnerToken:  runnerToken,
-		DeviceToken:  deviceToken,
+		CliToken:     cliToken,
+		DeviceToken:  cliToken,
 		Concurrency:  concurrency,
 		PollInterval: pollInterval,
 		Hostname:     hostname,

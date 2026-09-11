@@ -282,13 +282,13 @@ func (c *Client) setHeaders(req *http.Request) {
 	if c.cfg.RunnerToken != "" {
 		req.Header.Set("X-Runner-Token", c.cfg.RunnerToken)
 	}
-	if c.cfg.DeviceToken != "" {
-		req.Header.Set("X-Device-Token", c.cfg.DeviceToken)
+	if c.cfg.CliToken != "" {
+		req.Header.Set("X-CLI-Token", c.cfg.CliToken)
 	}
 	req.Header.Set("User-Agent", fmt.Sprintf("Beep-Runner/%s (%s; %s)", version.Version, runtime.GOOS, runtime.GOARCH))
 }
 
-type DeviceDelivery struct {
+type CliDelivery struct {
 	ID        string         `json:"id"`
 	BeepRunID *string        `json:"beep_run_id"`
 	Status    string         `json:"status"`
@@ -297,21 +297,25 @@ type DeviceDelivery struct {
 	CreatedAt time.Time      `json:"created_at"`
 }
 
-type DeviceInboxResponse struct {
-	Deliveries []DeviceDelivery `json:"deliveries"`
+type DeviceDelivery = CliDelivery
+
+type CliInboxResponse struct {
+	Deliveries []CliDelivery `json:"deliveries"`
 }
 
-func (c *Client) FetchDeviceInbox(ctx context.Context) ([]DeviceDelivery, error) {
-	if c.cfg.DeviceToken == "" {
+type DeviceInboxResponse = CliInboxResponse
+
+func (c *Client) FetchCliInbox(ctx context.Context) ([]CliDelivery, error) {
+	if c.cfg.CliToken == "" {
 		return nil, nil
 	}
-	url := fmt.Sprintf("%s/api/v1/device/inbox", c.cfg.ServerURL)
+	url := fmt.Sprintf("%s/api/v1/cli/inbox", c.cfg.ServerURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 	c.setHeaders(req)
-	req.Header.Set("X-Device-Token", c.cfg.DeviceToken)
+	req.Header.Set("X-CLI-Token", c.cfg.CliToken)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -321,18 +325,22 @@ func (c *Client) FetchDeviceInbox(ctx context.Context) ([]DeviceDelivery, error)
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("fetch device inbox failed (status %d): %s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("fetch cli inbox failed (status %d): %s", resp.StatusCode, string(respBody))
 	}
 
-	var inboxRes DeviceInboxResponse
+	var inboxRes CliInboxResponse
 	if err := json.NewDecoder(resp.Body).Decode(&inboxRes); err != nil {
 		return nil, err
 	}
 	return inboxRes.Deliveries, nil
 }
 
-func (c *Client) AckDeviceDelivery(ctx context.Context, deliveryID string, status string, errorMsg string) error {
-	url := fmt.Sprintf("%s/api/v1/device/deliveries/%s/ack", c.cfg.ServerURL, deliveryID)
+func (c *Client) FetchDeviceInbox(ctx context.Context) ([]CliDelivery, error) {
+	return c.FetchCliInbox(ctx)
+}
+
+func (c *Client) AckCliDelivery(ctx context.Context, deliveryID string, status string, errorMsg string) error {
+	url := fmt.Sprintf("%s/api/v1/cli/deliveries/%s/ack", c.cfg.ServerURL, deliveryID)
 	payload := map[string]any{
 		"status": status,
 	}
@@ -345,7 +353,7 @@ func (c *Client) AckDeviceDelivery(ctx context.Context, deliveryID string, statu
 		return err
 	}
 	c.setHeaders(req)
-	req.Header.Set("X-Device-Token", c.cfg.DeviceToken)
+	req.Header.Set("X-CLI-Token", c.cfg.CliToken)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -355,9 +363,13 @@ func (c *Client) AckDeviceDelivery(ctx context.Context, deliveryID string, statu
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("ack device delivery failed (status %d): %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("ack cli delivery failed (status %d): %s", resp.StatusCode, string(respBody))
 	}
 	return nil
+}
+
+func (c *Client) AckDeviceDelivery(ctx context.Context, deliveryID string, status string, errorMsg string) error {
+	return c.AckCliDelivery(ctx, deliveryID, status, errorMsg)
 }
 
 type ChannelUser struct {

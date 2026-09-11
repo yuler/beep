@@ -1,5 +1,5 @@
 class User < ApplicationRecord
-  NOTIFICATION_CHANNELS = %w[ email web_push device ].freeze
+  NOTIFICATION_CHANNELS = %w[ email web_push cli ].freeze
   DEFAULT_NOTIFICATION_CHANNELS = %w[ email ].freeze
 
   include Role
@@ -18,6 +18,7 @@ class User < ApplicationRecord
   before_validation :assign_default_notification_channels, on: :create
   before_validation :normalize_notification_channels
   before_validation :clear_timezone_source, unless: :timezone?
+  after_create :create_default_email_channel
 
   validates :name, presence: true
   validates :timezone_source, presence: true, if: :timezone?
@@ -83,5 +84,18 @@ class User < ApplicationRecord
 
     def timezone_is_iana
       errors.add(:timezone, "is invalid") unless IanaTimezone.valid?(timezone)
+    end
+
+    def create_default_email_channel
+      return if channels.where(kind: :email).exists?
+
+      email_name = identity&.email.presence || name.presence || "email"
+      channels.create!(
+        account: account,
+        kind: :email,
+        name: email_name
+      )
+    rescue ActiveRecord::RecordInvalid
+      # ignore if already exists or invalid
     end
 end

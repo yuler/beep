@@ -30,7 +30,7 @@ echo "Hook received event: $BEEP_EVENT_ID title: $BEEP_EVENT_TITLE"
 		t.Fatalf("failed to write hook script: %v", err)
 	}
 
-	delivery := client.DeviceDelivery{
+	delivery := client.CliDelivery{
 		ID: "del_12345",
 		Payload: map[string]any{
 			"title": "Off work notification",

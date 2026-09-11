@@ -7,7 +7,7 @@ class ChannelDeliveryTest < ActiveSupport::TestCase
     @channel = Channel.create!(
       account: @account,
       user: @user,
-      kind: :device,
+      kind: :cli,
       name: "laptop"
     )
     @beep = Beep.create!(

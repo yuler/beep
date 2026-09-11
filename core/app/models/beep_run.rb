@@ -40,6 +40,7 @@ class BeepRun < ApplicationRecord
 
     def deliver_for(user, payload_result)
       channels = Array(beep.notification_channels)
+      return payload_result if channels.empty?
 
       if channels.include?("web_push")
         payload_result = deliver_web_push(user, payload_result)
@@ -54,9 +55,34 @@ class BeepRun < ApplicationRecord
         end
       end
 
-      if channels.include?("device") || channels.any? { |c| c.to_s.start_with?("device:") }
-        payload_result = deliver_device(user, channels, payload_result)
+      if channels.include?("cli") || channels.any? { |c| c.to_s.start_with?("cli:") }
+        payload_result = deliver_cli(user, channels, payload_result)
         persist_result(payload_result)
+      end
+
+      channel_ids = channels.select { |c| c.to_s.match?(/\A[0-9a-zA-Z_-]{10,40}\z/) && !c.to_s.in?(User::NOTIFICATION_CHANNELS) }
+      if channel_ids.any?
+        user_channels = user.channels.active.where(id: channel_ids).to_a
+        user_channels.each do |channel|
+          case channel.kind
+          when "email"
+            payload_result = deliver_email(user, payload_result)
+            persist_result(payload_result)
+            if payload_result.dig("email", "status") == "error"
+              raise EmailDeliveryError, payload_result.dig("email", "error")
+            end
+          when "web_push"
+            delivery_record = deliver_to(channel)
+            existing = payload_result.dig("web_push", "deliveries") || []
+            payload_result = payload_result.merge("web_push" => { "deliveries" => existing + [ delivery_record ] })
+            persist_result(payload_result)
+          when "cli"
+            delivery_record = deliver_to_channel(channel)
+            existing = payload_result.dig("cli", "deliveries") || []
+            payload_result = payload_result.merge("cli" => { "deliveries" => existing + [ delivery_record ] })
+            persist_result(payload_result)
+          end
+        end
       end
 
       payload_result
@@ -75,7 +101,7 @@ class BeepRun < ApplicationRecord
     end
 
     def web_push_payload(user)
-      subscriptions = user.push_subscriptions.to_a
+      subscriptions = user.channels.active.where(kind: :web_push).to_a
       if subscriptions.empty?
         { "web_push" => { "reason" => "no_subscriptions" } }
       else
@@ -89,12 +115,12 @@ class BeepRun < ApplicationRecord
 
     def deliver_to(subscription)
       subscription.deliver_beep(beep, run: self)
-      { "subscription_id" => subscription.id, "status" => "sent" }
+      { "subscription_id" => subscription.id, "channel_id" => subscription.id, "status" => "sent" }
     rescue WebPush::ExpiredSubscription, WebPush::InvalidSubscription
       subscription.destroy!
-      { "subscription_id" => subscription.id, "status" => "expired" }
+      { "subscription_id" => subscription.id, "channel_id" => subscription.id, "status" => "expired" }
     rescue StandardError => error
-      { "subscription_id" => subscription.id, "status" => "error", "error" => error.class.name }
+      { "subscription_id" => subscription.id, "channel_id" => subscription.id, "status" => "error", "error" => error.class.name }
     end
 
     def deliver_email(user, payload_result)
@@ -116,26 +142,26 @@ class BeepRun < ApplicationRecord
       payload_result.merge("email" => { "status" => "error", "error" => error.class.name })
     end
 
-    def deliver_device(user, channels, payload_result)
-      if payload_result.key?("device")
+    def deliver_cli(user, channels, payload_result)
+      if payload_result.key?("cli")
         payload_result
       else
-        payload_result.merge(device_payload(user, channels))
+        payload_result.merge(cli_payload(user, channels))
       end
     end
 
-    def device_payload(user, channels)
-      target_channels = user.channels.active.where(kind: :device)
-      specific_names = channels.select { |c| c.to_s.start_with?("device:") }.map { |c| c.to_s.delete_prefix("device:") }
+    def cli_payload(user, channels)
+      target_channels = user.channels.active.where(kind: :cli)
+      specific_names = channels.select { |c| c.to_s.start_with?("cli:") }.map { |c| c.to_s.delete_prefix("cli:") }
       if specific_names.any?
         target_channels = target_channels.where(name: specific_names)
       end
 
       if target_channels.empty?
-        { "device" => { "reason" => "no_channels" } }
+        { "cli" => { "reason" => "no_channels" } }
       else
         {
-          "device" => {
+          "cli" => {
             "deliveries" => target_channels.map { |channel| deliver_to_channel(channel) }
           }
         }

@@ -10,7 +10,7 @@ class ChannelDelivery < ApplicationRecord
 
   validates :status, presence: true
 
-  scope :due_for_device, -> { pending.where(expires_at: Time.current..) }
+  scope :due_for_cli, -> { pending.where(expires_at: Time.current..) }
   scope :stale_pending, -> { pending.where(expires_at: ...Time.current) }
 
   def expired?

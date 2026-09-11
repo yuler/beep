@@ -1,6 +1,6 @@
 # Notification Channel System
 
-The **Channel** system is Beep's notification and device action delivery infrastructure. It decouples reminder triggers from physical targets, supporting user-scoped devices (desktop CLI daemons), browsers ([Web Push](web-push.md)), mailboxes, and webhooks.
+The **Channel** system is Beep's notification delivery infrastructure. A Channel is one user-owned destination row. Kinds today: CLI (`beep up`), [Web Push](web-push.md), email, and webhook. Terms: [`TERMS.md`](../TERMS.md).
 
 ---
 
@@ -12,11 +12,11 @@ flowchart TD
     Beep["Beep / Beeper Fired"] --> Router[Channel Delivery Router]
     Router -->|Email| Mail[BeepMailer]
     Router -->|WebPush| FCM[WebPush Protocol]
-    Router -->|Device Channel| DeviceInbox[Device Channel Queue]
+    Router -->|CLI Channel| CliInbox[CLI Channel Queue]
   end
 
-  subgraph Host ["Device CLI: beep up"]
-    Daemon["beep up CLI Daemon"] -->|"Pull (Short/Long Polling)"| DeviceInbox
+  subgraph Host ["Beep CLI: beep up"]
+    Daemon["beep up"] -->|"Pull (Short/Long Polling)"| CliInbox
     Daemon -->|"Validate TTL <= 30m"| HookRunner[Local Hook Dispatcher]
     HookRunner -->|exec| Hook[".beep/hooks/on_beep"]
     Hook -->|trigger| Action["System Action / omarchy / checkin-blank.sh"]
@@ -27,8 +27,8 @@ flowchart TD
 
 ## 2. Core Decisions
 
-1. **User-scoped ownership**: Channels belong to a `User` (`belongs_to :user`, `belongs_to :account`). Devices and personal notifications are owned by individual users for privacy and security. Team accounts aggregate channels across their members.
-2. **Pull-only HTTP transport**: Intranet devices connect outbound via standard HTTP polling / long-polling (`beep up`). Zero open ports, zero firewall config. Resilient to sleep/wake, network switches, and server restarts.
+1. **User-scoped ownership**: Channels belong to a `User` (`belongs_to :user`, `belongs_to :account`). A Beep, including on a team account, targets only that user's Channels. Team is the tenant, not a fan-out of members' destinations.
+2. **Pull-only HTTP transport**: CLI Channels connect outbound via HTTP polling / long-polling (`beep up`). Zero open ports, zero firewall config. Resilient to sleep/wake, network switches, and server restarts.
 3. **Declarative local hooks**: Core transmits structured event payloads only (`event: "beep.fired"`, metadata). The local host controls execution via `$WORKSPACE/.beep/hooks/on_beep`.
 4. **TTL safety window**: Notification payloads carry an `expires_at` cutoff (default 30m TTL). Stale events pulled after waking from sleep skip disruptive actions (e.g. screen blanking / locking).
 
@@ -36,12 +36,12 @@ flowchart TD
 
 ## 3. Data model
 
-- **`channels`**: `account_id`, `user_id`, `kind` (`device`, `email`, `web_push`, `webhook`), `name`, `token` (for device auth), `status` (`active`, `disabled`), `last_seen_at`.
+- **`channels`**: `account_id`, `user_id`, `kind` (`cli`, `email`, `web_push`, `webhook`), `name`, `token` (CLI token / `beep_ct_`), `status` (`active`, `disabled`), `last_seen_at`.
 - **`channel_deliveries`**: `beep_run_id`, `channel_id`, `status` (`pending` → `claimed` → `succeeded` / `failed` / `expired`), `payload` (JSON), `expires_at`.
 
 ---
 
-## 4. Device Delivery & Action Protocol
+## 4. CLI Delivery & Action Protocol
 
 ### Event Payload Schema
 ```json
@@ -82,7 +82,7 @@ fi
 
 ## 5. End-to-End Workflow: `get-off-work`
 
-1. **Morning fetch (09:30 Cloud Job)**: Runs `.beep/jobs/get-off-work`, queries `wgkq.id5.cn` for `firstCheckinTime` (`09:12:30`), calculates off-work time (`18:12:30`), and creates a `once` Beep scheduled for `18:12:30` targeting `["device:my-laptop", "web_push"]`.
+1. **Morning fetch (09:30 Cloud Job)**: Runs `.beep/jobs/get-off-work`, queries `wgkq.id5.cn` for `firstCheckinTime` (`09:12:30`), calculates off-work time (`18:12:30`), and creates a `once` Beep scheduled for `18:12:30` targeting the user's CLI Channel (`my-laptop`) and Web Push Channels.
 2. **Due trigger (18:12:30 Core Scheduler)**: `Beep.poll_due_now` fires and creates `channel_deliveries` with `expires_at = 18:42:30`.
 3. **Local execution (Host PC)**: `beep up` pulls the delivery, checks `expires_at >= Time.now`, and runs `.beep/hooks/on_beep` → `checkin-blank.sh offwork` (screensaver slogan → 120s hold → `omarchy system lock` + DPMS off), then ACKs the delivery.
 
@@ -92,11 +92,11 @@ fi
 
 The primary motivation for establishing the **Channel** abstraction is extensibility: the core scheduling engine remains completely platform-agnostic, while new notification targets and client endpoints can be plugged in as first-class adapters:
 
-- **Mobile Clients**:
+- **Mobile** (`kind=ios` / `kind=android`, planned):
   - **iOS**: Native APNs Push, Live Activities, and critical alerts.
   - **Android**: FCM / UnifiedPush / local background services.
-- **Desktop Clients**:
-  - **Native Desktop Apps**: macOS Menu Bar, Windows Tray, Linux App (Omarchy GUI).
+- **Desktop** (`kind=desktop`, planned; not Beep CLI / `beep up`):
+  - Native apps: macOS Menu Bar, Windows Tray, Linux App (Omarchy GUI).
 - **Third-Party Integrations**:
   - **Team Chat Webhooks**: Lark / Feishu, DingTalk, WeCom, Slack, Discord, Telegram bots.
 - **Bi-directional Remote Actions**:

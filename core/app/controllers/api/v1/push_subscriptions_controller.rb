@@ -56,7 +56,7 @@ class Api::V1::PushSubscriptionsController < Api::V1::BaseController
       @push_subscription.destroy!
       render_json_error(
         status: :gone,
-        message: "This device is no longer subscribed",
+        message: "This browser is no longer subscribed",
         code: "PUSH_SUBSCRIPTION_EXPIRED"
       )
     end
