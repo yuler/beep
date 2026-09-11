@@ -1,4 +1,4 @@
-import { Monitor, Plus, Trash2 } from "lucide-react";
+import { Check, Loader2, Plus, Send, Terminal, Trash2 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 	createChannel,
 	deleteChannel,
 	fetchChannels,
+	testChannel,
 } from "@/lib/api/channels";
 import { ApiError } from "@/lib/api/client";
 import { translateError } from "@/lib/i18n-labels";
@@ -27,13 +28,15 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 	const [name, setName] = useState("");
 	const [creating, setCreating] = useState(false);
 	const [createdChannel, setCreatedChannel] = useState<Channel | null>(null);
+	const [testingId, setTestingId] = useState<string | null>(null);
+	const [testSentId, setTestSentId] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const { copied, copy } = useCopyToClipboard();
 
 	const load = useCallback(async () => {
 		try {
-			const data = await fetchChannels(slug);
-			setChannels(data);
+			const data = await fetchChannels(slug, "cli");
+			setChannels(data.filter((ch) => ch.kind === "cli"));
 		} catch (err) {
 			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
@@ -76,11 +79,27 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 		}
 	}
 
+	async function handleTest(id: string) {
+		setError(null);
+		setTestingId(id);
+		try {
+			await testChannel(slug, id);
+			setTestSentId(id);
+			setTimeout(() => {
+				setTestSentId((current) => (current === id ? null : current));
+			}, 3000);
+		} catch (err) {
+			setError(err instanceof ApiError ? err.message : translateError(err));
+		} finally {
+			setTestingId(null);
+		}
+	}
+
 	return (
 		<Card className="max-w-2xl">
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
-					<Monitor className="size-5" />
+					<Terminal className="size-5" />
 					CLI Channels
 				</CardTitle>
 				<CardDescription>
@@ -126,13 +145,13 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 								code={createdChannel.token}
 								copied={copied}
 								onCopy={() => copy(createdChannel.token ?? "")}
-								label="Copy CLI token"
+								label="Copy channel token"
 							/>
 						</div>
 						<div className="mt-2 text-xs text-muted-foreground">
 							Run:{" "}
 							<code className="rounded bg-muted px-1">
-								beep config set cli_token {createdChannel.token}
+								beep config set channel_token {createdChannel.token}
 							</code>
 						</div>
 					</div>
@@ -159,37 +178,65 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 								key={ch.id}
 								className="flex items-center justify-between p-3.5"
 							>
-								<div className="flex flex-col gap-0.5">
+								<div className="flex flex-col gap-1">
 									<div className="flex items-center gap-2 font-medium text-sm">
 										{ch.name}
-										<Badge variant="outline" className="text-[10px] uppercase">
-											{ch.kind}
-										</Badge>
-										{ch.status === "active" ? (
-											<Badge variant="secondary" className="text-[10px]">
+										{ch.is_online ? (
+											<Badge
+												variant="outline"
+												className="gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px]"
+											>
+												<span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
 												Active
 											</Badge>
-										) : null}
+										) : (
+											<Badge
+												variant="outline"
+												className="gap-1.5 border-zinc-500/30 text-muted-foreground text-[10px]"
+											>
+												<span className="size-1.5 rounded-full bg-zinc-400" />
+												Offline
+											</Badge>
+										)}
 									</div>
-									<div className="text-xs text-muted-foreground">
-										Token: {ch.masked_token}
-										{ch.last_seen_at ? (
-											<span>
-												{" "}
-												• Seen: {new Date(ch.last_seen_at).toLocaleString()}
-											</span>
-										) : null}
+									<div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+										<span>Token: {ch.masked_token}</span>
+										<span>•</span>
+										<span>
+											{ch.last_seen_at
+												? `Last active: ${new Date(ch.last_seen_at).toLocaleString()}`
+												: "Never connected"}
+										</span>
 									</div>
 								</div>
-								<Button
-									size="icon"
-									variant="ghost"
-									className="text-muted-foreground hover:text-destructive"
-									onClick={() => handleDelete(ch.id)}
-								>
-									<Trash2 className="size-4" />
-									<span className="sr-only">Delete</span>
-								</Button>
+								<div className="flex items-center gap-2">
+									<Button
+										type="button"
+										size="sm"
+										variant="outline"
+										className="h-8 gap-1.5 px-2.5 text-xs"
+										disabled={testingId === ch.id}
+										onClick={() => handleTest(ch.id)}
+									>
+										{testingId === ch.id ? (
+											<Loader2 className="size-3.5 animate-spin" />
+										) : testSentId === ch.id ? (
+											<Check className="size-3.5 text-emerald-500" />
+										) : (
+											<Send className="size-3.5" />
+										)}
+										<span>{testSentId === ch.id ? "Sent" : "Test"}</span>
+									</Button>
+									<Button
+										size="icon-sm"
+										variant="ghost"
+										className="text-muted-foreground hover:text-destructive"
+										onClick={() => handleDelete(ch.id)}
+									>
+										<Trash2 className="size-4" />
+										<span className="sr-only">Delete</span>
+									</Button>
+								</div>
 							</div>
 						))
 					)}

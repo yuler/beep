@@ -25,20 +25,22 @@ var (
 	flagDaemon       bool
 )
 
-var upCmd = &cobra.Command{
-	Use:     "up",
-	Aliases: []string{"run"},
-	Short:   "Start the runner daemon to poll and execute scheduled tasks",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runUp(cmd, args)
-	},
+func newUpCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "up",
+		Aliases: []string{"run"},
+		Short:   "Start daemon to listen for notifications and execute tasks",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runUp(cmd, args)
+		},
+	}
+	cmd.Flags().IntVarP(&flagConcurrency, "concurrency", "c", 0, "Max concurrent jobs (default 5)")
+	cmd.Flags().DurationVarP(&flagPollInterval, "poll-interval", "i", 0, "Poll interval (default 3s)")
+	cmd.Flags().BoolVarP(&flagDaemon, "daemon", "d", false, "Run daemon in background")
+	return cmd
 }
 
-func init() {
-	upCmd.Flags().IntVarP(&flagConcurrency, "concurrency", "c", 0, "Max concurrent jobs (default 5)")
-	upCmd.Flags().DurationVarP(&flagPollInterval, "poll-interval", "i", 0, "Poll interval (default 3s)")
-	upCmd.Flags().BoolVarP(&flagDaemon, "daemon", "d", false, "Run runner daemon in background")
-}
+var upCmd = newUpCmd()
 
 func runUp(cmd *cobra.Command, args []string) error {
 	cfg, err := loadConfig()

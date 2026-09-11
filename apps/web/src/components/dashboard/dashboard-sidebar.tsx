@@ -2,11 +2,11 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
 	Activity,
 	Bell,
-	BellRing,
 	BriefcaseBusiness,
 	KeyRound,
 	LayoutDashboard,
 	Mail,
+	Radio,
 	Server,
 	SlidersHorizontal,
 	User,
@@ -56,7 +56,7 @@ export function DashboardSidebar({
 	const runnersPath = `/${slug}/runners`;
 	const settingsPath = `/${slug}/settings`;
 	const settingsGeneralPath = `/${slug}/settings/general`;
-	const settingsNotificationsPath = `/${slug}/settings/notifications`;
+	const settingsChannelsPath = `/${slug}/settings/channels`;
 	const lettersPath = "/dev/letters";
 	const jobsPath = "/admin/jobs";
 	const statsPath = "/admin/stats";
@@ -262,20 +262,21 @@ export function DashboardSidebar({
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											isActive={
-												pathname === settingsNotificationsPath ||
-												pathname.startsWith(`${settingsNotificationsPath}/`)
+												pathname === settingsChannelsPath ||
+												pathname.startsWith(`${settingsChannelsPath}/`) ||
+												pathname === `/${slug}/settings/notifications`
 											}
-											tooltip={m.settings_notifications_title()}
+											tooltip={m.settings_channels_title()}
 											render={
 												<Link
-													to="/$account_slug/settings/notifications"
+													to="/$account_slug/settings/channels"
 													params={{ account_slug: slug }}
 													onClick={closeMobileSidebar}
 												/>
 											}
 										>
-											<BellRing />
-											<span>{m.settings_notifications_title()}</span>
+											<Radio />
+											<span>{m.settings_channels_title()}</span>
 										</SidebarMenuButton>
 									</SidebarMenuItem>
 								</SidebarMenu>

@@ -33,6 +33,7 @@ import { Route as Account_slugBeepersBeeperIdRouteImport } from './routes/$accou
 import { Route as Account_slugBeepsBeepIdRouteImport } from './routes/$account_slug/beeps_.$beepId'
 import { Route as Account_slugRunnersRunnerIdRouteImport } from './routes/$account_slug/runners_.$runnerId'
 import { Route as Account_slugSettingsIndexRouteImport } from './routes/$account_slug/settings/index'
+import { Route as Account_slugSettingsChannelsRouteImport } from './routes/$account_slug/settings/channels'
 import { Route as Account_slugSettingsGeneralRouteImport } from './routes/$account_slug/settings/general'
 import { Route as Account_slugSettingsNotificationsRouteImport } from './routes/$account_slug/settings/notifications'
 
@@ -159,6 +160,12 @@ const Account_slugSettingsIndexRoute =
     path: '/',
     getParentRoute: () => Account_slugSettingsRoute,
   } as any)
+const Account_slugSettingsChannelsRoute =
+  Account_slugSettingsChannelsRouteImport.update({
+    id: '/channels',
+    path: '/channels',
+    getParentRoute: () => Account_slugSettingsRoute,
+  } as any)
 const Account_slugSettingsGeneralRoute =
   Account_slugSettingsGeneralRouteImport.update({
     id: '/general',
@@ -196,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/$account_slug/beepers/$beeperId': typeof Account_slugBeepersBeeperIdRoute
   '/$account_slug/beeps/$beepId': typeof Account_slugBeepsBeepIdRoute
   '/$account_slug/runners/$runnerId': typeof Account_slugRunnersRunnerIdRoute
+  '/$account_slug/settings/channels': typeof Account_slugSettingsChannelsRoute
   '/$account_slug/settings/general': typeof Account_slugSettingsGeneralRoute
   '/$account_slug/settings/notifications': typeof Account_slugSettingsNotificationsRoute
   '/$account_slug/settings/': typeof Account_slugSettingsIndexRoute
@@ -221,6 +229,7 @@ export interface FileRoutesByTo {
   '/$account_slug/beepers/$beeperId': typeof Account_slugBeepersBeeperIdRoute
   '/$account_slug/beeps/$beepId': typeof Account_slugBeepsBeepIdRoute
   '/$account_slug/runners/$runnerId': typeof Account_slugRunnersRunnerIdRoute
+  '/$account_slug/settings/channels': typeof Account_slugSettingsChannelsRoute
   '/$account_slug/settings/general': typeof Account_slugSettingsGeneralRoute
   '/$account_slug/settings/notifications': typeof Account_slugSettingsNotificationsRoute
   '/$account_slug/settings': typeof Account_slugSettingsIndexRoute
@@ -250,6 +259,7 @@ export interface FileRoutesById {
   '/$account_slug/beepers_/$beeperId': typeof Account_slugBeepersBeeperIdRoute
   '/$account_slug/beeps_/$beepId': typeof Account_slugBeepsBeepIdRoute
   '/$account_slug/runners_/$runnerId': typeof Account_slugRunnersRunnerIdRoute
+  '/$account_slug/settings/channels': typeof Account_slugSettingsChannelsRoute
   '/$account_slug/settings/general': typeof Account_slugSettingsGeneralRoute
   '/$account_slug/settings/notifications': typeof Account_slugSettingsNotificationsRoute
   '/$account_slug/settings/': typeof Account_slugSettingsIndexRoute
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/$account_slug/beepers/$beeperId'
     | '/$account_slug/beeps/$beepId'
     | '/$account_slug/runners/$runnerId'
+    | '/$account_slug/settings/channels'
     | '/$account_slug/settings/general'
     | '/$account_slug/settings/notifications'
     | '/$account_slug/settings/'
@@ -305,6 +316,7 @@ export interface FileRouteTypes {
     | '/$account_slug/beepers/$beeperId'
     | '/$account_slug/beeps/$beepId'
     | '/$account_slug/runners/$runnerId'
+    | '/$account_slug/settings/channels'
     | '/$account_slug/settings/general'
     | '/$account_slug/settings/notifications'
     | '/$account_slug/settings'
@@ -333,6 +345,7 @@ export interface FileRouteTypes {
     | '/$account_slug/beepers_/$beeperId'
     | '/$account_slug/beeps_/$beepId'
     | '/$account_slug/runners_/$runnerId'
+    | '/$account_slug/settings/channels'
     | '/$account_slug/settings/general'
     | '/$account_slug/settings/notifications'
     | '/$account_slug/settings/'
@@ -519,6 +532,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Account_slugSettingsIndexRouteImport
       parentRoute: typeof Account_slugSettingsRoute
     }
+    '/$account_slug/settings/channels': {
+      id: '/$account_slug/settings/channels'
+      path: '/channels'
+      fullPath: '/$account_slug/settings/channels'
+      preLoaderRoute: typeof Account_slugSettingsChannelsRouteImport
+      parentRoute: typeof Account_slugSettingsRoute
+    }
     '/$account_slug/settings/general': {
       id: '/$account_slug/settings/general'
       path: '/general'
@@ -537,12 +557,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface Account_slugSettingsRouteChildren {
+  Account_slugSettingsChannelsRoute: typeof Account_slugSettingsChannelsRoute
   Account_slugSettingsGeneralRoute: typeof Account_slugSettingsGeneralRoute
   Account_slugSettingsNotificationsRoute: typeof Account_slugSettingsNotificationsRoute
   Account_slugSettingsIndexRoute: typeof Account_slugSettingsIndexRoute
 }
 
 const Account_slugSettingsRouteChildren: Account_slugSettingsRouteChildren = {
+  Account_slugSettingsChannelsRoute: Account_slugSettingsChannelsRoute,
   Account_slugSettingsGeneralRoute: Account_slugSettingsGeneralRoute,
   Account_slugSettingsNotificationsRoute:
     Account_slugSettingsNotificationsRoute,

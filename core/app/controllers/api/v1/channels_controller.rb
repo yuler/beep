@@ -1,8 +1,9 @@
 class Api::V1::ChannelsController < Api::V1::BaseController
-  before_action :set_channel, only: %i[ destroy ]
+  before_action :set_channel, only: %i[ destroy test ]
 
   def index
     @channels = Current.account.channels.order(created_at: :desc)
+    @channels = @channels.where(kind: params[:kind]) if params[:kind].present?
     render :index
   end
 
@@ -23,6 +24,11 @@ class Api::V1::ChannelsController < Api::V1::BaseController
 
   def destroy
     @channel.destroy!
+    head :no_content
+  end
+
+  def test
+    @channel.deliver_test!
     head :no_content
   end
 

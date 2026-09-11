@@ -306,7 +306,14 @@ type CliInboxResponse struct {
 type DeviceInboxResponse = CliInboxResponse
 
 func (c *Client) FetchCliInbox(ctx context.Context) ([]CliDelivery, error) {
-	if c.cfg.CliToken == "" {
+	token := c.cfg.ChannelToken
+	if token == "" {
+		token = c.cfg.CliToken
+	}
+	if token == "" {
+		token = c.cfg.DeviceToken
+	}
+	if token == "" {
 		return nil, nil
 	}
 	url := fmt.Sprintf("%s/api/v1/channels/cli/inbox", c.cfg.ServerURL)
@@ -315,7 +322,8 @@ func (c *Client) FetchCliInbox(ctx context.Context) ([]CliDelivery, error) {
 		return nil, err
 	}
 	c.setHeaders(req)
-	req.Header.Set("X-CLI-Token", c.cfg.CliToken)
+	req.Header.Set("X-Channel-Token", token)
+	req.Header.Set("X-CLI-Token", token)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -340,6 +348,17 @@ func (c *Client) FetchDeviceInbox(ctx context.Context) ([]CliDelivery, error) {
 }
 
 func (c *Client) AckCliDelivery(ctx context.Context, deliveryID string, status string, errorMsg string) error {
+	token := c.cfg.ChannelToken
+	if token == "" {
+		token = c.cfg.CliToken
+	}
+	if token == "" {
+		token = c.cfg.DeviceToken
+	}
+	if token == "" {
+		return fmt.Errorf("missing channel token")
+	}
+
 	url := fmt.Sprintf("%s/api/v1/channels/cli/deliveries/%s/ack", c.cfg.ServerURL, deliveryID)
 	payload := map[string]any{
 		"status": status,
@@ -353,7 +372,8 @@ func (c *Client) AckCliDelivery(ctx context.Context, deliveryID string, status s
 		return err
 	}
 	c.setHeaders(req)
-	req.Header.Set("X-CLI-Token", c.cfg.CliToken)
+	req.Header.Set("X-Channel-Token", token)
+	req.Header.Set("X-CLI-Token", token)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

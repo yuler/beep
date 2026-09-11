@@ -40,15 +40,16 @@ func TestDisconnectCommandClearsToken(t *testing.T) {
 	defer server.Close()
 
 	t.Setenv("BEEP_SERVER", server.URL)
+	t.Setenv("BEEP_SERVER", server.URL)
+	t.Setenv("BEEP_CHANNEL_TOKEN", "")
 	t.Setenv("BEEP_CLI_TOKEN", "")
 	t.Setenv("BEEP_DEVICE_TOKEN", "")
 
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.json")
 	fc := &config.FileConfig{
-		ServerURL:   server.URL,
-		CliToken:    "beep_ct_test123",
-		DeviceToken: "beep_ct_test123",
+		ServerURL:    server.URL,
+		ChannelToken: "beep_ct_test123",
 	}
 	if err := config.SaveFile(configPath, fc); err != nil {
 		t.Fatalf("failed to save test config: %v", err)
@@ -73,8 +74,8 @@ func TestDisconnectCommandClearsToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load updated config: %v", err)
 	}
-	if updated.CliToken != "" || updated.DeviceToken != "" {
-		t.Errorf("expected tokens to be cleared, got cli_token=%q, device_token=%q", updated.CliToken, updated.DeviceToken)
+	if updated.ChannelToken != "" || updated.CliToken != "" || updated.DeviceToken != "" {
+		t.Errorf("expected tokens to be cleared, got channel_token=%q", updated.ChannelToken)
 	}
 }
 
@@ -85,15 +86,15 @@ func TestDisconnectCommandClearsTokenWhenServerGone(t *testing.T) {
 	defer server.Close()
 
 	t.Setenv("BEEP_SERVER", server.URL)
+	t.Setenv("BEEP_CHANNEL_TOKEN", "")
 	t.Setenv("BEEP_CLI_TOKEN", "")
 	t.Setenv("BEEP_DEVICE_TOKEN", "")
 
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.json")
 	fc := &config.FileConfig{
-		ServerURL:   server.URL,
-		CliToken:    "beep_ct_test123",
-		DeviceToken: "beep_ct_test123",
+		ServerURL:    server.URL,
+		ChannelToken: "beep_ct_test123",
 	}
 	if err := config.SaveFile(configPath, fc); err != nil {
 		t.Fatalf("failed to save test config: %v", err)
@@ -110,8 +111,8 @@ func TestDisconnectCommandClearsTokenWhenServerGone(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load updated config: %v", err)
 	}
-	if updated.CliToken != "" || updated.DeviceToken != "" {
-		t.Errorf("expected tokens to be cleared, got cli_token=%q, device_token=%q", updated.CliToken, updated.DeviceToken)
+	if updated.ChannelToken != "" || updated.CliToken != "" || updated.DeviceToken != "" {
+		t.Errorf("expected tokens to be cleared, got channel_token=%q", updated.ChannelToken)
 	}
 }
 

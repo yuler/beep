@@ -12,15 +12,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Check runner daemon running status and information",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runStatus(cmd, args)
-	},
+func newStatusCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "status",
+		Short: "Check daemon running status and information",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runStatus(cmd, args)
+		},
+	}
 }
 
-// statusCmd is registered under runnerCmd in runner.go
+var statusCmd = newStatusCmd()
 
 func runStatus(cmd *cobra.Command, args []string) error {
 	cfg, err := loadConfig()
@@ -60,7 +62,10 @@ func runStatus(cmd *cobra.Command, args []string) error {
 			fmt.Println(ui.KeyValue("Server", ui.Bold(cfg.ServerURL)))
 		}
 		if cfg.RunnerToken != "" {
-			fmt.Println(ui.KeyValue("Token", ui.Yellow(config.MaskToken(cfg.RunnerToken))))
+			fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(config.MaskToken(cfg.RunnerToken))))
+		}
+		if cfg.ChannelToken != "" {
+			fmt.Println(ui.KeyValue("Channel Token", ui.Yellow(config.MaskToken(cfg.ChannelToken))))
 		}
 	} else {
 		fmt.Println(ui.KeyValue("Status", ui.Dim("stopped")+" "+ui.Dim("○")))
@@ -70,10 +75,16 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		if cfg.ServerURL != "" {
 			fmt.Println(ui.KeyValue("Server", ui.Bold(cfg.ServerURL)))
 		}
+		if cfg.RunnerToken != "" {
+			fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(config.MaskToken(cfg.RunnerToken))))
+		}
+		if cfg.ChannelToken != "" {
+			fmt.Println(ui.KeyValue("Channel Token", ui.Yellow(config.MaskToken(cfg.ChannelToken))))
+		}
 		fmt.Println()
 		fmt.Println(ui.Section("Start commands:"))
-		fmt.Printf("  Foreground: %s\n", ui.Green("beep runner up"))
-		fmt.Printf("  Background: %s\n", ui.Cyan("beep runner up -d"))
+		fmt.Printf("  Foreground: %s\n", ui.Green("beep up"))
+		fmt.Printf("  Background: %s\n", ui.Cyan("beep up -d"))
 	}
 	return nil
 }

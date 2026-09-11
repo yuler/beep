@@ -30,7 +30,8 @@ class Api::V1::Channels::Cli::BaseController < ActionController::API
     end
 
     def extract_cli_token
-      request.headers["X-CLI-Token"].to_s.strip.presence ||
+      request.headers["X-Channel-Token"].to_s.strip.presence ||
+        request.headers["X-CLI-Token"].to_s.strip.presence ||
         bearer_token
     end
 

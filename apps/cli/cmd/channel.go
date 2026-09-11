@@ -101,8 +101,9 @@ var channelConnectCmd = &cobra.Command{
 					fc = &config.FileConfig{}
 				}
 
-				fc.CliToken = tokenRes.AccessToken
-				fc.DeviceToken = tokenRes.AccessToken
+				fc.ChannelToken = tokenRes.AccessToken
+				fc.CliToken = ""
+				fc.DeviceToken = ""
 				if err := config.SaveFile(configPath, fc); err != nil {
 					return fmt.Errorf("failed to save config: %w", err)
 				}
@@ -160,12 +161,12 @@ var channelDisconnectCmd = &cobra.Command{
 			return fmt.Errorf("failed to load config: %w", err)
 		}
 
-		if fc.CliToken == "" && fc.DeviceToken == "" {
+		if fc.ChannelToken == "" && fc.CliToken == "" && fc.DeviceToken == "" {
 			fmt.Println(ui.Dim("No CLI channel token configured in " + configPath))
 			return nil
 		}
 
-		if cfg.ServerURL != "" && cfg.CliToken != "" {
+		if cfg.ServerURL != "" && cfg.ChannelToken != "" {
 			c := client.New(cfg)
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
@@ -175,6 +176,7 @@ var channelDisconnectCmd = &cobra.Command{
 			}
 		}
 
+		fc.ChannelToken = ""
 		fc.CliToken = ""
 		fc.DeviceToken = ""
 		if err := config.SaveFile(configPath, fc); err != nil {

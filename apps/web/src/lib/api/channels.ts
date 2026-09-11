@@ -10,6 +10,7 @@ export interface Channel {
 	name: string;
 	kind: string;
 	status: string;
+	is_online?: boolean;
 	token?: string;
 	masked_token: string;
 	user?: ChannelUser;
@@ -17,11 +18,16 @@ export interface Channel {
 	created_at: string;
 }
 
-export async function fetchChannels(accountSlug: string): Promise<Channel[]> {
-	const res = await apiFetch<{ channels: Channel[] }>(
-		`/api/v1/${accountSlug}/channels`,
-		{ method: "GET" },
-	);
+export async function fetchChannels(
+	accountSlug: string,
+	kind?: string,
+): Promise<Channel[]> {
+	const url = kind
+		? `/api/v1/${accountSlug}/channels?kind=${encodeURIComponent(kind)}`
+		: `/api/v1/${accountSlug}/channels`;
+	const res = await apiFetch<{ channels: Channel[] }>(url, {
+		method: "GET",
+	});
 	return res.channels;
 }
 
@@ -45,6 +51,15 @@ export async function deleteChannel(
 ): Promise<void> {
 	await apiFetch(`/api/v1/${accountSlug}/channels/${channelId}`, {
 		method: "DELETE",
+	});
+}
+
+export async function testChannel(
+	accountSlug: string,
+	channelId: string,
+): Promise<void> {
+	await apiFetch(`/api/v1/${accountSlug}/channels/${channelId}/test`, {
+		method: "POST",
 	});
 }
 

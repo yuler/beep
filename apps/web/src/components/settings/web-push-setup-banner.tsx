@@ -68,7 +68,7 @@ function WebPushSetupBannerInner({ slug }: { slug: string }) {
 
 	function openSettings() {
 		navigate({
-			to: "/$account_slug/settings/notifications",
+			to: "/$account_slug/settings/channels",
 			params: { account_slug: slug },
 		});
 	}

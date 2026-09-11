@@ -29,8 +29,16 @@ class Channel < ApplicationRecord
     Channel::WebPush.upsert_for!(user, attributes)
   end
 
+  ONLINE_TIMEOUT = 5.minutes
+
   def touch_last_seen
+    return if last_seen_at && last_seen_at > 30.seconds.ago
+
     touch(:last_seen_at)
+  end
+
+  def online?
+    active? && last_seen_at.present? && last_seen_at >= ONLINE_TIMEOUT.ago
   end
 
   def masked_token

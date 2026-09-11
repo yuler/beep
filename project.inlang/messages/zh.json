@@ -603,6 +603,8 @@
   "push_turn_off_browser": "关闭此浏览器",
   "push_turning_off": "关闭中…",
   "push_unsupported": "此浏览器不支持 Web Push。",
+  "settings_channels_description": "此工作区的通知渠道、已连接设备及接收方式。",
+  "settings_channels_title": "渠道",
   "settings_description": "此工作区的通知、时区和设备偏好。",
   "settings_general_description": "此工作区的时区与通用偏好设置。",
   "settings_general_title": "通用",

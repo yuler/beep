@@ -603,6 +603,8 @@
   "push_turn_off_browser": "Turn off this browser",
   "push_turning_off": "Turning off…",
   "push_unsupported": "This browser does not support web push.",
+  "settings_channels_description": "Notification channels, connected devices, and delivery destinations for this workspace.",
+  "settings_channels_title": "Channels",
   "settings_description": "Notifications, timezone, and device preferences for this workspace.",
   "settings_general_description": "Timezone and general preferences for this workspace.",
   "settings_general_title": "General",

@@ -87,6 +87,7 @@ class User < ApplicationRecord
     end
 
     def create_default_email_channel
+      return if system?
       return if channels.where(kind: :email).exists?
 
       email_name = identity&.email.presence || name.presence || "email"

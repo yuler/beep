@@ -79,6 +79,12 @@ var configSetCmd = &cobra.Command{
 					fc.RunnerToken = val
 					updated = true
 					i++
+				case "channel_token", "channel-token", "channel", "cli_token", "device_token":
+					fc.ChannelToken = val
+					fc.CliToken = ""
+					fc.DeviceToken = ""
+					updated = true
+					i++
 				case "workspace", "dir", "workdir":
 					fc.Workspace = val
 					updated = true
@@ -156,6 +162,10 @@ var configUnsetCmd = &cobra.Command{
 			fc.ServerURL = ""
 		case "token", "runner_token", "runner-token":
 			fc.RunnerToken = ""
+		case "channel_token", "channel-token", "channel", "cli_token", "device_token":
+			fc.ChannelToken = ""
+			fc.CliToken = ""
+			fc.DeviceToken = ""
 		case "workspace", "dir":
 			fc.Workspace = ""
 		case "concurrency":
@@ -215,6 +225,13 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	fmt.Println(ui.KeyValue("Config File", ui.Dim(cfg.ConfigFile)))
 	fmt.Println(ui.KeyValue("Server URL", ui.Bold(cfg.ServerURL)))
 	fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(tokenStr)))
+	if cfg.ChannelToken != "" {
+		channelTokenStr := config.MaskToken(cfg.ChannelToken)
+		if flagShowToken {
+			channelTokenStr = cfg.ChannelToken
+		}
+		fmt.Println(ui.KeyValue("Channel Token", ui.Yellow(channelTokenStr)))
+	}
 	fmt.Println(ui.KeyValue("Workspace", ui.Dim(cfg.Workspace)))
 	fmt.Println(ui.KeyValue("Concurrency", ui.Bold(strconv.Itoa(cfg.Concurrency))))
 	fmt.Println(ui.KeyValue("Poll Interval", ui.Bold(cfg.PollInterval.String())))

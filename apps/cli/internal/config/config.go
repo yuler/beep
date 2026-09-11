@@ -14,6 +14,7 @@ import (
 type FileConfig struct {
 	ServerURL    string `json:"server_url,omitempty"`
 	RunnerToken  string `json:"runner_token,omitempty"`
+	ChannelToken string `json:"channel_token,omitempty"`
 	CliToken     string `json:"cli_token,omitempty"`
 	DeviceToken  string `json:"device_token,omitempty"`
 	Workspace    string `json:"workspace,omitempty"`
@@ -25,6 +26,7 @@ type FileConfig struct {
 type Config struct {
 	ServerURL    string
 	RunnerToken  string
+	ChannelToken string
 	CliToken     string
 	DeviceToken  string
 	Concurrency  int
@@ -125,9 +127,12 @@ func Load(wsHint string) (*Config, error) {
 	serverURL = strings.TrimRight(serverURL, "/")
 
 	runnerToken := getEnv("BEEP_RUNNER_TOKEN", fc.RunnerToken)
-	cliToken := getEnv("BEEP_CLI_TOKEN", fc.CliToken)
-	if cliToken == "" {
-		cliToken = getEnv("BEEP_DEVICE_TOKEN", fc.DeviceToken)
+	channelToken := getEnv("BEEP_CHANNEL_TOKEN", fc.ChannelToken)
+	if channelToken == "" {
+		channelToken = getEnv("BEEP_CLI_TOKEN", fc.CliToken)
+	}
+	if channelToken == "" {
+		channelToken = getEnv("BEEP_DEVICE_TOKEN", fc.DeviceToken)
 	}
 
 	concurrency := 5
@@ -156,8 +161,9 @@ func Load(wsHint string) (*Config, error) {
 	cfg := &Config{
 		ServerURL:    serverURL,
 		RunnerToken:  runnerToken,
-		CliToken:     cliToken,
-		DeviceToken:  cliToken,
+		ChannelToken: channelToken,
+		CliToken:     channelToken,
+		DeviceToken:  channelToken,
 		Concurrency:  concurrency,
 		PollInterval: pollInterval,
 		Hostname:     hostname,
@@ -174,10 +180,10 @@ func LoadFromEnv() (*Config, error) {
 
 func (c *Config) Validate() error {
 	if c.ServerURL == "" {
-		return fmt.Errorf("server URL is required (set via 'beep runner config set --server <url>' or --server or BEEP_SERVER)")
+		return fmt.Errorf("server URL is required (set via 'beep config set server <url>' or --server or BEEP_SERVER)")
 	}
-	if c.RunnerToken == "" {
-		return fmt.Errorf("runner token is required (set via 'beep runner config set --token <token>' or --token or BEEP_RUNNER_TOKEN)")
+	if c.RunnerToken == "" && c.ChannelToken == "" {
+		return fmt.Errorf("runner token or channel token is required (connect via 'beep channel connect' or configure runner token via 'beep config set token <token>')")
 	}
 	if c.Concurrency <= 0 {
 		c.Concurrency = 5

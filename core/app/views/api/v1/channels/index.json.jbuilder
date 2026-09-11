@@ -3,6 +3,7 @@ json.channels @channels do |channel|
   json.name channel.name
   json.kind channel.kind
   json.status channel.status
+  json.is_online channel.online?
   json.masked_token channel.masked_token
   json.user do
     json.id channel.user_id

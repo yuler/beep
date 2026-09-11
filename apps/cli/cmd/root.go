@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"beep/internal/config"
 	"beep/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -37,8 +38,16 @@ func Execute() {
 func init() {
 	RootCmd.PersistentFlags().BoolVar(&flagNoColor, "no-color", false, "Disable colored output")
 	RootCmd.PersistentFlags().BoolVar(&flagNoInteractive, "no-interactive", false, "Disable interactive prompts")
+	RootCmd.PersistentFlags().StringVarP(&flagWorkspace, "workspace", "w", "", fmt.Sprintf("Local job workspace directory (default %s, env: BEEP_WORKSPACE)", config.DefaultWorkspaceDisplay()))
+	RootCmd.PersistentFlags().StringVarP(&flagServer, "server", "s", "", "Beep server URL (env: BEEP_SERVER)")
+	RootCmd.PersistentFlags().StringVarP(&flagToken, "token", "t", "", "Runner authentication token (env: BEEP_RUNNER_TOKEN)")
 
-	// Register top-level subcommands
+	// Daemon commands
+	RootCmd.AddCommand(newUpCmd())
+	RootCmd.AddCommand(newStopCmd())
+	RootCmd.AddCommand(newStatusCmd())
+
+	// Top-level subcommands
 	RootCmd.AddCommand(runnerCmd)
 	RootCmd.AddCommand(channelCmd)
 	RootCmd.AddCommand(configCmd)
