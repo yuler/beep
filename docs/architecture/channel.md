@@ -73,7 +73,6 @@ When `beep up` pulls a pending delivery, it executes `$WORKSPACE/.beep/hooks/on_
 - `BEEP_EVENT_JSON`: Complete event payload JSON string.
 - `BEEP_EVENT_ID`: Unique delivery ID.
 - `BEEP_EVENT_TITLE`: Notification title.
-- `BEEP_EVENT_ACTION_HINT`: Legacy fallback action hint (if present in metadata).
 
 ```bash
 #!/usr/bin/env bash

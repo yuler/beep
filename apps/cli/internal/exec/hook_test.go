@@ -38,7 +38,7 @@ echo "Hook received event: $BEEP_EVENT source: $BEEP_EVENT_SOURCE intent: $BEEP_
 			"intent": "get_off_work",
 			"title":  "Off work notification",
 			"metadata": map[string]any{
-				"action_hint": "get_off_work",
+				"first_checkin_time": "09:12:30",
 			},
 		},
 	}
