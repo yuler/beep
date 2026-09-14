@@ -55,7 +55,7 @@ Subscribe is done. Due `once` beeps push via `BeepPollerJob` (every 10s) → `be
 - Table `push_subscriptions`: `user_id` + `account_id`, unique `(user_id, endpoint)`, `endpoint` is `text`
 - Create: HTTPS + host allowlist (FCM / Mozilla / Apple / WNS). No DNS on create (SQLite write lock)
 - `SsrfProtection#resolved_endpoint_ip` exists; send does not pin IP yet
-- API (jbuilder): `GET/POST/DELETE /api/v1/:slug/push_subscriptions`, `POST .../:id/test` (410 deletes that row)
+- API (jbuilder): `GET/POST/DELETE /api/v1/:slug/push_subscriptions`, `POST .../:id/tests` (410 deletes that row)
 - `apps/web`: unhashed `/service-worker.js`, settings, UA-based Tips, Web Push Channel list and remove
 - Due fire payload:
 

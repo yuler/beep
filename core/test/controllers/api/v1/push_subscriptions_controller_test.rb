@@ -140,7 +140,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert Push::Subscription.exists?(subscription.id)
   end
 
-  test "test sends a notification for the current user's subscription" do
+  test "tests#create sends a notification for the current user's subscription" do
     subscription = users(:john).push_subscriptions.create!(
       endpoint: @endpoint,
       p256dh_key: "key",
@@ -149,7 +149,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     sent = false
 
     stub_web_push_payload_send(->(**_kwargs) { sent = true }) do
-      post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/test",
+      post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/tests",
         headers: { "Authorization" => "Bearer #{@token}" },
         as: :json
     end
@@ -158,7 +158,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert sent
   end
 
-  test "test destroys an expired subscription" do
+  test "tests#create destroys an expired subscription" do
     subscription = users(:john).push_subscriptions.create!(
       endpoint: @endpoint,
       p256dh_key: "key",
@@ -169,7 +169,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     expired = WebPush::ExpiredSubscription.new(push_response, "fcm.googleapis.com")
 
     stub_web_push_payload_send(->(**_kwargs) { raise expired }) do
-      post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/test",
+      post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/tests",
         headers: { "Authorization" => "Bearer #{@token}" },
         as: :json
     end
@@ -179,14 +179,14 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert_not Push::Subscription.exists?(subscription.id)
   end
 
-  test "test does not send for another user's subscription" do
+  test "tests#create does not send for another user's subscription" do
     subscription = users(:yuler).push_subscriptions.create!(
       endpoint: @endpoint,
       p256dh_key: "key",
       auth_key: "auth"
     )
 
-    post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/test",
+    post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/tests",
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 

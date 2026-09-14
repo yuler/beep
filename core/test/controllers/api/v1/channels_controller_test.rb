@@ -80,7 +80,7 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
     assert_response :no_content
   end
 
-  test "test delivers test notification to channel" do
+  test "tests#create delivers test notification to channel" do
     channel = @account.channels.create!(
       user: @user,
       kind: :cli,
@@ -88,7 +88,7 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
     )
 
     assert_difference -> { channel.deliveries.count }, 1 do
-      post "/api/v1/#{@account.slug}/channels/#{channel.id}/test",
+      post "/api/v1/#{@account.slug}/channels/#{channel.id}/tests",
         headers: { "Authorization" => "Bearer #{@token}" },
         as: :json
     end

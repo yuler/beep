@@ -69,13 +69,13 @@ Rails.application.routes.draw do
 
       resource :web_push, only: :show, controller: "web_push"
       resources :push_subscriptions, only: %i[ index create destroy ] do
-        post :test, on: :member
+        resources :tests, only: %i[ create ], controller: "push_subscriptions/tests"
       end
 
       resource :settings, only: %i[ show update ]
 
       resources :channels, only: %i[ index create destroy ] do
-        post :test, on: :member
+        resources :tests, only: %i[ create ], controller: "channels/tests"
       end
       namespace :channels do
         namespace :cli do
