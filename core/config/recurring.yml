@@ -14,6 +14,14 @@ prune_beeper_runs: &prune_beeper_runs
   class: PruneBeeperRunsJob
   schedule: every day at 03:00
 
+prune_channel_authorizations: &prune_channel_authorizations
+  class: PruneChannelAuthorizationsJob
+  schedule: every 10 minutes
+
+prune_runner_authorizations: &prune_runner_authorizations
+  class: PruneRunnerAuthorizationsJob
+  schedule: every 10 minutes
+
 development:
   beep_poller:
     <<: *beep_poller
@@ -23,6 +31,10 @@ development:
     <<: *runner_job_poller
   prune_beeper_runs:
     <<: *prune_beeper_runs
+  prune_channel_authorizations:
+    <<: *prune_channel_authorizations
+  prune_runner_authorizations:
+    <<: *prune_runner_authorizations
 
 test:
   beep_poller:
@@ -33,6 +45,10 @@ test:
     <<: *runner_job_poller
   prune_beeper_runs:
     <<: *prune_beeper_runs
+  prune_channel_authorizations:
+    <<: *prune_channel_authorizations
+  prune_runner_authorizations:
+    <<: *prune_runner_authorizations
 
 production:
   beep_poller:
@@ -43,6 +59,10 @@ production:
     <<: *runner_job_poller
   prune_beeper_runs:
     <<: *prune_beeper_runs
+  prune_channel_authorizations:
+    <<: *prune_channel_authorizations
+  prune_runner_authorizations:
+    <<: *prune_runner_authorizations
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every day at 00:00

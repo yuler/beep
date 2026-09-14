@@ -1,7 +1,7 @@
 class Channel < ApplicationRecord
   TOKEN_PREFIX = "beep_ct_" # ct = channel token
   NAME_MAX_LENGTH = 80
-  KINDS = %w[ cli email web_push webhook ].freeze
+  KINDS = %w[ email cli web_push webhook ].freeze
   Cli = Handlers::Cli
   Email = Handlers::Email
   WebPush = Handlers::WebPush
@@ -14,7 +14,7 @@ class Channel < ApplicationRecord
   has_many :deliveries, class_name: "Channel::Delivery", dependent: :destroy
   has_many :authorizations, class_name: "Channel::Authorization", dependent: :destroy
 
-  enum :kind, KINDS.index_by(&:itself), default: "cli"
+  enum :kind, KINDS.index_by(&:itself), default: "email"
   enum :status, %w[ active disabled ].index_by(&:itself), default: "active"
 
   has_secure_token prefix: TOKEN_PREFIX

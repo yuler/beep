@@ -1,6 +1,4 @@
 class Beep::Run < ApplicationRecord
-  self.table_name = "beep_runs"
-
   class EmailDeliveryError < StandardError; end
 
   belongs_to :beep

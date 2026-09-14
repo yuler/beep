@@ -30,6 +30,11 @@ class Channel::Authorization < ApplicationRecord
     end
   end
 
+  def self.expire_pending_now
+    where(status: "pending").where(expires_at: ..Time.current)
+      .update_all(status: "expired", updated_at: Time.current)
+  end
+
   def expired?
     status == "expired" || expires_at <= Time.current
   end
