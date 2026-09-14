@@ -152,7 +152,7 @@ func TestClientRunnerDeviceAuthorizationFlow(t *testing.T) {
 	}
 	c := client.New(cfg)
 
-	authRes, err := c.RequestRunnerDeviceAuthorization(context.Background(), "My Test Runner", []string{"test"}, map[string]string{"os": "linux"})
+	authRes, err := c.RequestRunnerDeviceAuthorization(context.Background(), "My Test Runner", []string{"test"}, map[string]string{"os": "linux"}, "test-account")
 	if err != nil {
 		t.Fatalf("RequestRunnerDeviceAuthorization failed: %v", err)
 	}

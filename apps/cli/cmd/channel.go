@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"beep/internal/browser"
@@ -23,6 +24,10 @@ var channelCmd = &cobra.Command{
 	Short:   "Connect this CLI as a notification channel",
 }
 
+var (
+	flagChannelAccount string
+)
+
 var channelConnectCmd = &cobra.Command{
 	Use:   "connect",
 	Short: "Connect this CLI as a notification channel via Web browser (RFC 8628)",
@@ -34,6 +39,22 @@ var channelConnectCmd = &cobra.Command{
 
 		if cfg.ServerURL == "" {
 			return fmt.Errorf("server URL is not configured (set via BEEP_SERVER or 'beep config set server <url>')")
+		}
+
+		accountSlug := strings.TrimSpace(flagChannelAccount)
+		if accountSlug == "" {
+			accountSlug = cfg.AccountSlug
+		}
+		if accountSlug == "" {
+			if ui.IsInteractive() {
+				slug, err := ui.PromptAccountSlug()
+				if err != nil {
+					return err
+				}
+				accountSlug = slug
+			} else {
+				return fmt.Errorf("account slug is required (set via --account <slug> or BEEP_ACCOUNT or 'beep config set account <slug>')")
+			}
 		}
 
 		c := client.New(cfg)
@@ -52,7 +73,7 @@ var channelConnectCmd = &cobra.Command{
 		fmt.Println(ui.Dim("Requesting device authorization from ") + ui.Cyan(cfg.ServerURL) + ui.Dim("..."))
 
 		authReqCtx, authReqCancel := context.WithTimeout(ctx, 15*time.Second)
-		authRes, err := c.RequestDeviceAuthorization(authReqCtx, channelName)
+		authRes, err := c.RequestDeviceAuthorization(authReqCtx, channelName, accountSlug)
 		authReqCancel()
 		if err != nil {
 			return fmt.Errorf("device authorization request failed: %w", err)
@@ -114,6 +135,9 @@ var channelConnectCmd = &cobra.Command{
 				fc.ChannelToken = tokenRes.AccessToken
 				fc.CliToken = ""
 				fc.DeviceToken = ""
+				if accountSlug != "" {
+					fc.AccountSlug = accountSlug
+				}
 				if err := config.SaveFile(configPath, fc); err != nil {
 					return fmt.Errorf("failed to save config: %w", err)
 				}
@@ -283,6 +307,7 @@ func newChannelStatusCmd() *cobra.Command {
 }
 
 func init() {
+	channelConnectCmd.Flags().StringVarP(&flagChannelAccount, "account", "a", "", "Account slug to connect to")
 	channelCmd.AddCommand(newChannelUpCmd())
 	channelCmd.AddCommand(newChannelStopCmd())
 	channelCmd.AddCommand(newChannelStatusCmd())

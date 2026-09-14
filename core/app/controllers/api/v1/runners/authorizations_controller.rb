@@ -13,6 +13,7 @@ class Api::V1::Runners::AuthorizationsController < Api::V1::BaseController
       tags: params[:tags],
       metadata: params[:metadata]
     )
+    @account_slug = params[:account_slug].presence
     @web_origin = Rails.configuration.x.web_origin
     render :create, status: :created
   end

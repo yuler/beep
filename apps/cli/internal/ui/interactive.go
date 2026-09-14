@@ -763,3 +763,25 @@ func PromptConfigUnsetSelect(fc *config.FileConfig) (string, error) {
 	}
 	return choice, nil
 }
+
+// PromptAccountSlug prompts the user interactively for their account slug.
+func PromptAccountSlug() (string, error) {
+	var slug string
+	err := huh.NewInput().
+		Title("Account Slug").
+		Description("Account slug to authorize this device for (e.g. personal, acme)").
+		Placeholder("personal").
+		Value(&slug).
+		Validate(func(s string) error {
+			s = strings.TrimSpace(s)
+			if s == "" {
+				return errors.New("account slug is required")
+			}
+			return nil
+		}).
+		Run()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(strings.ToLower(slug)), nil
+}

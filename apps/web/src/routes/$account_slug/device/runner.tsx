@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeftRight, CheckCircle2, Server, XCircle } from "lucide-react";
+import { CheckCircle2, Server, XCircle } from "lucide-react";
 import { type FormEvent, useCallback, useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +20,9 @@ import {
 	type RunnerDeviceAuthInfo,
 	verifyRunnerDeviceCode,
 } from "@/lib/api/runners";
+import { parseDeviceSearch } from "@/lib/device-search";
 import { translateError } from "@/lib/i18n-labels";
 import { m } from "@/locale/paraglide/messages";
-import type { DeviceSearch } from "../../device";
-import { parseDeviceSearch } from "../../device";
 
 export const Route = createFileRoute("/$account_slug/device/runner")({
 	ssr: false,
@@ -120,8 +119,6 @@ function AccountRunnerDeviceAuthPage() {
 		}
 	}
 
-	const switchSearch: DeviceSearch = {};
-
 	return (
 		<>
 			<DashboardHeader
@@ -152,14 +149,6 @@ function AccountRunnerDeviceAuthPage() {
 								({account.slug})
 							</span>
 						</div>
-						<Link
-							to="/device/runner"
-							search={switchSearch}
-							className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-						>
-							<ArrowLeftRight className="size-3" />
-							<span>Switch</span>
-						</Link>
 					</div>
 
 					{status === "approved" ? (

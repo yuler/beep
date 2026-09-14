@@ -23,6 +23,17 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
     assert_equal 5, body["interval"]
   end
 
+  test "create with account_slug generates account-scoped endpoints" do
+    post "/api/v1/channels/cli/authorizations",
+      params: { channel_name: "My-Laptop", account_slug: "acme" },
+      as: :json
+
+    assert_response :created
+    body = response.parsed_body
+    assert_includes body["verification_uri"], "/acme/device/channel"
+    assert_includes body["verification_uri_complete"], "/acme/device/channel?code="
+  end
+
   test "show returns user code details when active" do
     auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
 

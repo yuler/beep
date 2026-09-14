@@ -9,6 +9,7 @@ class Api::V1::Channels::Cli::AuthorizationsController < Api::V1::BaseController
 
   def create
     @auth = Channel::Authorization.create_request!(channel_name: params[:channel_name])
+    @account_slug = params[:account_slug].presence
     @web_origin = Rails.configuration.x.web_origin
     render :create, status: :created
   end

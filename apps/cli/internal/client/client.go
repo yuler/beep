@@ -522,10 +522,13 @@ const (
 	OAuthErrAccessDenied         = "access_denied"
 )
 
-func (c *Client) RequestDeviceAuthorization(ctx context.Context, channelName string) (*DeviceAuthorizationResponse, error) {
+func (c *Client) RequestDeviceAuthorization(ctx context.Context, channelName, accountSlug string) (*DeviceAuthorizationResponse, error) {
 	url := fmt.Sprintf("%s/api/v1/channels/cli/authorizations", c.cfg.ServerURL)
 	payload := map[string]any{
 		"channel_name": channelName,
+	}
+	if accountSlug != "" {
+		payload["account_slug"] = accountSlug
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))
@@ -624,12 +627,15 @@ type RunnerTokenResponse struct {
 	Tags        []string `json:"tags"`
 }
 
-func (c *Client) RequestRunnerDeviceAuthorization(ctx context.Context, runnerName string, tags []string, metadata map[string]string) (*DeviceAuthorizationResponse, error) {
+func (c *Client) RequestRunnerDeviceAuthorization(ctx context.Context, runnerName string, tags []string, metadata map[string]string, accountSlug string) (*DeviceAuthorizationResponse, error) {
 	url := fmt.Sprintf("%s/api/v1/runners/authorizations", c.cfg.ServerURL)
 	payload := map[string]any{
 		"runner_name": runnerName,
 		"tags":        tags,
 		"metadata":    metadata,
+	}
+	if accountSlug != "" {
+		payload["account_slug"] = accountSlug
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))

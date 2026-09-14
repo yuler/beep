@@ -159,7 +159,7 @@ func TestDeviceAuthorizationAndPollMockServer(t *testing.T) {
 	}
 	c := client.New(cfg)
 
-	authRes, err := c.RequestDeviceAuthorization(context.Background(), "Test-Laptop")
+	authRes, err := c.RequestDeviceAuthorization(context.Background(), "Test-Laptop", "test-account")
 	if err != nil {
 		t.Fatalf("RequestDeviceAuthorization failed: %v", err)
 	}

@@ -13,6 +13,7 @@ import (
 
 type FileConfig struct {
 	ServerURL    string `json:"server_url,omitempty"`
+	AccountSlug  string `json:"account_slug,omitempty"`
 	RunnerToken  string `json:"runner_token,omitempty"`
 	ChannelToken string `json:"channel_token,omitempty"`
 	CliToken     string `json:"cli_token,omitempty"`
@@ -25,6 +26,7 @@ type FileConfig struct {
 
 type Config struct {
 	ServerURL    string
+	AccountSlug  string
 	RunnerToken  string
 	ChannelToken string
 	CliToken     string
@@ -166,8 +168,11 @@ func Load(wsHint string) (*Config, error) {
 		}
 	}
 
+	accountSlug := getEnv("BEEP_ACCOUNT", fc.AccountSlug)
+
 	cfg := &Config{
 		ServerURL:    serverURL,
+		AccountSlug:  accountSlug,
 		RunnerToken:  runnerToken,
 		ChannelToken: channelToken,
 		CliToken:     channelToken,

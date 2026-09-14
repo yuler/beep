@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"time"
 
 	"beep/internal/browser"
@@ -104,8 +105,9 @@ func newRunnerStatusCmd() *cobra.Command {
 
 func newRunnerConnectCmd() *cobra.Command {
 	var (
-		name string
-		tags []string
+		name    string
+		account string
+		tags    []string
 	)
 	cmd := &cobra.Command{
 		Use:   "connect",
@@ -118,6 +120,22 @@ func newRunnerConnectCmd() *cobra.Command {
 
 			if cfg.ServerURL == "" {
 				return fmt.Errorf("server URL is not configured (set via BEEP_SERVER or 'beep config set server <url>')")
+			}
+
+			accountSlug := strings.TrimSpace(account)
+			if accountSlug == "" {
+				accountSlug = cfg.AccountSlug
+			}
+			if accountSlug == "" {
+				if ui.IsInteractive() {
+					slug, err := ui.PromptAccountSlug()
+					if err != nil {
+						return err
+					}
+					accountSlug = slug
+				} else {
+					return fmt.Errorf("account slug is required (set via --account <slug> or BEEP_ACCOUNT or 'beep config set account <slug>')")
+				}
 			}
 
 			c := client.New(cfg)
@@ -150,7 +168,7 @@ func newRunnerConnectCmd() *cobra.Command {
 			fmt.Println(ui.Dim("Requesting runner device authorization from ") + ui.Cyan(cfg.ServerURL) + ui.Dim("..."))
 
 			authReqCtx, authReqCancel := context.WithTimeout(ctx, 15*time.Second)
-			authRes, err := c.RequestRunnerDeviceAuthorization(authReqCtx, runnerName, tags, metadata)
+			authRes, err := c.RequestRunnerDeviceAuthorization(authReqCtx, runnerName, tags, metadata, accountSlug)
 			authReqCancel()
 			if err != nil {
 				return fmt.Errorf("runner device authorization request failed: %w", err)
@@ -205,6 +223,9 @@ func newRunnerConnectCmd() *cobra.Command {
 					}
 
 					fc.RunnerToken = tokenRes.AccessToken
+					if accountSlug != "" {
+						fc.AccountSlug = accountSlug
+					}
 					if err := config.SaveFile(configPath, fc); err != nil {
 						return fmt.Errorf("failed to save config: %w", err)
 					}
@@ -249,6 +270,7 @@ func newRunnerConnectCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Runner display name (defaults to hostname)")
+	cmd.Flags().StringVarP(&account, "account", "a", "", "Account slug to connect to")
 	cmd.Flags().StringSliceVar(&tags, "tags", nil, "Runner tags (defaults to [\"default\"])")
 	return cmd
 }

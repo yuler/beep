@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeftRight, CheckCircle2, Laptop, XCircle } from "lucide-react";
+import { CheckCircle2, Laptop, XCircle } from "lucide-react";
 import { type FormEvent, useCallback, useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -19,10 +19,9 @@ import {
 	verifyDeviceCode,
 } from "@/lib/api/channels";
 import { ApiError } from "@/lib/api/client";
+import { parseDeviceSearch } from "@/lib/device-search";
 import { translateError } from "@/lib/i18n-labels";
 import { m } from "@/locale/paraglide/messages";
-import type { DeviceSearch } from "../../device";
-import { parseDeviceSearch } from "../../device";
 
 export const Route = createFileRoute("/$account_slug/device/channel")({
 	ssr: false,
@@ -134,8 +133,6 @@ function AccountChannelDeviceAuthPage() {
 		}
 	}
 
-	const switchSearch: DeviceSearch = {};
-
 	return (
 		<>
 			<DashboardHeader
@@ -166,14 +163,6 @@ function AccountChannelDeviceAuthPage() {
 								({account.slug})
 							</span>
 						</div>
-						<Link
-							to="/device/channel"
-							search={switchSearch}
-							className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-						>
-							<ArrowLeftRight className="size-3" />
-							<span>Switch</span>
-						</Link>
 					</div>
 
 					{status === "approved" ? (

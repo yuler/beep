@@ -24,6 +24,17 @@ class Api::V1::Runners::AuthorizationsControllerTest < ActionDispatch::Integrati
     assert_equal 5, body["interval"]
   end
 
+  test "create with account_slug generates account-scoped endpoints" do
+    post "/api/v1/runners/authorizations",
+      params: { runner_name: "My-Server", account_slug: "acme" },
+      as: :json
+
+    assert_response :created
+    body = response.parsed_body
+    assert_includes body["verification_uri"], "/acme/device/runner"
+    assert_includes body["verification_uri_complete"], "/acme/device/runner?code="
+  end
+
   test "show returns user code details when active" do
     auth = Runner::Authorization.create_request!(
       runner_name: "My-Server",

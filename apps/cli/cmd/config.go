@@ -48,6 +48,10 @@ var configSetCmd = &cobra.Command{
 			fc.ServerURL = strings.TrimRight(flagSetConfig.ServerURL, "/")
 			updated = true
 		}
+		if flagSetConfig.AccountSlug != "" {
+			fc.AccountSlug = strings.TrimSpace(flagSetConfig.AccountSlug)
+			updated = true
+		}
 		if flagSetConfig.RunnerToken != "" {
 			fc.RunnerToken = flagSetConfig.RunnerToken
 			updated = true
@@ -73,6 +77,10 @@ var configSetCmd = &cobra.Command{
 				switch key {
 				case "server", "server_url", "server-url", "url":
 					fc.ServerURL = strings.TrimRight(val, "/")
+					updated = true
+					i++
+				case "account", "account_slug", "account-slug", "slug":
+					fc.AccountSlug = strings.TrimSpace(val)
 					updated = true
 					i++
 				case "token", "runner_token", "runner-token", "auth":
@@ -160,6 +168,8 @@ var configUnsetCmd = &cobra.Command{
 		switch key {
 		case "server", "server_url", "server-url":
 			fc.ServerURL = ""
+		case "account", "account_slug", "account-slug", "slug":
+			fc.AccountSlug = ""
 		case "token", "runner_token", "runner-token":
 			fc.RunnerToken = ""
 		case "channel_token", "channel-token", "channel", "cli_token", "device_token":
@@ -199,6 +209,7 @@ func init() {
 	configCmd.Flags().BoolVar(&flagShowToken, "show-token", false, "Display unmasked runner token")
 
 	configSetCmd.Flags().StringVar(&flagSetConfig.ServerURL, "server", "", "Beep server URL")
+	configSetCmd.Flags().StringVarP(&flagSetConfig.AccountSlug, "account", "a", "", "Account slug")
 	configSetCmd.Flags().StringVar(&flagSetConfig.RunnerToken, "token", "", "Runner token")
 	configSetCmd.Flags().StringVar(&flagSetConfig.Workspace, "workspace", "", "Workspace directory")
 	configSetCmd.Flags().IntVar(&flagSetConfig.Concurrency, "concurrency", 0, "Max concurrency")
@@ -224,6 +235,9 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	fmt.Println(ui.Bold(ui.Cyan("Beep Runner Configuration:")))
 	fmt.Println(ui.KeyValue("Config File", ui.Dim(cfg.ConfigFile)))
 	fmt.Println(ui.KeyValue("Server URL", ui.Bold(cfg.ServerURL)))
+	if cfg.AccountSlug != "" {
+		fmt.Println(ui.KeyValue("Account Slug", ui.Bold(cfg.AccountSlug)))
+	}
 	fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(tokenStr)))
 	if cfg.ChannelToken != "" {
 		channelTokenStr := config.MaskToken(cfg.ChannelToken)
