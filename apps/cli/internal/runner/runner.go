@@ -53,22 +53,18 @@ func (r *Runner) Run(ctx context.Context) error {
 		return fmt.Errorf("workspace is not configured")
 	}
 
-	log.Printf("%s Connecting to %s %s=%s %s=%d",
-		ui.Bold(ui.Cyan("[beep-runner]")),
-		ui.Bold(r.cfg.ServerURL),
-		ui.Dim("workspace"), ui.Dim(r.workspace.Root),
-		ui.Dim("concurrency"), r.cfg.Concurrency,
-	)
-
 	pingRes, err := r.client.Ping(ctx)
 	if err != nil {
 		return fmt.Errorf("runner handshake failed: %w", err)
 	}
-	log.Printf("%s %s %s (%s)",
+	log.Printf("%s %s %s (%s) %s=%s %s=%s %s=%d",
 		ui.Bold(ui.Cyan("[beep-runner]")),
 		ui.Green("Connected:"),
 		ui.Bold(pingRes.RunnerID),
 		ui.Dim(pingRes.RunnerName),
+		ui.Dim("server"), ui.Bold(r.cfg.ServerURL),
+		ui.Dim("workspace"), ui.Dim(r.workspace.Root),
+		ui.Dim("concurrency"), r.cfg.Concurrency,
 	)
 
 	if r.OnReady != nil {

@@ -50,11 +50,25 @@ func (c *Channel) Run(ctx context.Context) error {
 		return fmt.Errorf("channel token is not configured (run 'beep channel connect' or configure channel_token in config.json)")
 	}
 
-	log.Printf("%s %s %s=%s",
-		ui.Bold(ui.Cyan("[beep-channel]")),
-		ui.Green("Channel listening active:"),
-		ui.Dim("server"), ui.Bold(c.cfg.ServerURL),
-	)
+	wsRoot := ""
+	if c.workspace != nil {
+		wsRoot = c.workspace.Root
+	}
+
+	if wsRoot != "" {
+		log.Printf("%s %s %s=%s %s=%s",
+			ui.Bold(ui.Cyan("[beep-channel]")),
+			ui.Green("Channel listening active:"),
+			ui.Dim("server"), ui.Bold(c.cfg.ServerURL),
+			ui.Dim("workspace"), ui.Dim(wsRoot),
+		)
+	} else {
+		log.Printf("%s %s %s=%s",
+			ui.Bold(ui.Cyan("[beep-channel]")),
+			ui.Green("Channel listening active:"),
+			ui.Dim("server"), ui.Bold(c.cfg.ServerURL),
+		)
+	}
 
 	if c.OnReady != nil {
 		c.OnReady()
