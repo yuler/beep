@@ -84,7 +84,7 @@ Rails.application.routes.draw do
       namespace :channels do
         namespace :cli do
           resource :inbox, only: %i[ show ]
-          resource :disconnect, only: %i[ destroy ]
+          resource :connection, only: %i[ destroy ]
           resources :deliveries, only: [] do
             scope module: :deliveries do
               resource :ack, only: :create
@@ -147,7 +147,7 @@ Rails.application.routes.draw do
       end
 
       namespace :runner do
-        resource :disconnect, only: %i[ destroy ]
+        resource :connection, only: %i[ destroy ]
         resource :ping, only: %i[ create ]
         resources :jobs, only: %i[ index create destroy ]
         namespace :jobs do

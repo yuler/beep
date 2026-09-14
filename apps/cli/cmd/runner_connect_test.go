@@ -61,8 +61,8 @@ func TestRunnerDisconnectCommandClearsToken(t *testing.T) {
 		t.Fatalf("runner disconnect failed: %v", err)
 	}
 
-	if gotMethod != http.MethodDelete || gotPath != "/api/v1/runner/disconnect" {
-		t.Errorf("expected DELETE /api/v1/runner/disconnect, got %s %s", gotMethod, gotPath)
+	if gotMethod != http.MethodDelete || gotPath != "/api/v1/runner/connection" {
+		t.Errorf("expected DELETE /api/v1/runner/connection, got %s %s", gotMethod, gotPath)
 	}
 	if gotToken != "beep_rt_test123" {
 		t.Errorf("expected X-Runner-Token header to be sent, got %q", gotToken)

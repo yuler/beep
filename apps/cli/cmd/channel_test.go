@@ -61,8 +61,8 @@ func TestDisconnectCommandClearsToken(t *testing.T) {
 		t.Fatalf("channel disconnect failed: %v", err)
 	}
 
-	if gotMethod != http.MethodDelete || gotPath != "/api/v1/channels/cli/disconnect" {
-		t.Errorf("expected DELETE /api/v1/channels/cli/disconnect, got %s %s", gotMethod, gotPath)
+	if gotMethod != http.MethodDelete || gotPath != "/api/v1/channels/cli/connection" {
+		t.Errorf("expected DELETE /api/v1/channels/cli/connection, got %s %s", gotMethod, gotPath)
 	}
 	if gotToken != "beep_ct_test123" {
 		t.Errorf("expected X-CLI-Token header to be sent, got %q", gotToken)

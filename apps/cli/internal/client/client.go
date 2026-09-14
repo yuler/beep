@@ -460,7 +460,7 @@ func (c *Client) DisconnectChannel(ctx context.Context) error {
 	if token == "" {
 		return fmt.Errorf("missing channel token")
 	}
-	url := fmt.Sprintf("%s/api/v1/channels/cli/disconnect", c.cfg.ServerURL)
+	url := fmt.Sprintf("%s/api/v1/channels/cli/connection", c.cfg.ServerURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return err
@@ -591,7 +591,7 @@ func (c *Client) DisconnectRunner(ctx context.Context) error {
 	if token == "" {
 		return fmt.Errorf("missing runner token")
 	}
-	url := fmt.Sprintf("%s/api/v1/runner/disconnect", c.cfg.ServerURL)
+	url := fmt.Sprintf("%s/api/v1/runner/connection", c.cfg.ServerURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return err

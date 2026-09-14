@@ -1,6 +1,6 @@
 require "test_helper"
 
-class Api::V1::Channels::Cli::DisconnectsControllerTest < ActionDispatch::IntegrationTest
+class Api::V1::Channels::Cli::ConnectionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @account = accounts(:john_account)
     @user = users(:john)
@@ -13,7 +13,7 @@ class Api::V1::Channels::Cli::DisconnectsControllerTest < ActionDispatch::Integr
 
   test "destroy removes the channel authenticated by CLI token" do
     assert_difference -> { Channel.count }, -1 do
-      delete "/api/v1/channels/cli/disconnect",
+      delete "/api/v1/channels/cli/connection",
         headers: { "X-CLI-Token" => @channel.token },
         as: :json
     end
@@ -22,13 +22,13 @@ class Api::V1::Channels::Cli::DisconnectsControllerTest < ActionDispatch::Integr
   end
 
   test "destroy rejects missing token" do
-    delete "/api/v1/channels/cli/disconnect", as: :json
+    delete "/api/v1/channels/cli/connection", as: :json
 
     assert_response :unauthorized
   end
 
   test "destroy rejects invalid token" do
-    delete "/api/v1/channels/cli/disconnect",
+    delete "/api/v1/channels/cli/connection",
       headers: { "X-CLI-Token" => "invalid_token" },
       as: :json
 
