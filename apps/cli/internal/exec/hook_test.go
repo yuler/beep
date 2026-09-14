@@ -142,7 +142,69 @@ func TestDispatchHookMissingReturnsEmptyName(t *testing.T) {
 	}
 }
 
-func writeHook(t *testing.T, workspaceRoot, name, script string) {
+func TestDispatchHookEmptyRootReturnsEmpty(t *testing.T) {
+	out, name, err := DispatchHook(context.Background(), "  ", client.CliDelivery{
+		ID:      "del_empty",
+		Payload: map[string]any{"event": "beep.fired"},
+	})
+	if err != nil {
+		t.Fatalf("DispatchHook: %v", err)
+	}
+	if name != "" || out != "" {
+		t.Fatalf("name=%q out=%q, want empty for blank workspace root", name, out)
+	}
+}
+
+func TestDispatchHookRejectsGroupWritableHook(t *testing.T) {
+	root := t.TempDir()
+	path := writeHook(t, root, "on_channel", "#!/bin/sh\necho hi\n")
+	if err := os.Chmod(path, 0o775); err != nil {
+		t.Fatal(err)
+	}
+
+	_, name, err := DispatchHook(context.Background(), root, client.CliDelivery{
+		ID:      "del_unsafe",
+		Payload: map[string]any{"event": "beep.fired"},
+	})
+	if err == nil {
+		t.Fatal("expected unsafe-permissions error, got nil")
+	}
+	if name != "on_channel" {
+		t.Fatalf("hook name = %q, want on_channel", name)
+	}
+}
+
+func TestDispatchHookRejectsNonExecutableHook(t *testing.T) {
+	root := t.TempDir()
+	path := writeHook(t, root, "on_channel", "#!/bin/sh\necho hi\n")
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, err := DispatchHook(context.Background(), root, client.CliDelivery{
+		ID:      "del_noexec",
+		Payload: map[string]any{"event": "beep.fired"},
+	})
+	if err == nil {
+		t.Fatal("expected non-executable error, got nil")
+	}
+}
+
+func TestTruncateHookOutputKeepsRuneBoundary(t *testing.T) {
+	long := strings.Repeat("通知", 1500) // 3000 runes
+	got := truncateHookOutput(long)
+	if gotLen := len([]rune(got)); gotLen != 2048 {
+		t.Fatalf("truncated to %d runes, want 2048", gotLen)
+	}
+	if !strings.HasSuffix(got, "通知") {
+		t.Fatalf("truncation split a multi-byte rune: %q", got[len(got)-10:])
+	}
+	if short := truncateHookOutput("ok"); short != "ok" {
+		t.Fatalf("short output changed: %q", short)
+	}
+}
+
+func writeHook(t *testing.T, workspaceRoot, name, script string) string {
 	t.Helper()
 	dir := filepath.Join(workspaceRoot, "hooks")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -152,4 +214,5 @@ func writeHook(t *testing.T, workspaceRoot, name, script string) {
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	return path
 }

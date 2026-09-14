@@ -37,6 +37,18 @@ class Api::V1::Channels::CliControllerTest < ActionDispatch::IntegrationTest
     assert_equal "claimed", @delivery.reload.status
   end
 
+  test "inbox expires stale deliveries instead of returning them" do
+    @delivery.update_columns(expires_at: 1.minute.ago)
+
+    get "/api/v1/channels/cli/inbox",
+      headers: { "X-CLI-Token" => @channel.token },
+      as: :json
+
+    assert_response :success
+    assert_equal [], response.parsed_body["deliveries"]
+    assert_equal "expired", @delivery.reload.status
+  end
+
   test "inbox rejects unauthorized request" do
     get "/api/v1/channels/cli/inbox",
       headers: { "X-CLI-Token" => "invalid_token" },

@@ -298,7 +298,6 @@ export function DashboardSidebar({
 												render={
 													<Link
 														to="/dev/letters"
-														params={{ account_slug: slug }}
 														onClick={closeMobileSidebar}
 													/>
 												}
@@ -325,11 +324,7 @@ export function DashboardSidebar({
 												}
 												tooltip={m.nav_jobs()}
 												render={
-													<Link
-														to="/admin/jobs"
-														params={{ account_slug: slug }}
-														onClick={closeMobileSidebar}
-													/>
+													<Link to="/admin/jobs" onClick={closeMobileSidebar} />
 												}
 											>
 												<BriefcaseBusiness />
@@ -346,7 +341,6 @@ export function DashboardSidebar({
 												render={
 													<Link
 														to="/admin/stats"
-														params={{ account_slug: slug }}
 														onClick={closeMobileSidebar}
 													/>
 												}

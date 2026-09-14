@@ -11,7 +11,10 @@
 #
 # Permissions: owned by you, executable, not group/world-writable (isSafeHook).
 # Cwd is the workspace root. Exit 0 ACKs succeeded; non-zero ACKs failed.
-# No hook file: logged and ACKed succeeded. 60s timeout.
+# No hook file: logged with a warning and ACKed failed so the server can retry. 60s timeout.
+#
+# Security: BEEP_EVENT* values come from the server payload. Never
+# `eval` them or pass them to `sh -c` — branch with `case` like below.
 #
 # Environment:
 #   BEEP_EVENT             Event type, e.g. beep.fired | channel.test

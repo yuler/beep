@@ -1,0 +1,2 @@
+json.error @device_flow_error
+json.error_description @device_flow_error_description

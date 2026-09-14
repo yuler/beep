@@ -13,6 +13,10 @@ class Channel::Delivery < ApplicationRecord
   scope :due_for_cli, -> { pending.where(expires_at: Time.current..) }
   scope :stale_pending, -> { pending.where(expires_at: ...Time.current) }
 
+  def self.expire_stale!
+    stale_pending.update_all(status: "expired", updated_at: Time.current)
+  end
+
   def expired?
     expires_at.present? && expires_at < Time.current
   end

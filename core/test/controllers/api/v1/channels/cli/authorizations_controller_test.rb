@@ -45,6 +45,17 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
     assert_response :not_found
   end
 
+  test "show returns not found when user is not member of target account" do
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
+    other_account = accounts(:yuler_account)
+
+    get "/api/v1/#{other_account.slug}/channels/cli/authorizations/#{auth.user_code}",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :not_found
+  end
+
   test "update approves authorization and creates new channel" do
     auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
 

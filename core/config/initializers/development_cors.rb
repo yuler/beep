@@ -44,7 +44,7 @@ if Rails.env.development?
           204,
           cors_headers({
             "Access-Control-Allow-Methods" => "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers" => "Authorization, Content-Type, X-Account-Slug",
+            "Access-Control-Allow-Headers" => "Authorization, Content-Type, X-Account-Slug, X-Requested-With",
             "Access-Control-Expose-Headers" => "X-Magic-Link-Code",
             "Access-Control-Max-Age" => "86400"
           }, origin),

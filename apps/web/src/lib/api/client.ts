@@ -47,6 +47,11 @@ async function request(
 		requestHeaders.set("Content-Type", "application/json");
 	}
 	requestHeaders.set("Accept", "application/json");
+	// CSRF defense in depth: cookie-authenticated JSON mutations are only
+	// accepted with this header (see RequestForgeryProtection). Browsers can
+	// only send it from same-origin JS, never from a cross-site form.
+	// Same-origin proxied calls need no CORS preflight for it.
+	requestHeaders.set("X-Requested-With", "XMLHttpRequest");
 
 	const cookie = await serverCookieHeader();
 	if (cookie && !requestHeaders.has("Cookie")) {

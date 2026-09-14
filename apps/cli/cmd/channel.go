@@ -85,6 +85,9 @@ var channelConnectCmd = &cobra.Command{
 		}
 		deadline := time.Now().Add(time.Duration(expiresIn) * time.Second)
 
+		const maxPollInterval = 30 * time.Second
+		consecutiveNetworkErrors := 0
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -132,12 +135,17 @@ var channelConnectCmd = &cobra.Command{
 
 			var oauthErr *client.OAuthErrorResponse
 			if errors.As(err, &oauthErr) {
+				// The server answered — this was not a network failure.
+				consecutiveNetworkErrors = 0
 				switch oauthErr.ErrorCode {
 				case client.OAuthErrAuthorizationPending:
 					// Continue polling
 					continue
 				case client.OAuthErrSlowDown:
 					interval += 5 * time.Second
+					if interval > maxPollInterval {
+						interval = maxPollInterval
+					}
 					continue
 				case client.OAuthErrAccessDenied:
 					return fmt.Errorf("authorization was denied by the user")
@@ -147,7 +155,22 @@ var channelConnectCmd = &cobra.Command{
 					return fmt.Errorf("authorization failed: %s", oauthErr.Error())
 				}
 			} else if err != nil {
-				// Network error or unexpected response, retry if context not cancelled
+				// Network error or unexpected response. Back off instead of
+				// spinning at poll frequency, and give up if the server never
+				// answers — the 15-minute deadline alone is not feedback.
+				consecutiveNetworkErrors++
+				if consecutiveNetworkErrors >= 10 {
+					return fmt.Errorf("device authorization polling failed %d times in a row: %w", consecutiveNetworkErrors, err)
+				}
+				backoff := interval * time.Duration(consecutiveNetworkErrors)
+				if backoff > maxPollInterval {
+					backoff = maxPollInterval
+				}
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(backoff):
+				}
 				continue
 			}
 		}

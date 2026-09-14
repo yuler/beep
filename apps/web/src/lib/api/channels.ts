@@ -76,9 +76,12 @@ export interface DeviceAuthInfo {
 	expires_in: number;
 }
 
-export async function verifyDeviceCode(code: string): Promise<DeviceAuthInfo> {
+export async function verifyDeviceCode(
+	accountSlug: string,
+	code: string,
+): Promise<DeviceAuthInfo> {
 	return apiFetch<DeviceAuthInfo>(
-		`/api/v1/channels/cli/authorizations/${encodeURIComponent(code)}`,
+		`/api/v1/${encodeURIComponent(accountSlug)}/channels/cli/authorizations/${encodeURIComponent(code)}`,
 		{
 			method: "GET",
 		},

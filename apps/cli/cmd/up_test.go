@@ -62,6 +62,11 @@ func TestBuildChildDaemonArgs(t *testing.T) {
 			input:    []string{"channel", "up", "-d", "--token=secret_val", "--server", "http://localhost:3000"},
 			expected: []string{"runner", "up", "--server", "http://localhost:3000"},
 		},
+		{
+			// Flag values that look like subcommand verbs must survive.
+			input:    []string{"up", "--server", "up"},
+			expected: []string{"runner", "up", "--server", "up"},
+		},
 	}
 
 	for _, tc := range tests {
