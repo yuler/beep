@@ -1,6 +1,6 @@
 require "test_helper"
 
-class ChannelDeliveryTest < ActiveSupport::TestCase
+class Channel::DeliveryTest < ActiveSupport::TestCase
   setup do
     @account = accounts(:john_account)
     @user = users(:john)

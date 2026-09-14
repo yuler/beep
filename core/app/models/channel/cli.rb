@@ -1,7 +1,7 @@
 module Channel::Cli
   class << self
     def deliver_beep(channel, beep, run: nil)
-      expires = (run&.scheduled_for || Time.current) + ChannelDelivery::DEFAULT_TTL
+      expires = (run&.scheduled_for || Time.current) + Channel::Delivery::DEFAULT_TTL
       delivery = channel.deliveries.create!(
         beep_run: run,
         payload: {
@@ -26,7 +26,7 @@ module Channel::Cli
     end
 
     def deliver_test!(channel)
-      expires = Time.current + ChannelDelivery::DEFAULT_TTL
+      expires = Time.current + Channel::Delivery::DEFAULT_TTL
       channel.deliveries.create!(
         payload: {
           event: "beep.test",

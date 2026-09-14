@@ -1,4 +1,4 @@
-class ChannelDelivery < ApplicationRecord
+class Channel::Delivery < ApplicationRecord
   DEFAULT_TTL = 30.minutes
 
   belongs_to :channel
