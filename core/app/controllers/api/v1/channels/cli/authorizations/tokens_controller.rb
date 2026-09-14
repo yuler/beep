@@ -8,7 +8,7 @@ class Api::V1::Channels::Cli::Authorizations::TokensController < Api::V1::BaseCo
       return
     end
 
-    @auth = ChannelAuthorization.find_by(device_code: params[:device_code].to_s.strip)
+    @auth = Channel::Authorization.find_by(device_code: params[:device_code].to_s.strip)
     unless @auth
       render json: { error: "invalid_grant", error_description: "Invalid device code" }, status: :bad_request
       return

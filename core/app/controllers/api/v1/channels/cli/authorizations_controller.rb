@@ -3,13 +3,13 @@ class Api::V1::Channels::Cli::AuthorizationsController < Api::V1::BaseController
   allow_unauthenticated_access only: %i[ create ]
 
   def create
-    @auth = ChannelAuthorization.create_request!(channel_name: params[:channel_name])
+    @auth = Channel::Authorization.create_request!(channel_name: params[:channel_name])
     @web_origin = Rails.configuration.x.web_origin
     render :create, status: :created
   end
 
   def show
-    @auth = ChannelAuthorization.active.find_by(user_code: params[:user_code].to_s.upcase.strip)
+    @auth = Channel::Authorization.active.find_by(user_code: params[:user_code].to_s.upcase.strip)
     if @auth
       render :show, status: :ok
     else
@@ -18,7 +18,7 @@ class Api::V1::Channels::Cli::AuthorizationsController < Api::V1::BaseController
   end
 
   def update
-    @auth = ChannelAuthorization.active.find_by(user_code: params[:user_code].to_s.upcase.strip)
+    @auth = Channel::Authorization.active.find_by(user_code: params[:user_code].to_s.upcase.strip)
     user = Current.user || Current.identity&.personal_user
     if @auth && user && @auth.approve!(user: user, name: params[:channel_name])
       @channel = @auth.channel
@@ -29,7 +29,7 @@ class Api::V1::Channels::Cli::AuthorizationsController < Api::V1::BaseController
   end
 
   def destroy
-    @auth = ChannelAuthorization.active.find_by(user_code: params[:user_code].to_s.upcase.strip)
+    @auth = Channel::Authorization.active.find_by(user_code: params[:user_code].to_s.upcase.strip)
     if @auth&.deny!
       head :no_content
     else

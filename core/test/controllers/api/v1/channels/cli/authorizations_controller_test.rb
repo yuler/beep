@@ -24,7 +24,7 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
   end
 
   test "show returns user code details when active" do
-    auth = ChannelAuthorization.create_request!(channel_name: "My-Laptop")
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
 
     get "/api/v1/channels/cli/authorizations/#{auth.user_code}",
       headers: { "Authorization" => "Bearer #{@token}" },
@@ -46,7 +46,7 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
   end
 
   test "update approves authorization and creates new channel" do
-    auth = ChannelAuthorization.create_request!(channel_name: "My-Laptop")
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
 
     assert_difference -> { Channel.count }, 1 do
       patch "/api/v1/channels/cli/authorizations/#{auth.user_code}",
@@ -66,7 +66,7 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
   end
 
   test "destroy denies authorization" do
-    auth = ChannelAuthorization.create_request!(channel_name: "My-Laptop")
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
 
     delete "/api/v1/channels/cli/authorizations/#{auth.user_code}",
       headers: { "Authorization" => "Bearer #{@token}" },
@@ -77,7 +77,7 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
   end
 
   test "tokens#create polling returns authorization_pending when pending" do
-    auth = ChannelAuthorization.create_request!(channel_name: "My-Laptop")
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
 
     post "/api/v1/channels/cli/authorizations/token",
       params: {
@@ -91,7 +91,7 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
   end
 
   test "tokens#create polling returns access_token when approved" do
-    auth = ChannelAuthorization.create_request!(channel_name: "My-Laptop")
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
     auth.approve!(user: @user, name: "My-Laptop")
 
     post "/api/v1/channels/cli/authorizations/token",
@@ -111,7 +111,7 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
   end
 
   test "tokens#create polling returns access_denied when denied" do
-    auth = ChannelAuthorization.create_request!(channel_name: "My-Laptop")
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
     auth.deny!
 
     post "/api/v1/channels/cli/authorizations/token",
@@ -126,7 +126,7 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
   end
 
   test "tokens#create polling returns expired_token when expired" do
-    auth = ChannelAuthorization.create_request!(channel_name: "My-Laptop")
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
     auth.update_columns(expires_at: 1.minute.ago)
 
     post "/api/v1/channels/cli/authorizations/token",
