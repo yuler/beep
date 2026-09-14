@@ -395,5 +395,14 @@ class BeepTest < ActiveSupport::TestCase
     )
     assert_equal "beep", standalone_beep.source_slug
     assert_nil standalone_beep.source
+
+    unsupported = Beep.new(
+      account: @account,
+      kind: :once,
+      title: "From account",
+      source: @account
+    )
+    assert_not unsupported.valid?
+    assert unsupported.errors[:source].any?
   end
 end

@@ -7,6 +7,7 @@ class Beep < ApplicationRecord
   EXPIRED_AFTER = 1.hour
   TITLE_MAX_LENGTH = 80
   BODY_MAX_LENGTH = 2000
+  SOURCE_TYPES = %w[ Beeper Runner::Job ].freeze
 
   belongs_to :account
   belongs_to :source, polymorphic: true, optional: true
@@ -19,7 +20,7 @@ class Beep < ApplicationRecord
   normalizes :title, with: ->(value) { value.strip.presence }
   normalizes :body, with: ->(value) { value&.strip.presence }
 
-  before_validation :sync_source_and_beeper
+  before_validation :assign_beeper_from_source
   before_validation :assign_default_notification_channels, on: :create
   before_validation :sync_run_attributes
 
@@ -33,6 +34,7 @@ class Beep < ApplicationRecord
   validate :timezone_is_iana
   validate :validate_cron_expression, if: :recurring?
   validate :validate_notification_channels
+  validate :validate_source
 
   after_create_commit :deliver_if_due_on_create
 
@@ -168,7 +170,7 @@ class Beep < ApplicationRecord
   def source_slug
     case source_type
     when "Beeper" then "beeper"
-    when "Runner::Job", "Runner::Run" then "runner_job"
+    when "Runner::Job" then "runner_job"
     else "beep"
     end
   end
@@ -178,16 +180,18 @@ class Beep < ApplicationRecord
   end
 
   private
-    def sync_source_and_beeper
-      if source.present?
-        if source.is_a?(Beeper)
-          self.beeper_id = source_id
-        end
-      elsif beeper_id.present?
-        self.source_type = "Beeper"
-        self.source_id = beeper_id
+    def assign_beeper_from_source
+      if source.is_a?(Beeper)
+        self.beeper_id = source_id
       end
     end
+
+    def validate_source
+      if source_type.present? && SOURCE_TYPES.exclude?(source_type)
+        errors.add(:source, "is not supported")
+      end
+    end
+
     def claim_run(scheduled_for)
       if expired?(scheduled_for)
         runs.create!(scheduled_for: scheduled_for, status: :expired)
