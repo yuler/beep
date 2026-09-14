@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_11_160000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_14_170000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "subscription_id"
@@ -352,6 +352,28 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_11_160000) do
     t.index ["user_id", "endpoint"], name: "index_push_subscriptions_on_user_id_and_endpoint", unique: true
   end
 
+  create_table "runner_authorizations", id: :uuid, force: :cascade do |t|
+    t.uuid "account_id"
+    t.uuid "user_id"
+    t.uuid "runner_id"
+    t.string "device_code", null: false
+    t.string "user_code", null: false
+    t.string "runner_name"
+    t.json "tags", default: [], null: false
+    t.json "metadata", default: {}, null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "last_polled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_runner_authorizations_on_account_id"
+    t.index ["device_code"], name: "index_runner_authorizations_on_device_code", unique: true
+    t.index ["expires_at"], name: "index_runner_authorizations_on_expires_at"
+    t.index ["runner_id"], name: "index_runner_authorizations_on_runner_id"
+    t.index ["user_code"], name: "index_runner_authorizations_on_user_code", unique: true
+    t.index ["user_id"], name: "index_runner_authorizations_on_user_id"
+  end
+
   create_table "runner_jobs", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "runner_id", null: false
@@ -457,6 +479,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_11_160000) do
   add_foreign_key "identity_access_tokens", "identities"
   add_foreign_key "push_subscriptions", "accounts"
   add_foreign_key "push_subscriptions", "users"
+  add_foreign_key "runner_authorizations", "accounts"
+  add_foreign_key "runner_authorizations", "runners"
+  add_foreign_key "runner_authorizations", "users"
   add_foreign_key "runner_jobs", "accounts"
   add_foreign_key "runner_jobs", "runners"
   add_foreign_key "runner_runs", "runner_jobs"

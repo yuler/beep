@@ -121,6 +121,13 @@ Rails.application.routes.draw do
         end
       end
 
+      namespace :runners do
+        resources :authorizations, param: :user_code, only: %i[ create show update destroy ]
+        namespace :authorizations do
+          resource :token, only: :create
+        end
+      end
+
       resources :runners, only: %i[ index show create update destroy ] do
         scope module: :runners do
           resource :token, only: %i[ create ]
@@ -140,6 +147,7 @@ Rails.application.routes.draw do
       end
 
       namespace :runner do
+        resource :disconnect, only: %i[ destroy ]
         resource :ping, only: %i[ create ]
         resources :jobs, only: %i[ index create destroy ]
         namespace :jobs do

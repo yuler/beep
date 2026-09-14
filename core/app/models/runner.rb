@@ -6,6 +6,7 @@ class Runner < ApplicationRecord
   belongs_to :account
   has_many :jobs, dependent: :destroy
   has_many :runs, dependent: :destroy
+  has_many :authorizations, class_name: "Runner::Authorization", dependent: :nullify
 
   enum :status, %w[ offline online idle ].index_by(&:itself), default: "offline"
 

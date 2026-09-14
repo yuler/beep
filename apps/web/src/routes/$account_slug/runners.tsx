@@ -125,6 +125,23 @@ function RunnersPage() {
 								<CliInstallSnippet />
 							</CardContent>
 						</Card>
+
+						<Card className="p-4 sm:p-6">
+							<CardHeader className="p-0 pb-3">
+								<CardTitle className="text-sm font-semibold">
+									Connect via CLI
+								</CardTitle>
+								<CardDescription className="text-xs">
+									Authorize and register your machine automatically using the
+									device code flow:
+								</CardDescription>
+							</CardHeader>
+							<CardContent className="p-0">
+								<div className="rounded-lg bg-muted p-3 font-mono text-xs select-all">
+									beep runner connect
+								</div>
+							</CardContent>
+						</Card>
 					</div>
 				) : (
 					<RunnerList

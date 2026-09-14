@@ -586,6 +586,111 @@ func (c *Client) PollDeviceToken(ctx context.Context, deviceCode string) (*Devic
 	return nil, fmt.Errorf("token request failed (status %d): %s", resp.StatusCode, string(respBody))
 }
 
+func (c *Client) DisconnectRunner(ctx context.Context) error {
+	token := c.cfg.RunnerToken
+	if token == "" {
+		return fmt.Errorf("missing runner token")
+	}
+	url := fmt.Sprintf("%s/api/v1/runner/disconnect", c.cfg.ServerURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	c.setRunnerHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNoContent ||
+		resp.StatusCode == http.StatusOK ||
+		resp.StatusCode == http.StatusUnauthorized ||
+		resp.StatusCode == http.StatusNotFound {
+		io.Copy(io.Discard, resp.Body)
+		return nil
+	}
+
+	respBody, _ := io.ReadAll(resp.Body)
+	return fmt.Errorf("disconnect runner failed (status %d): %s", resp.StatusCode, string(respBody))
+}
+
+type RunnerTokenResponse struct {
+	AccessToken string   `json:"access_token"`
+	TokenType   string   `json:"token_type"`
+	RunnerID    string   `json:"runner_id"`
+	RunnerName  string   `json:"runner_name"`
+	Tags        []string `json:"tags"`
+}
+
+func (c *Client) RequestRunnerDeviceAuthorization(ctx context.Context, runnerName string, tags []string, metadata map[string]string) (*DeviceAuthorizationResponse, error) {
+	url := fmt.Sprintf("%s/api/v1/runners/authorizations", c.cfg.ServerURL)
+	payload := map[string]any{
+		"runner_name": runnerName,
+		"tags":        tags,
+		"metadata":    metadata,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setBaseHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+	var res DeviceAuthorizationResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) PollRunnerDeviceToken(ctx context.Context, deviceCode string) (*RunnerTokenResponse, error) {
+	reqURL := fmt.Sprintf("%s/api/v1/runners/authorizations/token", c.cfg.ServerURL)
+	payload := map[string]any{
+		"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
+		"device_code": deviceCode,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setBaseHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK {
+		var tokenRes RunnerTokenResponse
+		if err := json.Unmarshal(respBody, &tokenRes); err != nil {
+			return nil, err
+		}
+		return &tokenRes, nil
+	}
+
+	var oauthErr OAuthErrorResponse
+	if err := json.Unmarshal(respBody, &oauthErr); err == nil && oauthErr.ErrorCode != "" {
+		return nil, &oauthErr
+	}
+
+	return nil, fmt.Errorf("token request failed (status %d): %s", resp.StatusCode, string(respBody))
+}
+
+
 func mustJSON(payload any) *bytes.Reader {
 	bodyBytes, _ := json.Marshal(payload)
 	return bytes.NewReader(bodyBytes)
