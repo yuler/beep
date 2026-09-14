@@ -7,7 +7,7 @@ class Channel::Authorization < ApplicationRecord
   belongs_to :user, optional: true
   belongs_to :channel, optional: true
 
-  enum :status, %w[ pending approved access_denied expired ].index_by(&:itself), default: "pending"
+  enum :status, %w[ pending approved consumed access_denied expired ].index_by(&:itself), default: "pending"
 
   has_secure_token :device_code
 
@@ -21,7 +21,13 @@ class Channel::Authorization < ApplicationRecord
   scope :active, -> { where(status: "pending").where("expires_at > ?", Time.current) }
 
   def self.create_request!(channel_name: nil)
-    create!(channel_name: channel_name.presence)
+    retries = 3
+    begin
+      create!(channel_name: channel_name.presence)
+    rescue ActiveRecord::RecordNotUnique
+      retries -= 1
+      retries >= 0 ? retry : raise
+    end
   end
 
   def expired?
@@ -32,25 +38,38 @@ class Channel::Authorization < ApplicationRecord
     return false if expired? || status != "pending"
 
     target_name = name.presence || channel_name.presence || "CLI Channel"
-    new_channel = user.account.channels.create!(
-      user: user,
-      kind: "cli",
-      name: target_name
-    )
+    transaction do
+      new_channel = user.account.channels.create!(
+        user: user,
+        kind: "cli",
+        name: target_name
+      )
 
-    update!(
-      account: user.account,
-      user: user,
-      channel: new_channel,
-      channel_name: target_name,
-      status: "approved"
-    )
+      update!(
+        account: user.account,
+        user: user,
+        channel: new_channel,
+        channel_name: target_name,
+        status: "approved"
+      )
+    end
   end
 
   def deny!
-    return false if expired?
+    return false if expired? || status != "pending"
 
     update!(status: "access_denied")
+  end
+
+  def consume_token!
+    return nil unless status == "approved" && channel.present?
+
+    update!(status: "consumed")
+    channel
+  end
+
+  def poll_interval_exceeded?
+    last_polled_at.present? && Time.current - last_polled_at < DEFAULT_INTERVAL
   end
 
   def poll!

@@ -44,7 +44,7 @@ class Channel < ApplicationRecord
   def masked_token
     return if token.blank?
 
-    "#{token.first(12)}••••"
+    "#{TOKEN_PREFIX}••••"
   end
 
   def deliver_beep(beep, run: nil)

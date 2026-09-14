@@ -42,15 +42,18 @@ export const Route = createFileRoute("/device")({
 
 function DeviceAuthPage() {
 	const search = Route.useSearch();
+	const navigate = Route.useNavigate();
 	const [code, setCode] = useState(search.code?.toUpperCase() ?? "");
 	const [channelName, setChannelName] = useState("");
 	const [authInfo, setAuthInfo] = useState<DeviceAuthInfo | null>(null);
+	const [approvedName, setApprovedName] = useState<string | null>(null);
 	const [verifying, setVerifying] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [status, setStatus] = useState<
 		"idle" | "verified" | "approved" | "denied"
 	>("idle");
 	const [error, setError] = useState<string | null>(null);
+	const [urlCodeConsumed, setUrlCodeConsumed] = useState(false);
 
 	const handleVerifyCode = useCallback(async (userCode: string) => {
 		const cleaned = userCode.trim().toUpperCase();
@@ -63,19 +66,25 @@ function DeviceAuthPage() {
 			setAuthInfo(info);
 			setChannelName(info.channel_name || "CLI Device");
 			setStatus("verified");
+			void navigate({ search: {}, replace: true });
 		} catch (err) {
 			setError(err instanceof ApiError ? err.message : translateError(err));
 			setStatus("idle");
 		} finally {
 			setVerifying(false);
 		}
-	}, []);
+	}, [navigate]);
 
 	useEffect(() => {
-		if (search.code && status === "idle") {
-			void handleVerifyCode(search.code);
+		setCode(search.code?.toUpperCase() ?? "");
+	}, [search.code]);
+
+	useEffect(() => {
+		if (search.code && !urlCodeConsumed) {
+			setUrlCodeConsumed(true);
+			setCode(search.code.toUpperCase());
 		}
-	}, [search.code, status, handleVerifyCode]);
+	}, [search.code, urlCodeConsumed]);
 
 	async function handleApprove(e: FormEvent) {
 		e.preventDefault();
@@ -84,10 +93,11 @@ function DeviceAuthPage() {
 		setSubmitting(true);
 		setError(null);
 		try {
-			await approveDeviceAuth({
+			const res = await approveDeviceAuth({
 				user_code: authInfo.user_code,
 				channel_name: channelName.trim() || undefined,
 			});
+			setApprovedName(res.channel.name);
 			setStatus("approved");
 		} catch (err) {
 			setError(err instanceof ApiError ? err.message : translateError(err));
@@ -124,7 +134,7 @@ function DeviceAuthPage() {
 							<p className="text-muted-foreground text-sm">
 								Your CLI channel{" "}
 								<span className="font-medium text-foreground">
-									{channelName}
+									{approvedName ?? channelName}
 								</span>{" "}
 								has been connected. You can now close this tab and return to
 								your terminal.
@@ -145,6 +155,12 @@ function DeviceAuthPage() {
 					</div>
 				) : status === "verified" && authInfo ? (
 					<form onSubmit={handleApprove} className="flex flex-col gap-5">
+						{search.code ? (
+							<p className="text-[11px] text-muted-foreground" role="note">
+								This code came from a shared link. Only continue if you just
+								generated it in your own terminal.
+							</p>
+						) : null}
 						<div className="rounded-lg border border-border bg-muted/40 p-3.5">
 							<div className="flex items-center gap-3">
 								<span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-background border">
@@ -156,6 +172,9 @@ function DeviceAuthPage() {
 									</span>
 									<span className="font-mono font-bold tracking-widest text-base">
 										{authInfo.user_code}
+									</span>
+									<span className="text-[11px] text-muted-foreground">
+										Expires in {Math.max(0, Math.round(authInfo.expires_in / 60))} min
 									</span>
 								</div>
 							</div>

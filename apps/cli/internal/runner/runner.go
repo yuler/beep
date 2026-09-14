@@ -49,6 +49,9 @@ func (r *Runner) Run(ctx context.Context) error {
 	if r.cfg.RunnerToken == "" {
 		return fmt.Errorf("runner token is not configured (set via BEEP_RUNNER_TOKEN or config.json)")
 	}
+	if r.workspace == nil {
+		return fmt.Errorf("workspace is not configured")
+	}
 
 	log.Printf("%s Connecting to %s %s=%s %s=%d",
 		ui.Bold(ui.Cyan("[beep-runner]")),
@@ -97,7 +100,11 @@ func (r *Runner) PollAndExecute(ctx context.Context) {
 		return
 	}
 
-	for {
+	maxPerTick := 2 * cap(r.sem)
+	if maxPerTick <= 0 {
+		maxPerTick = 2
+	}
+	for n := 0; n < maxPerTick; n++ {
 		if len(r.sem) >= cap(r.sem) {
 			pingCtx, pingCancel := context.WithTimeout(ctx, 10*time.Second)
 			_, err := r.client.Ping(pingCtx)

@@ -53,6 +53,6 @@ class ChannelTest < ActiveSupport::TestCase
       name: "my-laptop"
     )
 
-    assert_equal "#{channel.token.first(12)}••••", channel.masked_token
+    assert_equal "#{Channel::TOKEN_PREFIX}••••", channel.masked_token
   end
 end

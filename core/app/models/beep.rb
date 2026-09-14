@@ -24,7 +24,7 @@ class Beep < ApplicationRecord
   before_validation :assign_default_notification_channels, on: :create
   before_validation :sync_run_attributes
 
-  validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }
+  validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }, format: { without: /[\r\n]/ }
   validates :body, length: { maximum: BODY_MAX_LENGTH }, allow_nil: true
   validates :timezone, presence: true
   validates :run_at, absence: true, if: :recurring?
@@ -189,6 +189,8 @@ class Beep < ApplicationRecord
     def validate_source
       if source_type.present? && SOURCE_TYPES.exclude?(source_type)
         errors.add(:source, "is not supported")
+      elsif source.present? && source.respond_to?(:account_id) && source.account_id != account_id
+        errors.add(:source, "must belong to the same account")
       end
     end
 

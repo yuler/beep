@@ -1,6 +1,9 @@
 class Api::V1::Channels::Cli::Authorizations::TokensController < Api::V1::BaseController
   disallow_account_scope
   allow_unauthenticated_access
+  rate_limit to: 30, within: 1.minute, only: :create,
+    by: -> { params[:device_code].to_s.strip.presence || request.remote_ip },
+    with: :rate_limit_exceeded
 
   def create
     unless params[:grant_type] == "urn:ietf:params:oauth:grant-type:device_code"
@@ -14,11 +17,22 @@ class Api::V1::Channels::Cli::Authorizations::TokensController < Api::V1::BaseCo
       return
     end
 
+    if @auth.poll_interval_exceeded?
+      render json: { error: "slow_down", error_description: "Polling too frequently" }, status: :bad_request
+      return
+    end
+
     @auth.poll!
 
     if @auth.status == "approved"
-      @channel = @auth.channel
-      render :create, status: :ok
+      @channel = @auth.consume_token!
+      if @channel
+        render :create, status: :ok
+      else
+        render json: { error: "invalid_grant", error_description: "Invalid device code" }, status: :bad_request
+      end
+    elsif @auth.status == "consumed"
+      render json: { error: "invalid_grant", error_description: "Invalid device code" }, status: :bad_request
     elsif @auth.status == "access_denied"
       render json: { error: "access_denied", error_description: "The user denied the authorization request" }, status: :bad_request
     elsif @auth.expired? || @auth.status == "expired"
@@ -27,4 +41,9 @@ class Api::V1::Channels::Cli::Authorizations::TokensController < Api::V1::BaseCo
       render json: { error: "authorization_pending", error_description: "The authorization request is still pending" }, status: :bad_request
     end
   end
+
+  private
+    def rate_limit_exceeded
+      render json: { error: "slow_down", error_description: "Polling too frequently" }, status: :too_many_requests
+    end
 end

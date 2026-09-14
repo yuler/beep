@@ -29,10 +29,10 @@ class Api::V1::ChannelsController < Api::V1::BaseController
 
   private
     def set_channel
-      @channel = Current.account.channels.find(params[:id])
+      @channel = Current.account.channels.where(user: Current.user).find(params[:id])
     end
 
     def channel_params
-      params.require(:channel).permit(:name, :kind, :config)
+      params.require(:channel).permit(:name, :kind)
     end
 end

@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"time"
 
 	"beep/internal/browser"
@@ -35,7 +37,7 @@ var channelConnectCmd = &cobra.Command{
 		}
 
 		c := client.New(cfg)
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer cancel()
 
 		channelName := cfg.Hostname
@@ -73,11 +75,15 @@ var channelConnectCmd = &cobra.Command{
 		fmt.Printf("%s Waiting for authorization in web browser...\n", ui.Dim("⏳"))
 
 		interval := time.Duration(authRes.Interval) * time.Second
-		if interval < 2*time.Second {
+		if interval <= 0 {
 			interval = 5 * time.Second
 		}
 
-		deadline := time.Now().Add(time.Duration(authRes.ExpiresIn) * time.Second)
+		expiresIn := authRes.ExpiresIn
+		if expiresIn <= 0 {
+			expiresIn = 900
+		}
+		deadline := time.Now().Add(time.Duration(expiresIn) * time.Second)
 
 		for {
 			select {
@@ -124,7 +130,8 @@ var channelConnectCmd = &cobra.Command{
 				return nil
 			}
 
-			if oauthErr, ok := err.(*client.OAuthErrorResponse); ok {
+			var oauthErr *client.OAuthErrorResponse
+			if errors.As(err, &oauthErr) {
 				switch oauthErr.ErrorCode {
 				case client.OAuthErrAuthorizationPending:
 					// Continue polling

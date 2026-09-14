@@ -46,7 +46,7 @@ export function WebPushSetupBanner() {
 }
 
 function WebPushSetupBannerInner({ slug }: { slug: string }) {
-	const { status, ready, pending, enable, error } = useWebPush(slug);
+	const { status, ready, error } = useWebPush(slug);
 	const [dismissed, setDismissed] = useState(true);
 	const navigate = useNavigate();
 
@@ -74,7 +74,6 @@ function WebPushSetupBannerInner({ slug }: { slug: string }) {
 	}
 
 	function handleClick() {
-		if (!needsIosInstall && !denied && !pending) void enable();
 		openSettings();
 	}
 

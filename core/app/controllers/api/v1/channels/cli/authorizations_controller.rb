@@ -1,6 +1,11 @@
 class Api::V1::Channels::Cli::AuthorizationsController < Api::V1::BaseController
   disallow_account_scope
   allow_unauthenticated_access only: %i[ create ]
+  rate_limit to: 20, within: 1.minute, only: %i[ create ],
+    by: -> { request.remote_ip }, with: :rate_limit_exceeded
+  rate_limit to: 30, within: 1.minute, only: %i[ show update destroy ],
+    by: -> { params[:user_code].to_s.upcase.strip.presence || request.remote_ip },
+    with: :rate_limit_exceeded
 
   def create
     @auth = Channel::Authorization.create_request!(channel_name: params[:channel_name])
@@ -36,4 +41,9 @@ class Api::V1::Channels::Cli::AuthorizationsController < Api::V1::BaseController
       render_json_error(status: :unprocessable_entity, message: "Unable to deny authorization", code: "UNPROCESSABLE_ENTITY")
     end
   end
+
+  private
+    def rate_limit_exceeded
+      render json: { error: "slow_down", error_description: "Too many requests" }, status: :too_many_requests
+    end
 end

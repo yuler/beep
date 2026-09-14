@@ -8,6 +8,6 @@ class Api::V1::Channels::TestsController < Api::V1::BaseController
 
   private
     def set_channel
-      @channel = Current.account.channels.find(params[:channel_id])
+      @channel = Current.account.channels.where(user: Current.user).find(params[:channel_id])
     end
 end

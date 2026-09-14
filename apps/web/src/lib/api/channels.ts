@@ -23,8 +23,8 @@ export async function fetchChannels(
 	kind?: string,
 ): Promise<Channel[]> {
 	const url = kind
-		? `/api/v1/${accountSlug}/channels?kind=${encodeURIComponent(kind)}`
-		: `/api/v1/${accountSlug}/channels`;
+		? `/api/v1/${encodeURIComponent(accountSlug)}/channels?kind=${encodeURIComponent(kind)}`
+		: `/api/v1/${encodeURIComponent(accountSlug)}/channels`;
 	const res = await apiFetch<{ channels: Channel[] }>(url, {
 		method: "GET",
 	});
@@ -36,7 +36,7 @@ export async function createChannel(
 	data: { name: string; kind?: string },
 ): Promise<Channel> {
 	const res = await apiFetch<{ channel: Channel }>(
-		`/api/v1/${accountSlug}/channels`,
+		`/api/v1/${encodeURIComponent(accountSlug)}/channels`,
 		{
 			method: "POST",
 			body: { channel: data },
@@ -49,18 +49,24 @@ export async function deleteChannel(
 	accountSlug: string,
 	channelId: string,
 ): Promise<void> {
-	await apiFetch(`/api/v1/${accountSlug}/channels/${channelId}`, {
-		method: "DELETE",
-	});
+	await apiFetch(
+		`/api/v1/${encodeURIComponent(accountSlug)}/channels/${encodeURIComponent(channelId)}`,
+		{
+			method: "DELETE",
+		},
+	);
 }
 
 export async function testChannel(
 	accountSlug: string,
 	channelId: string,
 ): Promise<void> {
-	await apiFetch(`/api/v1/${accountSlug}/channels/${channelId}/test`, {)
-		method: "POST",
-	});
+	await apiFetch(
+		`/api/v1/${encodeURIComponent(accountSlug)}/channels/${encodeURIComponent(channelId)}/test`,
+		{
+			method: "POST",
+		},
+	);
 }
 
 export interface DeviceAuthInfo {

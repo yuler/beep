@@ -95,14 +95,19 @@ func LoadFile(configPath string) (*FileConfig, error) {
 
 func SaveFile(configPath string, fc *FileConfig) error {
 	dir := filepath.Dir(configPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 	data, err := json.MarshalIndent(fc, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(configPath, append(data, '\n'), 0o600)
+	if err := os.WriteFile(configPath, append(data, '\n'), 0o600); err != nil {
+		return err
+	}
+	_ = os.Chmod(configPath, 0o600)
+	_ = os.Chmod(dir, 0o700)
+	return nil
 }
 
 func Load(wsHint string) (*Config, error) {

@@ -1,5 +1,5 @@
 import { Check, Loader2, Plus, Send, Terminal, Trash2 } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,24 +29,39 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 	const [creating, setCreating] = useState(false);
 	const [createdChannel, setCreatedChannel] = useState<Channel | null>(null);
 	const [testingId, setTestingId] = useState<string | null>(null);
+	const [deletingId, setDeletingId] = useState<string | null>(null);
 	const [testSentId, setTestSentId] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const { copied, copy } = useCopyToClipboard();
-
-	const load = useCallback(async () => {
-		try {
-			const data = await fetchChannels(slug, "cli");
-			setChannels(data.filter((ch) => ch.kind === "cli"));
-		} catch (err) {
-			setError(err instanceof ApiError ? err.message : translateError(err));
-		} finally {
-			setLoading(false);
-		}
-	}, [slug]);
+	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	useEffect(() => {
-		void load();
-	}, [load]);
+		return () => {
+			if (timerRef.current) clearTimeout(timerRef.current);
+		};
+	}, []);
+
+	useEffect(() => {
+		setLoading(true);
+		setCreatedChannel(null);
+		setError(null);
+		let cancelled = false;
+		void (async () => {
+			try {
+				const data = await fetchChannels(slug, "cli");
+				if (cancelled) return;
+				setChannels(data.filter((ch) => ch.kind === "cli"));
+			} catch (err) {
+				if (cancelled) return;
+				setError(err instanceof ApiError ? err.message : translateError(err));
+			} finally {
+				if (!cancelled) setLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [slug]);
 
 	async function handleCreate(e: FormEvent) {
 		e.preventDefault();
@@ -61,7 +76,8 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 			});
 			setCreatedChannel(ch);
 			setName("");
-			await load();
+			const data = await fetchChannels(slug, "cli");
+			setChannels(data.filter((c) => c.kind === "cli"));
 		} catch (err) {
 			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
@@ -70,22 +86,29 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 	}
 
 	async function handleDelete(id: string) {
+		if (deletingId || testingId) return;
 		if (!confirm("Are you sure you want to remove this channel?")) return;
+		setDeletingId(id);
 		try {
 			await deleteChannel(slug, id);
-			await load();
+			const data = await fetchChannels(slug, "cli");
+			setChannels(data.filter((ch) => ch.kind === "cli"));
 		} catch (err) {
 			setError(err instanceof ApiError ? err.message : translateError(err));
+		} finally {
+			setDeletingId(null);
 		}
 	}
 
 	async function handleTest(id: string) {
+		if (testingId || deletingId) return;
 		setError(null);
 		setTestingId(id);
 		try {
 			await testChannel(slug, id);
 			setTestSentId(id);
-			setTimeout(() => {
+			if (timerRef.current) clearTimeout(timerRef.current);
+			timerRef.current = setTimeout(() => {
 				setTestSentId((current) => (current === id ? null : current));
 			}, 3000);
 		} catch (err) {
@@ -133,12 +156,22 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 
 				{createdChannel?.token ? (
 					<div className="rounded-lg border border-primary/40 bg-primary/5 p-4 text-sm">
-						<div className="font-semibold text-foreground">
-							CLI Channel Created: {createdChannel.name}
+						<div className="flex items-center justify-between gap-2">
+							<div className="font-semibold text-foreground">
+								CLI Channel Created: {createdChannel.name}
+							</div>
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								onClick={() => setCreatedChannel(null)}
+							>
+								Dismiss
+							</Button>
 						</div>
 						<p className="mt-1 text-xs text-muted-foreground">
-							Copy this token and configure it on your machine using the Beep
-							CLI:
+							Copy this token now — it is shown only once. Configure it on
+							your machine using the Beep CLI:
 						</p>
 						<div className="mt-2">
 							<CopyableCode
@@ -151,7 +184,7 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 						<div className="mt-2 text-xs text-muted-foreground">
 							Run:{" "}
 							<code className="rounded bg-muted px-1">
-								beep config set channel_token {createdChannel.token}
+								beep config set channel_token &lt;token&gt;
 							</code>
 						</div>
 					</div>
@@ -215,7 +248,7 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 										size="sm"
 										variant="outline"
 										className="h-8 gap-1.5 px-2.5 text-xs"
-										disabled={testingId === ch.id}
+										disabled={testingId !== null || deletingId !== null}
 										onClick={() => handleTest(ch.id)}
 									>
 										{testingId === ch.id ? (
@@ -228,9 +261,11 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 										<span>{testSentId === ch.id ? "Sent" : "Test"}</span>
 									</Button>
 									<Button
+										type="button"
 										size="icon-sm"
 										variant="ghost"
 										className="text-muted-foreground hover:text-destructive"
+										disabled={testingId !== null || deletingId !== null}
 										onClick={() => handleDelete(ch.id)}
 									>
 										<Trash2 className="size-4" />

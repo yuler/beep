@@ -55,15 +55,24 @@ class Channel::DeliveryTest < ActiveSupport::TestCase
   end
 
   test "succeed! and fail! transitions" do
-    delivery = @channel.deliveries.create!(
+    succeeded = @channel.deliveries.create!(
       beep_run: @run,
       payload: { title: "Test" }
     )
 
-    delivery.succeed!
-    assert_equal "succeeded", delivery.reload.status
+    assert succeeded.succeed!
+    assert_equal "succeeded", succeeded.reload.status
+    assert_not succeeded.succeed!, "terminal deliveries must not transition again"
 
-    delivery.fail!
-    assert_equal "failed", delivery.reload.status
+    failed = @channel.deliveries.create!(
+      beep_run: @run,
+      payload: { title: "Test" }
+    )
+
+    assert failed.claim!
+    failed.fail!("boom")
+    assert_equal "failed", failed.reload.status
+    assert_equal "boom", failed.reload.payload["error"]
+    assert_not failed.fail!("again"), "terminal deliveries must not transition again"
   end
 end

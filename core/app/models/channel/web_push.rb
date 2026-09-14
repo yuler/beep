@@ -37,7 +37,7 @@ module Channel::WebPush
     def upsert_for!(user, attributes)
       attrs = attributes.to_h.symbolize_keys
       endpoint_val = attrs[:endpoint]
-      channel = user.channels.where(kind: :web_push).find { |c| c.endpoint == endpoint_val }
+      channel = user.channels.where(kind: :web_push).for_endpoint(endpoint_val).first if endpoint_val.present?
 
       name_val = attrs[:name].presence || user_agent_device_name(attrs[:user_agent])
       config_data = {
@@ -101,7 +101,7 @@ module Channel::WebPush
 
       def permitted_endpoint_host?(uri)
         host = uri&.host&.downcase
-        PERMITTED_ENDPOINT_HOSTS.any? { |permitted| host&.end_with?(permitted) }
+        PERMITTED_ENDPOINT_HOSTS.any? { |permitted| host == permitted || host&.end_with?(".#{permitted}") }
       end
 
       def test_payload(channel)

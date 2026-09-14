@@ -33,6 +33,8 @@ func New(cfg *config.Config) *Client {
 				}
 				if len(via) > 0 && !strings.EqualFold(req.URL.Host, via[0].URL.Host) {
 					req.Header.Del("X-Runner-Token")
+					req.Header.Del("X-Channel-Token")
+					req.Header.Del("X-CLI-Token")
 				}
 				return nil
 			},
@@ -127,7 +129,7 @@ func (c *Client) ListJobs(ctx context.Context) ([]*ServerJob, error) {
 }
 
 func (c *Client) DeleteJob(ctx context.Context, slug string) error {
-	url := fmt.Sprintf("%s/api/v1/runner/jobs/%s", c.cfg.ServerURL, slug)
+	url := fmt.Sprintf("%s/api/v1/runner/jobs/%s", c.cfg.ServerURL, url.PathEscape(slug))
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return err
@@ -358,8 +360,11 @@ func (c *Client) AckCliDelivery(ctx context.Context, deliveryID string, status s
 	if token == "" {
 		return fmt.Errorf("missing channel token")
 	}
+	if len(errorMsg) > 2048 {
+		errorMsg = errorMsg[len(errorMsg)-2048:]
+	}
 
-	url := fmt.Sprintf("%s/api/v1/channels/cli/deliveries/%s/ack", c.cfg.ServerURL, deliveryID)
+	url := fmt.Sprintf("%s/api/v1/channels/cli/deliveries/%s/ack", c.cfg.ServerURL, url.PathEscape(deliveryID))
 	payload := map[string]any{
 		"status": status,
 	}
@@ -393,12 +398,24 @@ func (c *Client) AckDeviceDelivery(ctx context.Context, deliveryID string, statu
 }
 
 func (c *Client) DisconnectChannel(ctx context.Context) error {
+	token := c.cfg.ChannelToken
+	if token == "" {
+		token = c.cfg.CliToken
+	}
+	if token == "" {
+		token = c.cfg.DeviceToken
+	}
+	if token == "" {
+		return fmt.Errorf("missing channel token")
+	}
 	url := fmt.Sprintf("%s/api/v1/channels/cli/disconnect", c.cfg.ServerURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return err
 	}
 	c.setHeaders(req)
+	req.Header.Set("X-Channel-Token", token)
+	req.Header.Set("X-CLI-Token", token)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

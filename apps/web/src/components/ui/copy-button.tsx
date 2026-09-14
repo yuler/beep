@@ -68,12 +68,18 @@ export function useCopyToClipboard() {
 	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	function copy(text: string) {
-		void navigator.clipboard.writeText(text);
-		setCopied(true);
-		if (timeoutRef.current) {
-			clearTimeout(timeoutRef.current);
-		}
-		timeoutRef.current = setTimeout(() => setCopied(false), 2000);
+		navigator.clipboard.writeText(text).then(
+			() => {
+				setCopied(true);
+				if (timeoutRef.current) {
+					clearTimeout(timeoutRef.current);
+				}
+				timeoutRef.current = setTimeout(() => setCopied(false), 2000);
+			},
+			() => {
+				setCopied(false);
+			},
+		);
 	}
 
 	return { copied, copy };

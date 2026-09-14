@@ -3,18 +3,27 @@ class Api::V1::Channels::Cli::Deliveries::AcksController < Api::V1::Channels::Cl
     delivery = @current_channel.deliveries.find(params[:delivery_id])
     status = params[:status].to_s
 
-    if status == "succeeded"
+    ok = case status
+    when "succeeded"
       delivery.succeed!
-      head :no_content
-    elsif status == "failed"
+    when "failed"
       delivery.fail!(params[:error])
-      head :no_content
     else
-      render_json_error(
+      return render_json_error(
         status: :unprocessable_entity,
         message: "Invalid status, must be succeeded or failed",
         code: "VALIDATION_ERROR"
       )
     end
+
+    unless ok
+      return render_json_error(
+        status: :unprocessable_entity,
+        message: "Delivery cannot transition from #{delivery.status}",
+        code: "VALIDATION_ERROR"
+      )
+    end
+
+    head :no_content
   end
 end

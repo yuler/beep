@@ -42,6 +42,6 @@ class BackfillEmailAndWebPushChannels < ActiveRecord::Migration[8.2]
   end
 
   def down
-    execute "DELETE FROM channels WHERE kind IN ('email', 'web_push')"
+    # Irreversible backfill: do not delete user channels on rollback.
   end
 end
