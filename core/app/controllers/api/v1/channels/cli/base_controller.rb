@@ -2,6 +2,10 @@ class Api::V1::Channels::Cli::BaseController < ActionController::API
   include ActionController::Cookies
   include Api::V1::Responses
 
+  rescue_from ActiveRecord::RecordNotFound do |exception|
+    render_json_error(status: :not_found, message: exception.message, code: "NOT_FOUND")
+  end
+
   before_action :authenticate_cli_channel!
 
   private

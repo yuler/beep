@@ -67,14 +67,20 @@ func GetDaemonStatus(workspaceDir, service string) (*SocketStatus, error) {
 	}
 	defer conn.Close()
 
+	if err := verifyPeerCredentials(conn, 0); err != nil {
+		return nil, fmt.Errorf("daemon socket security check failed: %w", err)
+	}
+
 	_ = conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
 	var status SocketStatus
 	if err := json.NewDecoder(conn).Decode(&status); err != nil {
 		return nil, fmt.Errorf("failed to decode daemon socket response: %w", err)
 	}
 
-	if err := verifyPeerCredentials(conn, status.PID); err != nil {
-		return nil, fmt.Errorf("daemon socket security check failed: %w", err)
+	if status.PID > 0 {
+		if err := verifyPeerCredentials(conn, status.PID); err != nil {
+			return nil, fmt.Errorf("daemon socket security check failed: %w", err)
+		}
 	}
 
 	return &status, nil

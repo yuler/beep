@@ -97,15 +97,41 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
     assert_equal "pending", auth.reload.status
   end
 
-  test "destroy denies authorization" do
+  test "update returns unprocessable entity when channel name exceeds maximum length" do
     auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
 
-    delete "/api/v1/channels/cli/authorizations/#{auth.user_code}",
+    patch "/api/v1/#{@user.account.slug}/channels/cli/authorizations/#{auth.user_code}",
+      params: { channel_name: "A" * 81 },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
+    assert_includes response.parsed_body["message"], "too long"
+    assert_equal "pending", auth.reload.status
+  end
+
+  test "destroy denies authorization under account slug path" do
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
+
+    delete "/api/v1/#{@user.account.slug}/channels/cli/authorizations/#{auth.user_code}",
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 
     assert_response :no_content
     assert_equal "access_denied", auth.reload.status
+  end
+
+  test "destroy returns not found when user is not member of target account" do
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
+    other_account = accounts(:yuler_account)
+
+    delete "/api/v1/#{other_account.slug}/channels/cli/authorizations/#{auth.user_code}",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :not_found
+    assert_equal "pending", auth.reload.status
   end
 
   test "tokens#create polling returns authorization_pending when pending" do

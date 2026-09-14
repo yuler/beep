@@ -1,10 +1,10 @@
 class Api::V1::Channels::Cli::AuthorizationsController < Api::V1::BaseController
-  skip_account_scope only: %i[ create show destroy ]
+  skip_account_scope only: %i[ create show ]
   allow_unauthenticated_access only: %i[ create ]
   rate_limit to: 20, within: 1.minute, only: %i[ create ],
     by: -> { request.remote_ip }, with: :rate_limit_exceeded
   rate_limit to: 30, within: 1.minute, only: %i[ show update destroy ],
-    by: -> { params[:user_code].to_s.upcase.strip.presence || request.remote_ip },
+    by: -> { request.remote_ip },
     with: :rate_limit_exceeded
 
   def create
@@ -29,7 +29,9 @@ class Api::V1::Channels::Cli::AuthorizationsController < Api::V1::BaseController
       @channel = @auth.channel
       render :update, status: :ok
     else
-      render_json_error(status: :unprocessable_entity, message: "Unable to approve authorization", code: "UNPROCESSABLE_ENTITY")
+      code = @auth&.errors&.present? ? "VALIDATION_ERROR" : "UNPROCESSABLE_ENTITY"
+      message = @auth&.errors&.full_messages&.to_sentence.presence || "Unable to approve authorization"
+      render_json_error(status: :unprocessable_entity, message: message, code: code)
     end
   end
 

@@ -65,10 +65,13 @@ func GetConfigPath(ws string) string {
 	if ws == "" {
 		ws = DefaultWorkspace()
 	}
-	if strings.HasPrefix(ws, "~") {
-		home, err := os.UserHomeDir()
-		if err == nil {
-			ws = filepath.Join(home, strings.TrimPrefix(ws, "~"))
+	if ws == "~" {
+		if home, err := os.UserHomeDir(); err == nil {
+			ws = home
+		}
+	} else if strings.HasPrefix(ws, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			ws = filepath.Join(home, strings.TrimPrefix(ws, "~/"))
 		}
 	}
 	abs, err := filepath.Abs(ws)

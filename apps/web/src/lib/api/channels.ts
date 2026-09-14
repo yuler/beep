@@ -107,9 +107,12 @@ export async function approveDeviceAuth(
 	);
 }
 
-export async function denyDeviceAuth(user_code: string): Promise<void> {
+export async function denyDeviceAuth(
+	accountSlug: string,
+	user_code: string,
+): Promise<void> {
 	await apiFetch(
-		`/api/v1/channels/cli/authorizations/${encodeURIComponent(user_code)}`,
+		`/api/v1/${encodeURIComponent(accountSlug)}/channels/cli/authorizations/${encodeURIComponent(user_code)}`,
 		{
 			method: "DELETE",
 		},

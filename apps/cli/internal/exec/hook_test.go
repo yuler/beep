@@ -98,11 +98,32 @@ echo "legacy fired"
 	if err != nil {
 		t.Fatalf("DispatchHook: %v", err)
 	}
-	if name != "on_channel" {
-		t.Fatalf("hook name = %q, want on_channel", name)
+	if name != "on_beep_fired" {
+		t.Fatalf("hook name = %q, want on_beep_fired", name)
 	}
 	if !strings.Contains(out, "legacy fired") {
 		t.Fatalf("output %q", out)
+	}
+}
+
+func TestDispatchHookChannelTestDoesNotFallBackToLegacyOnBeepFired(t *testing.T) {
+	root := t.TempDir()
+	writeHook(t, root, "on_beep_fired", `#!/bin/sh
+echo "legacy fired"
+`)
+
+	out, name, err := DispatchHook(context.Background(), root, client.CliDelivery{
+		ID: "del_test",
+		Payload: map[string]any{
+			"event": "channel.test",
+			"title": "Test notification",
+		},
+	})
+	if err != nil {
+		t.Fatalf("DispatchHook: %v", err)
+	}
+	if name != "" || out != "" {
+		t.Fatalf("name=%q out=%q, want empty for channel.test when only legacy hook exists", name, out)
 	}
 }
 

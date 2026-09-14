@@ -35,10 +35,10 @@ class Channel::Authorization < ApplicationRecord
   end
 
   def approve!(user:, name: nil)
-    return false if expired? || status != "pending"
+    with_lock do
+      return false if expired? || status != "pending"
 
-    target_name = name.presence || channel_name.presence || "CLI Channel"
-    transaction do
+      target_name = name.presence || channel_name.presence || "CLI Channel"
       new_channel = user.account.channels.create!(
         user: user,
         kind: "cli",
@@ -53,12 +53,17 @@ class Channel::Authorization < ApplicationRecord
         status: "approved"
       )
     end
+  rescue ActiveRecord::RecordInvalid => error
+    errors.add(:base, error.message)
+    false
   end
 
   def deny!
-    return false if expired? || status != "pending"
+    return false if expired?
 
-    update!(status: "access_denied")
+    denied = self.class.where(id: id, status: "pending").update_all(status: "access_denied", updated_at: Time.current) == 1
+    self.status = "access_denied" if denied
+    denied
   end
 
   def consume_token!

@@ -269,7 +269,7 @@ func runChannelService(cfg *config.Config, daemonMode bool) error {
 	signal.Notify(sigChan, proc.ShutdownSignals...)
 	go func() {
 		<-sigChan
-		log.Println(ui.Dim("[beep-cli] Received termination signal..."))
+		log.Println(ui.Dim("[beep-channel] Received termination signal..."))
 		cancel()
 	}()
 
@@ -291,6 +291,20 @@ func startServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 
 	cmd := exec.Command(exe, childArgs...)
 	cmd.Env = append(os.Environ(), "BEEP_DAEMON_CHILD=1")
+	if service == "channel" {
+		token := cfg.ChannelToken
+		if token == "" {
+			token = cfg.CliToken
+		}
+		if token == "" {
+			token = cfg.DeviceToken
+		}
+		if token != "" {
+			cmd.Env = append(cmd.Env, "BEEP_CHANNEL_TOKEN="+token)
+		}
+	} else if service == "runner" && cfg.RunnerToken != "" {
+		cmd.Env = append(cmd.Env, "BEEP_RUNNER_TOKEN="+cfg.RunnerToken)
+	}
 	proc.Detach(cmd)
 
 	if err := cmd.Start(); err != nil {
@@ -346,7 +360,12 @@ func buildServiceChildArgs(service string, args []string) []string {
 	stripped := stripDaemonFlags(args)
 	var flags []string
 	takesArg := false
+	skipNext := false
 	for _, arg := range stripped {
+		if skipNext {
+			skipNext = false
+			continue
+		}
 		if takesArg {
 			flags = append(flags, arg)
 			takesArg = false
@@ -357,10 +376,17 @@ func buildServiceChildArgs(service string, args []string) []string {
 			continue
 		}
 
+		if arg == "-t" || arg == "--token" {
+			skipNext = true
+			continue
+		}
+		if strings.HasPrefix(arg, "--token=") || strings.HasPrefix(arg, "-t=") {
+			continue
+		}
+
 		flags = append(flags, arg)
 		if arg == "-w" || arg == "--workspace" ||
 			arg == "-s" || arg == "--server" ||
-			arg == "-t" || arg == "--token" ||
 			arg == "-c" || arg == "--concurrency" ||
 			arg == "-i" || arg == "--poll-interval" ||
 			arg == "--timeout" {

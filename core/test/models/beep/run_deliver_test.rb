@@ -292,6 +292,63 @@ class Beep::RunDeliverTest < ActiveSupport::TestCase
     assert_equal laptop.id, @run.result.dig("cli", "deliveries", 0, "channel_id")
   end
 
+  test "deliver to multiple recipients does not skip second user" do
+    jane_identity = Identity.create!(email: "jane@example.com")
+    second_user = @account.users.create!(
+      name: "Jane",
+      identity: jane_identity,
+      role: "member",
+      active: true,
+      notification_channels: [ "email", "web_push" ]
+    )
+    subscribe("https://fcm.googleapis.com/fcm/send/two", user: second_user)
+
+    orig_recipients = Beep.instance_method(:recipient_users)
+    Beep.define_method(:recipient_users) { [ account.owner_user, second_user ] }
+
+    sent = 0
+    ActionMailer::Base.deliveries.clear
+    stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
+      @run.deliver_now
+    end
+
+    assert @run.succeeded?
+    assert_equal 1, sent
+    assert_equal 2, ActionMailer::Base.deliveries.size
+  ensure
+    Beep.define_method(:recipient_users, orig_recipients) if orig_recipients
+  end
+
+  test "deliver is a no-op when already running and no errors occurred" do
+    @run.update_columns(status: "running", result: {})
+    sent = 0
+    ActionMailer::Base.deliveries.clear
+
+    stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
+      @run.deliver_now
+    end
+
+    assert_equal 0, sent
+    assert_equal 0, ActionMailer::Base.deliveries.size
+  end
+
+  test "deliver retries email without duplicating explicit channel delivery" do
+    laptop = @account.channels.create!(user: users(:john), kind: :cli, name: "laptop")
+    @beep.update!(notification_channels: [ "email", laptop.id ])
+
+    fail_email_delivery do
+      assert_raises Beep::Run::EmailDeliveryError do
+        @run.deliver_now
+      end
+    end
+
+    assert_equal 1, laptop.deliveries.count
+
+    @run.deliver_now
+    assert_equal 1, laptop.deliveries.count
+    assert @run.reload.succeeded?
+  end
+
     def subscribe(endpoint, user: users(:john))
       Push::Subscription.new(
         user: user,

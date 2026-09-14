@@ -18,8 +18,9 @@ import (
 )
 
 type Client struct {
-	cfg        *config.Config
-	httpClient *http.Client
+	cfg              *config.Config
+	httpClient       *http.Client
+	noRedirectClient *http.Client
 }
 
 func New(cfg *config.Config) *Client {
@@ -37,6 +38,12 @@ func New(cfg *config.Config) *Client {
 					req.Header.Del("X-CLI-Token")
 				}
 				return nil
+			},
+		},
+		noRedirectClient: &http.Client{
+			Timeout: 35 * time.Second,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
 			},
 		},
 	}
@@ -197,7 +204,21 @@ func (c *Client) ReportLog(ctx context.Context, logURL, chunk string) error {
 	if err := c.allowedCallbackURL(logURL); err != nil {
 		return err
 	}
-	return c.postJSON(ctx, logURL, map[string]any{"chunk": chunk}, http.StatusNoContent, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, logURL, mustJSON(map[string]any{"chunk": chunk}))
+	if err != nil {
+		return err
+	}
+	c.setRunnerHeaders(req)
+	resp, err := c.noRedirectClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("report log failed (status %d): %s", resp.StatusCode, string(body))
+	}
+	return nil
 }
 
 func (c *Client) ReportResult(ctx context.Context, resultURL string, result *task.Result) error {
@@ -210,7 +231,21 @@ func (c *Client) ReportResult(ctx context.Context, resultURL string, result *tas
 		"message": result.Message,
 		"metrics": result.Metrics,
 	}
-	return c.postJSON(ctx, resultURL, payload, http.StatusNoContent, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, resultURL, mustJSON(payload))
+	if err != nil {
+		return err
+	}
+	c.setRunnerHeaders(req)
+	resp, err := c.noRedirectClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("report result failed (status %d): %s", resp.StatusCode, string(body))
+	}
+	return nil
 }
 
 func (c *Client) allowedCallbackURL(raw string) error {
@@ -278,16 +313,36 @@ func (c *Client) getJSON(ctx context.Context, url string, want int, dest any) er
 	return json.NewDecoder(resp.Body).Decode(dest)
 }
 
-func (c *Client) setHeaders(req *http.Request) {
+func (c *Client) setBaseHeaders(req *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", fmt.Sprintf("Beep-Runner/%s (%s; %s)", version.Version, runtime.GOOS, runtime.GOARCH))
+}
+
+func (c *Client) setRunnerHeaders(req *http.Request) {
+	c.setBaseHeaders(req)
 	if c.cfg.RunnerToken != "" {
 		req.Header.Set("X-Runner-Token", c.cfg.RunnerToken)
 	}
-	if c.cfg.CliToken != "" {
-		req.Header.Set("X-CLI-Token", c.cfg.CliToken)
+}
+
+func (c *Client) setChannelHeaders(req *http.Request) {
+	c.setBaseHeaders(req)
+	token := c.cfg.ChannelToken
+	if token == "" {
+		token = c.cfg.CliToken
 	}
-	req.Header.Set("User-Agent", fmt.Sprintf("Beep-Runner/%s (%s; %s)", version.Version, runtime.GOOS, runtime.GOARCH))
+	if token == "" {
+		token = c.cfg.DeviceToken
+	}
+	if token != "" {
+		req.Header.Set("X-Channel-Token", token)
+		req.Header.Set("X-CLI-Token", token)
+	}
+}
+
+func (c *Client) setHeaders(req *http.Request) {
+	c.setRunnerHeaders(req)
 }
 
 type CliDelivery struct {
@@ -323,9 +378,7 @@ func (c *Client) FetchCliInbox(ctx context.Context) ([]CliDelivery, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.setHeaders(req)
-	req.Header.Set("X-Channel-Token", token)
-	req.Header.Set("X-CLI-Token", token)
+	c.setChannelHeaders(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -360,8 +413,9 @@ func (c *Client) AckCliDelivery(ctx context.Context, deliveryID string, status s
 	if token == "" {
 		return fmt.Errorf("missing channel token")
 	}
-	if len(errorMsg) > 2048 {
-		errorMsg = errorMsg[len(errorMsg)-2048:]
+	runes := []rune(errorMsg)
+	if len(runes) > 2048 {
+		errorMsg = string(runes[len(runes)-2048:])
 	}
 
 	url := fmt.Sprintf("%s/api/v1/channels/cli/deliveries/%s/ack", c.cfg.ServerURL, url.PathEscape(deliveryID))
@@ -376,9 +430,7 @@ func (c *Client) AckCliDelivery(ctx context.Context, deliveryID string, status s
 	if err != nil {
 		return err
 	}
-	c.setHeaders(req)
-	req.Header.Set("X-Channel-Token", token)
-	req.Header.Set("X-CLI-Token", token)
+	c.setChannelHeaders(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -413,9 +465,7 @@ func (c *Client) DisconnectChannel(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	c.setHeaders(req)
-	req.Header.Set("X-Channel-Token", token)
-	req.Header.Set("X-CLI-Token", token)
+	c.setChannelHeaders(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -478,8 +528,22 @@ func (c *Client) RequestDeviceAuthorization(ctx context.Context, channelName str
 		"channel_name": channelName,
 	}
 
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setBaseHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
 	var res DeviceAuthorizationResponse
-	if err := c.postJSON(ctx, url, payload, http.StatusCreated, &res); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -496,7 +560,7 @@ func (c *Client) PollDeviceToken(ctx context.Context, deviceCode string) (*Devic
 	if err != nil {
 		return nil, err
 	}
-	c.setHeaders(req)
+	c.setBaseHeaders(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

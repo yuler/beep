@@ -16,9 +16,15 @@ import (
 )
 
 func FindHook(workspaceRoot string) string {
+	return FindHookForEvent(workspaceRoot, "")
+}
+
+func FindHookForEvent(workspaceRoot string, eventName string) string {
 	candidates := hookPaths(workspaceRoot, "on_channel", "on-channel")
-	candidates = append(candidates, hookPaths(workspaceRoot, "on_beep", "on-beep")...)
-	candidates = append(candidates, hookPaths(workspaceRoot, "on_beep_fired", "on-beep-fired")...)
+	if eventName != "channel.test" {
+		candidates = append(candidates, hookPaths(workspaceRoot, "on_beep", "on-beep")...)
+		candidates = append(candidates, hookPaths(workspaceRoot, "on_beep_fired", "on-beep-fired")...)
+	}
 
 	for _, c := range candidates {
 		info, err := os.Stat(c)
@@ -49,13 +55,14 @@ func DispatchHook(ctx context.Context, workspaceRoot string, delivery client.Cli
 		eventName = "beep.fired"
 	}
 
-	hookPath := FindHook(workspaceRoot)
+	hookPath := FindHookForEvent(workspaceRoot, eventName)
 	if hookPath == "" {
 		return "", "", nil
 	}
+	hookName := filepath.Base(hookPath)
 
 	if !isSafeHook(hookPath) {
-		return "", "on_channel", fmt.Errorf("hook %s failed: unsafe permissions or ownership", hookPath)
+		return "", hookName, fmt.Errorf("hook %s failed: unsafe permissions or ownership", hookPath)
 	}
 
 	payloadBytes, _ := json.Marshal(delivery.Payload)
@@ -91,17 +98,18 @@ func DispatchHook(ctx context.Context, workspaceRoot string, delivery client.Cli
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(out), "on_channel", fmt.Errorf("hook %s failed: %w (output: %s)", hookPath, err, truncateHookOutput(string(out)))
+		return string(out), hookName, fmt.Errorf("hook %s failed: %w (output: %s)", hookPath, err, truncateHookOutput(string(out)))
 	}
-	return string(out), "on_channel", nil
+	return string(out), hookName, nil
 }
 
 func truncateHookOutput(s string) string {
 	const maxLen = 2048
-	if len(s) <= maxLen {
+	runes := []rune(s)
+	if len(runes) <= maxLen {
 		return s
 	}
-	return s[len(s)-maxLen:]
+	return string(runes[len(runes)-maxLen:])
 }
 
 func isSafeHook(path string) bool {

@@ -33,6 +33,7 @@ export const Route = createFileRoute("/$account_slug/device")({
 function AccountDeviceAuthPage() {
 	const { account } = Route.useRouteContext();
 	const search = Route.useSearch();
+	const navigate = Route.useNavigate();
 	const [code, setCode] = useState(search.code?.toUpperCase() ?? "");
 	const [channelName, setChannelName] = useState("");
 	const [authInfo, setAuthInfo] = useState<DeviceAuthInfo | null>(null);
@@ -45,24 +46,28 @@ function AccountDeviceAuthPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [initialVerified, setInitialVerified] = useState(false);
 
-	const handleVerifyCode = useCallback(async (userCode: string) => {
-		const cleaned = userCode.trim().toUpperCase();
-		if (!cleaned) return;
+	const handleVerifyCode = useCallback(
+		async (userCode: string) => {
+			const cleaned = userCode.trim().toUpperCase();
+			if (!cleaned) return;
 
-		setVerifying(true);
-		setError(null);
-		try {
-			const info = await verifyDeviceCode(cleaned);
-			setAuthInfo(info);
-			setChannelName(info.channel_name || "CLI Device");
-			setStatus("verified");
-		} catch (err) {
-			setError(err instanceof ApiError ? err.message : translateError(err));
-			setStatus("idle");
-		} finally {
-			setVerifying(false);
-		}
-	}, []);
+			setVerifying(true);
+			setError(null);
+			try {
+				const info = await verifyDeviceCode(cleaned);
+				setAuthInfo(info);
+				setChannelName(info.channel_name || "CLI Device");
+				setStatus("verified");
+				void navigate({ search: {}, replace: true });
+			} catch (err) {
+				setError(err instanceof ApiError ? err.message : translateError(err));
+				setStatus("idle");
+			} finally {
+				setVerifying(false);
+			}
+		},
+		[navigate],
+	);
 
 	useEffect(() => {
 		if (search.code && !initialVerified) {
@@ -97,7 +102,7 @@ function AccountDeviceAuthPage() {
 		setSubmitting(true);
 		setError(null);
 		try {
-			await denyDeviceAuth(authInfo.user_code);
+			await denyDeviceAuth(account.slug, authInfo.user_code);
 			setStatus("denied");
 		} catch (err) {
 			setError(err instanceof ApiError ? err.message : translateError(err));
@@ -106,11 +111,7 @@ function AccountDeviceAuthPage() {
 		}
 	}
 
-	const switchSearch: DeviceSearch = authInfo?.user_code
-		? { code: authInfo.user_code }
-		: search.code
-			? { code: search.code }
-			: {};
+	const switchSearch: DeviceSearch = {};
 
 	return (
 		<>

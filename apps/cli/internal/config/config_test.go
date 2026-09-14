@@ -129,3 +129,30 @@ func TestDefaultWorkspace(t *testing.T) {
 		t.Errorf("expected ~/%s, got %s", DefaultWorkspaceName, DefaultWorkspaceDisplay())
 	}
 }
+
+func TestGetConfigPath(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("no home dir")
+	}
+
+	got := GetConfigPath("~/myworkspace")
+	want := filepath.Join(home, "myworkspace", "config.json")
+	if got != want {
+		t.Errorf("GetConfigPath(~/myworkspace) = %s, want %s", got, want)
+	}
+
+	gotHome := GetConfigPath("~")
+	wantHome := filepath.Join(home, "config.json")
+	if gotHome != wantHome {
+		t.Errorf("GetConfigPath(~) = %s, want %s", gotHome, wantHome)
+	}
+
+	// ~otheruser should NOT be expanded to current user's home
+	cwd, _ := os.Getwd()
+	gotOther := GetConfigPath("~otheruser")
+	wantOther := filepath.Join(cwd, "~otheruser", "config.json")
+	if gotOther != wantOther {
+		t.Errorf("GetConfigPath(~otheruser) = %s, want %s", gotOther, wantOther)
+	}
+}

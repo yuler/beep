@@ -54,6 +54,14 @@ func TestBuildChildDaemonArgs(t *testing.T) {
 			input:    []string{"up", "--daemon=true"},
 			expected: []string{"runner", "up"},
 		},
+		{
+			input:    []string{"up", "-d", "-t", "secret_token_val", "--workspace", "/tmp/ws"},
+			expected: []string{"runner", "up", "--workspace", "/tmp/ws"},
+		},
+		{
+			input:    []string{"channel", "up", "-d", "--token=secret_val", "--server", "http://localhost:3000"},
+			expected: []string{"runner", "up", "--server", "http://localhost:3000"},
+		},
 	}
 
 	for _, tc := range tests {

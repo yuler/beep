@@ -8,14 +8,15 @@ import (
 	"strings"
 )
 
-// Open attempts to open the specified URL in the system's default browser.
 func Open(rawURL string) error {
-	u, err := url.Parse(strings.TrimSpace(rawURL))
+	rawURL = strings.TrimSpace(rawURL)
+	u, err := url.Parse(rawURL)
 	if err != nil || u.Scheme == "" || u.Host == "" {
 		return fmt.Errorf("refusing to open invalid URL")
 	}
-	if u.Scheme != "https" {
-		if u.Scheme != "http" || !isLocalhost(u.Hostname()) {
+	scheme := strings.ToLower(u.Scheme)
+	if scheme != "https" {
+		if scheme != "http" || !isLocalhost(u.Hostname()) {
 			return fmt.Errorf("refusing to open non-HTTPS URL")
 		}
 	}

@@ -20,7 +20,7 @@ class Channel::Delivery < ApplicationRecord
   def claim!
     return false if expired?
 
-    claimed = self.class.where(id: id, status: "pending").update_all(status: "claimed", claimed_at: Time.current, updated_at: Time.current) == 1
+    claimed = self.class.where(id: id, status: "pending").where("expires_at > ?", Time.current).update_all(status: "claimed", claimed_at: Time.current, updated_at: Time.current) == 1
     if claimed
       self.status = "claimed"
       self.claimed_at = Time.current
@@ -29,17 +29,20 @@ class Channel::Delivery < ApplicationRecord
   end
 
   def succeed!
-    return false unless pending? || claimed?
-
-    update!(status: :succeeded)
+    updated = self.class.where(id: id, status: %w[pending claimed]).update_all(status: "succeeded", updated_at: Time.current) == 1
+    self.status = "succeeded" if updated
+    updated
   end
 
   def fail!(error_message = nil)
-    return false unless pending? || claimed?
-
     msg = error_message.to_s.strip.truncate(2048)
     merged = (payload || {}).merge("error" => msg.presence).compact
-    update!(status: :failed, payload: merged)
+    updated = self.class.where(id: id, status: %w[pending claimed]).update_all(status: "failed", payload: merged, updated_at: Time.current) == 1
+    if updated
+      self.status = "failed"
+      self.payload = merged
+    end
+    updated
   end
 
   private

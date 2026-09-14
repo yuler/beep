@@ -2,7 +2,7 @@ class Api::V1::Channels::Cli::Authorizations::TokensController < Api::V1::BaseCo
   disallow_account_scope
   allow_unauthenticated_access
   rate_limit to: 30, within: 1.minute, only: :create,
-    by: -> { params[:device_code].to_s.strip.presence || request.remote_ip },
+    by: -> { request.remote_ip },
     with: :rate_limit_exceeded
 
   def create
