@@ -1,6 +1,6 @@
 require "test_helper"
 
-class BeepRunDeliverTest < ActiveSupport::TestCase
+class Beep::RunDeliverTest < ActiveSupport::TestCase
   setup do
     stub_web_push_dns_resolution
     @account = accounts(:john_account)
@@ -115,7 +115,7 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     sent = 0
     stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
       fail_email_delivery do
-        assert_raises BeepRun::EmailDeliveryError do
+        assert_raises Beep::Run::EmailDeliveryError do
           @run.deliver_now
         end
       end
@@ -204,7 +204,7 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
   end
 
   test "deliver is a no-op for an expired run" do
-    expired_run = BeepRun.create!(beep: @beep, scheduled_for: 1.hour.ago, status: :expired)
+    expired_run = Beep::Run.create!(beep: @beep, scheduled_for: 1.hour.ago, status: :expired)
 
     expired_run.deliver_now
 

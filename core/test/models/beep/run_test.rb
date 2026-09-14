@@ -1,6 +1,6 @@
 require "test_helper"
 
-class BeepRunTest < ActiveSupport::TestCase
+class Beep::RunTest < ActiveSupport::TestCase
   test "rejects a second run for the same beep and scheduled_for" do
     account = accounts(:john_account)
     beep = Beep.create!(
