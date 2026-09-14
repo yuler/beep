@@ -12,8 +12,8 @@ import (
 
 func TestDispatchHookRunsOnChannelForBeepFired(t *testing.T) {
 	root := t.TempDir()
-	writeHook(t, root, "on_channel", `#!/bin/sh
-echo "on_channel event=$BEEP_EVENT id=$BEEP_EVENT_ID"
+	writeHook(t, root, "on-channel", `#!/bin/sh
+echo "on-channel event=$BEEP_EVENT id=$BEEP_EVENT_ID"
 `)
 
 	out, name, err := DispatchHook(context.Background(), root, client.CliDelivery{
@@ -26,18 +26,18 @@ echo "on_channel event=$BEEP_EVENT id=$BEEP_EVENT_ID"
 	if err != nil {
 		t.Fatalf("DispatchHook: %v", err)
 	}
-	if name != "on_channel" {
-		t.Fatalf("hook name = %q, want on_channel", name)
+	if name != "on-channel" {
+		t.Fatalf("hook name = %q, want on-channel", name)
 	}
-	if !strings.Contains(out, "on_channel event=beep.fired") {
+	if !strings.Contains(out, "on-channel event=beep.fired") {
 		t.Fatalf("output %q", out)
 	}
 }
 
 func TestDispatchHookRunsOnChannelForChannelTest(t *testing.T) {
 	root := t.TempDir()
-	writeHook(t, root, "on_channel", `#!/bin/sh
-echo "on_channel event=$BEEP_EVENT"
+	writeHook(t, root, "on-channel", `#!/bin/sh
+echo "on-channel event=$BEEP_EVENT"
 `)
 
 	out, name, err := DispatchHook(context.Background(), root, client.CliDelivery{
@@ -50,45 +50,18 @@ echo "on_channel event=$BEEP_EVENT"
 	if err != nil {
 		t.Fatalf("DispatchHook: %v", err)
 	}
-	if name != "on_channel" {
-		t.Fatalf("hook name = %q, want on_channel", name)
+	if name != "on-channel" {
+		t.Fatalf("hook name = %q, want on-channel", name)
 	}
-	if !strings.Contains(out, "on_channel event=channel.test") {
+	if !strings.Contains(out, "on-channel event=channel.test") {
 		t.Fatalf("output %q", out)
 	}
 }
 
-func TestDispatchHookPrefersOnChannelOverLegacyOnBeep(t *testing.T) {
+func TestDispatchHookIgnoresLegacyOnBeep(t *testing.T) {
 	root := t.TempDir()
 	writeHook(t, root, "on_beep", `#!/bin/sh
 echo "legacy on_beep"
-`)
-	writeHook(t, root, "on_channel", `#!/bin/sh
-echo "on_channel wins"
-`)
-
-	out, name, err := DispatchHook(context.Background(), root, client.CliDelivery{
-		ID:      "del_both",
-		Payload: map[string]any{"event": "beep.fired"},
-	})
-	if err != nil {
-		t.Fatalf("DispatchHook: %v", err)
-	}
-	if name != "on_channel" {
-		t.Fatalf("hook name = %q, want on_channel", name)
-	}
-	if !strings.Contains(out, "on_channel wins") {
-		t.Fatalf("output %q", out)
-	}
-	if strings.Contains(out, "legacy on_beep") {
-		t.Fatalf("legacy on_beep ran: %q", out)
-	}
-}
-
-func TestDispatchHookFallsBackToLegacyOnBeepFired(t *testing.T) {
-	root := t.TempDir()
-	writeHook(t, root, "on_beep_fired", `#!/bin/sh
-echo "legacy fired"
 `)
 
 	out, name, err := DispatchHook(context.Background(), root, client.CliDelivery{
@@ -98,32 +71,8 @@ echo "legacy fired"
 	if err != nil {
 		t.Fatalf("DispatchHook: %v", err)
 	}
-	if name != "on_beep_fired" {
-		t.Fatalf("hook name = %q, want on_beep_fired", name)
-	}
-	if !strings.Contains(out, "legacy fired") {
-		t.Fatalf("output %q", out)
-	}
-}
-
-func TestDispatchHookChannelTestDoesNotFallBackToLegacyOnBeepFired(t *testing.T) {
-	root := t.TempDir()
-	writeHook(t, root, "on_beep_fired", `#!/bin/sh
-echo "legacy fired"
-`)
-
-	out, name, err := DispatchHook(context.Background(), root, client.CliDelivery{
-		ID: "del_test",
-		Payload: map[string]any{
-			"event": "channel.test",
-			"title": "Test notification",
-		},
-	})
-	if err != nil {
-		t.Fatalf("DispatchHook: %v", err)
-	}
 	if name != "" || out != "" {
-		t.Fatalf("name=%q out=%q, want empty for channel.test when only legacy hook exists", name, out)
+		t.Fatalf("name=%q out=%q, want empty when only legacy on_beep hook exists", name, out)
 	}
 }
 
@@ -157,7 +106,7 @@ func TestDispatchHookEmptyRootReturnsEmpty(t *testing.T) {
 
 func TestDispatchHookRejectsGroupWritableHook(t *testing.T) {
 	root := t.TempDir()
-	path := writeHook(t, root, "on_channel", "#!/bin/sh\necho hi\n")
+	path := writeHook(t, root, "on-channel", "#!/bin/sh\necho hi\n")
 	if err := os.Chmod(path, 0o775); err != nil {
 		t.Fatal(err)
 	}
@@ -169,14 +118,14 @@ func TestDispatchHookRejectsGroupWritableHook(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected unsafe-permissions error, got nil")
 	}
-	if name != "on_channel" {
-		t.Fatalf("hook name = %q, want on_channel", name)
+	if name != "on-channel" {
+		t.Fatalf("hook name = %q, want on-channel", name)
 	}
 }
 
 func TestDispatchHookRejectsNonExecutableHook(t *testing.T) {
 	root := t.TempDir()
-	path := writeHook(t, root, "on_channel", "#!/bin/sh\necho hi\n")
+	path := writeHook(t, root, "on-channel", "#!/bin/sh\necho hi\n")
 	if err := os.Chmod(path, 0o644); err != nil {
 		t.Fatal(err)
 	}

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# hooks/on_channel — one local callback for every CLI channel delivery.
+# hooks/on-channel — one local callback for every CLI channel delivery.
 #
 # Beeps and channel tests both arrive as ChannelDelivery on this inbox.
 # `beep up` always execs this file (see docs/architecture/channel.md §5).
 # Branch on BEEP_EVENT inside the script; the CLI does not pick a second hook.
 #
 # Install (workspace root is ~/.beep.local for local dev, ~/.beep for prod):
-#   cp apps/cli/examples/hooks/on_channel.example ~/.beep.local/hooks/on_channel
-#   chmod 755 ~/.beep.local/hooks/on_channel
+#   cp apps/cli/examples/hooks/on-channel.example ~/.beep.local/hooks/on-channel
+#   chmod 755 ~/.beep.local/hooks/on-channel
 #
 # Permissions: owned by you, executable, not group/world-writable (isSafeHook).
 # Cwd is the workspace root. Exit 0 ACKs succeeded; non-zero ACKs failed.
@@ -27,7 +27,7 @@
 #   BEEP_EVENT_TITLE       Notification title
 set -euo pipefail
 
-echo "[on_channel] event=${BEEP_EVENT:-} source=${BEEP_EVENT_SOURCE:-} intent=${BEEP_EVENT_INTENT:-} id=${BEEP_EVENT_ID:-} title=${BEEP_EVENT_TITLE:-}"
+echo "[on-channel] event=${BEEP_EVENT:-} source=${BEEP_EVENT_SOURCE:-} intent=${BEEP_EVENT_INTENT:-} id=${BEEP_EVENT_ID:-} title=${BEEP_EVENT_TITLE:-}"
 printf 'BEEP_EVENT_JSON=%s\n' "${BEEP_EVENT_JSON:-}"
 if command -v jq >/dev/null 2>&1 && [ -n "${BEEP_EVENT_JSON:-}" ]; then
   printf '%s\n' "${BEEP_EVENT_JSON}" | jq .
@@ -35,25 +35,25 @@ fi
 
 case "${BEEP_EVENT:-}" in
   channel.test)
-    echo "[on_channel] channel test OK: ${BEEP_EVENT_TITLE:-}"
+    echo "[on-channel] channel test OK: ${BEEP_EVENT_TITLE:-}"
     ;;
   beep.*)
     case "${BEEP_EVENT_SOURCE:-beep}" in
       runner_job)
         if [[ "${BEEP_EVENT_INTENT:-}" == "get_off_work" ]]; then
-          echo "[on_channel] Triggering offwork local action..."
+          echo "[on-channel] Triggering offwork local action..."
           # ~/.local/bin/offwork-action.sh &
         fi
         ;;
       beeper)
-        echo "[on_channel] Beeper alert/recovery: ${BEEP_EVENT_TITLE:-}"
+        echo "[on-channel] Beeper alert/recovery: ${BEEP_EVENT_TITLE:-}"
         ;;
       *)
-        echo "[on_channel] Beep reminder: ${BEEP_EVENT_TITLE:-}"
+        echo "[on-channel] Beep reminder: ${BEEP_EVENT_TITLE:-}"
         ;;
     esac
     ;;
   *)
-    echo "[on_channel] unhandled event: ${BEEP_EVENT:-}" >&2
+    echo "[on-channel] unhandled event: ${BEEP_EVENT:-}" >&2
     ;;
 esac

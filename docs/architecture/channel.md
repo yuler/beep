@@ -18,7 +18,7 @@ flowchart TD
   subgraph Host ["Beep CLI: beep up"]
     Daemon["beep up"] -->|"Pull (Short/Long Polling)"| CliInbox
     Daemon -->|"Validate TTL <= 30m"| HookRunner[Local Hook Dispatcher]
-    HookRunner -->|exec| OnChannel["hooks/on_channel"]
+    HookRunner -->|exec| OnChannel["hooks/on-channel"]
     OnChannel -->|BEEP_EVENT| Action["User script (notify, lock, test ping, …)"]
   end
 ```
@@ -29,7 +29,7 @@ flowchart TD
 
 1. **User-scoped ownership**: Channels belong to a `User` (`belongs_to :user`, `belongs_to :account`). A Beep, including on a team account, targets only that user's Channels. Team is the tenant, not a fan-out of members' destinations.
 2. **Pull-only HTTP transport**: CLI Channels connect outbound via HTTP polling / long-polling (`beep up`). Zero open ports, zero firewall config. Resilient to sleep/wake, network switches, and server restarts.
-3. **Declarative local hooks**: Core transmits structured event payloads only. Every CLI inbox delivery — Beep (`beep.fired`) or channel test (`channel.test`) — runs the same `$WORKSPACE/hooks/on_channel`. The script branches on `BEEP_EVENT`. The CLI does not send OS desktop notifications itself.
+3. **Declarative local hooks**: Core transmits structured event payloads only. Every CLI inbox delivery — Beep (`beep.fired`) or channel test (`channel.test`) — runs the same `$WORKSPACE/hooks/on-channel`. The script branches on `BEEP_EVENT`. The CLI does not send OS desktop notifications itself.
 4. **TTL safety window**: Notification payloads carry an `expires_at` cutoff (default 30m TTL). Stale events pulled after waking from sleep skip disruptive actions (e.g. screen blanking / locking).
 
 ---
@@ -96,10 +96,10 @@ beep channel disconnect
 }
 ```
 
-### Local Hook (`hooks/on_channel`)
-When `beep up` pulls a pending delivery it execs **one** file: `$WORKSPACE/hooks/on_channel` (also `$WORKSPACE/.beep/hooks/on_channel`). Beep and channel test share this callback because both arrive as `ChannelDelivery` on the CLI inbox. Branch on `BEEP_EVENT` in the script.
+### Local Hook (`hooks/on-channel`)
+When `beep up` pulls a pending delivery it execs **one** file: `$WORKSPACE/hooks/on-channel` (also `$WORKSPACE/.beep/hooks/on-channel`). Beep and channel test share this callback because both arrive as `ChannelDelivery` on the CLI inbox. Branch on `BEEP_EVENT` in the script.
 
-Legacy filenames `on_beep` / `on_beep_fired` are used only when `on_channel` is missing. Missing hook: log and ACK success. Hook non-zero exit: ACK failed.
+Missing hook: log and ACK success. Hook non-zero exit: ACK failed.
 
 Environment variables:
 - `BEEP_EVENT`: Event type string (e.g. `beep.fired`, `channel.test`).
@@ -113,26 +113,26 @@ Environment variables:
 
 ```bash
 #!/usr/bin/env bash
-# hooks/on_channel — every CLI channel delivery
+# hooks/on-channel — every CLI channel delivery
 set -euo pipefail
 
 case "${BEEP_EVENT:-}" in
   channel.test)
-    echo "[on_channel] channel test OK: $BEEP_EVENT_TITLE"
+    echo "[on-channel] channel test OK: $BEEP_EVENT_TITLE"
     ;;
   beep.*)
     case "${BEEP_EVENT_SOURCE:-beep}" in
       runner_job)
         if [[ "${BEEP_EVENT_INTENT:-}" == "get_off_work" ]]; then
-          echo "[on_channel] Triggering offwork local action..."
+          echo "[on-channel] Triggering offwork local action..."
           ~/.local/bin/offwork-action.sh &
         fi
         ;;
       beeper)
-        echo "[on_channel] Beeper alert/recovery received: $BEEP_EVENT_TITLE"
+        echo "[on-channel] Beeper alert/recovery received: $BEEP_EVENT_TITLE"
         ;;
       *)
-        echo "[on_channel] Standard reminder: $BEEP_EVENT_TITLE"
+        echo "[on-channel] Standard reminder: $BEEP_EVENT_TITLE"
         ;;
     esac
     ;;
@@ -148,7 +148,7 @@ esac
 
 1. **Morning fetch (09:30 Cloud Job)**: Runs `.beep/jobs/get-off-work`, queries external attendance data for `firstCheckinTime` (`09:12:30`), calculates off-work time (`18:12:30`), and creates a `once` Beep scheduled for `18:12:30` targeting the user's CLI Channel (`my-laptop`) and Web Push Channels.
 2. **Due trigger (18:12:30 Core Scheduler)**: `Beep.poll_due_now` fires and creates `channel_deliveries` with `expires_at = 18:42:30`.
-3. **Local execution (Host PC)**: `beep up` pulls the delivery, checks `expires_at >= Time.now`, and runs `hooks/on_channel` → the user's local script (branch on `BEEP_EVENT`; e.g. desktop notification, screen lock/blank, audio cue), then ACKs the delivery.
+3. **Local execution (Host PC)**: `beep up` pulls the delivery, checks `expires_at >= Time.now`, and runs `hooks/on-channel` → the user's local script (branch on `BEEP_EVENT`; e.g. desktop notification, screen lock/blank, audio cue), then ACKs the delivery.
 
 ---
 

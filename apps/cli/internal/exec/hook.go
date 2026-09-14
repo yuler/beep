@@ -19,12 +19,8 @@ func FindHook(workspaceRoot string) string {
 	return FindHookForEvent(workspaceRoot, "")
 }
 
-func FindHookForEvent(workspaceRoot string, eventName string) string {
-	candidates := hookPaths(workspaceRoot, "on_channel", "on-channel")
-	if eventName != "channel.test" {
-		candidates = append(candidates, hookPaths(workspaceRoot, "on_beep", "on-beep")...)
-		candidates = append(candidates, hookPaths(workspaceRoot, "on_beep_fired", "on-beep-fired")...)
-	}
+func FindHookForEvent(workspaceRoot string, _ string) string {
+	candidates := hookPaths(workspaceRoot, "on-channel")
 
 	for _, c := range candidates {
 		info, err := os.Stat(c)

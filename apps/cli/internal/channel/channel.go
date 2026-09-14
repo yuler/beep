@@ -145,11 +145,11 @@ func (c *Channel) PollInbox(ctx context.Context) {
 		if hookName == "" {
 			log.Printf("%s %s %s (configure %s to handle notifications)",
 				ui.Bold(ui.Cyan("[beep-channel]")),
-				ui.Yellow("Warning: No on_channel hook found for event:"),
+				ui.Yellow("Warning: No on-channel hook found for event:"),
 				ui.Bold(eventName),
-				ui.Cyan("hooks/on_channel"),
+				ui.Cyan("hooks/on-channel"),
 			)
-			_ = c.client.AckCliDelivery(ctx, delivery.ID, "failed", "no on_channel hook configured")
+			_ = c.client.AckCliDelivery(ctx, delivery.ID, "failed", "no on-channel hook configured")
 			continue
 		} else if strings.TrimSpace(out) != "" {
 			log.Printf("%s %s %s", ui.Bold(ui.Cyan("[beep-channel]")), ui.Dim("Hook output:"), strings.TrimSpace(out))

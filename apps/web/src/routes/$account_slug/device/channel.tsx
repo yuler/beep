@@ -45,6 +45,21 @@ function AccountChannelDeviceAuthPage() {
 	>("idle");
 	const [error, setError] = useState<string | null>(null);
 
+	// A 401 here means the session died after the page loaded (logout in
+	// another tab, revoked session). Send the user to sign back in and bring
+	// them back with the code pre-filled, instead of dead-ending on
+	// "Unauthorized".
+	const signInAgain = useCallback(
+		(userCode: string) => {
+			const cleaned = userCode.trim().toUpperCase();
+			const returnTo = cleaned
+				? `/${account.slug}/device/channel?code=${encodeURIComponent(cleaned)}`
+				: `/${account.slug}/device/channel`;
+			void navigate({ to: "/sign", search: { return_to: returnTo } });
+		},
+		[account.slug, navigate],
+	);
+
 	// NOTE: `search.code` only pre-fills the input below — it is never
 	// verified automatically. Auto-verifying a linkable code lets an attacker
 	// send `.../device/channel?code=ATTACKER-CODE` and get one click closer
@@ -63,13 +78,17 @@ function AccountChannelDeviceAuthPage() {
 				setStatus("verified");
 				void navigate({ search: {}, replace: true });
 			} catch (err) {
+				if (err instanceof ApiError && err.status === 401) {
+					signInAgain(cleaned);
+					return;
+				}
 				setError(err instanceof ApiError ? err.message : translateError(err));
 				setStatus("idle");
 			} finally {
 				setVerifying(false);
 			}
 		},
-		[account.slug, navigate],
+		[account.slug, navigate, signInAgain],
 	);
 
 	async function handleApprove(e: FormEvent) {
@@ -86,6 +105,10 @@ function AccountChannelDeviceAuthPage() {
 			setApprovedName(res.channel.name);
 			setStatus("approved");
 		} catch (err) {
+			if (err instanceof ApiError && err.status === 401) {
+				signInAgain(authInfo.user_code);
+				return;
+			}
 			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
 			setSubmitting(false);
@@ -101,6 +124,10 @@ function AccountChannelDeviceAuthPage() {
 			await denyDeviceAuth(account.slug, authInfo.user_code);
 			setStatus("denied");
 		} catch (err) {
+			if (err instanceof ApiError && err.status === 401) {
+				signInAgain(authInfo.user_code);
+				return;
+			}
 			setError(err instanceof ApiError ? err.message : translateError(err));
 		} finally {
 			setSubmitting(false);
