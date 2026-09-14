@@ -1,5 +1,5 @@
 class BeepMailer < ApplicationMailer
-  def reminder(beep_run, user:)
+  def beep(beep_run, user:)
     @beep = beep_run.beep
     @account = @beep.account
     @user = user

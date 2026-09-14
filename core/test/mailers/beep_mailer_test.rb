@@ -1,7 +1,7 @@
 require "test_helper"
 
 class BeepMailerTest < ActionMailer::TestCase
-  test "reminder uses the beep title and unsubscribe headers" do
+  test "beep uses the beep title and unsubscribe headers" do
     account = accounts(:john_account)
     beep = Beep.create!(
       account: account,
@@ -12,7 +12,7 @@ class BeepMailerTest < ActionMailer::TestCase
     )
     run = beep.runs.create!(scheduled_for: Time.current)
 
-    email = BeepMailer.reminder(run, user: users(:john))
+    email = BeepMailer.beep(run, user: users(:john))
 
     assert_equal [ "john@example.com" ], email.to
     assert_equal "Call mom", email.subject

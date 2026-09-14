@@ -3,7 +3,7 @@ module Channel::Email
     def deliver_beep(channel, beep, run: nil)
       user = channel.user
       if run
-        BeepMailer.reminder(run, user: user).deliver_now
+        BeepMailer.beep(run, user: user).deliver_now
       end
       { "channel_id" => channel.id, "status" => "sent" }
     rescue StandardError => error

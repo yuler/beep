@@ -19,7 +19,7 @@ class Channel::EmailTest < ActiveSupport::TestCase
     ActionMailer::Base.deliveries.clear
   end
 
-  test "deliver_beep sends reminder email" do
+  test "deliver_beep sends email" do
     result = @channel.deliver_beep(@beep, run: @run)
 
     assert_equal @channel.id, result["channel_id"]

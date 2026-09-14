@@ -95,7 +95,7 @@ class Beep::Run < ApplicationRecord
     def deliver_email(user, payload_result)
       return payload_result if email_attempt_complete?(payload_result)
 
-      send_reminder_email(user, payload_result)
+      send_email(user, payload_result)
     end
 
     def email_attempt_complete?(payload_result)
@@ -106,8 +106,8 @@ class Beep::Run < ApplicationRecord
       payload_result.dig("email", "status") == "error"
     end
 
-    def send_reminder_email(user, payload_result)
-      BeepMailer.reminder(self, user: user).deliver_now
+    def send_email(user, payload_result)
+      BeepMailer.beep(self, user: user).deliver_now
       payload_result.merge("email" => { "status" => "sent" })
     rescue StandardError => error
       payload_result.merge("email" => { "status" => "error", "error" => error.class.name })
