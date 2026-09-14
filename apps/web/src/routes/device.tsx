@@ -55,25 +55,28 @@ function DeviceAuthPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [urlCodeConsumed, setUrlCodeConsumed] = useState(false);
 
-	const handleVerifyCode = useCallback(async (userCode: string) => {
-		const cleaned = userCode.trim().toUpperCase();
-		if (!cleaned) return;
+	const handleVerifyCode = useCallback(
+		async (userCode: string) => {
+			const cleaned = userCode.trim().toUpperCase();
+			if (!cleaned) return;
 
-		setVerifying(true);
-		setError(null);
-		try {
-			const info = await verifyDeviceCode(cleaned);
-			setAuthInfo(info);
-			setChannelName(info.channel_name || "CLI Device");
-			setStatus("verified");
-			void navigate({ search: {}, replace: true });
-		} catch (err) {
-			setError(err instanceof ApiError ? err.message : translateError(err));
-			setStatus("idle");
-		} finally {
-			setVerifying(false);
-		}
-	}, [navigate]);
+			setVerifying(true);
+			setError(null);
+			try {
+				const info = await verifyDeviceCode(cleaned);
+				setAuthInfo(info);
+				setChannelName(info.channel_name || "CLI Device");
+				setStatus("verified");
+				void navigate({ search: {}, replace: true });
+			} catch (err) {
+				setError(err instanceof ApiError ? err.message : translateError(err));
+				setStatus("idle");
+			} finally {
+				setVerifying(false);
+			}
+		},
+		[navigate],
+	);
 
 	useEffect(() => {
 		setCode(search.code?.toUpperCase() ?? "");
@@ -174,7 +177,8 @@ function DeviceAuthPage() {
 										{authInfo.user_code}
 									</span>
 									<span className="text-[11px] text-muted-foreground">
-										Expires in {Math.max(0, Math.round(authInfo.expires_in / 60))} min
+										Expires in{" "}
+										{Math.max(0, Math.round(authInfo.expires_in / 60))} min
 									</span>
 								</div>
 							</div>

@@ -170,8 +170,8 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 							</Button>
 						</div>
 						<p className="mt-1 text-xs text-muted-foreground">
-							Copy this token now — it is shown only once. Configure it on
-							your machine using the Beep CLI:
+							Copy this token now — it is shown only once. Configure it on your
+							machine using the Beep CLI:
 						</p>
 						<div className="mt-2">
 							<CopyableCode
