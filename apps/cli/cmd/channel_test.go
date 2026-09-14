@@ -13,20 +13,18 @@ import (
 )
 
 func TestChannelCommandsRegistration(t *testing.T) {
-	connectCmd, _, err := RootCmd.Find([]string{"channel", "connect"})
-	if err != nil {
-		t.Fatalf("failed to find 'channel connect': %v", err)
-	}
-	if connectCmd.Name() != "connect" {
-		t.Errorf("expected command name 'connect', got %s", connectCmd.Name())
-	}
-
-	disconnectCmd, _, err := RootCmd.Find([]string{"channel", "disconnect"})
-	if err != nil {
-		t.Fatalf("failed to find 'channel disconnect': %v", err)
-	}
-	if disconnectCmd.Name() != "disconnect" {
-		t.Errorf("expected command name 'disconnect', got %s", disconnectCmd.Name())
+	for _, sub := range []string{"connect", "disconnect", "up", "run", "stop", "status"} {
+		cmd, _, err := RootCmd.Find([]string{"channel", sub})
+		if err != nil {
+			t.Fatalf("failed to find 'channel %s': %v", sub, err)
+		}
+		expectedName := sub
+		if sub == "run" {
+			expectedName = "up"
+		}
+		if cmd.Name() != expectedName {
+			t.Errorf("expected command name %q, got %q", expectedName, cmd.Name())
+		}
 	}
 }
 

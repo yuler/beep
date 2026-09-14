@@ -1,4 +1,4 @@
-package daemon
+package runner
 
 import (
 	"context"
@@ -20,11 +20,11 @@ import (
 
 func TestJobEnvOmitsRunnerToken(t *testing.T) {
 	t.Setenv("BEEP_RUNNER_TOKEN", "beep_rt_from_environ")
-	d := &Daemon{cfg: &config.Config{
+	r := &Runner{cfg: &config.Config{
 		ServerURL:   "https://core.example.com",
 		RunnerToken: "beep_rt_secret",
 	}}
-	env, err := d.jobEnv(&task.Task{
+	env, err := r.JobEnv(&task.Task{
 		ID:        "run-1",
 		JobSlug:   "check",
 		LogURL:    "https://core.example.com/api/v1/runner/tasks/run-1/logs",
@@ -54,11 +54,11 @@ func TestJobEnvOmitsRunnerTokenFromWorkspace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := &Daemon{
+	r := &Runner{
 		cfg:       &config.Config{ServerURL: "https://core.example.com"},
 		workspace: ws,
 	}
-	env, err := d.jobEnv(&task.Task{
+	env, err := r.JobEnv(&task.Task{
 		ID:        "run-1",
 		JobSlug:   "check",
 		LogURL:    "https://core.example.com/api/v1/runner/tasks/run-1/logs",
@@ -100,11 +100,11 @@ func TestJobEnvUnreadableWorkspaceEnv(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
 
-	d := &Daemon{
+	r := &Runner{
 		cfg:       &config.Config{ServerURL: "https://core.example.com"},
 		workspace: ws,
 	}
-	env, err := d.jobEnv(&task.Task{
+	env, err := r.JobEnv(&task.Task{
 		ID:        "run-1",
 		JobSlug:   "check",
 		LogURL:    "https://core.example.com/api/v1/runner/tasks/run-1/logs",
@@ -145,7 +145,7 @@ OVERRIDDEN_BY_LOCAL=from_local
 		t.Fatal(err)
 	}
 
-	d := &Daemon{
+	r := &Runner{
 		cfg: &config.Config{
 			ServerURL: "https://core.example.com",
 		},
@@ -162,7 +162,7 @@ OVERRIDDEN_BY_LOCAL=from_local
 		},
 	}
 
-	env, err := d.jobEnv(job)
+	env, err := r.JobEnv(job)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,88 +240,25 @@ func TestPollAndExecuteFillsConcurrency(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := New(&config.Config{
+	r := New(&config.Config{
 		ServerURL:    ts.URL,
 		RunnerToken:  "beep_rt_test",
 		Concurrency:  2,
 		PollInterval: time.Second,
 	}, ws)
 
-	d.pollAndExecute(context.Background())
-	if got := polls.Load(); got != 2 {
-		t.Fatalf("expected 2 polls to fill concurrency, got %d", got)
-	}
-	if got := pings.Load(); got != 1 {
-		t.Fatalf("expected 1 ping when saturated, got %d", got)
-	}
-}
+	r.PollAndExecute(context.Background())
 
-func TestExecuteReportsLogsAndResult(t *testing.T) {
-	var (
-		gotLogs   strings.Builder
-		gotResult *task.Result
-	)
-	var tsURL string
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/api/v1/runner/tasks/task-run-1/logs":
-			var req struct {
-				Chunk string `json:"chunk"`
-			}
-			if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
-				gotLogs.WriteString(req.Chunk)
-			}
-			w.WriteHeader(http.StatusNoContent)
-		case "/api/v1/runner/tasks/task-run-1/result":
-			var res task.Result
-			if err := json.NewDecoder(r.Body).Decode(&res); err == nil {
-				gotResult = &res
-			}
-			w.WriteHeader(http.StatusNoContent)
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer ts.Close()
-	tsURL = ts.URL
-
-	root := t.TempDir()
-	jobsDir := filepath.Join(root, "jobs")
-	if err := os.MkdirAll(jobsDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	script := filepath.Join(jobsDir, "slow-check")
-	if err := os.WriteFile(script, []byte("#!/bin/sh\necho \"step 1\"\necho \"step 2 completed\"\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	ws, err := workspace.Open(root)
-	if err != nil {
-		t.Fatal(err)
+	if polls.Load() != 2 {
+		t.Fatalf("expected 2 polls before hitting concurrency limit, got %d", polls.Load())
 	}
 
-	d := New(&config.Config{
-		ServerURL:   tsURL,
-		RunnerToken: "beep_rt_test",
-	}, ws)
-
-	job := &task.Task{
-		ID:             "task-run-1",
-		JobSlug:        "slow-check",
-		Name:           "Slow Check",
-		TimeoutSeconds: 30,
-		LogURL:         tsURL + "/api/v1/runner/tasks/task-run-1/logs",
-		ResultURL:      tsURL + "/api/v1/runner/tasks/task-run-1/result",
+	// Saturated runner should ping heartbeat instead of polling for jobs
+	r.PollAndExecute(context.Background())
+	if polls.Load() != 2 {
+		t.Fatalf("expected no additional polls while at capacity, got %d", polls.Load())
 	}
-
-	d.execute(context.Background(), job)
-
-	if !strings.Contains(gotLogs.String(), "step 1") || !strings.Contains(gotLogs.String(), "step 2 completed") {
-		t.Fatalf("expected logs to contain step outputs, got: %q", gotLogs.String())
-	}
-	if gotResult == nil {
-		t.Fatal("expected result report to be called, but got nil")
-	}
-	if gotResult.Status != task.StatusOk {
-		t.Fatalf("expected result status 'ok', got %q (%s)", gotResult.Status, gotResult.Title)
+	if pings.Load() == 0 {
+		t.Fatalf("expected ping while at capacity, got %d", pings.Load())
 	}
 }

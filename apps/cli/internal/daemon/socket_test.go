@@ -13,18 +13,25 @@ func TestAcquireSocket(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// First acquire should succeed
-	sl, err := AcquireSocket(tempDir)
+	sl, err := AcquireSocket(tempDir, ServiceRunner)
 	if err != nil {
 		t.Fatalf("expected AcquireSocket to succeed, got error: %v", err)
 	}
 
-	// Second acquire should fail with already running error
-	_, err2 := AcquireSocket(tempDir)
+	// Second acquire for same service should fail with already running error
+	_, err2 := AcquireSocket(tempDir, ServiceRunner)
 	if err2 == nil {
 		t.Fatalf("expected second AcquireSocket to fail")
 	}
 
-	running, pid, err := CheckRunning(tempDir)
+	// Different service should succeed simultaneously
+	slChannel, errChan := AcquireSocket(tempDir, ServiceChannel)
+	if errChan != nil {
+		t.Fatalf("expected channel AcquireSocket to succeed, got: %v", errChan)
+	}
+	defer slChannel.Close()
+
+	running, pid, err := CheckRunning(tempDir, ServiceRunner)
 	if err != nil || !running {
 		t.Fatalf("expected CheckRunning to return true, got running=%v, pid=%d, err=%v", running, pid, err)
 	}
@@ -38,13 +45,13 @@ func TestAcquireSocket(t *testing.T) {
 	}
 
 	// After closing, CheckRunning should be false
-	runningAfter, _, _ := CheckRunning(tempDir)
+	runningAfter, _, _ := CheckRunning(tempDir, ServiceRunner)
 	if runningAfter {
 		t.Fatalf("expected CheckRunning to return false after close")
 	}
 
 	// Now third acquire should succeed again
-	sl2, err := AcquireSocket(tempDir)
+	sl2, err := AcquireSocket(tempDir, ServiceRunner)
 	if err != nil {
 		t.Fatalf("expected third AcquireSocket to succeed, got: %v", err)
 	}
@@ -59,18 +66,18 @@ func TestGetDaemonStatusAndStopDaemon(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// When not running, GetDaemonStatus returns nil, nil
-	status, err := GetDaemonStatus(tempDir)
+	status, err := GetDaemonStatus(tempDir, ServiceRunner)
 	if err != nil || status != nil {
 		t.Fatalf("expected nil status when daemon not running, got %v, err: %v", status, err)
 	}
 
-	sl, err := AcquireSocket(tempDir)
+	sl, err := AcquireSocket(tempDir, ServiceRunner)
 	if err != nil {
 		t.Fatalf("failed to acquire socket: %v", err)
 	}
 	defer sl.Close()
 
-	status, err = GetDaemonStatus(tempDir)
+	status, err = GetDaemonStatus(tempDir, ServiceRunner)
 	if err != nil {
 		t.Fatalf("failed to get status: %v", err)
 	}

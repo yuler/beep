@@ -33,15 +33,30 @@ type SocketListener struct {
 	closed    bool
 }
 
-// SocketPath returns the standard socket file path within a workspace directory.
-func SocketPath(workspaceDir string) string {
-	return filepath.Join(workspaceDir, ".socket")
+const (
+	ServiceRunner  = "runner"
+	ServiceChannel = "channel"
+)
+
+// SocketPath returns the standard socket file path within a workspace directory for a service.
+func SocketPath(workspaceDir, service string) string {
+	if service == "" {
+		return filepath.Join(workspaceDir, ".socket")
+	}
+	return filepath.Join(workspaceDir, "."+service+".socket")
+}
+
+func serviceLabel(service string) string {
+	if service == "" {
+		return "daemon"
+	}
+	return service + " daemon"
 }
 
 // GetDaemonStatus queries the workspace Unix domain socket for running status and metadata.
 // Returns nil, nil if the daemon is not running.
-func GetDaemonStatus(workspaceDir string) (*SocketStatus, error) {
-	socketPath := SocketPath(workspaceDir)
+func GetDaemonStatus(workspaceDir, service string) (*SocketStatus, error) {
+	socketPath := SocketPath(workspaceDir, service)
 	if _, err := os.Stat(socketPath); os.IsNotExist(err) {
 		return nil, nil
 	}
@@ -65,29 +80,29 @@ func GetDaemonStatus(workspaceDir string) (*SocketStatus, error) {
 	return &status, nil
 }
 
-// CheckRunning checks whether a runner daemon is actively listening on the workspace socket.
+// CheckRunning checks whether a service daemon is actively listening on the workspace socket.
 // Returns true, PID, and nil if running.
-func CheckRunning(workspaceDir string) (bool, int, error) {
-	status, err := GetDaemonStatus(workspaceDir)
+func CheckRunning(workspaceDir, service string) (bool, int, error) {
+	status, err := GetDaemonStatus(workspaceDir, service)
 	if err != nil || status == nil || status.PID <= 0 {
 		return false, 0, err
 	}
 	return true, status.PID, nil
 }
 
-// CheckReady checks whether a runner daemon is listening and ready (initial handshake complete).
-func CheckReady(workspaceDir string) (bool, int, error) {
-	status, err := GetDaemonStatus(workspaceDir)
+// CheckReady checks whether a service daemon is listening and ready (initial handshake complete).
+func CheckReady(workspaceDir, service string) (bool, int, error) {
+	status, err := GetDaemonStatus(workspaceDir, service)
 	if err != nil || status == nil || status.PID <= 0 {
 		return false, 0, err
 	}
 	return status.Status == "running", status.PID, nil
 }
 
-// StopDaemon signals and terminates the runner daemon running in workspaceDir.
+// StopDaemon signals and terminates the service daemon running in workspaceDir.
 // Returns stopped PID or 0 if not running.
-func StopDaemon(workspaceDir string, timeout time.Duration, force bool) (int, error) {
-	running, pid, err := CheckRunning(workspaceDir)
+func StopDaemon(workspaceDir, service string, timeout time.Duration, force bool) (int, error) {
+	running, pid, err := CheckRunning(workspaceDir, service)
 	if err != nil {
 		return 0, err
 	}
@@ -103,7 +118,7 @@ func StopDaemon(workspaceDir string, timeout time.Duration, force bool) (int, er
 	// Send termination signal to initiate graceful shutdown
 	if err := proc.Terminate(p); err != nil {
 		if errors.Is(err, os.ErrProcessDone) || strings.Contains(err.Error(), "process already finished") {
-			_ = os.Remove(SocketPath(workspaceDir))
+			_ = os.Remove(SocketPath(workspaceDir, service))
 			return pid, nil
 		}
 		return 0, fmt.Errorf("failed to send signal to PID %d: %w", pid, err)
@@ -112,7 +127,7 @@ func StopDaemon(workspaceDir string, timeout time.Duration, force bool) (int, er
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		time.Sleep(100 * time.Millisecond)
-		isRun, _, _ := CheckRunning(workspaceDir)
+		isRun, _, _ := CheckRunning(workspaceDir, service)
 		if !isRun {
 			return pid, nil
 		}
@@ -122,22 +137,22 @@ func StopDaemon(workspaceDir string, timeout time.Duration, force bool) (int, er
 		// Force kill the process and any process group
 		_ = proc.Kill(p, pid)
 		time.Sleep(100 * time.Millisecond)
-		_ = os.Remove(SocketPath(workspaceDir))
+		_ = os.Remove(SocketPath(workspaceDir, service))
 		return pid, nil
 	}
 
-	return pid, fmt.Errorf("daemon (PID: %d) did not stop within %s (use --force to kill)", pid, timeout)
+	return pid, fmt.Errorf("%s (PID: %d) did not stop within %s (use --force to kill)", serviceLabel(service), pid, timeout)
 }
 
-// AcquireSocket attempts to create and listen on the Unix domain socket in workspaceDir.
+// AcquireSocket attempts to create and listen on the Unix domain socket for a service in workspaceDir.
 // If another instance is active, it returns an error. If a stale socket file exists, it cleans it up.
-func AcquireSocket(workspaceDir string) (*SocketListener, error) {
+func AcquireSocket(workspaceDir, service string) (*SocketListener, error) {
 	if err := os.MkdirAll(workspaceDir, 0o700); err != nil {
 		return nil, fmt.Errorf("failed to create workspace directory %s: %w", workspaceDir, err)
 	}
 	_ = os.Chmod(workspaceDir, 0o700)
 
-	socketPath := SocketPath(workspaceDir)
+	socketPath := SocketPath(workspaceDir, service)
 
 	// Check if socket file exists
 	if _, err := os.Stat(socketPath); err == nil {
@@ -145,7 +160,7 @@ func AcquireSocket(workspaceDir string) (*SocketListener, error) {
 		if dialErr == nil {
 			// Another instance is actively listening
 			conn.Close()
-			return nil, fmt.Errorf("runner daemon is already running (socket: %s)", socketPath)
+			return nil, fmt.Errorf("%s is already running (socket: %s)", serviceLabel(service), socketPath)
 		}
 		// Stale socket file, remove it
 		_ = os.Remove(socketPath)

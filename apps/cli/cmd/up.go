@@ -8,11 +8,14 @@ import (
 	"os/exec"
 	"os/signal"
 	"strings"
+	"sync"
 	"time"
 
+	"beep/internal/channel"
 	"beep/internal/config"
 	"beep/internal/daemon"
 	"beep/internal/proc"
+	"beep/internal/runner"
 	"beep/internal/ui"
 	"beep/internal/workspace"
 
@@ -29,12 +32,12 @@ func newUpCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "up",
 		Aliases: []string{"run"},
-		Short:   "Start daemon to listen for notifications and execute tasks",
+		Short:   "Start daemon services to listen for notifications and execute tasks",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUp(cmd, args)
 		},
 	}
-	cmd.Flags().IntVarP(&flagConcurrency, "concurrency", "c", 0, "Max concurrent jobs (default 5)")
+	cmd.Flags().IntVarP(&flagConcurrency, "concurrency", "c", 0, "Max concurrent jobs for runner (default 5)")
 	cmd.Flags().DurationVarP(&flagPollInterval, "poll-interval", "i", 0, "Poll interval (default 3s)")
 	cmd.Flags().BoolVarP(&flagDaemon, "daemon", "d", false, "Run daemon in background")
 	return cmd
@@ -57,34 +60,152 @@ func runUp(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("configuration error: %w", err)
 	}
 
-	ws, err := workspace.Open(cfg.Workspace)
-	if err != nil {
-		return fmt.Errorf("workspace error: %w", err)
+	hasRunner := cfg.RunnerToken != ""
+	hasChannel := cfg.ChannelToken != "" || cfg.CliToken != "" || cfg.DeviceToken != ""
+
+	if !hasRunner && !hasChannel {
+		return fmt.Errorf("no services configured. To configure:\n  Runner:  set BEEP_RUNNER_TOKEN or configure config.json\n  Channel: run 'beep channel connect'")
 	}
 
 	isChild := os.Getenv("BEEP_DAEMON_CHILD") == "1"
 
 	// If background daemon mode requested and not already the spawned child:
 	if flagDaemon && !isChild {
-		return startBackgroundDaemon(cfg)
+		if hasRunner {
+			if err := startServiceBackgroundDaemon(daemon.ServiceRunner, []string{"runner", "up"}, os.Args[1:], cfg); err != nil {
+				return err
+			}
+		}
+		if hasChannel {
+			if err := startServiceBackgroundDaemon(daemon.ServiceChannel, []string{"channel", "up"}, os.Args[1:], cfg); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
-	// Single instance control via Unix domain socket
-	sock, err := daemon.AcquireSocket(cfg.Workspace)
+	ws, err := workspace.Open(cfg.Workspace)
 	if err != nil {
-		return err
+		return fmt.Errorf("workspace error: %w", err)
 	}
-	defer sock.Close()
 
-	// Daily rotating logger in $WORKSPACE/logs
-	logWriter, _, err := daemon.SetupLogger(cfg.Workspace, !isChild)
+	// Foreground combined mode: acquire sockets for all active services
+	var sockRunner *daemon.SocketListener
+	var sockChannel *daemon.SocketListener
+
+	if hasRunner {
+		var err error
+		sockRunner, err = daemon.AcquireSocket(cfg.Workspace, daemon.ServiceRunner)
+		if err != nil {
+			return err
+		}
+		defer sockRunner.Close()
+	}
+
+	if hasChannel {
+		var err error
+		sockChannel, err = daemon.AcquireSocket(cfg.Workspace, daemon.ServiceChannel)
+		if err != nil {
+			return err
+		}
+		defer sockChannel.Close()
+	}
+
+	logWriter, _, err := daemon.SetupLogger(cfg.Workspace, "", !isChild)
 	if err != nil {
 		return fmt.Errorf("failed to setup daily logger: %w", err)
 	}
 	defer logWriter.Close()
 
-	d := daemon.New(cfg, ws)
-	d.OnReady = func() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, proc.ShutdownSignals...)
+	go func() {
+		<-sigChan
+		log.Println(ui.Dim("[beep] Received termination signal..."))
+		cancel()
+	}()
+
+	var wg sync.WaitGroup
+	var runnerErr error
+	var channelErr error
+
+	if hasRunner {
+		wg.Add(1)
+		r := runner.New(cfg, ws)
+		r.OnReady = func() {
+			if sockRunner != nil {
+				sockRunner.SetRunning()
+			}
+		}
+		go func() {
+			defer wg.Done()
+			if err := r.Run(ctx); err != nil && ctx.Err() == nil {
+				runnerErr = err
+				cancel()
+			}
+		}()
+	}
+
+	if hasChannel {
+		wg.Add(1)
+		ch := channel.New(cfg, ws)
+		ch.OnReady = func() {
+			if sockChannel != nil {
+				sockChannel.SetRunning()
+			}
+		}
+		go func() {
+			defer wg.Done()
+			if err := ch.Run(ctx); err != nil && ctx.Err() == nil {
+				channelErr = err
+				cancel()
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	if runnerErr != nil {
+		return fmt.Errorf("runner error: %w", runnerErr)
+	}
+	if channelErr != nil {
+		return fmt.Errorf("channel error: %w", channelErr)
+	}
+	return nil
+}
+
+func runRunnerService(cfg *config.Config, daemonMode bool) error {
+	if cfg.RunnerToken == "" {
+		return fmt.Errorf("runner token is not configured (set via BEEP_RUNNER_TOKEN or config.json)")
+	}
+
+	isChild := os.Getenv("BEEP_DAEMON_CHILD") == "1"
+	if daemonMode && !isChild {
+		return startServiceBackgroundDaemon(daemon.ServiceRunner, []string{"runner", "up"}, os.Args[1:], cfg)
+	}
+
+	ws, err := workspace.Open(cfg.Workspace)
+	if err != nil {
+		return fmt.Errorf("workspace error: %w", err)
+	}
+
+	sock, err := daemon.AcquireSocket(cfg.Workspace, daemon.ServiceRunner)
+	if err != nil {
+		return err
+	}
+	defer sock.Close()
+
+	logWriter, _, err := daemon.SetupLogger(cfg.Workspace, daemon.ServiceRunner, !isChild)
+	if err != nil {
+		return fmt.Errorf("failed to setup daily logger: %w", err)
+	}
+	defer logWriter.Close()
+
+	r := runner.New(cfg, ws)
+	r.OnReady = func() {
 		sock.SetRunning()
 	}
 
@@ -99,13 +220,66 @@ func runUp(cmd *cobra.Command, args []string) error {
 		cancel()
 	}()
 
-	return d.Start(ctx)
+	return r.Run(ctx)
 }
 
-func startBackgroundDaemon(cfg *config.Config) error {
-	running, pid, _ := daemon.CheckRunning(cfg.Workspace)
+func runChannelService(cfg *config.Config, daemonMode bool) error {
+	token := cfg.ChannelToken
+	if token == "" {
+		token = cfg.CliToken
+	}
+	if token == "" {
+		token = cfg.DeviceToken
+	}
+	if token == "" {
+		return fmt.Errorf("channel token is not configured (run 'beep channel connect')")
+	}
+
+	isChild := os.Getenv("BEEP_DAEMON_CHILD") == "1"
+	if daemonMode && !isChild {
+		return startServiceBackgroundDaemon(daemon.ServiceChannel, []string{"channel", "up"}, os.Args[1:], cfg)
+	}
+
+	ws, err := workspace.Open(cfg.Workspace)
+	if err != nil {
+		return fmt.Errorf("workspace error: %w", err)
+	}
+
+	sock, err := daemon.AcquireSocket(cfg.Workspace, daemon.ServiceChannel)
+	if err != nil {
+		return err
+	}
+	defer sock.Close()
+
+	logWriter, _, err := daemon.SetupLogger(cfg.Workspace, daemon.ServiceChannel, !isChild)
+	if err != nil {
+		return fmt.Errorf("failed to setup daily logger: %w", err)
+	}
+	defer logWriter.Close()
+
+	ch := channel.New(cfg, ws)
+	ch.OnReady = func() {
+		sock.SetRunning()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, proc.ShutdownSignals...)
+	go func() {
+		<-sigChan
+		log.Println(ui.Dim("[beep-cli] Received termination signal..."))
+		cancel()
+	}()
+
+	return ch.Run(ctx)
+}
+
+func startServiceBackgroundDaemon(service string, childSubcommand []string, rawArgs []string, cfg *config.Config) error {
+	running, pid, _ := daemon.CheckRunning(cfg.Workspace, service)
 	if running {
-		return fmt.Errorf("runner daemon is already running (PID: %d, socket: %s)", pid, daemon.SocketPath(cfg.Workspace))
+		return fmt.Errorf("%s daemon is already running (PID: %d, socket: %s)", service, pid, daemon.SocketPath(cfg.Workspace, service))
 	}
 
 	exe, err := os.Executable()
@@ -113,57 +287,48 @@ func startBackgroundDaemon(cfg *config.Config) error {
 		return fmt.Errorf("failed to determine executable path: %w", err)
 	}
 
-	// Filter out daemon flags from args so child doesn't think it needs to spawn again
-	childArgs := buildChildDaemonArgs(os.Args[1:])
+	childArgs := buildServiceChildArgs(service, rawArgs)
 
 	cmd := exec.Command(exe, childArgs...)
 	cmd.Env = append(os.Environ(), "BEEP_DAEMON_CHILD=1")
 	proc.Detach(cmd)
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start background daemon: %w", err)
+		return fmt.Errorf("failed to start background daemon for %s: %w", service, err)
 	}
 
-	// Wait up to 5s for daemon to acquire socket and complete initial handshake
-	started := false
 	today := time.Now().Format("2006-01-02")
-	logFile := daemon.DailyLogPath(cfg.Workspace, today)
+	logFile := daemon.DailyLogPath(cfg.Workspace, service, today)
 
 	for i := 0; i < 50; i++ {
 		time.Sleep(100 * time.Millisecond)
 
-		if isReady, childPID, _ := daemon.CheckReady(cfg.Workspace); isReady {
-			started = true
+		if isReady, childPID, _ := daemon.CheckReady(cfg.Workspace, service); isReady {
 			if childPID <= 0 {
 				childPID = cmd.Process.Pid
 			}
 
 			fmt.Printf("%s %s (PID: %s)\n",
 				ui.Green("✓"),
-				ui.Bold("Beep runner started in background"),
+				ui.Bold(fmt.Sprintf("Beep %s started in background", service)),
 				ui.Cyan(fmt.Sprintf("%d", childPID)),
 			)
 			fmt.Printf("  %s %s\n", ui.Dim("Workspace:"), cfg.Workspace)
 			fmt.Printf("  %s %s\n", ui.Dim("Logs:     "), logFile)
-			fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace))
+			fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace, service))
 			return nil
 		}
 
-		// Check if child process has exited early
 		if exited, exitStatus := proc.Exited(cmd.Process.Pid); exited {
-			return fmt.Errorf("runner daemon failed to start (exited with status %d, check logs: %s)", exitStatus, logFile)
+			return fmt.Errorf("%s daemon failed to start (exited with status %d, check logs: %s)", service, exitStatus, logFile)
 		}
 	}
 
-	if !started {
-		if cmd.Process != nil {
-			_ = cmd.Process.Kill()
-			_, _ = cmd.Process.Wait()
-		}
-		return fmt.Errorf("daemon failed to complete handshake within 5s (check logs: %s)", logFile)
+	if cmd.Process != nil {
+		_ = cmd.Process.Kill()
+		_, _ = cmd.Process.Wait()
 	}
-
-	return nil
+	return fmt.Errorf("%s daemon failed to complete handshake within 5s (check logs: %s)", service, logFile)
 }
 
 func stripDaemonFlags(args []string) []string {
@@ -177,16 +342,20 @@ func stripDaemonFlags(args []string) []string {
 	return out
 }
 
-func buildChildDaemonArgs(args []string) []string {
+func buildServiceChildArgs(service string, args []string) []string {
 	stripped := stripDaemonFlags(args)
 	i := 0
 	for i < len(stripped) {
 		cmd := stripped[i]
-		if cmd == "runner" || cmd == "up" || cmd == "run" {
+		if cmd == "runner" || cmd == "channel" || cmd == "up" || cmd == "run" {
 			i++
 		} else {
 			break
 		}
 	}
-	return append([]string{"runner", "up"}, stripped[i:]...)
+	return append([]string{service, "up"}, stripped[i:]...)
+}
+
+func buildChildDaemonArgs(args []string) []string {
+	return buildServiceChildArgs("runner", args)
 }

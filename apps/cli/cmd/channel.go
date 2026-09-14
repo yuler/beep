@@ -9,6 +9,7 @@ import (
 	"beep/internal/browser"
 	"beep/internal/client"
 	"beep/internal/config"
+	"beep/internal/daemon"
 	"beep/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -188,7 +189,73 @@ var channelDisconnectCmd = &cobra.Command{
 	},
 }
 
+func newChannelUpCmd() *cobra.Command {
+	var (
+		pollInterval time.Duration
+		daemonMode   bool
+	)
+	cmd := &cobra.Command{
+		Use:     "up",
+		Aliases: []string{"run"},
+		Short:   "Start channel daemon to listen for notifications and execute hooks",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig()
+			if err != nil {
+				return err
+			}
+			if pollInterval > 0 {
+				cfg.PollInterval = pollInterval
+			}
+			if err := cfg.Validate(); err != nil {
+				return fmt.Errorf("configuration error: %w", err)
+			}
+			return runChannelService(cfg, daemonMode)
+		},
+	}
+	cmd.Flags().DurationVarP(&pollInterval, "poll-interval", "i", 0, "Poll interval (default 3s)")
+	cmd.Flags().BoolVarP(&daemonMode, "daemon", "d", false, "Run channel daemon in background")
+	return cmd
+}
+
+func newChannelStopCmd() *cobra.Command {
+	var (
+		force   bool
+		timeout time.Duration
+	)
+	cmd := &cobra.Command{
+		Use:   "stop",
+		Short: "Stop the running channel daemon",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig()
+			if err != nil {
+				return err
+			}
+			return stopSingleService(daemon.ServiceChannel, cfg.Workspace, timeout, force)
+		},
+	}
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "Forcibly kill the daemon process if graceful stop times out")
+	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Second, "Timeout waiting for daemon to stop")
+	return cmd
+}
+
+func newChannelStatusCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "status",
+		Short: "Check channel daemon running status and information",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := loadConfig()
+			if err != nil {
+				return err
+			}
+			return showSingleServiceStatus(daemon.ServiceChannel, cfg)
+		},
+	}
+}
+
 func init() {
+	channelCmd.AddCommand(newChannelUpCmd())
+	channelCmd.AddCommand(newChannelStopCmd())
+	channelCmd.AddCommand(newChannelStatusCmd())
 	channelCmd.AddCommand(channelConnectCmd)
 	channelCmd.AddCommand(channelDisconnectCmd)
 }

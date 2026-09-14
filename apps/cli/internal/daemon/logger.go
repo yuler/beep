@@ -23,9 +23,9 @@ type DailyLogWriter struct {
 	currentFile *os.File
 }
 
-// DailyLogPath returns the workspace log file for the given day (YYYY-MM-DD).
-func DailyLogPath(workspaceDir, day string) string {
-	return filepath.Join(workspaceDir, "logs", dailyLogName("", day))
+// DailyLogPath returns the workspace log file for the given prefix/service and day (YYYY-MM-DD).
+func DailyLogPath(workspaceDir, prefix, day string) string {
+	return filepath.Join(workspaceDir, "logs", dailyLogName(prefix, day))
 }
 
 func dailyLogName(prefix, day string) string {
@@ -121,9 +121,9 @@ func (w *DailyLogWriter) Close() error {
 
 // SetupLogger sets up the global log package to write to the daily log writer,
 // and optionally also to os.Stdout if toStdout is true.
-func SetupLogger(workspaceDir string, toStdout bool) (*DailyLogWriter, string, error) {
+func SetupLogger(workspaceDir, prefix string, toStdout bool) (*DailyLogWriter, string, error) {
 	logsDir := filepath.Join(workspaceDir, "logs")
-	writer, err := NewDailyLogWriter(logsDir, "")
+	writer, err := NewDailyLogWriter(logsDir, prefix)
 	if err != nil {
 		return nil, "", err
 	}

@@ -74,7 +74,10 @@ func TestDailyLogWriterEmptyPrefix(t *testing.T) {
 	if _, err := os.Stat(expectedFile); err != nil {
 		t.Fatalf("expected dated log file %s: %v", expectedFile, err)
 	}
-	if got := DailyLogPath("/tmp/ws", today); got != filepath.Join("/tmp/ws", "logs", today+".log") {
+	if got := DailyLogPath("/tmp/ws", "", today); got != filepath.Join("/tmp/ws", "logs", today+".log") {
+		t.Fatalf("DailyLogPath = %s", got)
+	}
+	if got := DailyLogPath("/tmp/ws", "runner", today); got != filepath.Join("/tmp/ws", "logs", "runner-"+today+".log") {
 		t.Fatalf("DailyLogPath = %s", got)
 	}
 }

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -102,5 +103,33 @@ func TestStatusAndStopCommandRegistration(t *testing.T) {
 	}
 	if stopCmd.Name() != "stop" {
 		t.Errorf("expected command name 'stop', got %s", stopCmd.Name())
+	}
+}
+
+func TestTopLevelCommandsRegistration(t *testing.T) {
+	for _, name := range []string{"up", "run", "stop", "status"} {
+		cmd, _, err := RootCmd.Find([]string{name})
+		if err != nil {
+			t.Fatalf("failed to find %q command: %v", name, err)
+		}
+		expectedName := name
+		if name == "run" {
+			expectedName = "up"
+		}
+		if cmd.Name() != expectedName {
+			t.Errorf("expected command name %q, got %q", expectedName, cmd.Name())
+		}
+	}
+}
+
+func TestBuildServiceChildArgs(t *testing.T) {
+	runnerArgs := buildServiceChildArgs("runner", []string{"up", "-d", "--workspace", "/var/run"})
+	if strings.Join(runnerArgs, " ") != "runner up --workspace /var/run" {
+		t.Errorf("unexpected runner args: %v", runnerArgs)
+	}
+
+	channelArgs := buildServiceChildArgs("channel", []string{"up", "-d", "--workspace", "/var/run"})
+	if strings.Join(channelArgs, " ") != "channel up --workspace /var/run" {
+		t.Errorf("unexpected channel args: %v", channelArgs)
 	}
 }
