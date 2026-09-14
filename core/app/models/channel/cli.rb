@@ -29,7 +29,7 @@ module Channel::Cli
       expires = Time.current + Channel::Delivery::DEFAULT_TTL
       channel.deliveries.create!(
         payload: {
-          event: "beep.test",
+          event: "channel.test",
           title: "Test notification",
           body: "This is a test notification for CLI channel #{channel.name}",
           expires_at: expires.iso8601

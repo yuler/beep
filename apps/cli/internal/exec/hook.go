@@ -15,24 +15,10 @@ import (
 	"beep/internal/proc"
 )
 
-func FindHook(workspaceRoot string, event string) string {
-	candidates := []string{}
-	if event == "beep.fired" || event == "beep_fired" || event == "" {
-		candidates = append(candidates,
-			filepath.Join(workspaceRoot, ".beep", "hooks", "on_beep_fired"),
-			filepath.Join(workspaceRoot, "hooks", "on_beep_fired"),
-			filepath.Join(workspaceRoot, ".beep", "hooks", "on-beep-fired"),
-			filepath.Join(workspaceRoot, "hooks", "on-beep-fired"),
-		)
-	}
-
-	// Fallback to legacy/generic on_beep hook
-	candidates = append(candidates,
-		filepath.Join(workspaceRoot, ".beep", "hooks", "on_beep"),
-		filepath.Join(workspaceRoot, "hooks", "on_beep"),
-		filepath.Join(workspaceRoot, ".beep", "hooks", "on-beep"),
-		filepath.Join(workspaceRoot, "hooks", "on-beep"),
-	)
+func FindHook(workspaceRoot string) string {
+	candidates := hookPaths(workspaceRoot, "on_channel", "on-channel")
+	candidates = append(candidates, hookPaths(workspaceRoot, "on_beep", "on-beep")...)
+	candidates = append(candidates, hookPaths(workspaceRoot, "on_beep_fired", "on-beep-fired")...)
 
 	for _, c := range candidates {
 		info, err := os.Stat(c)
@@ -43,26 +29,33 @@ func FindHook(workspaceRoot string, event string) string {
 	return ""
 }
 
-func FindOnBeepHook(workspaceRoot string) string {
-	return FindHook(workspaceRoot, "beep.fired")
+func hookPaths(workspaceRoot string, names ...string) []string {
+	var paths []string
+	for _, name := range names {
+		paths = append(paths,
+			filepath.Join(workspaceRoot, "hooks", name),
+			filepath.Join(workspaceRoot, ".beep", "hooks", name),
+		)
+	}
+	return paths
 }
 
-func DispatchOnBeepHook(ctx context.Context, workspaceRoot string, delivery client.CliDelivery) (string, error) {
+func DispatchHook(ctx context.Context, workspaceRoot string, delivery client.CliDelivery) (string, string, error) {
 	if strings.TrimSpace(workspaceRoot) == "" {
-		return "", nil
+		return "", "", nil
 	}
 	eventName, _ := delivery.Payload["event"].(string)
 	if eventName == "" {
 		eventName = "beep.fired"
 	}
 
-	hookPath := FindHook(workspaceRoot, eventName)
+	hookPath := FindHook(workspaceRoot)
 	if hookPath == "" {
-		return "", nil
+		return "", "", nil
 	}
 
 	if !isSafeHook(hookPath) {
-		return "", fmt.Errorf("hook %s failed: unsafe permissions or ownership", hookPath)
+		return "", "on_channel", fmt.Errorf("hook %s failed: unsafe permissions or ownership", hookPath)
 	}
 
 	payloadBytes, _ := json.Marshal(delivery.Payload)
@@ -98,9 +91,9 @@ func DispatchOnBeepHook(ctx context.Context, workspaceRoot string, delivery clie
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(out), fmt.Errorf("hook %s failed: %w (output: %s)", hookPath, err, truncateHookOutput(string(out)))
+		return string(out), "on_channel", fmt.Errorf("hook %s failed: %w (output: %s)", hookPath, err, truncateHookOutput(string(out)))
 	}
-	return string(out), nil
+	return string(out), "on_channel", nil
 }
 
 func truncateHookOutput(s string) string {

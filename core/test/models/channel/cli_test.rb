@@ -29,5 +29,19 @@ class Channel::CliTest < ActiveSupport::TestCase
     delivery = @channel.deliveries.find(result["delivery_id"])
     assert_equal "pending", delivery.status
     assert_equal "Drink water", delivery.payload["title"]
+    assert_equal "beep.fired", delivery.payload["event"]
+    assert_equal @run.id, delivery.beep_run_id
+  end
+
+  test "deliver_test! queues a channel.test delivery without a beep run" do
+    assert_difference -> { @channel.deliveries.count }, 1 do
+      @channel.deliver_test!
+    end
+
+    delivery = @channel.deliveries.order(:created_at).last
+    assert_nil delivery.beep_run_id
+    assert_equal "channel.test", delivery.payload["event"]
+    assert_equal "Test notification", delivery.payload["title"]
+    assert_equal "pending", delivery.status
   end
 end

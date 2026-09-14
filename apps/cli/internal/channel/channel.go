@@ -78,7 +78,7 @@ func (c *Channel) Run(ctx context.Context) error {
 	}
 }
 
-// PollInbox fetches pending deliveries and dispatches notifications and hooks.
+// PollInbox fetches pending deliveries and dispatches local hooks.
 func (c *Channel) PollInbox(ctx context.Context) {
 	if c.Token() == "" {
 		return
@@ -105,9 +105,9 @@ func (c *Channel) PollInbox(ctx context.Context) {
 		}
 
 		title, _ := delivery.Payload["title"].(string)
-		body, _ := delivery.Payload["body"].(string)
-		if body == "" {
-			body, _ = delivery.Payload["message"].(string)
+		eventName, _ := delivery.Payload["event"].(string)
+		if eventName == "" {
+			eventName = "beep.fired"
 		}
 
 		log.Printf("%s %s %s (%s)",
@@ -117,28 +117,26 @@ func (c *Channel) PollInbox(ctx context.Context) {
 			ui.Dim(title),
 		)
 
-		if title != "" || body != "" {
-			notifTitle := title
-			if notifTitle == "" {
-				notifTitle = "Beep Notification"
-			}
-			exec.NotifyDesktop(notifTitle, body)
-		}
-
 		wsRoot := ""
 		if c.workspace != nil {
 			wsRoot = c.workspace.Root
 		}
 
-		out, hookErr := exec.DispatchOnBeepHook(ctx, wsRoot, delivery)
+		out, hookName, hookErr := exec.DispatchHook(ctx, wsRoot, delivery)
 		if hookErr != nil {
 			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-channel]")), ui.Red("Hook execution failed:"), hookErr)
 			_ = c.client.AckCliDelivery(ctx, delivery.ID, "failed", hookErr.Error())
-		} else {
-			if strings.TrimSpace(out) != "" {
-				log.Printf("%s %s %s", ui.Bold(ui.Cyan("[beep-channel]")), ui.Dim("Hook output:"), strings.TrimSpace(out))
-			}
-			_ = c.client.AckCliDelivery(ctx, delivery.ID, "succeeded", "")
+			continue
 		}
+		if hookName == "" {
+			log.Printf("%s %s %s",
+				ui.Bold(ui.Cyan("[beep-channel]")),
+				ui.Dim("No on_channel hook for event:"),
+				ui.Bold(eventName),
+			)
+		} else if strings.TrimSpace(out) != "" {
+			log.Printf("%s %s %s", ui.Bold(ui.Cyan("[beep-channel]")), ui.Dim("Hook output:"), strings.TrimSpace(out))
+		}
+		_ = c.client.AckCliDelivery(ctx, delivery.ID, "succeeded", "")
 	}
 }
