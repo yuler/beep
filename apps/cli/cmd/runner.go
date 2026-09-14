@@ -249,7 +249,7 @@ func newRunnerConnectCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Runner display name (defaults to hostname)")
-	cmd.Flags().StringSliceVarP(&tags, "tags", "t", nil, "Runner tags (defaults to [\"default\"])")
+	cmd.Flags().StringSliceVar(&tags, "tags", nil, "Runner tags (defaults to [\"default\"])")
 	return cmd
 }
 

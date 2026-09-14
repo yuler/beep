@@ -10,6 +10,8 @@ import (
 
 	"beep/internal/client"
 	"beep/internal/config"
+
+	"github.com/spf13/cobra"
 )
 
 func TestRunnerCommandsRegistration(t *testing.T) {
@@ -25,6 +27,28 @@ func TestRunnerCommandsRegistration(t *testing.T) {
 		if cmd.Name() != expectedName {
 			t.Errorf("expected command name %q, got %q", expectedName, cmd.Name())
 		}
+	}
+}
+
+func TestAllCommandsFlagsNoConflict(t *testing.T) {
+	var checkCmd func(c *cobra.Command)
+	checkCmd = func(c *cobra.Command) {
+		c.InitDefaultHelpFlag()
+		for _, child := range c.Commands() {
+			checkCmd(child)
+		}
+	}
+	checkCmd(RootCmd)
+
+	cmd, _, err := RootCmd.Find([]string{"runner", "connect"})
+	if err != nil {
+		t.Fatalf("failed to find 'runner connect': %v", err)
+	}
+	if cmd.Flags().Lookup("tags") == nil {
+		t.Fatal("expected 'tags' flag to be registered on runner connect")
+	}
+	if cmd.Flags().Lookup("token") == nil {
+		t.Fatal("expected inherited 'token' flag to be available on runner connect")
 	}
 }
 
