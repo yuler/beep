@@ -37,7 +37,8 @@ class Beep::Run < ApplicationRecord
     end
 
     def claim_delivery?
-      self.class.where(id: id, status: :pending).update_all(status: "running", updated_at: Time.current) == 1
+      claimed = self.class.where(id: id, status: :pending).update_all(status: "running", updated_at: Time.current) == 1
+      claimed || running?
     end
 
     def stringify_result

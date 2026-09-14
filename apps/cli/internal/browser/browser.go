@@ -33,5 +33,8 @@ func Open(rawURL string) error {
 
 func isLocalhost(host string) bool {
 	h := strings.ToLower(strings.TrimSpace(host))
-	return h == "localhost" || h == "127.0.0.1" || h == "::1"
+	if h == "localhost" || h == "127.0.0.1" || h == "::1" {
+		return true
+	}
+	return strings.HasSuffix(h, ".localhost")
 }

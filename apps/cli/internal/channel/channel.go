@@ -51,7 +51,7 @@ func (c *Channel) Run(ctx context.Context) error {
 	}
 
 	log.Printf("%s %s %s=%s",
-		ui.Bold(ui.Cyan("[beep-cli]")),
+		ui.Bold(ui.Cyan("[beep-channel]")),
 		ui.Green("Channel listening active:"),
 		ui.Dim("server"), ui.Bold(c.cfg.ServerURL),
 	)
@@ -70,7 +70,7 @@ func (c *Channel) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("%s %s", ui.Bold(ui.Cyan("[beep-cli]")), ui.Yellow("Shutting down..."))
+			log.Printf("%s %s", ui.Bold(ui.Cyan("[beep-channel]")), ui.Yellow("Shutting down..."))
 			return nil
 		case <-ticker.C:
 			c.PollInbox(ctx)
@@ -87,7 +87,7 @@ func (c *Channel) PollInbox(ctx context.Context) {
 	deliveries, err := c.client.FetchCliInbox(ctx)
 	if err != nil {
 		if ctx.Err() == nil {
-			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-cli]")), ui.Red("Inbox error:"), err)
+			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-channel]")), ui.Red("Inbox error:"), err)
 		}
 		return
 	}
@@ -95,7 +95,7 @@ func (c *Channel) PollInbox(ctx context.Context) {
 	for _, delivery := range deliveries {
 		if delivery.ExpiresAt != nil && time.Now().After(*delivery.ExpiresAt) {
 			log.Printf("%s %s %s (expired at %s)",
-				ui.Bold(ui.Cyan("[beep-cli]")),
+				ui.Bold(ui.Cyan("[beep-channel]")),
 				ui.Yellow("Dropped expired delivery:"),
 				ui.Bold(delivery.ID),
 				delivery.ExpiresAt.Format(time.RFC3339),
@@ -111,7 +111,7 @@ func (c *Channel) PollInbox(ctx context.Context) {
 		}
 
 		log.Printf("%s %s %s (%s)",
-			ui.Bold(ui.Cyan("[beep-cli]")),
+			ui.Bold(ui.Cyan("[beep-channel]")),
 			ui.Green("Received notification:"),
 			ui.Bold(delivery.ID),
 			ui.Dim(title),
@@ -132,11 +132,11 @@ func (c *Channel) PollInbox(ctx context.Context) {
 
 		out, hookErr := exec.DispatchOnBeepHook(ctx, wsRoot, delivery)
 		if hookErr != nil {
-			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-cli]")), ui.Red("Hook execution failed:"), hookErr)
+			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-channel]")), ui.Red("Hook execution failed:"), hookErr)
 			_ = c.client.AckCliDelivery(ctx, delivery.ID, "failed", hookErr.Error())
 		} else {
 			if strings.TrimSpace(out) != "" {
-				log.Printf("%s %s %s", ui.Bold(ui.Cyan("[beep-cli]")), ui.Dim("Hook output:"), strings.TrimSpace(out))
+				log.Printf("%s %s %s", ui.Bold(ui.Cyan("[beep-channel]")), ui.Dim("Hook output:"), strings.TrimSpace(out))
 			}
 			_ = c.client.AckCliDelivery(ctx, delivery.ID, "succeeded", "")
 		}

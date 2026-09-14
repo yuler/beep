@@ -62,14 +62,17 @@ class Channel::Authorization < ApplicationRecord
   end
 
   def consume_token!
-    return nil unless status == "approved" && channel.present?
+    return nil unless channel.present?
 
-    update!(status: "consumed")
-    channel
+    consumed = self.class.where(id: id, status: "approved").update_all(status: "consumed", updated_at: Time.current) == 1
+    if consumed
+      self.status = "consumed"
+      channel
+    end
   end
 
   def poll_interval_exceeded?
-    last_polled_at.present? && Time.current - last_polled_at < DEFAULT_INTERVAL
+    last_polled_at.present? && (Time.current - last_polled_at) < (DEFAULT_INTERVAL - 1)
   end
 
   def poll!

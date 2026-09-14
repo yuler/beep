@@ -2,7 +2,7 @@ class Api::V1::ChannelsController < Api::V1::BaseController
   before_action :set_channel, only: %i[ destroy ]
 
   def index
-    @channels = Current.account.channels.order(created_at: :desc)
+    @channels = Current.account.channels.includes(:user).order(created_at: :desc)
     @channels = @channels.where(kind: params[:kind]) if params[:kind].present?
     render :index
   end

@@ -7,6 +7,7 @@ class Channel < ApplicationRecord
   belongs_to :account, default: -> { user&.account }
   belongs_to :user
   has_many :deliveries, class_name: "Channel::Delivery", dependent: :destroy
+  has_many :authorizations, class_name: "Channel::Authorization", dependent: :destroy
 
   enum :kind, KINDS.index_by(&:itself), default: "cli"
   enum :status, %w[ active disabled ].index_by(&:itself), default: "active"

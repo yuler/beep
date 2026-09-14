@@ -132,4 +132,9 @@ func TestBuildServiceChildArgs(t *testing.T) {
 	if strings.Join(channelArgs, " ") != "channel up --workspace /var/run" {
 		t.Errorf("unexpected channel args: %v", channelArgs)
 	}
+
+	precedingFlagsArgs := buildServiceChildArgs("runner", []string{"--workspace", "/var/run", "up", "-d"})
+	if strings.Join(precedingFlagsArgs, " ") != "runner up --workspace /var/run" {
+		t.Errorf("unexpected runner args with preceding flags: %v", precedingFlagsArgs)
+	}
 }

@@ -344,16 +344,30 @@ func stripDaemonFlags(args []string) []string {
 
 func buildServiceChildArgs(service string, args []string) []string {
 	stripped := stripDaemonFlags(args)
-	i := 0
-	for i < len(stripped) {
-		cmd := stripped[i]
-		if cmd == "runner" || cmd == "channel" || cmd == "up" || cmd == "run" {
-			i++
-		} else {
-			break
+	var flags []string
+	takesArg := false
+	for _, arg := range stripped {
+		if takesArg {
+			flags = append(flags, arg)
+			takesArg = false
+			continue
+		}
+
+		if arg == "runner" || arg == "channel" || arg == "up" || arg == "run" {
+			continue
+		}
+
+		flags = append(flags, arg)
+		if arg == "-w" || arg == "--workspace" ||
+			arg == "-s" || arg == "--server" ||
+			arg == "-t" || arg == "--token" ||
+			arg == "-c" || arg == "--concurrency" ||
+			arg == "-i" || arg == "--poll-interval" ||
+			arg == "--timeout" {
+			takesArg = true
 		}
 	}
-	return append([]string{service, "up"}, stripped[i:]...)
+	return append([]string{service, "up"}, flags...)
 }
 
 func buildChildDaemonArgs(args []string) []string {

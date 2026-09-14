@@ -55,4 +55,14 @@ class ChannelTest < ActiveSupport::TestCase
 
     assert_equal "#{Channel::TOKEN_PREFIX}••••", channel.masked_token
   end
+
+  test "destroying channel cascades to dependent authorizations" do
+    auth = Channel::Authorization.create_request!
+    auth.approve!(user: @user)
+    channel = auth.channel
+
+    assert_difference -> { Channel::Authorization.count }, -1 do
+      channel.destroy!
+    end
+  end
 end
