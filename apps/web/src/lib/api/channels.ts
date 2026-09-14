@@ -58,7 +58,7 @@ export async function testChannel(
 	accountSlug: string,
 	channelId: string,
 ): Promise<void> {
-	await apiFetch(`/api/v1/${accountSlug}/channels/${channelId}/tests`, {
+	await apiFetch(`/api/v1/${accountSlug}/channels/${channelId}/test`, {)
 		method: "POST",
 	});
 }

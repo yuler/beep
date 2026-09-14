@@ -46,7 +46,7 @@ export function destroyPushSubscription(slug: string, id: string) {
 }
 
 export function testPushSubscription(slug: string, id: string) {
-	return apiFetch<void>(`/api/v1/${slug}/push_subscriptions/${id}/tests`, {
+	return apiFetch<void>(`/api/v1/${slug}/push_subscriptions/${id}/test`, {)
 		method: "POST",
 	});
 }

@@ -149,7 +149,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     sent = false
 
     stub_web_push_payload_send(->(**_kwargs) { sent = true }) do
-      post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/tests",
+      post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/test",
         headers: { "Authorization" => "Bearer #{@token}" },
         as: :json
     end
@@ -169,7 +169,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     expired = WebPush::ExpiredSubscription.new(push_response, "fcm.googleapis.com")
 
     stub_web_push_payload_send(->(**_kwargs) { raise expired }) do
-      post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/tests",
+      post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/test",
         headers: { "Authorization" => "Bearer #{@token}" },
         as: :json
     end
@@ -186,7 +186,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
       auth_key: "auth"
     )
 
-    post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/tests",
+    post "/api/v1/#{@account.slug}/push_subscriptions/#{subscription.id}/test",
       headers: { "Authorization" => "Bearer #{@token}" },
       as: :json
 

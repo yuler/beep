@@ -88,7 +88,7 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
     )
 
     assert_difference -> { channel.deliveries.count }, 1 do
-      post "/api/v1/#{@account.slug}/channels/#{channel.id}/tests",
+      post "/api/v1/#{@account.slug}/channels/#{channel.id}/test",
         headers: { "Authorization" => "Bearer #{@token}" },
         as: :json
     end
