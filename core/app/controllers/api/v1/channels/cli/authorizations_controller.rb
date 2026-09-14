@@ -1,5 +1,5 @@
 class Api::V1::Channels::Cli::AuthorizationsController < Api::V1::BaseController
-  disallow_account_scope
+  skip_account_scope only: %i[ create show destroy ]
   allow_unauthenticated_access only: %i[ create ]
   rate_limit to: 20, within: 1.minute, only: %i[ create ],
     by: -> { request.remote_ip }, with: :rate_limit_exceeded
@@ -24,7 +24,7 @@ class Api::V1::Channels::Cli::AuthorizationsController < Api::V1::BaseController
 
   def update
     @auth = Channel::Authorization.active.find_by(user_code: params[:user_code].to_s.upcase.strip)
-    user = Current.user || Current.identity&.personal_user
+    user = Current.user
     if @auth && user && @auth.approve!(user: user, name: params[:channel_name])
       @channel = @auth.channel
       render :update, status: :ok

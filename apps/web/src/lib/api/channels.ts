@@ -85,10 +85,13 @@ export async function verifyDeviceCode(code: string): Promise<DeviceAuthInfo> {
 	);
 }
 
-export async function approveDeviceAuth(data: {
-	user_code: string;
-	channel_name?: string;
-}): Promise<{
+export async function approveDeviceAuth(
+	accountSlug: string,
+	data: {
+		user_code: string;
+		channel_name?: string;
+	},
+): Promise<{
 	status: string;
 	channel: { id: string; name: string; kind: string; status: string };
 }> {
@@ -96,7 +99,7 @@ export async function approveDeviceAuth(data: {
 		status: string;
 		channel: { id: string; name: string; kind: string; status: string };
 	}>(
-		`/api/v1/channels/cli/authorizations/${encodeURIComponent(data.user_code)}`,
+		`/api/v1/${encodeURIComponent(accountSlug)}/channels/cli/authorizations/${encodeURIComponent(data.user_code)}`,
 		{
 			method: "PATCH",
 			body: { channel_name: data.channel_name },

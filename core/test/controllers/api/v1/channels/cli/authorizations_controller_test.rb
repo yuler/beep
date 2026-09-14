@@ -65,6 +65,38 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
     assert_equal "Renamed-Laptop", auth.channel.name
   end
 
+  test "update approves authorization under account slug path" do
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
+
+    assert_difference -> { Channel.count }, 1 do
+      patch "/api/v1/#{@user.account.slug}/channels/cli/authorizations/#{auth.user_code}",
+        params: { channel_name: "Team-Laptop" },
+        headers: { "Authorization" => "Bearer #{@token}" },
+        as: :json
+    end
+
+    assert_response :success
+    assert_equal "approved", response.parsed_body["status"]
+    assert_equal "Team-Laptop", response.parsed_body.dig("channel", "name")
+
+    assert_equal "approved", auth.reload.status
+    assert_equal @user.account, auth.account
+    assert_equal "Team-Laptop", auth.channel.name
+  end
+
+  test "update returns not found when user is not member of target account" do
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
+    other_account = accounts(:yuler_account)
+
+    patch "/api/v1/#{other_account.slug}/channels/cli/authorizations/#{auth.user_code}",
+      params: { channel_name: "Hacked-Laptop" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :not_found
+    assert_equal "pending", auth.reload.status
+  end
+
   test "destroy denies authorization" do
     auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
 

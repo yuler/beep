@@ -554,6 +554,7 @@
   "push_browser_safari": "Safari",
   "push_browser_this": "this browser",
   "push_channel_email": "Email",
+  "push_channel_cli": "CLI (beep up)",
   "push_channel_web_push": "Browser notifications",
   "push_checking_browser": "Checking this browser…",
   "push_checking_network": "Checking if this network can reach the push service…",

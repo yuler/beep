@@ -5,7 +5,7 @@ export class I18nError extends Error {
 	}
 }
 
-export const NOTIFICATION_CHANNELS = ["email", "web_push"] as const;
+export const NOTIFICATION_CHANNELS = ["email", "web_push", "cli"] as const;
 
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 

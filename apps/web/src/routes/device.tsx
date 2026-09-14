@@ -1,19 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, Laptop, XCircle } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { Building2, Check, Laptop, UserRound } from "lucide-react";
 import { AuthCard, AuthLayout, AuthPending } from "@/components/layout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	approveDeviceAuth,
-	type DeviceAuthInfo,
-	denyDeviceAuth,
-	verifyDeviceCode,
-} from "@/lib/api/channels";
-import { ApiError } from "@/lib/api/client";
+import { buttonVariants } from "@/components/ui/button";
+import type { AccountSummary } from "@/lib/auth/account";
 import { requireSession } from "@/lib/auth/guards";
-import { translateError } from "@/lib/i18n-labels";
+import { cn } from "@/lib/utils";
+import { m } from "@/locale/paraglide/messages";
 
 export type DeviceSearch = {
 	code?: string;
@@ -33,237 +25,102 @@ export const Route = createFileRoute("/device")({
 	ssr: false,
 	pendingComponent: AuthPending,
 	validateSearch: parseDeviceSearch,
-	beforeLoad: async ({ context, location }) => {
+	beforeLoad: async ({ context, location, search }) => {
 		const me = await requireSession({ context, location });
+		if (me.accounts.length === 0) {
+			throw redirect({ to: "/sign" });
+		}
+		if (me.accounts.length === 1) {
+			throw redirect({
+				to: "/$account_slug/device",
+				params: { account_slug: me.accounts[0].slug },
+				search: search.code ? { code: search.code } : {},
+			});
+		}
 		return { me };
 	},
-	component: DeviceAuthPage,
+	component: DeviceAccountPickerPage,
 });
 
-function DeviceAuthPage() {
+function DeviceAccountPickerPage() {
+	const { me } = Route.useRouteContext();
 	const search = Route.useSearch();
-	const navigate = Route.useNavigate();
-	const [code, setCode] = useState(search.code?.toUpperCase() ?? "");
-	const [channelName, setChannelName] = useState("");
-	const [authInfo, setAuthInfo] = useState<DeviceAuthInfo | null>(null);
-	const [approvedName, setApprovedName] = useState<string | null>(null);
-	const [verifying, setVerifying] = useState(false);
-	const [submitting, setSubmitting] = useState(false);
-	const [status, setStatus] = useState<
-		"idle" | "verified" | "approved" | "denied"
-	>("idle");
-	const [error, setError] = useState<string | null>(null);
-	const [urlCodeConsumed, setUrlCodeConsumed] = useState(false);
-
-	const handleVerifyCode = useCallback(
-		async (userCode: string) => {
-			const cleaned = userCode.trim().toUpperCase();
-			if (!cleaned) return;
-
-			setVerifying(true);
-			setError(null);
-			try {
-				const info = await verifyDeviceCode(cleaned);
-				setAuthInfo(info);
-				setChannelName(info.channel_name || "CLI Device");
-				setStatus("verified");
-				void navigate({ search: {}, replace: true });
-			} catch (err) {
-				setError(err instanceof ApiError ? err.message : translateError(err));
-				setStatus("idle");
-			} finally {
-				setVerifying(false);
-			}
-		},
-		[navigate],
-	);
-
-	useEffect(() => {
-		setCode(search.code?.toUpperCase() ?? "");
-	}, [search.code]);
-
-	useEffect(() => {
-		if (search.code && !urlCodeConsumed) {
-			setUrlCodeConsumed(true);
-			setCode(search.code.toUpperCase());
-		}
-	}, [search.code, urlCodeConsumed]);
-
-	async function handleApprove(e: FormEvent) {
-		e.preventDefault();
-		if (!authInfo) return;
-
-		setSubmitting(true);
-		setError(null);
-		try {
-			const res = await approveDeviceAuth({
-				user_code: authInfo.user_code,
-				channel_name: channelName.trim() || undefined,
-			});
-			setApprovedName(res.channel.name);
-			setStatus("approved");
-		} catch (err) {
-			setError(err instanceof ApiError ? err.message : translateError(err));
-		} finally {
-			setSubmitting(false);
-		}
-	}
-
-	async function handleDeny() {
-		if (!authInfo) return;
-
-		setSubmitting(true);
-		setError(null);
-		try {
-			await denyDeviceAuth(authInfo.user_code);
-			setStatus("denied");
-		} catch (err) {
-			setError(err instanceof ApiError ? err.message : translateError(err));
-		} finally {
-			setSubmitting(false);
-		}
-	}
+	const lastSlug = me.last_account_slug;
 
 	return (
 		<AuthLayout>
-			<AuthCard description="Authorize a Beep CLI notification channel on your device.">
-				{status === "approved" ? (
-					<div className="flex flex-col items-center gap-4 py-4 text-center">
-						<div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-							<CheckCircle2 className="size-8" />
-						</div>
-						<div className="flex flex-col gap-1">
-							<h3 className="font-semibold text-base">Device Connected!</h3>
-							<p className="text-muted-foreground text-sm">
-								Your CLI channel{" "}
-								<span className="font-medium text-foreground">
-									{approvedName ?? channelName}
-								</span>{" "}
-								has been connected. You can now close this tab and return to
-								your terminal.
-							</p>
-						</div>
-					</div>
-				) : status === "denied" ? (
-					<div className="flex flex-col items-center gap-4 py-4 text-center">
-						<div className="flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-							<XCircle className="size-8" />
-						</div>
-						<div className="flex flex-col gap-1">
-							<h3 className="font-semibold text-base">Authorization Denied</h3>
-							<p className="text-muted-foreground text-sm">
-								The connection request has been rejected.
-							</p>
-						</div>
-					</div>
-				) : status === "verified" && authInfo ? (
-					<form onSubmit={handleApprove} className="flex flex-col gap-5">
-						{search.code ? (
-							<p className="text-[11px] text-muted-foreground" role="note">
-								This code came from a shared link. Only continue if you just
-								generated it in your own terminal.
-							</p>
-						) : null}
-						<div className="rounded-lg border border-border bg-muted/40 p-3.5">
-							<div className="flex items-center gap-3">
-								<span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-background border">
-									<Laptop className="size-5 text-muted-foreground" />
+			<AuthCard description="Select which account you want to connect your CLI channel to.">
+				{search.code ? (
+					<div className="mb-4 rounded-lg border border-border bg-muted/40 p-3">
+						<div className="flex items-center gap-3">
+							<span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background">
+								<Laptop className="size-4 text-muted-foreground" />
+							</span>
+							<div className="flex min-w-0 flex-col">
+								<span className="text-xs text-muted-foreground">
+									Verification Code
 								</span>
-								<div className="flex flex-col min-w-0">
-									<span className="text-xs text-muted-foreground">
-										User Verification Code
-									</span>
-									<span className="font-mono font-bold tracking-widest text-base">
-										{authInfo.user_code}
-									</span>
-									<span className="text-[11px] text-muted-foreground">
-										Expires in{" "}
-										{Math.max(0, Math.round(authInfo.expires_in / 60))} min
-									</span>
-								</div>
+								<span className="font-mono text-sm font-bold tracking-wider">
+									{search.code}
+								</span>
 							</div>
 						</div>
+					</div>
+				) : null}
 
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="channel-name" className="text-xs">
-								Channel Name
-							</Label>
-							<Input
-								id="channel-name"
-								placeholder="e.g. My Laptop"
-								value={channelName}
-								onChange={(e) => setChannelName(e.target.value)}
-								disabled={submitting}
-								required
-							/>
-							<p className="text-[11px] text-muted-foreground">
-								Identify this CLI channel in your notification settings.
-							</p>
-						</div>
-
-						{error ? (
-							<p className="text-sm text-destructive" role="alert">
-								{error}
-							</p>
-						) : null}
-
-						<div className="flex items-center gap-3 pt-2">
-							<Button
-								type="button"
-								variant="outline"
-								className="flex-1"
-								onClick={handleDeny}
-								disabled={submitting}
-							>
-								Deny
-							</Button>
-							<Button type="submit" className="flex-1" disabled={submitting}>
-								{submitting ? "Connecting..." : "Authorize"}
-							</Button>
-						</div>
-					</form>
-				) : (
-					<form
-						onSubmit={(e) => {
-							e.preventDefault();
-							void handleVerifyCode(code);
-						}}
-						className="flex flex-col gap-4"
-					>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="device-code" className="text-xs">
-								Enter One-Time Code
-							</Label>
-							<Input
-								id="device-code"
-								placeholder="e.g. WDJB-MJHT"
-								value={code}
-								onChange={(e) => setCode(e.target.value.toUpperCase())}
-								disabled={verifying}
-								autoFocus
-								className="font-mono uppercase tracking-wider"
-							/>
-							<p className="text-[11px] text-muted-foreground">
-								Enter the 8-character code displayed in your terminal.
-							</p>
-						</div>
-
-						{error ? (
-							<p className="text-sm text-destructive" role="alert">
-								{error}
-							</p>
-						) : null}
-
-						<Button
-							type="submit"
-							disabled={verifying || !code.trim()}
-							className="w-full"
-						>
-							{verifying ? "Checking Code..." : "Continue"}
-						</Button>
-					</form>
-				)}
+				<ul className="flex flex-col gap-2">
+					{me.accounts.map((account) => (
+						<AccountChoice
+							key={account.id}
+							account={account}
+							lastUsed={account.slug === lastSlug}
+							code={search.code}
+						/>
+					))}
+				</ul>
 			</AuthCard>
 		</AuthLayout>
+	);
+}
+
+function AccountChoice({
+	account,
+	lastUsed,
+	code,
+}: {
+	account: AccountSummary;
+	lastUsed: boolean;
+	code?: string;
+}) {
+	const Icon = account.personal ? UserRound : Building2;
+
+	return (
+		<li>
+			<Link
+				to="/$account_slug/device"
+				params={{ account_slug: account.slug }}
+				search={code ? { code } : {}}
+				className={cn(
+					buttonVariants({ variant: "outline" }),
+					"h-auto w-full justify-start gap-3 px-3 py-3",
+					lastUsed && "border-primary/40 bg-primary/5",
+				)}
+			>
+				<span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border">
+					<Icon className="size-4" />
+				</span>
+				<span className="flex min-w-0 flex-1 flex-col items-start text-left">
+					<span className="truncate font-medium">{account.name}</span>
+					<span className="truncate text-xs font-normal text-muted-foreground">
+						{account.personal
+							? m.account_type_personal()
+							: m.account_type_team()}{" "}
+						· /{account.slug}
+						{lastUsed ? m.auth_last_used_suffix() : ""}
+					</span>
+				</span>
+				{lastUsed ? <Check className="size-4 shrink-0 text-primary" /> : null}
+			</Link>
+		</li>
 	);
 }

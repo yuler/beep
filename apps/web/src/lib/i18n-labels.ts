@@ -90,9 +90,9 @@ export function jobStatusLabel(status: string): string {
 }
 
 export function channelLabel(channel: NotificationChannel): string {
-	return channel === "email"
-		? m.push_channel_email()
-		: m.push_channel_web_push();
+	if (channel === "email") return m.push_channel_email();
+	if (channel === "cli") return m.push_channel_cli();
+	return m.push_channel_web_push();
 }
 
 export function browserLabel(browserName: string): string {
