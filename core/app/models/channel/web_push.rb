@@ -10,6 +10,12 @@ module Channel::WebPush
   class << self
     def deliver_beep(channel, beep, run: nil)
       send_push(channel, beep.push_payload(run: run))
+      { "subscription_id" => channel.id, "channel_id" => channel.id, "status" => "sent" }
+    rescue ::WebPush::ExpiredSubscription, ::WebPush::InvalidSubscription
+      channel.destroy!
+      { "subscription_id" => channel.id, "channel_id" => channel.id, "status" => "expired" }
+    rescue StandardError => error
+      { "subscription_id" => channel.id, "channel_id" => channel.id, "status" => "error", "error" => error.class.name }
     end
 
     def deliver_test!(channel)

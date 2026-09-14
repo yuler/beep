@@ -12,7 +12,7 @@ class Beep < ApplicationRecord
   belongs_to :account
   belongs_to :source, polymorphic: true, optional: true
   belongs_to :beeper, optional: true
-  has_many :runs, class_name: "BeepRun", dependent: :destroy
+  has_many :runs, class_name: "Beep::Run", dependent: :destroy
 
   enum :kind, %w[ once recurring ].index_by(&:itself)
   enum :status, %w[ active paused completed cancelled firing ].index_by(&:itself)

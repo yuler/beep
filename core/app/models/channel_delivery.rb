@@ -2,7 +2,7 @@ class ChannelDelivery < ApplicationRecord
   DEFAULT_TTL = 30.minutes
 
   belongs_to :channel
-  belongs_to :beep_run, optional: true
+  belongs_to :beep_run, class_name: "Beep::Run", optional: true
 
   enum :status, %w[ pending claimed succeeded failed expired ].index_by(&:itself), default: "pending"
 
