@@ -81,17 +81,11 @@ run = "go test -v ./..."
 
 [tasks."cli:workspace:link"]
 description = "Symlink a beep workspace to .beep in the current repo"
-usage = '''
-arg "[workspace]" help="Workspace directory to link" default=""
-'''
-run = "bash scripts/cli-workspace-link.sh \"${usage_workspace:-}\" .beep"
+run = "bash scripts/cli-workspace-link.sh .beep"
 
 [tasks."cli:workspace:link:local"]
 description = "Symlink a beep workspace to .beep.local in the current repo"
-usage = '''
-arg "[workspace]" help="Workspace directory to link" default=""
-'''
-run = "bash scripts/cli-workspace-link.sh \"${usage_workspace:-}\" .beep.local"
+run = "bash scripts/cli-workspace-link.sh .beep.local"
 
 [tasks."cli:workspace:unlink"]
 description = "Unlink .beep workspace symlink from the current repo"
