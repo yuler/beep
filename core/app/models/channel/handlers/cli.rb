@@ -1,4 +1,4 @@
-module Channel::Cli
+class Channel::Handlers::Cli < Channel::Handlers::Base
   class << self
     def deliver_beep(channel, beep, run: nil)
       expires = (run&.scheduled_for || Time.current) + Channel::Delivery::DEFAULT_TTL
@@ -36,9 +36,6 @@ module Channel::Cli
         },
         expires_at: expires
       )
-    end
-
-    def validate_config(channel)
     end
   end
 end

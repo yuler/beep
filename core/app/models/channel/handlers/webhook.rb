@@ -1,5 +1,5 @@
 # TODO: implement webhook channel delivery and config validation
-module Channel::Webhook
+class Channel::Handlers::Webhook < Channel::Handlers::Base
   class << self
     def deliver_beep(channel, beep, run: nil)
       # TODO: implement webhook delivery

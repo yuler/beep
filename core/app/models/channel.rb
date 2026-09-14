@@ -2,7 +2,12 @@ class Channel < ApplicationRecord
   TOKEN_PREFIX = "beep_ct_" # ct = channel token
   NAME_MAX_LENGTH = 80
   KINDS = %w[ cli email web_push webhook ].freeze
-  PERMITTED_ENDPOINT_HOSTS = Channel::WebPush::PERMITTED_ENDPOINT_HOSTS
+  Cli = Handlers::Cli
+  Email = Handlers::Email
+  WebPush = Handlers::WebPush
+  Webhook = Handlers::Webhook
+
+  PERMITTED_ENDPOINT_HOSTS = Handlers::WebPush::PERMITTED_ENDPOINT_HOSTS
 
   belongs_to :account, default: -> { user&.account }
   belongs_to :user
@@ -27,7 +32,7 @@ class Channel < ApplicationRecord
   scope :for_endpoint, ->(ep) { where("json_extract(config, '$.endpoint') = ?", ep) }
 
   def self.upsert_web_push_for!(user, attributes)
-    Channel::WebPush.upsert_for!(user, attributes)
+    Handlers::WebPush.upsert_for!(user, attributes)
   end
 
   ONLINE_TIMEOUT = 5.minutes
@@ -57,18 +62,11 @@ class Channel < ApplicationRecord
   end
 
   def handler
-    case kind
-    when "web_push" then Channel::WebPush
-    when "cli"      then Channel::Cli
-    when "email"    then Channel::Email
-    when "webhook"  then Channel::Webhook
-    else
-      raise NotImplementedError, "Unhandled channel kind: #{kind}"
-    end
+    Handlers.for(kind)
   end
 
   def resolved_endpoint_ip
-    Channel::WebPush.resolved_endpoint_ip(self)
+    Handlers::WebPush.resolved_endpoint_ip(self)
   end
 
   private

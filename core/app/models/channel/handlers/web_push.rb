@@ -1,4 +1,4 @@
-module Channel::WebPush
+class Channel::Handlers::WebPush < Channel::Handlers::Base
   PERMITTED_ENDPOINT_HOSTS = %w[
     jmt17.google.com
     fcm.googleapis.com
@@ -35,31 +35,36 @@ module Channel::WebPush
     end
 
     def upsert_for!(user, attributes)
-      attrs = attributes.to_h.symbolize_keys
-      endpoint_val = attrs[:endpoint]
-      channel = user.channels.where(kind: :web_push).for_endpoint(endpoint_val).first if endpoint_val.present?
+      # Serialize on the user row: without a unique index on the endpoint
+      # (it lives inside the JSON config), two concurrent upserts for the same
+      # endpoint would both miss and insert duplicates.
+      user.with_lock do
+        attrs = attributes.to_h.symbolize_keys
+        endpoint_val = attrs[:endpoint]
+        channel = user.channels.where(kind: :web_push).for_endpoint(endpoint_val).first if endpoint_val.present?
 
-      name_val = attrs[:name].presence || user_agent_device_name(attrs[:user_agent])
-      config_data = {
-        endpoint: attrs[:endpoint],
-        p256dh_key: attrs[:p256dh_key],
-        auth_key: attrs[:auth_key],
-        user_agent: attrs[:user_agent]
-      }.compact.stringify_keys
+        name_val = attrs[:name].presence || user_agent_device_name(attrs[:user_agent])
+        config_data = {
+          endpoint: attrs[:endpoint],
+          p256dh_key: attrs[:p256dh_key],
+          auth_key: attrs[:auth_key],
+          user_agent: attrs[:user_agent]
+        }.compact.stringify_keys
 
-      if channel
-        channel.assign_attributes(name: name_val, config: channel.config.merge(config_data))
-      else
-        channel = user.channels.new(
-          account: user.account,
-          kind: :web_push,
-          name: name_val,
-          config: config_data
-        )
+        if channel
+          channel.assign_attributes(name: name_val, config: channel.config.merge(config_data))
+        else
+          channel = user.channels.new(
+            account: user.account,
+            kind: :web_push,
+            name: name_val,
+            config: config_data
+          )
+        end
+
+        channel.save!
+        channel
       end
-
-      channel.save!
-      channel
     end
 
     def resolved_endpoint_ip(channel)
@@ -86,10 +91,11 @@ module Channel::WebPush
       def user_agent_device_name(user_agent)
         if user_agent.blank?
           "Browser"
-        elsif user_agent.to_s.start_with?("curl")
-          "curl"
         else
-          user_agent.to_s.truncate(Channel::NAME_MAX_LENGTH)
+          # Store only the product token (e.g. "Mozilla/5.0", "curl/8.1.2"),
+          # not the full UA string: the parenthesized OS/device details are
+          # PII with no value in a channel display name.
+          user_agent.to_s.split.first.to_s.truncate(Channel::NAME_MAX_LENGTH)
         end
       end
 

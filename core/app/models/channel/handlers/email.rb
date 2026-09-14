@@ -1,4 +1,4 @@
-module Channel::Email
+class Channel::Handlers::Email < Channel::Handlers::Base
   class << self
     def deliver_beep(channel, beep, run: nil)
       user = channel.user
@@ -17,9 +17,6 @@ module Channel::Email
       beep = channel.account.beeps.build(title: "Test notification", body: "This is a test notification for Email channel #{channel.name}")
       run = beep.runs.build(scheduled_for: Time.current)
       BeepMailer.beep(run, user: user).deliver_now
-    end
-
-    def validate_config(channel)
     end
   end
 end

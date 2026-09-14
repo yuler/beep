@@ -34,10 +34,17 @@ flowchart TD
 
 ---
 
-## 3. Data model
+## 3. Architecture & Data Model
 
-- **`channels`**: `account_id`, `user_id`, `kind` (`cli`, `email`, `web_push`, `webhook`), `name`, `token` (CLI token / `beep_ct_`), `status` (`active`, `disabled`), `last_seen_at`.
-- **`channel_authorizations`**: `user_id`, `channel_id`, `device_code`, `user_code`, `channel_name`, `status` (`pending`, `approved`, `access_denied`, `expired`), `expires_at`, `last_polled_at` (RFC 8628 OAuth 2.0 Device Flow).
+### Class Hierarchy & Separation
+- **`Channel` (`core/app/models/channel.rb`)**: Core destination entity (`account_id`, `user_id`, `kind`, `name`, `token`, `status`, `config`). Delegates delivery and validation to strategy handlers via `Channel#handler`.
+- **`Channel::Handlers::*` (`core/app/models/channel/handlers/`)**: Protocol adapters implementing delivery and validation (`Handlers::Cli`, `Handlers::Email`, `Handlers::WebPush`, `Handlers::Webhook`).
+- **`Channel::Authorization` (`core/app/models/channel/authorization.rb`)**: RFC 8628 Device Authorization pairing records.
+- **`Channel::Delivery` (`core/app/models/channel/delivery.rb`)**: Delivery status and inbox pull queue records.
+
+### Database Tables
+- **`channels`**: `account_id`, `user_id`, `kind` (`cli`, `email`, `web_push`, `webhook`), `name`, `token` (CLI token / `beep_ct_`), `status` (`active`, `disabled`), `config`, `last_seen_at`.
+- **`channel_authorizations`**: `account_id`, `user_id`, `channel_id`, `device_code`, `user_code`, `channel_name`, `status` (`pending`, `approved`, `access_denied`, `expired`), `expires_at`, `last_polled_at` (RFC 8628 OAuth 2.0 Device Flow).
 - **`channel_deliveries`**: `beep_run_id`, `channel_id`, `status` (`pending` → `claimed` → `succeeded` / `failed` / `expired`), `payload` (JSON), `expires_at`.
 
 ---
