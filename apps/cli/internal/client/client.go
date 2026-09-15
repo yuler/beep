@@ -696,7 +696,6 @@ func (c *Client) PollRunnerDeviceToken(ctx context.Context, deviceCode string) (
 	return nil, fmt.Errorf("token request failed (status %d): %s", resp.StatusCode, string(respBody))
 }
 
-
 func mustJSON(payload any) *bytes.Reader {
 	bodyBytes, _ := json.Marshal(payload)
 	return bytes.NewReader(bodyBytes)

@@ -1,5 +1,5 @@
 package browser
- 
+
 import (
 	"testing"
 )
