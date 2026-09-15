@@ -1,6 +1,6 @@
 # Notification Channel System
 
-The **Channel** system is Beep's notification delivery infrastructure. A Channel is one user-owned destination row. Kinds today: CLI (`beep up`), [Web Push](web-push.md), email, and webhook. Terms: [`TERMS.md`](../TERMS.md).
+The **Channel** system is Beep's notification delivery infrastructure. A Channel is one user-owned destination row. Kinds today: CLI (`beep up`), [Web Push](web-push.md), and email (webhook is planned, not implemented yet). Terms: [`TERMS.md`](../TERMS.md).
 
 ---
 
@@ -43,7 +43,7 @@ flowchart TD
 - **`Channel::Delivery` (`core/app/models/channel/delivery.rb`)**: Delivery status and inbox pull queue records.
 
 ### Database Tables
-- **`channels`**: `account_id`, `user_id`, `kind` (`cli`, `email`, `web_push`, `webhook`), `name`, `token` (CLI token / `beep_ct_`), `status` (`active`, `disabled`), `config`, `last_seen_at`.
+- **`channels`**: `account_id`, `user_id`, `kind` (`cli`, `email`, `web_push`; `webhook` planned, not implemented), `name`, `token` (CLI token / `beep_ct_`), `status` (`active`, `disabled`), `config`, `last_seen_at`.
 - **`channel_authorizations`**: `account_id`, `user_id`, `channel_id`, `device_code`, `user_code`, `channel_name`, `status` (`pending`, `approved`, `access_denied`, `expired`), `expires_at`, `last_polled_at` (RFC 8628 OAuth 2.0 Device Flow).
 - **`channel_deliveries`**: `beep_run_id`, `channel_id`, `status` (`pending` → `claimed` → `succeeded` / `failed` / `expired`), `payload` (JSON), `expires_at`.
 

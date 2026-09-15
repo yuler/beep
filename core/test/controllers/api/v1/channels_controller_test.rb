@@ -64,6 +64,23 @@ class Api::V1::ChannelsControllerTest < ActionDispatch::IntegrationTest
     assert body["token"].start_with?(Channel::TOKEN_PREFIX)
   end
 
+  test "create rejects webhook kind without delivery implementation" do
+    assert_no_difference -> { @account.channels.count } do
+      post "/api/v1/#{@account.slug}/channels",
+        params: {
+          channel: {
+            name: "ops-hook",
+            kind: "webhook"
+          }
+        },
+        headers: { "Authorization" => "Bearer #{@token}" },
+        as: :json
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
+  end
+
   test "destroy removes the channel" do
     channel = @account.channels.create!(
       user: @user,
