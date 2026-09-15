@@ -65,6 +65,7 @@ func TestBeeperListCommand(t *testing.T) {
 			Status:     "active",
 			AlertState: "ok",
 			Cron:       "*/5 * * * *",
+			PingToken:  "beep_pt_supersecret123",
 			BeeperApp: &client.BeeperApp{
 				Slug: "heartbeat-ping",
 				Name: "Heartbeat Ping",
@@ -120,7 +121,7 @@ func TestBeeperListCommand(t *testing.T) {
 		t.Errorf("expected X-Account-Slug header 'team-alpha', got %q", gotHeaderAccount)
 	}
 
-	// 3. With --json
+	// 3. With --json (verify token is masked)
 	flagJSON = true
 	jsonOut, err := captureStdout(func() error {
 		return beeperListCmd.RunE(beeperListCmd, nil)
@@ -134,6 +135,92 @@ func TestBeeperListCommand(t *testing.T) {
 	}
 	if len(parsed) != 1 || parsed[0].ID != "beeper_101" {
 		t.Errorf("unexpected parsed JSON: %+v", parsed)
+	}
+	if parsed[0].PingToken != "beep_pt_••••••••" {
+		t.Errorf("expected masked ping token in list --json, got %q", parsed[0].PingToken)
+	}
+}
+
+func TestBeeperShowCommandTokenMasking(t *testing.T) {
+	mockBeeper := &client.Beeper{
+		ID:        "beeper_202",
+		Title:     "Ping Probe",
+		Status:    "active",
+		PingToken: "beep_pt_supersecret123",
+	}
+
+	_, cleanup := setupBeeperTestEnv(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/me" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"identity": map[string]any{"id": "id_1", "email": "test@example.com"},
+			})
+			return
+		}
+		if r.URL.Path == "/api/v1/beepers/beeper_202" {
+			_ = json.NewEncoder(w).Encode(mockBeeper)
+			return
+		}
+		http.NotFound(w, r)
+	})
+	defer cleanup()
+
+	// 1. Default masked in human show
+	out, err := captureStdout(func() error {
+		return beeperShowCmd.RunE(beeperShowCmd, []string{"beeper_202"})
+	})
+	if err != nil {
+		t.Fatalf("beeper show failed: %v", err)
+	}
+	if !strings.Contains(out, "beep_pt_••••••••") || strings.Contains(out, "supersecret123") {
+		t.Errorf("expected masked token in show, got: %s", out)
+	}
+
+	// 2. Default masked in --json show
+	flagJSON = true
+	jsonOut, err := captureStdout(func() error {
+		return beeperShowCmd.RunE(beeperShowCmd, []string{"beeper_202"})
+	})
+	flagJSON = false
+	if err != nil {
+		t.Fatalf("beeper show --json failed: %v", err)
+	}
+	var maskedBeeper client.Beeper
+	if err := json.Unmarshal([]byte(jsonOut), &maskedBeeper); err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
+	if maskedBeeper.PingToken != "beep_pt_••••••••" {
+		t.Errorf("expected masked token in --json show, got %q", maskedBeeper.PingToken)
+	}
+
+	// 3. Unmasked with --show-token
+	flagBeeperShowToken = true
+	defer func() { flagBeeperShowToken = false }()
+
+	out, err = captureStdout(func() error {
+		return beeperShowCmd.RunE(beeperShowCmd, []string{"beeper_202"})
+	})
+	if err != nil {
+		t.Fatalf("beeper show --show-token failed: %v", err)
+	}
+	if !strings.Contains(out, "beep_pt_supersecret123") {
+		t.Errorf("expected raw token in show --show-token, got: %s", out)
+	}
+
+	// 4. Unmasked in --json with --show-token
+	flagJSON = true
+	jsonOut, err = captureStdout(func() error {
+		return beeperShowCmd.RunE(beeperShowCmd, []string{"beeper_202"})
+	})
+	flagJSON = false
+	if err != nil {
+		t.Fatalf("beeper show --show-token --json failed: %v", err)
+	}
+	var unmaskedBeeper client.Beeper
+	if err := json.Unmarshal([]byte(jsonOut), &unmaskedBeeper); err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
+	if unmaskedBeeper.PingToken != "beep_pt_supersecret123" {
+		t.Errorf("expected raw token in --json show with --show-token, got %q", unmaskedBeeper.PingToken)
 	}
 }
 

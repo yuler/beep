@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 type Beep struct {
@@ -80,7 +81,7 @@ func (c *Client) ListBeeps(ctx context.Context) ([]*Beep, error) {
 }
 
 func (c *Client) GetBeep(ctx context.Context, id string) (*Beep, error) {
-	url := fmt.Sprintf("%s/api/v1/beeps/%s", c.cfg.ServerURL, id)
+	url := fmt.Sprintf("%s/api/v1/beeps/%s", c.cfg.ServerURL, url.PathEscape(id))
 	var beep Beep
 	if err := c.getAuthJSON(ctx, url, &beep); err != nil {
 		return nil, err
@@ -98,12 +99,12 @@ func (c *Client) CreateBeep(ctx context.Context, req *CreateBeepRequest) (*Beep,
 }
 
 func (c *Client) DeleteBeep(ctx context.Context, id string) error {
-	url := fmt.Sprintf("%s/api/v1/beeps/%s", c.cfg.ServerURL, id)
+	url := fmt.Sprintf("%s/api/v1/beeps/%s", c.cfg.ServerURL, url.PathEscape(id))
 	return c.deleteAuth(ctx, url)
 }
 
 func (c *Client) PauseBeep(ctx context.Context, id string) (*Beep, error) {
-	url := fmt.Sprintf("%s/api/v1/beeps/%s/pause", c.cfg.ServerURL, id)
+	url := fmt.Sprintf("%s/api/v1/beeps/%s/pause", c.cfg.ServerURL, url.PathEscape(id))
 	var beep Beep
 	if err := c.postAuthJSON(ctx, url, nil, http.StatusOK, &beep); err != nil {
 		return nil, err
@@ -112,7 +113,7 @@ func (c *Client) PauseBeep(ctx context.Context, id string) (*Beep, error) {
 }
 
 func (c *Client) ResumeBeep(ctx context.Context, id string) (*Beep, error) {
-	url := fmt.Sprintf("%s/api/v1/beeps/%s/pause", c.cfg.ServerURL, id)
+	url := fmt.Sprintf("%s/api/v1/beeps/%s/pause", c.cfg.ServerURL, url.PathEscape(id))
 	var beep Beep
 	if err := c.deleteAuthJSON(ctx, url, &beep); err != nil {
 		return nil, err
@@ -121,7 +122,7 @@ func (c *Client) ResumeBeep(ctx context.Context, id string) (*Beep, error) {
 }
 
 func (c *Client) RunBeep(ctx context.Context, id string) (*BeepRun, error) {
-	url := fmt.Sprintf("%s/api/v1/beeps/%s/runs", c.cfg.ServerURL, id)
+	url := fmt.Sprintf("%s/api/v1/beeps/%s/runs", c.cfg.ServerURL, url.PathEscape(id))
 	var run BeepRun
 	if err := c.postAuthJSON(ctx, url, nil, http.StatusCreated, &run); err != nil {
 		return nil, err

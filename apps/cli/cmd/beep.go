@@ -207,6 +207,17 @@ var beepCreateCmd = &cobra.Command{
 	Short: "Create a reminder beep",
 	Long: `Create a reminder beep.
 
+Scheduling modes (mutually exclusive):
+  - Instant (default): fires immediately when no schedule flags are provided
+  - Relative delay:    --in (e.g. 15m, 2h, 1d)
+  - Specific datetime: --at (e.g. 16:30, "2026-10-01 10:00")
+  - Recurring cron:    --cron (e.g. "0 10 * * 1-5")
+  - AI natural:        --natural / -n (e.g. "remind me in 30 minutes to drink water")
+
+Note: --cron, --in, --at, and --natural are mutually exclusive.
+When using --json, interactive confirmation is skipped.
+Optional --body and --channels can also be combined with --natural to supplement proposal fields.
+
 Examples:
   # Instant reminder (fires immediately)
   beep beep create "Deploy finished"
@@ -362,7 +373,8 @@ func handleNaturalBeepCreate(ctx context.Context, c *client.Client, prompt, tz s
 		return fmt.Errorf("could not understand reminder: %s", strings.Join(proposal.Errors, ", "))
 	}
 
-	if !flagNoInteractive && ui.IsInteractive() {
+	// In interactive mode, confirm proposal unless --json or --no-interactive is passed.
+	if !flagNoInteractive && !flagJSON && ui.IsInteractive() {
 		fmt.Println()
 		fmt.Printf("  %s %s\n", ui.Bold("AI Proposal:"), ui.Cyan(proposal.Title))
 		if proposal.Body != "" {
@@ -391,13 +403,26 @@ func handleNaturalBeepCreate(ctx context.Context, c *client.Client, prompt, tz s
 		}
 	}
 
+	body := proposal.Body
+	if flagBeepBody != "" {
+		body = flagBeepBody
+	}
+
 	req := &client.CreateBeepRequest{
 		Title:    proposal.Title,
-		Body:     proposal.Body,
+		Body:     body,
 		Kind:     proposal.Kind,
 		Cron:     proposal.Cron,
 		RunAt:    proposal.RunAt,
 		Timezone: proposal.Timezone,
+	}
+
+	if flagBeepChannels != "" {
+		for _, ch := range strings.Split(flagBeepChannels, ",") {
+			if trimmed := strings.TrimSpace(ch); trimmed != "" {
+				req.NotificationChannels = append(req.NotificationChannels, trimmed)
+			}
+		}
 	}
 
 	b, err := c.CreateBeep(ctx, req)
@@ -476,7 +501,10 @@ var beepPauseCmd = &cobra.Command{
 		}
 
 		if flagJSON {
-			data, _ := json.MarshalIndent(b, "", "  ")
+			data, err := json.MarshalIndent(b, "", "  ")
+			if err != nil {
+				return err
+			}
 			fmt.Println(string(data))
 			return nil
 		}
@@ -510,7 +538,10 @@ var beepResumeCmd = &cobra.Command{
 		}
 
 		if flagJSON {
-			data, _ := json.MarshalIndent(b, "", "  ")
+			data, err := json.MarshalIndent(b, "", "  ")
+			if err != nil {
+				return err
+			}
 			fmt.Println(string(data))
 			return nil
 		}
@@ -545,7 +576,10 @@ var beepRunCmd = &cobra.Command{
 		}
 
 		if flagJSON {
-			data, _ := json.MarshalIndent(run, "", "  ")
+			data, err := json.MarshalIndent(run, "", "  ")
+			if err != nil {
+				return err
+			}
 			fmt.Println(string(data))
 			return nil
 		}
@@ -646,6 +680,7 @@ func init() {
 	beepCreateCmd.Flags().StringVarP(&flagBeepTimezone, "timezone", "z", "", "Timezone (defaults to local timezone)")
 	beepCreateCmd.Flags().StringVar(&flagBeepChannels, "channels", "", "Comma-separated notification channel names or IDs")
 	beepCreateCmd.Flags().StringVarP(&flagBeepNatural, "natural", "n", "", "Natural language reminder prompt parsed by AI")
+	beepCreateCmd.MarkFlagsMutuallyExclusive("cron", "in", "at", "natural")
 
 	beepCmd.AddCommand(beepListCmd)
 	beepCmd.AddCommand(beepShowCmd)

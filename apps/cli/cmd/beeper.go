@@ -19,14 +19,45 @@ import (
 )
 
 var (
-	flagBeeperApp      string
-	flagBeeperTitle    string
-	flagBeeperBody     string
-	flagBeeperCron     string
-	flagBeeperTimezone string
-	flagBeeperChannels string
-	flagBeeperConfigs  []string
+	flagBeeperApp       string
+	flagBeeperTitle     string
+	flagBeeperBody      string
+	flagBeeperCron      string
+	flagBeeperTimezone  string
+	flagBeeperChannels  string
+	flagBeeperConfigs   []string
+	flagBeeperShowToken bool
 )
+
+func maskToken(tok string) string {
+	if tok == "" {
+		return ""
+	}
+	if len(tok) <= 8 {
+		return "••••••••"
+	}
+	prefix := tok[:min(len(tok), 8)]
+	return prefix + "••••••••"
+}
+
+func redactBeeper(b *client.Beeper, revealToken bool) *client.Beeper {
+	if b == nil {
+		return nil
+	}
+	clone := *b
+	if !revealToken {
+		clone.PingToken = maskToken(clone.PingToken)
+	}
+	return &clone
+}
+
+func redactBeepers(list []*client.Beeper, revealToken bool) []*client.Beeper {
+	res := make([]*client.Beeper, len(list))
+	for i, b := range list {
+		res[i] = redactBeeper(b, revealToken)
+	}
+	return res
+}
 
 var beeperCmd = &cobra.Command{
 	Use:     "beeper",
@@ -62,7 +93,8 @@ var beeperListCmd = &cobra.Command{
 		}
 
 		if flagJSON {
-			data, err := json.MarshalIndent(beepers, "", "  ")
+			redacted := redactBeepers(beepers, false)
+			data, err := json.MarshalIndent(redacted, "", "  ")
 			if err != nil {
 				return err
 			}
@@ -126,7 +158,11 @@ var beeperListCmd = &cobra.Command{
 var beeperShowCmd = &cobra.Command{
 	Use:   "show <id>",
 	Short: "Show details of a monitor beeper",
-	Args:  cobra.ExactArgs(1),
+	Long: `Show details of a monitor beeper.
+
+Note: By default, sensitive tokens like ping_token are masked (e.g. beep_pt_••••••••).
+Pass --show-token to display the unmasked token in human view or --json output.`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -147,7 +183,7 @@ var beeperShowCmd = &cobra.Command{
 		}
 
 		if flagJSON {
-			data, err := json.MarshalIndent(b, "", "  ")
+			data, err := json.MarshalIndent(redactBeeper(b, flagBeeperShowToken), "", "  ")
 			if err != nil {
 				return err
 			}
@@ -171,7 +207,11 @@ var beeperShowCmd = &cobra.Command{
 			fmt.Println(ui.KeyValue("Failures", fmt.Sprintf("%d consecutive", b.ConsecutiveFailures)))
 		}
 		if b.PingToken != "" {
-			fmt.Println(ui.KeyValue("Ping Token", ui.Yellow(b.PingToken)))
+			tokDisplay := maskToken(b.PingToken)
+			if flagBeeperShowToken {
+				tokDisplay = b.PingToken
+			}
+			fmt.Println(ui.KeyValue("Ping Token", ui.Yellow(tokDisplay)))
 		}
 		if b.LastPingAt != "" {
 			fmt.Println(ui.KeyValue("Last Ping", b.LastPingAt))
@@ -277,6 +317,9 @@ var beeperCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create and install a monitor beeper",
 	Long: `Create and install a monitor probe beeper.
+
+Note: The raw ping token is displayed once upon creation so you can configure your endpoint.
+Subsequent 'list' and 'show' commands mask the token by default (use 'beep beeper show <id> --show-token' to view unmasked).
 
 Examples:
   # Create a heartbeat ping probe
@@ -524,7 +567,10 @@ var beeperPauseCmd = &cobra.Command{
 		}
 
 		if flagJSON {
-			data, _ := json.MarshalIndent(b, "", "  ")
+			data, err := json.MarshalIndent(redactBeeper(b, flagBeeperShowToken), "", "  ")
+			if err != nil {
+				return err
+			}
 			fmt.Println(string(data))
 			return nil
 		}
@@ -558,7 +604,10 @@ var beeperResumeCmd = &cobra.Command{
 		}
 
 		if flagJSON {
-			data, _ := json.MarshalIndent(b, "", "  ")
+			data, err := json.MarshalIndent(redactBeeper(b, flagBeeperShowToken), "", "  ")
+			if err != nil {
+				return err
+			}
 			fmt.Println(string(data))
 			return nil
 		}
@@ -592,7 +641,10 @@ var beeperRunCmd = &cobra.Command{
 		}
 
 		if flagJSON {
-			data, _ := json.MarshalIndent(run, "", "  ")
+			data, err := json.MarshalIndent(run, "", "  ")
+			if err != nil {
+				return err
+			}
 			fmt.Println(string(data))
 			return nil
 		}
@@ -695,6 +747,8 @@ func init() {
 	beeperCreateCmd.Flags().StringVarP(&flagBeeperTimezone, "timezone", "z", "", "Timezone (defaults to local timezone)")
 	beeperCreateCmd.Flags().StringVar(&flagBeeperChannels, "channels", "", "Comma-separated notification channel names or IDs")
 	beeperCreateCmd.Flags().StringSliceVar(&flagBeeperConfigs, "config", nil, "Configuration parameters in key=value format (repeatable)")
+
+	beeperShowCmd.Flags().BoolVar(&flagBeeperShowToken, "show-token", false, "Display unmasked ping token (defaults to masked for security)")
 
 	beeperCmd.AddCommand(beeperListCmd)
 	beeperCmd.AddCommand(beeperShowCmd)

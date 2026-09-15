@@ -212,6 +212,17 @@ func TestBeepCreateCommand(t *testing.T) {
 			})
 			return
 		}
+		if r.URL.Path == "/api/v1/beep_proposals" && r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(&client.BeepProposal{
+				Title:       "check database backup",
+				Kind:        "once",
+				RunAt:       "2026-09-15T18:00:00Z",
+				Timezone:    "UTC",
+				Confirmable: true,
+			})
+			return
+		}
 		http.NotFound(w, r)
 	})
 	defer cleanup()
@@ -254,6 +265,37 @@ func TestBeepCreateCommand(t *testing.T) {
 	}
 	if receivedBody.Title != "Cron Test" || receivedBody.Kind != "recurring" || receivedBody.Cron != "*/5 * * * *" {
 		t.Errorf("unexpected cron create request: %+v", receivedBody)
+	}
+
+	// 4. Natural create with --json, merging --body and --channels
+	flagBeepNatural = "check database backup"
+	flagBeepBody = "Custom body"
+	flagBeepChannels = "slack,email"
+	flagJSON = true
+	_, err = captureStdout(func() error {
+		return beepCreateCmd.RunE(beepCreateCmd, nil)
+	})
+	flagBeepNatural = ""
+	flagBeepBody = ""
+	flagBeepChannels = ""
+	flagJSON = false
+	if err != nil {
+		t.Fatalf("natural create with --json failed: %v", err)
+	}
+	if receivedBody.Body != "Custom body" || len(receivedBody.NotificationChannels) != 2 {
+		t.Errorf("expected merged body and channels in natural create, got: %+v", receivedBody)
+	}
+}
+
+func TestBeepCreateMutuallyExclusiveFlags(t *testing.T) {
+	cmd := RootCmd
+	cmd.SetArgs([]string{"beep", "create", "Conflict Test", "--cron", "0 * * * *", "--in", "10m"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatalf("expected mutually exclusive error for --cron and --in, got nil")
+	}
+	if !strings.Contains(err.Error(), "none of the others can be") && !strings.Contains(err.Error(), "mutually exclusive") {
+		t.Errorf("unexpected error message: %v", err)
 	}
 }
 

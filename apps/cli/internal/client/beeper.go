@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 type BeeperAppInput struct {
@@ -100,7 +101,7 @@ func (c *Client) ListBeeperApps(ctx context.Context) ([]*BeeperApp, error) {
 }
 
 func (c *Client) GetBeeperApp(ctx context.Context, slug string) (*BeeperApp, error) {
-	url := fmt.Sprintf("%s/api/v1/beeper_apps/%s", c.cfg.ServerURL, slug)
+	url := fmt.Sprintf("%s/api/v1/beeper_apps/%s", c.cfg.ServerURL, url.PathEscape(slug))
 	var app BeeperApp
 	if err := c.getAuthJSON(ctx, url, &app); err != nil {
 		return nil, err
@@ -118,7 +119,7 @@ func (c *Client) ListBeepers(ctx context.Context) ([]*Beeper, error) {
 }
 
 func (c *Client) GetBeeper(ctx context.Context, id string) (*Beeper, error) {
-	url := fmt.Sprintf("%s/api/v1/beepers/%s", c.cfg.ServerURL, id)
+	url := fmt.Sprintf("%s/api/v1/beepers/%s", c.cfg.ServerURL, url.PathEscape(id))
 	var beeper Beeper
 	if err := c.getAuthJSON(ctx, url, &beeper); err != nil {
 		return nil, err
@@ -136,12 +137,12 @@ func (c *Client) CreateBeeper(ctx context.Context, req *CreateBeeperRequest) (*B
 }
 
 func (c *Client) DeleteBeeper(ctx context.Context, id string) error {
-	url := fmt.Sprintf("%s/api/v1/beepers/%s", c.cfg.ServerURL, id)
+	url := fmt.Sprintf("%s/api/v1/beepers/%s", c.cfg.ServerURL, url.PathEscape(id))
 	return c.deleteAuth(ctx, url)
 }
 
 func (c *Client) PauseBeeper(ctx context.Context, id string) (*Beeper, error) {
-	url := fmt.Sprintf("%s/api/v1/beepers/%s/pause", c.cfg.ServerURL, id)
+	url := fmt.Sprintf("%s/api/v1/beepers/%s/pause", c.cfg.ServerURL, url.PathEscape(id))
 	var beeper Beeper
 	if err := c.postAuthJSON(ctx, url, nil, http.StatusOK, &beeper); err != nil {
 		return nil, err
@@ -150,7 +151,7 @@ func (c *Client) PauseBeeper(ctx context.Context, id string) (*Beeper, error) {
 }
 
 func (c *Client) ResumeBeeper(ctx context.Context, id string) (*Beeper, error) {
-	url := fmt.Sprintf("%s/api/v1/beepers/%s/pause", c.cfg.ServerURL, id)
+	url := fmt.Sprintf("%s/api/v1/beepers/%s/pause", c.cfg.ServerURL, url.PathEscape(id))
 	var beeper Beeper
 	if err := c.deleteAuthJSON(ctx, url, &beeper); err != nil {
 		return nil, err
@@ -159,7 +160,7 @@ func (c *Client) ResumeBeeper(ctx context.Context, id string) (*Beeper, error) {
 }
 
 func (c *Client) RunBeeper(ctx context.Context, id string) (*BeeperRun, error) {
-	url := fmt.Sprintf("%s/api/v1/beepers/%s/runs", c.cfg.ServerURL, id)
+	url := fmt.Sprintf("%s/api/v1/beepers/%s/runs", c.cfg.ServerURL, url.PathEscape(id))
 	var run BeeperRun
 	if err := c.postAuthJSON(ctx, url, nil, http.StatusCreated, &run); err != nil {
 		return nil, err
@@ -168,7 +169,7 @@ func (c *Client) RunBeeper(ctx context.Context, id string) (*BeeperRun, error) {
 }
 
 func (c *Client) ListBeeperRuns(ctx context.Context, id string) ([]*BeeperRun, error) {
-	url := fmt.Sprintf("%s/api/v1/beepers/%s/runs", c.cfg.ServerURL, id)
+	url := fmt.Sprintf("%s/api/v1/beepers/%s/runs", c.cfg.ServerURL, url.PathEscape(id))
 	var res listBeeperRunsResponse
 	if err := c.getAuthJSON(ctx, url, &res); err != nil {
 		return nil, err
