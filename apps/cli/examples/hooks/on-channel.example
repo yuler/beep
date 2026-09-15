@@ -3,7 +3,8 @@
 #
 # Beeps and channel tests both arrive as ChannelDelivery on this inbox.
 # `beep up` always execs this file (see docs/architecture/channel.md §5).
-# Branch on BEEP_EVENT inside the script; the CLI does not pick a second hook.
+# If BEEP_EVENT_INTENT is set, it dispatches to hooks/on-channel-$intent
+# (or hooks/on-channel-<kebab-case-intent>) when available.
 #
 # Install (workspace root is ~/.beep.local for local dev, ~/.beep for prod):
 #   cp apps/cli/examples/hooks/on-channel.example ~/.beep.local/hooks/on-channel
@@ -21,16 +22,42 @@
 #   BEEP_EVENT_SOURCE      Origin slug: runner_job | beeper | beep
 #   BEEP_EVENT_SOURCE_TYPE Polymorphic class, or empty
 #   BEEP_EVENT_SOURCE_ID   Unique ID of the trigger source
-#   BEEP_EVENT_INTENT      Business tag: get_off_work | alert | recovery | ...
+#   BEEP_EVENT_INTENT      Optional tag you set (any string; e.g. get_off_work)
 #   BEEP_EVENT_JSON        Complete delivery payload as a JSON string
 #   BEEP_EVENT_ID          Unique delivery ID
 #   BEEP_EVENT_TITLE       Notification title
 set -euo pipefail
 
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo "[on-channel] event=${BEEP_EVENT:-} source=${BEEP_EVENT_SOURCE:-} intent=${BEEP_EVENT_INTENT:-} id=${BEEP_EVENT_ID:-} title=${BEEP_EVENT_TITLE:-}"
 printf 'BEEP_EVENT_JSON=%s\n' "${BEEP_EVENT_JSON:-}"
 if command -v jq >/dev/null 2>&1 && [ -n "${BEEP_EVENT_JSON:-}" ]; then
   printf '%s\n' "${BEEP_EVENT_JSON}" | jq .
+fi
+
+# Intent-based dispatch: try on-channel-${intent}
+if [ -n "${BEEP_EVENT_INTENT:-}" ]; then
+  intent="${BEEP_EVENT_INTENT}"
+  kebab_intent="${intent//_/-}"
+  target_hook=""
+
+  if [ -e "${HOOK_DIR}/on-channel-${kebab_intent}" ]; then
+    target_hook="${HOOK_DIR}/on-channel-${kebab_intent}"
+  elif [ -e "${HOOK_DIR}/on-channel-${intent}" ]; then
+    target_hook="${HOOK_DIR}/on-channel-${intent}"
+  fi
+
+  if [ -n "$target_hook" ]; then
+    if [ -x "$target_hook" ] && [ ! -d "$target_hook" ]; then
+      echo "[on-channel] [INFO] Dispatching to intent hook: ${target_hook}"
+      exec "$target_hook" "$@"
+    else
+      echo "[on-channel] [WARN] Intent hook exists but is not executable: ${target_hook}, continuing default flow..." >&2
+    fi
+  else
+    echo "[on-channel] [WARN] Hook for intent '${intent}' not found (${HOOK_DIR}/on-channel-${kebab_intent}), continuing default flow..." >&2
+  fi
 fi
 
 case "${BEEP_EVENT:-}" in
@@ -40,10 +67,7 @@ case "${BEEP_EVENT:-}" in
   beep.*)
     case "${BEEP_EVENT_SOURCE:-beep}" in
       runner_job)
-        if [[ "${BEEP_EVENT_INTENT:-}" == "get_off_work" ]]; then
-          echo "[on-channel] Triggering offwork local action..."
-          # ~/.local/bin/offwork-action.sh &
-        fi
+        echo "[on-channel] Runner job: ${BEEP_EVENT_TITLE:-}"
         ;;
       beeper)
         echo "[on-channel] Beeper alert/recovery: ${BEEP_EVENT_TITLE:-}"

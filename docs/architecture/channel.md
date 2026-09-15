@@ -106,7 +106,7 @@ Environment variables:
 - `BEEP_EVENT_SOURCE`: Origin source slug (`runner_job`, `beeper`, `beep`).
 - `BEEP_EVENT_SOURCE_TYPE`: Polymorphic origin class (e.g. `Runner::Job`, `Beeper`, or empty).
 - `BEEP_EVENT_SOURCE_ID`: Unique ID of the trigger source.
-- `BEEP_EVENT_INTENT`: Business intent tag (e.g. `get_off_work`, `alert`, `recovery`, `reminder`).
+- `BEEP_EVENT_INTENT`: Optional free-form tag you set (example: `get_off_work`).
 - `BEEP_EVENT_JSON`: Complete event payload JSON string.
 - `BEEP_EVENT_ID`: Unique delivery ID.
 - `BEEP_EVENT_TITLE`: Notification title.
