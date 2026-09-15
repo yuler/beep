@@ -823,4 +823,3 @@ func PromptAccountSelect(accounts []client.MeAccount, defaultSlug string) (strin
 	}
 	return choice, nil
 }
-
