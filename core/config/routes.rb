@@ -67,6 +67,13 @@ Rails.application.routes.draw do
         resources :access_tokens, only: %i[ index create destroy ]
       end
 
+      namespace :cli do
+        resources :authorizations, param: :user_code, only: %i[ create show update destroy ]
+        namespace :authorizations do
+          resource :token, only: :create
+        end
+      end
+
       resource :web_push, only: :show, controller: "web_push"
       resources :push_subscriptions, only: %i[ index create destroy ] do
         scope module: :push_subscriptions do

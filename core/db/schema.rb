@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_14_170000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_15_100000) do
   create_table "account_charges", id: :uuid, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.uuid "subscription_id"
@@ -299,6 +299,24 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_14_170000) do
     t.index ["user_id"], name: "index_channels_on_user_id"
   end
 
+  create_table "cli_authorizations", id: :uuid, force: :cascade do |t|
+    t.uuid "identity_id"
+    t.uuid "access_token_id"
+    t.string "device_code", null: false
+    t.string "user_code", null: false
+    t.string "client_name"
+    t.string "status", default: "pending", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "last_polled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["access_token_id"], name: "index_cli_authorizations_on_access_token_id"
+    t.index ["device_code"], name: "index_cli_authorizations_on_device_code", unique: true
+    t.index ["expires_at"], name: "index_cli_authorizations_on_expires_at"
+    t.index ["identity_id"], name: "index_cli_authorizations_on_identity_id"
+    t.index ["user_code"], name: "index_cli_authorizations_on_user_code", unique: true
+  end
+
   create_table "identities", id: :uuid, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email", null: false
@@ -476,6 +494,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_14_170000) do
   add_foreign_key "channel_deliveries", "channels"
   add_foreign_key "channels", "accounts"
   add_foreign_key "channels", "users"
+  add_foreign_key "cli_authorizations", "identities"
+  add_foreign_key "cli_authorizations", "identity_access_tokens", column: "access_token_id"
   add_foreign_key "identity_access_tokens", "identities"
   add_foreign_key "push_subscriptions", "accounts"
   add_foreign_key "push_subscriptions", "users"
