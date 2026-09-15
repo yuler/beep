@@ -18,6 +18,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { CopyableCode, useCopyToClipboard } from "@/components/ui/copy-button";
 import {
 	fetchRunners,
 	type Runner,
@@ -46,6 +47,7 @@ function RunnersPage() {
 	const [revealedRunner, setRevealedRunner] = useState<RunnerWithToken | null>(
 		null,
 	);
+	const { copied: connectCopied, copy: copyConnect } = useCopyToClipboard();
 
 	function handleOpenAdd() {
 		setEditingRunner(null);
@@ -129,17 +131,19 @@ function RunnersPage() {
 						<Card className="p-4 sm:p-6">
 							<CardHeader className="p-0 pb-3">
 								<CardTitle className="text-sm font-semibold">
-									Connect via CLI
+									{m.runners_tab_connect()}
 								</CardTitle>
 								<CardDescription className="text-xs">
-									Authorize and register your machine automatically using the
-									device code flow:
+									{m.runners_connect_desc()}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="p-0">
-								<div className="rounded-lg bg-muted p-3 font-mono text-xs select-all">
-									beep runner connect
-								</div>
+								<CopyableCode
+									code="beep runner connect"
+									copied={connectCopied}
+									onCopy={() => copyConnect("beep runner connect")}
+									label={m.runners_copy()}
+								/>
 							</CardContent>
 						</Card>
 					</div>
