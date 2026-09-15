@@ -48,6 +48,7 @@ func init() {
 	RootCmd.AddCommand(newStatusCmd())
 
 	// Top-level subcommands
+	RootCmd.AddCommand(authCmd)
 	RootCmd.AddCommand(runnerCmd)
 	RootCmd.AddCommand(channelCmd)
 	RootCmd.AddCommand(configCmd)

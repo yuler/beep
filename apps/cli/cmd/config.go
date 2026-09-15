@@ -83,6 +83,10 @@ var configSetCmd = &cobra.Command{
 					fc.AccountSlug = strings.TrimSpace(val)
 					updated = true
 					i++
+				case "auth_token", "auth-token", "user_token", "user-token":
+					fc.AuthToken = val
+					updated = true
+					i++
 				case "token", "runner_token", "runner-token", "auth":
 					fc.RunnerToken = val
 					updated = true
@@ -170,6 +174,10 @@ var configUnsetCmd = &cobra.Command{
 			fc.ServerURL = ""
 		case "account", "account_slug", "account-slug", "slug":
 			fc.AccountSlug = ""
+		case "auth_token", "auth-token", "user_token", "user-token":
+			fc.AuthToken = ""
+			fc.UserEmail = ""
+			fc.UserName = ""
 		case "token", "runner_token", "runner-token":
 			fc.RunnerToken = ""
 		case "channel_token", "channel-token", "channel", "cli_token", "device_token":
@@ -237,6 +245,20 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	fmt.Println(ui.KeyValue("Server URL", ui.Bold(cfg.ServerURL)))
 	if cfg.AccountSlug != "" {
 		fmt.Println(ui.KeyValue("Account Slug", ui.Bold(cfg.AccountSlug)))
+	}
+	if cfg.AuthToken != "" {
+		authTokenStr := config.MaskToken(cfg.AuthToken)
+		if flagShowToken {
+			authTokenStr = cfg.AuthToken
+		}
+		displayName := cfg.UserEmail
+		if cfg.UserName != "" {
+			displayName = fmt.Sprintf("%s (%s)", cfg.UserName, cfg.UserEmail)
+		}
+		if displayName != "" {
+			fmt.Println(ui.KeyValue("Logged In As", ui.Green(displayName)))
+		}
+		fmt.Println(ui.KeyValue("Auth Token", ui.Yellow(authTokenStr)))
 	}
 	fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(tokenStr)))
 	if cfg.ChannelToken != "" {

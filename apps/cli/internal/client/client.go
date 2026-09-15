@@ -341,6 +341,16 @@ func (c *Client) setChannelHeaders(req *http.Request) {
 	}
 }
 
+func (c *Client) setAuthHeaders(req *http.Request) {
+	c.setBaseHeaders(req)
+	if c.cfg.AuthToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.cfg.AuthToken)
+	}
+	if c.cfg.AccountSlug != "" {
+		req.Header.Set("X-Account-Slug", c.cfg.AccountSlug)
+	}
+}
+
 func (c *Client) setHeaders(req *http.Request) {
 	c.setRunnerHeaders(req)
 }
@@ -535,7 +545,7 @@ func (c *Client) RequestDeviceAuthorization(ctx context.Context, channelName, ac
 	if err != nil {
 		return nil, err
 	}
-	c.setBaseHeaders(req)
+	c.setAuthHeaders(req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -642,7 +652,7 @@ func (c *Client) RequestRunnerDeviceAuthorization(ctx context.Context, runnerNam
 	if err != nil {
 		return nil, err
 	}
-	c.setBaseHeaders(req)
+	c.setAuthHeaders(req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -699,4 +709,131 @@ func (c *Client) PollRunnerDeviceToken(ctx context.Context, deviceCode string) (
 func mustJSON(payload any) *bytes.Reader {
 	bodyBytes, _ := json.Marshal(payload)
 	return bytes.NewReader(bodyBytes)
+}
+
+type MeIdentity struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Name  string `json:"name"`
+	Staff bool   `json:"staff"`
+}
+
+type MeAccount struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Slug     string `json:"slug"`
+	Personal bool   `json:"personal"`
+}
+
+type MeResponse struct {
+	Identity        MeIdentity  `json:"identity"`
+	Accounts        []MeAccount `json:"accounts"`
+	LastAccountSlug string      `json:"last_account_slug"`
+}
+
+func (c *Client) GetMe(ctx context.Context) (*MeResponse, error) {
+	url := fmt.Sprintf("%s/api/v1/me", c.cfg.ServerURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	c.setAuthHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("authentication token is invalid or expired (status 401)")
+	}
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to fetch user profile (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var me MeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&me); err != nil {
+		return nil, err
+	}
+	return &me, nil
+}
+
+type CliTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	User        struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+		Name  string `json:"name"`
+	} `json:"user"`
+	AccountSlug string `json:"account_slug"`
+}
+
+func (c *Client) RequestCliDeviceAuthorization(ctx context.Context, clientName string) (*DeviceAuthorizationResponse, error) {
+	url := fmt.Sprintf("%s/api/v1/cli/authorizations", c.cfg.ServerURL)
+	payload := map[string]any{
+		"client_name": clientName,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setBaseHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var res DeviceAuthorizationResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) PollCliDeviceToken(ctx context.Context, deviceCode string) (*CliTokenResponse, error) {
+	reqURL := fmt.Sprintf("%s/api/v1/cli/authorizations/token", c.cfg.ServerURL)
+	payload := map[string]any{
+		"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
+		"device_code": deviceCode,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setBaseHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK {
+		var tokenRes CliTokenResponse
+		if err := json.Unmarshal(respBody, &tokenRes); err != nil {
+			return nil, err
+		}
+		return &tokenRes, nil
+	}
+
+	var oauthErr OAuthErrorResponse
+	if err := json.Unmarshal(respBody, &oauthErr); err == nil && oauthErr.ErrorCode != "" {
+		return nil, &oauthErr
+	}
+
+	return nil, fmt.Errorf("token request failed (status %d): %s", resp.StatusCode, string(respBody))
 }

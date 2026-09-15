@@ -122,6 +122,13 @@ func newRunnerConnectCmd() *cobra.Command {
 				return fmt.Errorf("server URL is not configured (set via BEEP_SERVER or 'beep config set server <url>')")
 			}
 
+			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+			defer cancel()
+
+			if err := ensureLoggedIn(ctx, cfg); err != nil {
+				return err
+			}
+
 			accountSlug := strings.TrimSpace(account)
 			if accountSlug == "" {
 				accountSlug = cfg.AccountSlug
@@ -139,8 +146,6 @@ func newRunnerConnectCmd() *cobra.Command {
 			}
 
 			c := client.New(cfg)
-			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-			defer cancel()
 
 			runnerName := name
 			if runnerName == "" {
