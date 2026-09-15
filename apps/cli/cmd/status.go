@@ -130,6 +130,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	if cfg.ServerURL != "" {
 		fmt.Println(ui.KeyValue("Server", ui.Bold(cfg.ServerURL)))
 	}
+	printAuthStatus(cfg)
 	fmt.Println()
 
 	// Runner Section
@@ -187,4 +188,27 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func printAuthStatus(cfg *config.Config) {
+	if cfg.IsLoggedIn() {
+		fmt.Println(ui.KeyValue("Auth", ui.Green("logged in")+" "+ui.Green("●")))
+		user := cfg.UserEmail
+		if cfg.UserName != "" && cfg.UserEmail != "" {
+			user = fmt.Sprintf("%s (%s)", cfg.UserName, cfg.UserEmail)
+		} else if cfg.UserName != "" {
+			user = cfg.UserName
+		}
+		if user != "" {
+			fmt.Println(ui.KeyValue("User", ui.Cyan(user)))
+		}
+		if cfg.AccountSlug != "" {
+			fmt.Println(ui.KeyValue("Account", ui.Yellow(cfg.AccountSlug)))
+		}
+		if cfg.AccessToken != "" {
+			fmt.Println(ui.KeyValue("Token", ui.Yellow(config.MaskToken(cfg.AccessToken))))
+		}
+	} else {
+		fmt.Println(ui.KeyValue("Auth", ui.Dim("not logged in")+" "+ui.Dim("○")))
+	}
 }
