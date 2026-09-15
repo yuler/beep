@@ -3,6 +3,8 @@ class Identity::AccessToken < ApplicationRecord
 
   belongs_to :identity
 
+  has_many :cli_authorizations, class_name: "Cli::Authorization", foreign_key: :access_token_id, dependent: :nullify
+
   has_secure_token :token, prefix: TOKEN_PREFIX
 
   enum :permission, %w[ read write ].index_by(&:itself), default: "write"
