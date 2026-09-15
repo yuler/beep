@@ -153,7 +153,11 @@ class Beep < ApplicationRecord
   end
 
   def web_url
-    "#{Rails.application.config.x.web_origin}/#{account.slug}/beeps/#{id}"
+    if persisted?
+      "#{Rails.application.config.x.web_origin}/#{account.slug}/beeps/#{id}"
+    else
+      "#{Rails.application.config.x.web_origin}/#{account.slug}/settings/channels"
+    end
   end
 
   def recipient_users

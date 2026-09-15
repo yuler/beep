@@ -1,5 +1,6 @@
 class Channel::Delivery < ApplicationRecord
   DEFAULT_TTL = 30.minutes
+  CLAIM_TIMEOUT = 5.minutes
 
   belongs_to :channel
   belongs_to :beep_run, class_name: "Beep::Run", optional: true
@@ -12,9 +13,15 @@ class Channel::Delivery < ApplicationRecord
 
   scope :due_for_cli, -> { pending.where(expires_at: Time.current..) }
   scope :stale_pending, -> { pending.where(expires_at: ...Time.current) }
+  scope :stale_claimed, -> { claimed.where(expires_at: Time.current..).where("claimed_at < ?", CLAIM_TIMEOUT.ago) }
+  scope :expired_candidates, -> { where(status: %w[ pending claimed ]).where(expires_at: ...Time.current) }
 
   def self.expire_stale!
-    stale_pending.update_all(status: "expired", updated_at: Time.current)
+    expired_candidates.update_all(status: "expired", updated_at: Time.current)
+  end
+
+  def self.reclaim_stale!
+    stale_claimed.update_all(status: "pending", claimed_at: nil, updated_at: Time.current)
   end
 
   def expired?

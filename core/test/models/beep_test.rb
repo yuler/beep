@@ -147,6 +147,12 @@ class BeepTest < ActiveSupport::TestCase
     assert_equal beep.web_url, payload.dig(:options, :data, :url)
   end
 
+  test "web_url returns settings/channels path when beep is unpersisted" do
+    beep = @account.beeps.build(title: "Test notification")
+    assert_includes beep.web_url, "/#{@account.slug}/settings/channels"
+    assert_not_includes beep.web_url, "/beeps/"
+  end
+
   test "push payload omits body when the beep has none" do
     beep = Beep.create!(
       account: @account,

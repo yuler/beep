@@ -20,4 +20,17 @@ class PruneRunnerAuthorizationsJobTest < ActiveJob::TestCase
 
     assert_equal "access_denied", auth.reload.status
   end
+
+  test "prunes terminal authorizations older than retention period" do
+    old_auth = Runner::Authorization.create_request!(runner_name: "VeryOld")
+    old_auth.update_columns(status: "expired", updated_at: 8.days.ago)
+
+    recent_expired = Runner::Authorization.create_request!(runner_name: "Recent")
+    recent_expired.update_columns(status: "expired", updated_at: 1.day.ago)
+
+    PruneRunnerAuthorizationsJob.perform_now
+
+    assert_not Runner::Authorization.exists?(old_auth.id)
+    assert Runner::Authorization.exists?(recent_expired.id)
+  end
 end

@@ -76,4 +76,31 @@ class Api::V1::Channels::CliControllerTest < ActionDispatch::IntegrationTest
     assert_response :no_content
     assert_equal "failed", @delivery.reload.status
   end
+
+  test "inbox reclaims stale unacked claimed deliveries and returns them" do
+    @delivery.update_columns(status: "claimed", claimed_at: 6.minutes.ago, expires_at: 20.minutes.from_now)
+
+    get "/api/v1/channels/cli/inbox",
+      headers: { "X-CLI-Token" => @channel.token },
+      as: :json
+
+    assert_response :success
+    deliveries = response.parsed_body["deliveries"]
+    assert_equal 1, deliveries.size
+    assert_equal @delivery.id, deliveries.first["id"]
+    assert_equal "claimed", @delivery.reload.status
+    assert @delivery.claimed_at > 1.minute.ago
+  end
+
+  test "inbox expires claimed deliveries past expires_at" do
+    @delivery.update_columns(status: "claimed", claimed_at: 10.minutes.ago, expires_at: 1.minute.ago)
+
+    get "/api/v1/channels/cli/inbox",
+      headers: { "X-CLI-Token" => @channel.token },
+      as: :json
+
+    assert_response :success
+    assert_equal [], response.parsed_body["deliveries"]
+    assert_equal "expired", @delivery.reload.status
+  end
 end
