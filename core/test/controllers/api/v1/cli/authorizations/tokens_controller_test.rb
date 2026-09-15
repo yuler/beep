@@ -55,6 +55,23 @@ class Api::V1::Cli::Authorizations::TokensControllerTest < ActionDispatch::Integ
     assert_equal "access_denied", response.parsed_body["error"]
   end
 
+  test "returns expired_token when approved but expired" do
+    auth = Cli::Authorization.create_request!
+    auth.approve!(identity: @identity)
+    auth.update_columns(expires_at: 1.minute.ago)
+
+    post "/api/v1/cli/authorizations/token",
+      params: {
+        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+        device_code: auth.device_code
+      },
+      as: :json
+
+    assert_response :bad_request
+    assert_equal "expired_token", response.parsed_body["error"]
+    assert_equal "expired", auth.reload.status
+  end
+
   test "returns expired_token when expired" do
     auth = Cli::Authorization.create_request!
     auth.update_columns(expires_at: 1.minute.ago)

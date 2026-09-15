@@ -21,6 +21,10 @@ class Api::V1::Cli::Authorizations::TokensController < Api::V1::BaseController
 
     @auth.poll!
 
+    if @auth.expired? || @auth.status == "expired"
+      return device_flow_error("expired_token", "The device code has expired")
+    end
+
     if @auth.status == "approved"
       @access_token = @auth.consume_token!
       if @access_token
@@ -33,8 +37,6 @@ class Api::V1::Cli::Authorizations::TokensController < Api::V1::BaseController
       device_flow_error("invalid_grant", "Invalid device code")
     elsif @auth.status == "access_denied"
       device_flow_error("access_denied", "The user denied the authorization request")
-    elsif @auth.expired? || @auth.status == "expired"
-      device_flow_error("expired_token", "The device code has expired")
     else
       device_flow_error("authorization_pending", "The authorization request is still pending")
     end

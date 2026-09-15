@@ -205,6 +205,23 @@ class Api::V1::Channels::Cli::AuthorizationsControllerTest < ActionDispatch::Int
     assert_equal "access_denied", response.parsed_body["error"]
   end
 
+  test "tokens#create polling returns expired_token when approved but expired" do
+    auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
+    auth.approve!(user: @user, name: "My-Laptop")
+    auth.update_columns(expires_at: 1.minute.ago)
+
+    post "/api/v1/channels/cli/authorizations/token",
+      params: {
+        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+        device_code: auth.device_code
+      },
+      as: :json
+
+    assert_response :bad_request
+    assert_equal "expired_token", response.parsed_body["error"]
+    assert_equal "expired", auth.reload.status
+  end
+
   test "tokens#create polling returns expired_token when expired" do
     auth = Channel::Authorization.create_request!(channel_name: "My-Laptop")
     auth.update_columns(expires_at: 1.minute.ago)

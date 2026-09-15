@@ -75,6 +75,7 @@ class Cli::Authorization < ApplicationRecord
   end
 
   def consume_token!
+    return nil if expired?
     return nil unless access_token.present?
 
     consumed = self.class.where(id: id, status: "approved").update_all(status: "consumed", updated_at: Time.current) == 1
@@ -90,7 +91,7 @@ class Cli::Authorization < ApplicationRecord
 
   def poll!
     touch(:last_polled_at)
-    if expired? && status == "pending"
+    if expired? && status.in?(%w[ pending approved ])
       update!(status: "expired")
     end
   end

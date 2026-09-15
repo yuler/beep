@@ -21,7 +21,9 @@ class Api::V1::Channels::Cli::Authorizations::TokensController < Api::V1::BaseCo
 
     @auth.poll!
 
-    if @auth.status == "approved"
+    if @auth.expired? || @auth.status == "expired"
+      device_flow_error("expired_token", "The device code has expired")
+    elsif @auth.status == "approved"
       @channel = @auth.consume_token!
       if @channel
         render :create, status: :ok
@@ -32,8 +34,6 @@ class Api::V1::Channels::Cli::Authorizations::TokensController < Api::V1::BaseCo
       device_flow_error("invalid_grant", "Invalid device code")
     elsif @auth.status == "access_denied"
       device_flow_error("access_denied", "The user denied the authorization request")
-    elsif @auth.expired? || @auth.status == "expired"
-      device_flow_error("expired_token", "The device code has expired")
     else
       device_flow_error("authorization_pending", "The authorization request is still pending")
     end

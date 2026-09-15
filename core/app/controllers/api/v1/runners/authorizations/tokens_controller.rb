@@ -24,7 +24,9 @@ class Api::V1::Runners::Authorizations::TokensController < Api::V1::BaseControll
 
     @auth.poll!
 
-    if @auth.status == "approved"
+    if @auth.expired? || @auth.status == "expired"
+      render json: { error: "expired_token", error_description: "The device code has expired" }, status: :bad_request
+    elsif @auth.status == "approved"
       @runner = @auth.consume_token!
       if @runner
         render :create, status: :ok
@@ -35,8 +37,6 @@ class Api::V1::Runners::Authorizations::TokensController < Api::V1::BaseControll
       render json: { error: "invalid_grant", error_description: "Invalid device code" }, status: :bad_request
     elsif @auth.status == "access_denied"
       render json: { error: "access_denied", error_description: "The user denied the authorization request" }, status: :bad_request
-    elsif @auth.expired? || @auth.status == "expired"
-      render json: { error: "expired_token", error_description: "The device code has expired" }, status: :bad_request
     else
       render json: { error: "authorization_pending", error_description: "The authorization request is still pending" }, status: :bad_request
     end
