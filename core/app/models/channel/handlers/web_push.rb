@@ -117,7 +117,7 @@ class Channel::Handlers::WebPush < Channel::Handlers::Base
             body: "This is a test notification.",
             tag: "beep-test",
             renotify: true,
-            data: { url: "/#{channel.account.slug}/settings", badge: 1 }
+            data: { url: "/#{channel.account.slug}/settings/channels", badge: 1 }
           }
         }
       end

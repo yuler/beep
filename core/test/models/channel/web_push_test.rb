@@ -29,6 +29,8 @@ class Channel::WebPushTest < ActiveSupport::TestCase
     stub_web_push_payload_send(->(**kwargs) {
       sent = true
       assert_equal @channel.endpoint, kwargs[:endpoint]
+      payload = JSON.parse(kwargs[:message])
+      assert_equal "/#{@account.slug}/settings/channels", payload.dig("options", "data", "url")
     }) do
       @channel.deliver_test!
     end
