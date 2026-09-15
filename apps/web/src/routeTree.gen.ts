@@ -24,7 +24,9 @@ import { Route as Account_slugSettingsRouteImport } from './routes/$account_slug
 import { Route as AdminJobsRouteImport } from './routes/admin/jobs'
 import { Route as AdminStatsRouteImport } from './routes/admin/stats'
 import { Route as DevLettersRouteImport } from './routes/dev/letters'
+import { Route as DeviceChannelRouteImport } from './routes/device/channel'
 import { Route as DeviceCliRouteImport } from './routes/device/cli'
+import { Route as DeviceRunnerRouteImport } from './routes/device/runner'
 import { Route as MyAccess_tokensRouteImport } from './routes/my/access_tokens'
 import { Route as MySettingsRouteImport } from './routes/my/settings'
 import { Route as SignIndexRouteImport } from './routes/sign/index'
@@ -114,9 +116,19 @@ const DevLettersRoute = DevLettersRouteImport.update({
   path: '/letters',
   getParentRoute: () => DevRoute,
 } as any)
+const DeviceChannelRoute = DeviceChannelRouteImport.update({
+  id: '/device/channel',
+  path: '/device/channel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DeviceCliRoute = DeviceCliRouteImport.update({
   id: '/device/cli',
   path: '/device/cli',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeviceRunnerRoute = DeviceRunnerRouteImport.update({
+  id: '/device/runner',
+  path: '/device/runner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MyAccess_tokensRoute = MyAccess_tokensRouteImport.update({
@@ -208,7 +220,9 @@ export interface FileRoutesByFullPath {
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
+  '/device/channel': typeof DeviceChannelRoute
   '/device/cli': typeof DeviceCliRoute
+  '/device/runner': typeof DeviceRunnerRoute
   '/my/access_tokens': typeof MyAccess_tokensRoute
   '/my/settings': typeof MySettingsRoute
   '/sign/verify': typeof SignVerifyRoute
@@ -236,7 +250,9 @@ export interface FileRoutesByTo {
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
+  '/device/channel': typeof DeviceChannelRoute
   '/device/cli': typeof DeviceCliRoute
+  '/device/runner': typeof DeviceRunnerRoute
   '/my/access_tokens': typeof MyAccess_tokensRoute
   '/my/settings': typeof MySettingsRoute
   '/sign/verify': typeof SignVerifyRoute
@@ -268,7 +284,9 @@ export interface FileRoutesById {
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
+  '/device/channel': typeof DeviceChannelRoute
   '/device/cli': typeof DeviceCliRoute
+  '/device/runner': typeof DeviceRunnerRoute
   '/my/access_tokens': typeof MyAccess_tokensRoute
   '/my/settings': typeof MySettingsRoute
   '/sign/verify': typeof SignVerifyRoute
@@ -301,7 +319,9 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
+    | '/device/channel'
     | '/device/cli'
+    | '/device/runner'
     | '/my/access_tokens'
     | '/my/settings'
     | '/sign/verify'
@@ -329,7 +349,9 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
+    | '/device/channel'
     | '/device/cli'
+    | '/device/runner'
     | '/my/access_tokens'
     | '/my/settings'
     | '/sign/verify'
@@ -360,7 +382,9 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
+    | '/device/channel'
     | '/device/cli'
+    | '/device/runner'
     | '/my/access_tokens'
     | '/my/settings'
     | '/sign/verify'
@@ -385,7 +409,9 @@ export interface RootRouteChildren {
   DevRoute: typeof DevRouteWithChildren
   MyRoute: typeof MyRouteWithChildren
   SignRoute: typeof SignRouteWithChildren
+  DeviceChannelRoute: typeof DeviceChannelRoute
   DeviceCliRoute: typeof DeviceCliRoute
+  DeviceRunnerRoute: typeof DeviceRunnerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -495,11 +521,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevLettersRouteImport
       parentRoute: typeof DevRoute
     }
+    '/device/channel': {
+      id: '/device/channel'
+      path: '/device/channel'
+      fullPath: '/device/channel'
+      preLoaderRoute: typeof DeviceChannelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/device/cli': {
       id: '/device/cli'
       path: '/device/cli'
       fullPath: '/device/cli'
       preLoaderRoute: typeof DeviceCliRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/device/runner': {
+      id: '/device/runner'
+      path: '/device/runner'
+      fullPath: '/device/runner'
+      preLoaderRoute: typeof DeviceRunnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/my/access_tokens': {
@@ -698,7 +738,9 @@ const rootRouteChildren: RootRouteChildren = {
   DevRoute: DevRouteWithChildren,
   MyRoute: MyRouteWithChildren,
   SignRoute: SignRouteWithChildren,
+  DeviceChannelRoute: DeviceChannelRoute,
   DeviceCliRoute: DeviceCliRoute,
+  DeviceRunnerRoute: DeviceRunnerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
