@@ -36,13 +36,19 @@ module RequestForgeryProtection
         !request.xhr?
     end
 
-    # Allow non-browser API clients (curl, mobile apps, etc.) that never send
-    # Sec-Fetch-* headers. Browsers always attach Sec-Fetch-Mode, so its
-    # presence means the request is browser-originated and must go through
-    # normal CSRF verification regardless of Sec-Fetch-Site.
+    # Allow non-browser API clients (curl, CLI, mobile apps, server-to-server).
+    # Browsers always attach `Sec-Fetch-Site`, so its absence means the
+    # request did not come from a browser page — and a cross-site request
+    # forgery necessarily does.
+    #
+    # Only `Sec-Fetch-Site` is used as the signal on purpose. The Nitro
+    # `/api` proxy in front of core in production (Mode B) normalizes
+    # `Accept` to `*/*` (so `request.format.json?` is false) and injects
+    # `Sec-Fetch-Mode: cors`, so neither of those can tell proxied
+    # non-browser clients apart from browsers. Cookie-carrying browser
+    # mutations stay protected by
+    # `cookie_session_mutation_without_xhr_header?` above, which runs first.
     def allowed_api_request?
-      request.format.json? &&
-        sec_fetch_site_value.nil? &&
-        request.headers["Sec-Fetch-Mode"].nil?
+      sec_fetch_site_value.nil?
     end
 end

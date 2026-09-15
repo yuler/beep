@@ -28,19 +28,23 @@ class RequestForgeryProtectionTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  # Sec-Fetch-Mode is always present in browser requests. When it is present
-  # but Sec-Fetch-Site is absent (malformed or stripped by a proxy) the
-  # request must not be treated as a non-browser API client.
-  test "rejects browser-like request that has Sec-Fetch-Mode but no Sec-Fetch-Site" do
-    # Force SSL so that super's nil-Sec-Fetch-Site fallback also returns false,
-    # then confirm our Sec-Fetch-Mode guard fires independently.
+  # `Sec-Fetch-Mode` without `Sec-Fetch-Site` is what the production Nitro
+  # `/api` proxy produces for legitimate non-browser clients (it injects
+  # `Sec-Fetch-Mode: cors` and normalizes `Accept` to `*/*`). Browsers always
+  # send `Sec-Fetch-Site`, so its absence means the request did not come from
+  # a browser page and cannot be a cross-site forgery.
+  test "allows proxied non-browser request with Sec-Fetch-Mode but no Sec-Fetch-Site" do
+    # Force SSL so that super's nil-Sec-Fetch-Site fallback returns false,
+    # then confirm allowed_api_request? permits it on its own.
     post api_v1_session_url,
       params: { email: identities(:john).email },
       as: :json,
-      headers: { "Sec-Fetch-Mode" => "cors", "X-Forwarded-Proto" => "https" }
+      headers: {
+        "Sec-Fetch-Mode" => "cors",
+        "Accept" => "*/*",
+        "X-Forwarded-Proto" => "https"
+      }
 
-    # The request is rejected — either by super (SSL + nil Sec-Fetch-Site)
-    # or by the Sec-Fetch-Mode guard in allowed_api_request?.
-    assert_response :unprocessable_entity
+    assert_response :success
   end
 end
