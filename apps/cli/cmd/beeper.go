@@ -156,13 +156,13 @@ var beeperListCmd = &cobra.Command{
 }
 
 var beeperShowCmd = &cobra.Command{
-	Use:   "show <id>",
+	Use:   "show [id]",
 	Short: "Show details of a monitor beeper",
 	Long: `Show details of a monitor beeper.
 
 Note: By default, sensitive tokens like ping_token are masked (e.g. beep_pt_••••••••).
 Pass --show-token to display the unmasked token in human view or --json output.`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -177,7 +177,11 @@ Pass --show-token to display the unmasked token in human view or --json output.`
 		}
 
 		c := client.New(cfg)
-		b, err := c.GetBeeper(ctx, args[0])
+		id, err := resolveBeeperID(ctx, c, args, "show")
+		if err != nil {
+			return err
+		}
+		b, err := c.GetBeeper(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -358,103 +362,6 @@ Examples:
 			}
 		}
 
-		// Interactive fallback if missing app or title
-		if appSlug == "" {
-			if !flagNoInteractive && ui.IsInteractive() {
-				apps, err := c.ListBeeperApps(ctx)
-				if err != nil {
-					return err
-				}
-				if len(apps) == 0 {
-					return errors.New("no beeper apps available on server")
-				}
-
-				options := make([]huh.Option[string], 0, len(apps))
-				for _, a := range apps {
-					label := fmt.Sprintf("%s (%s)", a.Name, a.Slug)
-					options = append(options, huh.NewOption(label, a.Slug))
-				}
-
-				selectErr := huh.NewSelect[string]().
-					Title("Select Probe App Template").
-					Options(options...).
-					Value(&appSlug).
-					Run()
-				if selectErr != nil {
-					return selectErr
-				}
-			} else {
-				return errors.New("--app slug is required (view available apps with 'beep beeper apps')")
-			}
-		}
-
-		// Fetch selected app to get default cron and input specs
-		selectedApp, err := c.GetBeeperApp(ctx, appSlug)
-		if err != nil {
-			return fmt.Errorf("failed to fetch beeper app %s: %w", appSlug, err)
-		}
-
-		if cron == "" {
-			cron = selectedApp.DefaultCron
-		}
-
-		if title == "" {
-			if !flagNoInteractive && ui.IsInteractive() {
-				defaultTitle := selectedApp.Name
-				titleInput := defaultTitle
-				err := huh.NewInput().
-					Title("Beeper Title").
-					Description("Name of this monitor probe").
-					Value(&titleInput).
-					Validate(func(s string) error {
-						if strings.TrimSpace(s) == "" {
-							return errors.New("title is required")
-						}
-						return nil
-					}).
-					Run()
-				if err != nil {
-					return err
-				}
-				title = strings.TrimSpace(titleInput)
-			} else {
-				title = selectedApp.Name
-			}
-		}
-
-		// Check required inputs from selectedApp
-		if !flagNoInteractive && ui.IsInteractive() {
-			for _, input := range selectedApp.Inputs {
-				if _, ok := configMap[input.Name]; !ok && input.Required {
-					var val string
-					if input.Default != nil {
-						val = fmt.Sprintf("%v", input.Default)
-					}
-					promptErr := huh.NewInput().
-						Title(fmt.Sprintf("Input: %s", input.Name)).
-						Description(input.Description).
-						Value(&val).
-						Validate(func(s string) error {
-							if input.Required && strings.TrimSpace(s) == "" {
-								return fmt.Errorf("%s is required", input.Name)
-							}
-							return nil
-						}).
-						Run()
-					if promptErr != nil {
-						return promptErr
-					}
-					configMap[input.Name] = strings.TrimSpace(val)
-				}
-			}
-		}
-
-		if cron != "" {
-			if err := schedule.Validate(cron); err != nil {
-				return fmt.Errorf("invalid cron expression: %w", err)
-			}
-		}
-
 		tz := flagBeeperTimezone
 		if tz == "" {
 			if detected, ok := workspace.DetectTimezoneOK(); ok {
@@ -464,26 +371,88 @@ Examples:
 			}
 		}
 
-		req := &client.CreateBeeperRequest{
-			BeeperAppSlug: appSlug,
-			Title:         title,
-			Body:          flagBeeperBody,
-			Cron:          cron,
-			Timezone:      tz,
-			Config:        configMap,
-		}
+		var b *client.Beeper
+		if !flagNoInteractive && ui.IsInteractive() {
+			if appSlug == "" || title == "" {
+				b, err = runInteractiveBeeperCreate(ctx, c, appSlug, title, strings.TrimSpace(flagBeeperBody), cron, tz, configMap, flagBeeperChannels)
+				if err != nil {
+					return err
+				}
+			} else {
+				if cron != "" {
+					if err := schedule.Validate(cron); err != nil {
+						return fmt.Errorf("invalid cron expression: %w", err)
+					}
+				}
 
-		if flagBeeperChannels != "" {
-			for _, ch := range strings.Split(flagBeeperChannels, ",") {
-				if trimmed := strings.TrimSpace(ch); trimmed != "" {
-					req.NotificationChannels = append(req.NotificationChannels, trimmed)
+				req := &client.CreateBeeperRequest{
+					BeeperAppSlug: appSlug,
+					Title:         title,
+					Body:          strings.TrimSpace(flagBeeperBody),
+					Cron:          cron,
+					Timezone:      tz,
+					Config:        configMap,
+				}
+				if flagBeeperChannels != "" {
+					for _, ch := range strings.Split(flagBeeperChannels, ",") {
+						if trimmed := strings.TrimSpace(ch); trimmed != "" {
+							req.NotificationChannels = append(req.NotificationChannels, trimmed)
+						}
+					}
+				}
+
+				b, err = c.CreateBeeper(ctx, req)
+				if err != nil {
+					fmt.Println()
+					fmt.Println(ui.Error("Creation failed: %s", err))
+					fmt.Println(ui.Dim("Please review and adjust your inputs below:"))
+					fmt.Println()
+					b, err = runInteractiveBeeperCreate(ctx, c, appSlug, title, strings.TrimSpace(flagBeeperBody), cron, tz, configMap, flagBeeperChannels)
+					if err != nil {
+						return err
+					}
 				}
 			}
-		}
+		} else {
+			if appSlug == "" {
+				return errors.New("--app slug is required (view available apps with 'beep beeper apps')")
+			}
+			if title == "" {
+				selectedApp, err := c.GetBeeperApp(ctx, appSlug)
+				if err != nil {
+					return fmt.Errorf("failed to fetch beeper app %s: %w", appSlug, err)
+				}
+				title = selectedApp.Name
+				if cron == "" {
+					cron = selectedApp.DefaultCron
+				}
+			}
+			if cron != "" {
+				if err := schedule.Validate(cron); err != nil {
+					return fmt.Errorf("invalid cron expression: %w", err)
+				}
+			}
 
-		b, err := c.CreateBeeper(ctx, req)
-		if err != nil {
-			return err
+			req := &client.CreateBeeperRequest{
+				BeeperAppSlug: appSlug,
+				Title:         title,
+				Body:          strings.TrimSpace(flagBeeperBody),
+				Cron:          cron,
+				Timezone:      tz,
+				Config:        configMap,
+			}
+			if flagBeeperChannels != "" {
+				for _, ch := range strings.Split(flagBeeperChannels, ",") {
+					if trimmed := strings.TrimSpace(ch); trimmed != "" {
+						req.NotificationChannels = append(req.NotificationChannels, trimmed)
+					}
+				}
+			}
+
+			b, err = c.CreateBeeper(ctx, req)
+			if err != nil {
+				return err
+			}
 		}
 
 		if flagJSON {
@@ -510,11 +479,230 @@ Examples:
 	},
 }
 
+func runInteractiveBeeperCreate(
+	ctx context.Context,
+	c *client.Client,
+	initialAppSlug, initialTitle, initialBody, initialCron, initialTz string,
+	initialConfig map[string]any,
+	initialChannels string,
+) (*client.Beeper, error) {
+	appSlug := initialAppSlug
+	title := initialTitle
+	body := initialBody
+	cron := initialCron
+	tz := initialTz
+	channels := initialChannels
+	configMap := make(map[string]any)
+	for k, v := range initialConfig {
+		configMap[k] = v
+	}
+
+	apps, err := c.ListBeeperApps(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list beeper apps: %w", err)
+	}
+	if len(apps) == 0 {
+		return nil, errors.New("no beeper apps available on server")
+	}
+
+	appOptions := make([]huh.Option[string], 0, len(apps))
+	for _, a := range apps {
+		label := fmt.Sprintf("%s (%s)", a.Name, a.Slug)
+		appOptions = append(appOptions, huh.NewOption(label, a.Slug))
+	}
+
+	for {
+		// 1. Select App Template
+		err := huh.NewSelect[string]().
+			Title("Select Probe App Template").
+			Options(appOptions...).
+			Value(&appSlug).
+			Run()
+		if err != nil {
+			return nil, err
+		}
+
+		selectedApp, err := c.GetBeeperApp(ctx, appSlug)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch beeper app %s: %w", appSlug, err)
+		}
+
+		if title == "" {
+			title = selectedApp.Name
+		}
+		if cron == "" {
+			cron = selectedApp.DefaultCron
+		}
+
+		// 2. Build form fields
+		basicGroup := huh.NewGroup(
+			huh.NewInput().
+				Title("Beeper Title").
+				Description("Name of this monitor probe").
+				Value(&title).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return errors.New("title is required")
+					}
+					return nil
+				}),
+			huh.NewInput().
+				Title("Description / Body (optional)").
+				Description("Optional markdown body or details").
+				Value(&body),
+			huh.NewInput().
+				Title("Cron Schedule").
+				Description(fmt.Sprintf("Schedule expression (default: %s)", selectedApp.DefaultCron)).
+				Value(&cron).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return errors.New("cron expression is required")
+					}
+					return schedule.Validate(s)
+				}),
+		)
+
+		var groups []*huh.Group
+		groups = append(groups, basicGroup)
+
+		// Dynamic config inputs
+		configStringVals := make(map[string]*string)
+		if len(selectedApp.Inputs) > 0 {
+			configFields := make([]huh.Field, 0, len(selectedApp.Inputs))
+			for _, input := range selectedApp.Inputs {
+				val := ""
+				if existing, ok := configMap[input.Name]; ok {
+					val = fmt.Sprintf("%v", existing)
+				} else if input.Default != nil {
+					val = fmt.Sprintf("%v", input.Default)
+				}
+				configStringVals[input.Name] = &val
+
+				inputName := input.Name
+				desc := input.Description
+				req := input.Required
+				fieldTitle := fmt.Sprintf("Config: %s", inputName)
+				if req {
+					fieldTitle += " (required)"
+				} else {
+					fieldTitle += " (optional)"
+				}
+
+				configFields = append(configFields, huh.NewInput().
+					Title(fieldTitle).
+					Description(desc).
+					Value(configStringVals[inputName]).
+					Validate(func(s string) error {
+						if req && strings.TrimSpace(s) == "" {
+							return fmt.Errorf("%s is required", inputName)
+						}
+						return nil
+					}),
+				)
+			}
+			groups = append(groups, huh.NewGroup(configFields...))
+		}
+
+		// Settings group: Timezone and Channels
+		settingsGroup := huh.NewGroup(
+			huh.NewInput().
+				Title("Timezone").
+				Description("Timezone for probe schedule").
+				Value(&tz),
+			huh.NewInput().
+				Title("Notification Channels (optional)").
+				Description("Optional comma-separated channel names or IDs").
+				Value(&channels),
+		)
+		groups = append(groups, settingsGroup)
+
+		form := huh.NewForm(groups...)
+		if err := form.Run(); err != nil {
+			return nil, err
+		}
+
+		// Copy dynamic config values back to configMap
+		for k, v := range configStringVals {
+			if trimmed := strings.TrimSpace(*v); trimmed != "" {
+				configMap[k] = trimmed
+			} else {
+				delete(configMap, k)
+			}
+		}
+
+		req := &client.CreateBeeperRequest{
+			BeeperAppSlug: appSlug,
+			Title:         strings.TrimSpace(title),
+			Body:          strings.TrimSpace(body),
+			Cron:          strings.TrimSpace(cron),
+			Timezone:      strings.TrimSpace(tz),
+			Config:        configMap,
+		}
+
+		if trimmedCh := strings.TrimSpace(channels); trimmedCh != "" {
+			for _, ch := range strings.Split(trimmedCh, ",") {
+				if cName := strings.TrimSpace(ch); cName != "" {
+					req.NotificationChannels = append(req.NotificationChannels, cName)
+				}
+			}
+		}
+
+		b, err := c.CreateBeeper(ctx, req)
+		if err == nil {
+			return b, nil
+		}
+
+		fmt.Println()
+		fmt.Println(ui.Error("Creation failed: %s", err))
+		fmt.Println(ui.Dim("Please review and adjust your inputs below:"))
+		fmt.Println()
+	}
+}
+
+func resolveBeeperID(ctx context.Context, c *client.Client, args []string, action string) (string, error) {
+	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+		return strings.TrimSpace(args[0]), nil
+	}
+
+	if flagNoInteractive || !ui.IsInteractive() {
+		return "", fmt.Errorf("beeper ID is required (e.g. beep beeper %s <id>)", action)
+	}
+
+	beepers, err := c.ListBeepers(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to list beepers: %w", err)
+	}
+	if len(beepers) == 0 {
+		return "", errors.New("no beepers found in this account")
+	}
+
+	options := make([]huh.Option[string], 0, len(beepers))
+	for _, b := range beepers {
+		title := b.Title
+		if len(title) > 30 {
+			title = title[:27] + "..."
+		}
+		label := fmt.Sprintf("%-30s (%s - %s)", title, b.ID, b.Status)
+		options = append(options, huh.NewOption(label, b.ID))
+	}
+
+	var selectedID string
+	err = huh.NewSelect[string]().
+		Title(fmt.Sprintf("Select beeper to %s", action)).
+		Options(options...).
+		Value(&selectedID).
+		Run()
+	if err != nil {
+		return "", err
+	}
+	return selectedID, nil
+}
+
 var beeperDeleteCmd = &cobra.Command{
-	Use:     "delete <id>",
+	Use:     "delete [id]",
 	Aliases: []string{"rm"},
 	Short:   "Delete a monitor beeper",
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -529,24 +717,29 @@ var beeperDeleteCmd = &cobra.Command{
 		}
 
 		c := client.New(cfg)
-		if err := c.DeleteBeeper(ctx, args[0]); err != nil {
+		id, err := resolveBeeperID(ctx, c, args, "delete")
+		if err != nil {
+			return err
+		}
+
+		if err := c.DeleteBeeper(ctx, id); err != nil {
 			return err
 		}
 
 		if flagJSON {
-			fmt.Printf("{\"id\":%q,\"deleted\":true}\n", args[0])
+			fmt.Printf("{\"id\":%q,\"deleted\":true}\n", id)
 			return nil
 		}
 
-		fmt.Println(ui.Success("Deleted beeper %s", ui.Bold(args[0])))
+		fmt.Println(ui.Success("Deleted beeper %s", ui.Bold(id)))
 		return nil
 	},
 }
 
 var beeperPauseCmd = &cobra.Command{
-	Use:   "pause <id>",
+	Use:   "pause [id]",
 	Short: "Pause a monitor beeper",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -561,7 +754,12 @@ var beeperPauseCmd = &cobra.Command{
 		}
 
 		c := client.New(cfg)
-		b, err := c.PauseBeeper(ctx, args[0])
+		id, err := resolveBeeperID(ctx, c, args, "pause")
+		if err != nil {
+			return err
+		}
+
+		b, err := c.PauseBeeper(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -581,9 +779,9 @@ var beeperPauseCmd = &cobra.Command{
 }
 
 var beeperResumeCmd = &cobra.Command{
-	Use:   "resume <id>",
+	Use:   "resume [id]",
 	Short: "Resume a monitor beeper",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -598,7 +796,12 @@ var beeperResumeCmd = &cobra.Command{
 		}
 
 		c := client.New(cfg)
-		b, err := c.ResumeBeeper(ctx, args[0])
+		id, err := resolveBeeperID(ctx, c, args, "resume")
+		if err != nil {
+			return err
+		}
+
+		b, err := c.ResumeBeeper(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -618,9 +821,9 @@ var beeperResumeCmd = &cobra.Command{
 }
 
 var beeperRunCmd = &cobra.Command{
-	Use:   "run <id>",
+	Use:   "run [id]",
 	Short: "Immediately trigger a probe run for a beeper",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -635,7 +838,12 @@ var beeperRunCmd = &cobra.Command{
 		}
 
 		c := client.New(cfg)
-		run, err := c.RunBeeper(ctx, args[0])
+		id, err := resolveBeeperID(ctx, c, args, "run")
+		if err != nil {
+			return err
+		}
+
+		run, err := c.RunBeeper(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -649,15 +857,15 @@ var beeperRunCmd = &cobra.Command{
 			return nil
 		}
 
-		fmt.Println(ui.Success("Triggered run for beeper %s (Run ID: %s, Status: %s)", ui.Bold(args[0]), ui.Cyan(run.ID), formatRunStatus(run.Status)))
+		fmt.Println(ui.Success("Triggered run for beeper %s (Run ID: %s, Status: %s)", ui.Bold(id), ui.Cyan(run.ID), formatRunStatus(run.Status)))
 		return nil
 	},
 }
 
 var beeperRunsCmd = &cobra.Command{
-	Use:   "runs <id>",
+	Use:   "runs [id]",
 	Short: "View probe execution history for a beeper",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -672,7 +880,12 @@ var beeperRunsCmd = &cobra.Command{
 		}
 
 		c := client.New(cfg)
-		runs, err := c.ListBeeperRuns(ctx, args[0])
+		id, err := resolveBeeperID(ctx, c, args, "view runs for")
+		if err != nil {
+			return err
+		}
+
+		runs, err := c.ListBeeperRuns(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -686,7 +899,7 @@ var beeperRunsCmd = &cobra.Command{
 			return nil
 		}
 
-		fmt.Printf("%s %s\n\n", ui.Bold(ui.Cyan("Beeper Runs")), ui.Dim(fmt.Sprintf("(beeper ID: %s)", args[0])))
+		fmt.Printf("%s %s\n\n", ui.Bold(ui.Cyan("Beeper Runs")), ui.Dim(fmt.Sprintf("(beeper ID: %s)", id)))
 
 		if len(runs) == 0 {
 			fmt.Println(ui.Dim("  No runs found for this beeper."))

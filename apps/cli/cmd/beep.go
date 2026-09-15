@@ -119,9 +119,9 @@ var beepListCmd = &cobra.Command{
 }
 
 var beepShowCmd = &cobra.Command{
-	Use:   "show <id>",
+	Use:   "show [id]",
 	Short: "Show details of a reminder beep",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -136,7 +136,11 @@ var beepShowCmd = &cobra.Command{
 		}
 
 		c := client.New(cfg)
-		b, err := c.GetBeep(ctx, args[0])
+		id, err := resolveBeepID(ctx, c, args, "show")
+		if err != nil {
+			return err
+		}
+		b, err := c.GetBeep(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -270,78 +274,64 @@ Examples:
 			title = strings.TrimSpace(args[0])
 		}
 
-		// Interactive fallback for missing title
-		if title == "" {
-			if !flagNoInteractive && ui.IsInteractive() {
-				err := huh.NewInput().
-					Title("Reminder Title").
-					Description("Short description of what you want to be reminded about").
-					Placeholder("e.g. Call dentist, Check build status").
-					Value(&title).
-					Validate(func(s string) error {
-						if strings.TrimSpace(s) == "" {
-							return errors.New("title is required")
-						}
-						return nil
-					}).
-					Run()
+		body := flagBeepBody
+		channels := flagBeepChannels
+		schedKind := ""
+		schedVal := ""
+
+		if flagBeepCron != "" {
+			schedKind = "cron"
+			schedVal = flagBeepCron
+		} else if flagBeepIn != "" {
+			schedKind = "delay"
+			schedVal = flagBeepIn
+		} else if flagBeepAt != "" {
+			schedKind = "at"
+			schedVal = flagBeepAt
+		}
+
+		var b *client.Beep
+		if !flagNoInteractive && ui.IsInteractive() {
+			if title == "" || (schedKind == "" && len(args) == 0) {
+				b, err = runInteractiveBeepCreate(ctx, c, title, body, schedKind, schedVal, tz, channels)
 				if err != nil {
 					return err
 				}
-				title = strings.TrimSpace(title)
 			} else {
-				return fmt.Errorf("reminder title is required (e.g. beep beep create \"Meeting in 10m\" --in 10m)")
-			}
-		}
-
-		req := &client.CreateBeepRequest{
-			Title:    title,
-			Body:     flagBeepBody,
-			Timezone: tz,
-		}
-
-		if flagBeepChannels != "" {
-			for _, ch := range strings.Split(flagBeepChannels, ",") {
-				if trimmed := strings.TrimSpace(ch); trimmed != "" {
-					req.NotificationChannels = append(req.NotificationChannels, trimmed)
+				if schedKind == "" {
+					schedKind = "instant"
+				}
+				req, err := buildCreateBeepRequest(title, body, schedKind, schedVal, tz, channels)
+				if err != nil {
+					return err
+				}
+				b, err = c.CreateBeep(ctx, req)
+				if err != nil {
+					fmt.Println()
+					fmt.Println(ui.Error("Creation failed: %s", err))
+					fmt.Println(ui.Dim("Please review and adjust your inputs below:"))
+					fmt.Println()
+					b, err = runInteractiveBeepCreate(ctx, c, title, body, schedKind, schedVal, tz, channels)
+					if err != nil {
+						return err
+					}
 				}
 			}
-		}
-
-		// Determine schedule
-		if flagBeepCron != "" {
-			if err := schedule.Validate(flagBeepCron); err != nil {
-				return fmt.Errorf("invalid --cron expression: %w", err)
-			}
-			req.Kind = "recurring"
-			req.Cron = flagBeepCron
-		} else if flagBeepIn != "" {
-			d, err := parseInDuration(flagBeepIn)
-			if err != nil {
-				return fmt.Errorf("invalid --in duration (e.g. 10m, 2h, 1d): %w", err)
-			}
-			req.Kind = "once"
-			req.RunAt = time.Now().Add(d).Format(time.RFC3339)
-		} else if flagBeepAt != "" {
-			loc, err := time.LoadLocation(tz)
-			if err != nil {
-				loc = time.Local
-			}
-			t, err := parseAtTime(flagBeepAt, loc)
-			if err != nil {
-				return fmt.Errorf("invalid --at time (e.g. 15:30, 2026-10-01 10:00): %w", err)
-			}
-			req.Kind = "once"
-			req.RunAt = t.Format(time.RFC3339)
 		} else {
-			// Instant reminder
-			req.Kind = "once"
-			req.RunAt = time.Now().Format(time.RFC3339)
-		}
-
-		b, err := c.CreateBeep(ctx, req)
-		if err != nil {
-			return err
+			if title == "" {
+				return fmt.Errorf("reminder title is required (e.g. beep beep create \"Meeting in 10m\" --in 10m)")
+			}
+			if schedKind == "" {
+				schedKind = "instant"
+			}
+			req, err := buildCreateBeepRequest(title, body, schedKind, schedVal, tz, channels)
+			if err != nil {
+				return err
+			}
+			b, err = c.CreateBeep(ctx, req)
+			if err != nil {
+				return err
+			}
 		}
 
 		if flagJSON {
@@ -361,6 +351,235 @@ Examples:
 		}
 		return nil
 	},
+}
+
+func buildCreateBeepRequest(title, body, schedKind, schedVal, tz, channels string) (*client.CreateBeepRequest, error) {
+	req := &client.CreateBeepRequest{
+		Title:    title,
+		Body:     body,
+		Timezone: tz,
+	}
+	if channels != "" {
+		for _, ch := range strings.Split(channels, ",") {
+			if trimmed := strings.TrimSpace(ch); trimmed != "" {
+				req.NotificationChannels = append(req.NotificationChannels, trimmed)
+			}
+		}
+	}
+
+	switch schedKind {
+	case "cron":
+		if err := schedule.Validate(schedVal); err != nil {
+			return nil, fmt.Errorf("invalid --cron expression: %w", err)
+		}
+		req.Kind = "recurring"
+		req.Cron = schedVal
+	case "delay":
+		d, err := parseInDuration(schedVal)
+		if err != nil {
+			return nil, fmt.Errorf("invalid --in duration (e.g. 10m, 2h, 1d): %w", err)
+		}
+		req.Kind = "once"
+		req.RunAt = time.Now().Add(d).Format(time.RFC3339)
+	case "at":
+		loc, err := time.LoadLocation(tz)
+		if err != nil {
+			loc = time.Local
+		}
+		t, err := parseAtTime(schedVal, loc)
+		if err != nil {
+			return nil, fmt.Errorf("invalid --at time (e.g. 15:30, 2026-10-01 10:00): %w", err)
+		}
+		req.Kind = "once"
+		req.RunAt = t.Format(time.RFC3339)
+	default:
+		req.Kind = "once"
+		req.RunAt = time.Now().Format(time.RFC3339)
+	}
+
+	return req, nil
+}
+
+func runInteractiveBeepCreate(
+	ctx context.Context,
+	c *client.Client,
+	initialTitle, initialBody, initialKind, initialSchedVal, initialTz, initialChannels string,
+) (*client.Beep, error) {
+	title := initialTitle
+	body := initialBody
+	schedKind := initialKind
+	if schedKind == "" {
+		schedKind = "instant"
+	}
+	schedVal := initialSchedVal
+	tz := initialTz
+	channels := initialChannels
+
+	for {
+		err := huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Reminder Title").
+					Description("Short description of what you want to be reminded about").
+					Value(&title).
+					Validate(func(s string) error {
+						if strings.TrimSpace(s) == "" {
+							return errors.New("title is required")
+						}
+						return nil
+					}),
+				huh.NewInput().
+					Title("Message Body (optional)").
+					Description("Optional markdown body or details").
+					Value(&body),
+				huh.NewSelect[string]().
+					Title("Schedule Type").
+					Options(
+						huh.NewOption("Instant (fire immediately)", "instant"),
+						huh.NewOption("Relative delay (e.g. 15m, 2h, 1d)", "delay"),
+						huh.NewOption("Specific time (e.g. 16:30, 2026-10-01 10:00)", "at"),
+						huh.NewOption("Recurring cron (e.g. 0 9 * * 1-5)", "cron"),
+					).
+					Value(&schedKind),
+			),
+		).Run()
+		if err != nil {
+			return nil, err
+		}
+
+		if schedKind == "delay" {
+			if schedVal == "" {
+				schedVal = "15m"
+			}
+			err = huh.NewInput().
+				Title("Delay Duration").
+				Description("Duration before firing (e.g. 10m, 2h, 1d)").
+				Value(&schedVal).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return errors.New("delay duration is required")
+					}
+					_, err := parseInDuration(s)
+					return err
+				}).Run()
+			if err != nil {
+				return nil, err
+			}
+		} else if schedKind == "at" {
+			if schedVal == "" {
+				schedVal = "16:30"
+			}
+			err = huh.NewInput().
+				Title("Specific Time / Date").
+				Description("When to fire (e.g. 16:30, 2026-10-01 10:00)").
+				Value(&schedVal).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return errors.New("time is required")
+					}
+					loc, err := time.LoadLocation(tz)
+					if err != nil {
+						loc = time.Local
+					}
+					_, err = parseAtTime(s, loc)
+					return err
+				}).Run()
+			if err != nil {
+				return nil, err
+			}
+		} else if schedKind == "cron" {
+			if schedVal == "" {
+				schedVal = "0 9 * * 1-5"
+			}
+			err = huh.NewInput().
+				Title("Cron Expression").
+				Description("Standard 5-part cron expression (e.g. 0 9 * * 1-5)").
+				Value(&schedVal).
+				Validate(func(s string) error {
+					if strings.TrimSpace(s) == "" {
+						return errors.New("cron expression is required")
+					}
+					return schedule.Validate(s)
+				}).Run()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		err = huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Timezone").
+					Description("Timezone for scheduling").
+					Value(&tz),
+				huh.NewInput().
+					Title("Notification Channels (optional)").
+					Description("Optional comma-separated channel names or IDs").
+					Value(&channels),
+			),
+		).Run()
+		if err != nil {
+			return nil, err
+		}
+
+		req, err := buildCreateBeepRequest(title, body, schedKind, schedVal, tz, channels)
+		if err != nil {
+			fmt.Println()
+			fmt.Println(ui.Error("Invalid input: %s", err))
+			fmt.Println(ui.Dim("Please review and adjust your inputs below:"))
+			fmt.Println()
+			continue
+		}
+
+		b, err := c.CreateBeep(ctx, req)
+		if err == nil {
+			return b, nil
+		}
+
+		fmt.Println()
+		fmt.Println(ui.Error("Creation failed: %s", err))
+		fmt.Println(ui.Dim("Please review and adjust your inputs below:"))
+		fmt.Println()
+	}
+}
+
+func resolveBeepID(ctx context.Context, c *client.Client, args []string, action string) (string, error) {
+	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+		return strings.TrimSpace(args[0]), nil
+	}
+
+	if flagNoInteractive || !ui.IsInteractive() {
+		return "", fmt.Errorf("beep ID is required (e.g. beep beep %s <id>)", action)
+	}
+
+	beeps, err := c.ListBeeps(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to list beeps: %w", err)
+	}
+	if len(beeps) == 0 {
+		return "", errors.New("no beeps found in this account")
+	}
+
+	options := make([]huh.Option[string], 0, len(beeps))
+	for _, b := range beeps {
+		title := b.Title
+		if len(title) > 30 {
+			title = title[:27] + "..."
+		}
+		label := fmt.Sprintf("%-30s (%s - %s)", title, b.ID, b.Status)
+		options = append(options, huh.NewOption(label, b.ID))
+	}
+
+	var selectedID string
+	err = huh.NewSelect[string]().
+		Title(fmt.Sprintf("Select beep to %s", action)).
+		Options(options...).
+		Value(&selectedID).
+		Run()
+	if err != nil {
+		return "", err
+	}
+	return selectedID, nil
 }
 
 func handleNaturalBeepCreate(ctx context.Context, c *client.Client, prompt, tz string) error {
@@ -445,10 +664,10 @@ func handleNaturalBeepCreate(ctx context.Context, c *client.Client, prompt, tz s
 }
 
 var beepDeleteCmd = &cobra.Command{
-	Use:     "delete <id>",
+	Use:     "delete [id]",
 	Aliases: []string{"rm"},
 	Short:   "Delete a reminder beep",
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -463,24 +682,29 @@ var beepDeleteCmd = &cobra.Command{
 		}
 
 		c := client.New(cfg)
-		if err := c.DeleteBeep(ctx, args[0]); err != nil {
+		id, err := resolveBeepID(ctx, c, args, "delete")
+		if err != nil {
+			return err
+		}
+
+		if err := c.DeleteBeep(ctx, id); err != nil {
 			return err
 		}
 
 		if flagJSON {
-			fmt.Printf("{\"id\":%q,\"deleted\":true}\n", args[0])
+			fmt.Printf("{\"id\":%q,\"deleted\":true}\n", id)
 			return nil
 		}
 
-		fmt.Println(ui.Success("Deleted beep %s", ui.Bold(args[0])))
+		fmt.Println(ui.Success("Deleted beep %s", ui.Bold(id)))
 		return nil
 	},
 }
 
 var beepPauseCmd = &cobra.Command{
-	Use:   "pause <id>",
+	Use:   "pause [id]",
 	Short: "Pause a recurring reminder beep",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -495,7 +719,12 @@ var beepPauseCmd = &cobra.Command{
 		}
 
 		c := client.New(cfg)
-		b, err := c.PauseBeep(ctx, args[0])
+		id, err := resolveBeepID(ctx, c, args, "pause")
+		if err != nil {
+			return err
+		}
+
+		b, err := c.PauseBeep(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -515,9 +744,9 @@ var beepPauseCmd = &cobra.Command{
 }
 
 var beepResumeCmd = &cobra.Command{
-	Use:   "resume <id>",
+	Use:   "resume [id]",
 	Short: "Resume a paused reminder beep",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -532,7 +761,12 @@ var beepResumeCmd = &cobra.Command{
 		}
 
 		c := client.New(cfg)
-		b, err := c.ResumeBeep(ctx, args[0])
+		id, err := resolveBeepID(ctx, c, args, "resume")
+		if err != nil {
+			return err
+		}
+
+		b, err := c.ResumeBeep(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -552,10 +786,10 @@ var beepResumeCmd = &cobra.Command{
 }
 
 var beepRunCmd = &cobra.Command{
-	Use:     "run <id>",
+	Use:     "run [id]",
 	Aliases: []string{"trigger"},
 	Short:   "Immediately trigger a reminder beep",
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig()
 		if err != nil {
@@ -570,7 +804,12 @@ var beepRunCmd = &cobra.Command{
 		}
 
 		c := client.New(cfg)
-		run, err := c.RunBeep(ctx, args[0])
+		id, err := resolveBeepID(ctx, c, args, "run")
+		if err != nil {
+			return err
+		}
+
+		run, err := c.RunBeep(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -584,7 +823,7 @@ var beepRunCmd = &cobra.Command{
 			return nil
 		}
 
-		fmt.Println(ui.Success("Triggered beep %s (Run ID: %s, Status: %s)", ui.Bold(args[0]), ui.Cyan(run.ID), formatRunStatus(run.Status)))
+		fmt.Println(ui.Success("Triggered beep %s (Run ID: %s, Status: %s)", ui.Bold(id), ui.Cyan(run.ID), formatRunStatus(run.Status)))
 		return nil
 	},
 }

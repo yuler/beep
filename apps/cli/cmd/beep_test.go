@@ -13,6 +13,8 @@ import (
 
 	"beep/internal/client"
 	"beep/internal/config"
+
+	"github.com/spf13/cobra"
 )
 
 func TestBeepCommandsRegistration(t *testing.T) {
@@ -364,5 +366,31 @@ func TestBeepActionsCommands(t *testing.T) {
 	}
 	if deletedID != "b1" {
 		t.Errorf("expected delete on b1")
+	}
+}
+
+func TestBeepOmittedIDNonInteractive(t *testing.T) {
+	_, cleanup := setupBeepTestEnv(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/me" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"identity": map[string]any{"id": "id_1", "email": "test@example.com"},
+			})
+			return
+		}
+		http.NotFound(w, r)
+	})
+	defer cleanup()
+
+	flagNoInteractive = true
+	defer func() { flagNoInteractive = false }()
+
+	commands := []*cobra.Command{beepShowCmd, beepDeleteCmd, beepPauseCmd, beepResumeCmd, beepRunCmd}
+	for _, c := range commands {
+		err := c.RunE(c, nil)
+		if err == nil {
+			t.Errorf("expected error for command %s without ID in non-interactive mode", c.Name())
+		} else if !strings.Contains(err.Error(), "beep ID is required") {
+			t.Errorf("expected 'beep ID is required' error for %s, got: %v", c.Name(), err)
+		}
 	}
 }
