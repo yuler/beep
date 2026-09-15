@@ -17,6 +17,7 @@ import (
 	"beep/internal/proc"
 	"beep/internal/runner"
 	"beep/internal/ui"
+	"beep/internal/updater"
 	"beep/internal/workspace"
 
 	"github.com/spf13/cobra"
@@ -119,6 +120,7 @@ func runUp(cmd *cobra.Command, args []string) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	go updater.RunDaemonUpdateProbe(ctx, cfg.Workspace, log.Printf)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, proc.ShutdownSignals...)
@@ -211,6 +213,7 @@ func runRunnerService(cfg *config.Config, daemonMode bool) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	go updater.RunDaemonUpdateProbe(ctx, cfg.Workspace, log.Printf)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, proc.ShutdownSignals...)
@@ -264,6 +267,7 @@ func runChannelService(cfg *config.Config, daemonMode bool) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	go updater.RunDaemonUpdateProbe(ctx, cfg.Workspace, log.Printf)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, proc.ShutdownSignals...)

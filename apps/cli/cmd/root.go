@@ -3,9 +3,11 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"beep/internal/config"
 	"beep/internal/ui"
+	"beep/internal/updater"
 
 	"github.com/spf13/cobra"
 )
@@ -14,6 +16,17 @@ var (
 	flagNoColor       bool
 	flagNoInteractive bool
 )
+
+// skipUpdateHooks returns true for commands that should not trigger background
+// update checks or print update notices (upgrade/update/version/completion/help
+// and cobra internal __* commands).
+func skipUpdateHooks(name string) bool {
+	switch name {
+	case "upgrade", "update", "version", "completion", "help":
+		return true
+	}
+	return strings.HasPrefix(name, "__")
+}
 
 var RootCmd = &cobra.Command{
 	Use:   "beep",
@@ -24,6 +37,19 @@ Execute 'beep <command> --help' for detailed usage of a specific command.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if flagNoColor {
 			ui.SetEnabled(false)
+		}
+		if !skipUpdateHooks(cmd.Name()) {
+			updater.TriggerBackgroundCheck(flagWorkspace)
+		}
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		if skipUpdateHooks(cmd.Name()) {
+			return
+		}
+		if notice := updater.CheckNotice(flagWorkspace); notice != "" {
+			if _, err := fmt.Fprint(os.Stderr, notice); err == nil {
+				_ = updater.MarkNotified(flagWorkspace)
+			}
 		}
 	},
 }
@@ -53,4 +79,5 @@ func init() {
 	RootCmd.AddCommand(channelCmd)
 	RootCmd.AddCommand(configCmd)
 	RootCmd.AddCommand(versionCmd)
+	RootCmd.AddCommand(upgradeCmd)
 }
