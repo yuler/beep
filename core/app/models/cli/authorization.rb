@@ -1,4 +1,6 @@
 class Cli::Authorization < ApplicationRecord
+  self.table_name = "cli_authorizations"
+
   DEFAULT_TTL = 15.minutes
   DEFAULT_INTERVAL = 5 # seconds
   USER_CODE_CHARSET = "BCDFGHJKMNPQRSTVWXYZ23456789".freeze
