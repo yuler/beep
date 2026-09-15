@@ -23,10 +23,6 @@ var channelCmd = &cobra.Command{
 	Short:   "Connect this CLI as a notification channel",
 }
 
-var (
-	flagChannelAccount string
-)
-
 var channelConnectCmd = &cobra.Command{
 	Use:   "connect",
 	Short: "Connect this CLI as a notification channel via Web browser (RFC 8628)",
@@ -48,7 +44,7 @@ var channelConnectCmd = &cobra.Command{
 			return err
 		}
 
-		accountSlug, err := resolveAccountSlug(me, flagChannelAccount, cfg.AccountSlug)
+		accountSlug, err := resolveAccountSlug(me, flagAccount, cfg.AccountSlug)
 		if err != nil {
 			return err
 		}
@@ -299,7 +295,6 @@ func newChannelStatusCmd() *cobra.Command {
 }
 
 func init() {
-	channelConnectCmd.Flags().StringVarP(&flagChannelAccount, "account", "a", "", "Account slug to connect to")
 	channelCmd.AddCommand(newChannelUpCmd())
 	channelCmd.AddCommand(newChannelStopCmd())
 	channelCmd.AddCommand(newChannelStatusCmd())

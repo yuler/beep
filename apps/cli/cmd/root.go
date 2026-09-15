@@ -15,6 +15,8 @@ import (
 var (
 	flagNoColor       bool
 	flagNoInteractive bool
+	flagAccount       string
+	flagJSON          bool
 )
 
 // skipUpdateHooks returns true for commands that should not trigger background
@@ -67,6 +69,8 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&flagWorkspace, "workspace", "w", "", fmt.Sprintf("Local job workspace directory (default %s, env: BEEP_WORKSPACE)", config.DefaultWorkspaceDisplay()))
 	RootCmd.PersistentFlags().StringVarP(&flagServer, "server", "s", "", "Beep server URL (env: BEEP_SERVER)")
 	RootCmd.PersistentFlags().StringVarP(&flagToken, "token", "t", "", "Runner authentication token (env: BEEP_RUNNER_TOKEN)")
+	RootCmd.PersistentFlags().StringVarP(&flagAccount, "account", "a", "", "Account slug to operate on (defaults to config account_slug or personal account; env: BEEP_ACCOUNT)")
+	RootCmd.PersistentFlags().BoolVar(&flagJSON, "json", false, "Output results in JSON format")
 
 	// Daemon commands
 	RootCmd.AddCommand(newUpCmd())
@@ -75,6 +79,8 @@ func init() {
 
 	// Top-level subcommands
 	RootCmd.AddCommand(authCmd)
+	RootCmd.AddCommand(beepCmd)
+	RootCmd.AddCommand(beeperCmd)
 	RootCmd.AddCommand(runnerCmd)
 	RootCmd.AddCommand(channelCmd)
 	RootCmd.AddCommand(configCmd)
