@@ -168,3 +168,88 @@ func TestClientRunnerDeviceAuthorizationFlow(t *testing.T) {
 		t.Fatalf("unexpected token response: %+v", tokenRes)
 	}
 }
+
+func TestRunnerConnectAutomaticallyStartsDaemon(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/v1/me":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"email": "test@example.com",
+				"accounts": []map[string]any{
+					{"slug": "test-account", "name": "Test Account"},
+				},
+				"last_account_slug": "test-account",
+			})
+		case "/api/v1/runners/authorizations":
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(client.DeviceAuthorizationResponse{
+				DeviceCode:              "dc_runner_auto",
+				UserCode:                "RUNNER-AUTO",
+				VerificationURI:         "http://example.com/device/runner",
+				VerificationURIComplete: "http://example.com/device/runner?code=RUNNER-AUTO",
+				ExpiresIn:               900,
+				Interval:                1,
+			})
+		case "/api/v1/runners/authorizations/token":
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(client.RunnerTokenResponse{
+				AccessToken: "beep_rt_auto_token",
+				TokenType:   "bearer",
+				RunnerID:    "run_auto",
+				RunnerName:  "Auto-Runner",
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.json")
+	fc := &config.FileConfig{
+		ServerURL:   server.URL,
+		AccessToken: "test-login-token",
+		AccountSlug: "test-account",
+	}
+	if err := config.SaveFile(configPath, fc); err != nil {
+		t.Fatalf("failed to save test config: %v", err)
+	}
+
+	flagWorkspace = tmpDir
+	defer func() { flagWorkspace = "" }()
+
+	origStart := startServiceDaemonFn
+	defer func() { startServiceDaemonFn = origStart }()
+
+	var startedService string
+	var startedRawArgs []string
+	startServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+		startedService = service
+		startedRawArgs = rawArgs
+		return nil
+	}
+
+	cmd, _, err := RootCmd.Find([]string{"runner", "connect"})
+	if err != nil {
+		t.Fatalf("failed to find 'runner connect': %v", err)
+	}
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatalf("runner connect failed: %v", err)
+	}
+
+	if startedService != "runner" {
+		t.Errorf("expected started service 'runner', got %q", startedService)
+	}
+	if len(startedRawArgs) < 2 || startedRawArgs[0] != "--workspace" || startedRawArgs[1] != tmpDir {
+		t.Errorf("expected rawArgs to contain --workspace %s, got %v", tmpDir, startedRawArgs)
+	}
+
+	updated, err := config.LoadFile(configPath)
+	if err != nil {
+		t.Fatalf("failed to load updated config: %v", err)
+	}
+	if updated.RunnerToken != "beep_rt_auto_token" {
+		t.Errorf("expected runner_token 'beep_rt_auto_token', got %q", updated.RunnerToken)
+	}
+}

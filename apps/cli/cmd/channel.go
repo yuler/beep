@@ -141,11 +141,12 @@ var channelConnectCmd = &cobra.Command{
 					ui.Dim(config.MaskToken(tokenRes.AccessToken)),
 				)
 				fmt.Printf("%s Config saved to %s\n", ui.Green("✓"), ui.Dim(configPath))
-				fmt.Printf("\n%s To start receiving notifications:\n  %s\n",
-					ui.Dim("Next:"),
-					ui.Cyan("beep up"),
-				)
-				return nil
+				fmt.Println()
+
+				cfg.ChannelToken = tokenRes.AccessToken
+				cfg.CliToken = ""
+				cfg.DeviceToken = ""
+				return autoStartServiceDaemon(daemon.ServiceChannel, cfg)
 			}
 
 			var oauthErr *client.OAuthErrorResponse

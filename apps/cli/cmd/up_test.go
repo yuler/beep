@@ -3,6 +3,9 @@ package cmd
 import (
 	"strings"
 	"testing"
+
+	"beep/internal/config"
+	"beep/internal/daemon"
 )
 
 func TestStripDaemonFlags(t *testing.T) {
@@ -149,5 +152,47 @@ func TestBuildServiceChildArgs(t *testing.T) {
 	precedingFlagsArgs := buildServiceChildArgs("runner", []string{"--workspace", "/var/run", "up", "-d"})
 	if strings.Join(precedingFlagsArgs, " ") != "runner up --workspace /var/run" {
 		t.Errorf("unexpected runner args with preceding flags: %v", precedingFlagsArgs)
+	}
+}
+
+func TestBuildServiceChildArgsIgnoresConnect(t *testing.T) {
+	args := buildServiceChildArgs("runner", []string{"runner", "connect", "--workspace", "/var/run"})
+	if strings.Join(args, " ") != "runner up --workspace /var/run" {
+		t.Errorf("unexpected runner args: %v", args)
+	}
+
+	channelArgs := buildServiceChildArgs("channel", []string{"channel", "connect", "--workspace", "/var/run"})
+	if strings.Join(channelArgs, " ") != "channel up --workspace /var/run" {
+		t.Errorf("unexpected channel args: %v", channelArgs)
+	}
+}
+
+func TestAutoStartServiceDaemon(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &config.Config{
+		Workspace:    tmpDir,
+		ChannelToken: "beep_ct_test",
+	}
+
+	origStart := startServiceDaemonFn
+	defer func() { startServiceDaemonFn = origStart }()
+
+	var calledService string
+	var calledRawArgs []string
+	startServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+		calledService = service
+		calledRawArgs = rawArgs
+		return nil
+	}
+
+	if err := autoStartServiceDaemon(daemon.ServiceChannel, cfg); err != nil {
+		t.Fatalf("autoStartServiceDaemon failed: %v", err)
+	}
+
+	if calledService != daemon.ServiceChannel {
+		t.Errorf("expected service %q, got %q", daemon.ServiceChannel, calledService)
+	}
+	if len(calledRawArgs) < 2 || calledRawArgs[0] != "--workspace" || calledRawArgs[1] != tmpDir {
+		t.Errorf("expected rawArgs to contain --workspace %s, got %v", tmpDir, calledRawArgs)
 	}
 }

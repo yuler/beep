@@ -184,3 +184,84 @@ func TestDeviceAuthorizationAndPollMockServer(t *testing.T) {
 		t.Errorf("expected access token 'beep_ct_success_token', got %q", tokenRes.AccessToken)
 	}
 }
+
+func TestChannelConnectAutomaticallyStartsDaemon(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/v1/me":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"email": "test@example.com",
+				"accounts": []map[string]any{
+					{"slug": "test-account", "name": "Test Account"},
+				},
+				"last_account_slug": "test-account",
+			})
+		case "/api/v1/channels/cli/authorizations":
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(client.DeviceAuthorizationResponse{
+				DeviceCode:              "dev_code_auto",
+				UserCode:                "AUTO-CODE",
+				VerificationURI:         "http://example.com/device",
+				VerificationURIComplete: "http://example.com/device?code=AUTO-CODE",
+				ExpiresIn:               900,
+				Interval:                1,
+			})
+		case "/api/v1/channels/cli/authorizations/token":
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(client.DeviceTokenResponse{
+				AccessToken: "beep_ct_auto_token",
+				TokenType:   "bearer",
+				ChannelID:   "chan_auto",
+				ChannelName: "Auto-Channel",
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.json")
+	fc := &config.FileConfig{
+		ServerURL:   server.URL,
+		AccessToken: "test-login-token",
+		AccountSlug: "test-account",
+	}
+	if err := config.SaveFile(configPath, fc); err != nil {
+		t.Fatalf("failed to save test config: %v", err)
+	}
+
+	flagWorkspace = tmpDir
+	defer func() { flagWorkspace = "" }()
+
+	origStart := startServiceDaemonFn
+	defer func() { startServiceDaemonFn = origStart }()
+
+	var startedService string
+	var startedRawArgs []string
+	startServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+		startedService = service
+		startedRawArgs = rawArgs
+		return nil
+	}
+
+	if err := channelConnectCmd.RunE(channelConnectCmd, nil); err != nil {
+		t.Fatalf("channelConnectCmd failed: %v", err)
+	}
+
+	if startedService != "channel" {
+		t.Errorf("expected started service 'channel', got %q", startedService)
+	}
+	if len(startedRawArgs) < 2 || startedRawArgs[0] != "--workspace" || startedRawArgs[1] != tmpDir {
+		t.Errorf("expected rawArgs to contain --workspace %s, got %v", tmpDir, startedRawArgs)
+	}
+
+	updated, err := config.LoadFile(configPath)
+	if err != nil {
+		t.Fatalf("failed to load updated config: %v", err)
+	}
+	if updated.ChannelToken != "beep_ct_auto_token" {
+		t.Errorf("expected channel_token 'beep_ct_auto_token', got %q", updated.ChannelToken)
+	}
+}

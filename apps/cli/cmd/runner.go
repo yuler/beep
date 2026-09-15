@@ -229,12 +229,10 @@ func newRunnerConnectCmd() *cobra.Command {
 						ui.Dim(config.MaskToken(tokenRes.AccessToken)),
 					)
 					fmt.Printf("%s Config saved to %s\n", ui.Green("✓"), ui.Dim(configPath))
-					fmt.Printf("\n%s To start executing scheduled tasks:\n  %s\n  %s\n",
-						ui.Dim("Next:"),
-						ui.Cyan("beep runner up"),
-						ui.Dim("or: beep up"),
-					)
-					return nil
+					fmt.Println()
+
+					cfg.RunnerToken = tokenRes.AccessToken
+					return autoStartServiceDaemon(daemon.ServiceRunner, cfg)
 				}
 
 				var oauthErr *client.OAuthErrorResponse

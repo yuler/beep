@@ -276,6 +276,28 @@ func runChannelService(cfg *config.Config, daemonMode bool) error {
 	return ch.Run(ctx)
 }
 
+var startServiceDaemonFn = startServiceBackgroundDaemon
+
+func autoStartServiceDaemon(service string, cfg *config.Config) error {
+	running, pid, _ := daemon.CheckRunning(cfg.Workspace, service)
+	if running && pid > 0 {
+		fmt.Printf("%s Restarting %s daemon (stopping PID: %d)...\n", ui.Cyan("●"), service, pid)
+		if _, err := daemon.StopDaemon(cfg.Workspace, service, 10*time.Second, true); err != nil {
+			return fmt.Errorf("failed to stop existing %s daemon: %w", service, err)
+		}
+	}
+
+	var rawArgs []string
+	if cfg.Workspace != "" {
+		rawArgs = append(rawArgs, "--workspace", cfg.Workspace)
+	}
+	if flagServer != "" {
+		rawArgs = append(rawArgs, "--server", flagServer)
+	}
+
+	return startServiceDaemonFn(service, []string{service, "up"}, rawArgs, cfg)
+}
+
 func startServiceBackgroundDaemon(service string, childSubcommand []string, rawArgs []string, cfg *config.Config) error {
 	running, pid, _ := daemon.CheckRunning(cfg.Workspace, service)
 	if running {
@@ -372,7 +394,7 @@ func buildServiceChildArgs(service string, args []string) []string {
 			continue
 		}
 
-		if arg == "runner" || arg == "channel" || arg == "up" || arg == "run" {
+		if arg == "runner" || arg == "channel" || arg == "up" || arg == "run" || arg == "connect" {
 			continue
 		}
 
