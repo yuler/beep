@@ -18,7 +18,7 @@ var (
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Manage local runner configuration (~/.beep/config.json)",
+	Short: fmt.Sprintf("Manage local runner configuration (%s/config.json)", config.DefaultWorkspaceDisplay()),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runConfigShow(cmd, args)
 	},
@@ -48,6 +48,10 @@ var configSetCmd = &cobra.Command{
 			fc.ServerURL = strings.TrimRight(flagSetConfig.ServerURL, "/")
 			updated = true
 		}
+		if flagSetConfig.AccountSlug != "" {
+			fc.AccountSlug = strings.TrimSpace(flagSetConfig.AccountSlug)
+			updated = true
+		}
 		if flagSetConfig.RunnerToken != "" {
 			fc.RunnerToken = flagSetConfig.RunnerToken
 			updated = true
@@ -75,8 +79,22 @@ var configSetCmd = &cobra.Command{
 					fc.ServerURL = strings.TrimRight(val, "/")
 					updated = true
 					i++
+				case "account", "account_slug", "account-slug", "slug":
+					fc.AccountSlug = strings.TrimSpace(val)
+					updated = true
+					i++
+				case "access_token", "access-token", "user_token", "user-token":
+					fc.AccessToken = val
+					updated = true
+					i++
 				case "token", "runner_token", "runner-token", "auth":
 					fc.RunnerToken = val
+					updated = true
+					i++
+				case "channel_token", "channel-token", "channel", "cli_token", "device_token":
+					fc.ChannelToken = val
+					fc.CliToken = ""
+					fc.DeviceToken = ""
 					updated = true
 					i++
 				case "workspace", "dir", "workdir":
@@ -154,8 +172,18 @@ var configUnsetCmd = &cobra.Command{
 		switch key {
 		case "server", "server_url", "server-url":
 			fc.ServerURL = ""
+		case "account", "account_slug", "account-slug", "slug":
+			fc.AccountSlug = ""
+		case "access_token", "access-token", "user_token", "user-token":
+			fc.AccessToken = ""
+			fc.UserEmail = ""
+			fc.UserName = ""
 		case "token", "runner_token", "runner-token":
 			fc.RunnerToken = ""
+		case "channel_token", "channel-token", "channel", "cli_token", "device_token":
+			fc.ChannelToken = ""
+			fc.CliToken = ""
+			fc.DeviceToken = ""
 		case "workspace", "dir":
 			fc.Workspace = ""
 		case "concurrency":
@@ -189,6 +217,7 @@ func init() {
 	configCmd.Flags().BoolVar(&flagShowToken, "show-token", false, "Display unmasked runner token")
 
 	configSetCmd.Flags().StringVar(&flagSetConfig.ServerURL, "server", "", "Beep server URL")
+	configSetCmd.Flags().StringVarP(&flagSetConfig.AccountSlug, "account", "a", "", "Account slug")
 	configSetCmd.Flags().StringVar(&flagSetConfig.RunnerToken, "token", "", "Runner token")
 	configSetCmd.Flags().StringVar(&flagSetConfig.Workspace, "workspace", "", "Workspace directory")
 	configSetCmd.Flags().IntVar(&flagSetConfig.Concurrency, "concurrency", 0, "Max concurrency")
@@ -214,7 +243,31 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	fmt.Println(ui.Bold(ui.Cyan("Beep Runner Configuration:")))
 	fmt.Println(ui.KeyValue("Config File", ui.Dim(cfg.ConfigFile)))
 	fmt.Println(ui.KeyValue("Server URL", ui.Bold(cfg.ServerURL)))
+	if cfg.AccountSlug != "" {
+		fmt.Println(ui.KeyValue("Account Slug", ui.Bold(cfg.AccountSlug)))
+	}
+	if cfg.AccessToken != "" {
+		accessTokenStr := config.MaskToken(cfg.AccessToken)
+		if flagShowToken {
+			accessTokenStr = cfg.AccessToken
+		}
+		displayName := cfg.UserEmail
+		if cfg.UserName != "" {
+			displayName = fmt.Sprintf("%s (%s)", cfg.UserName, cfg.UserEmail)
+		}
+		if displayName != "" {
+			fmt.Println(ui.KeyValue("Logged In As", ui.Green(displayName)))
+		}
+		fmt.Println(ui.KeyValue("Access Token", ui.Yellow(accessTokenStr)))
+	}
 	fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(tokenStr)))
+	if cfg.ChannelToken != "" {
+		channelTokenStr := config.MaskToken(cfg.ChannelToken)
+		if flagShowToken {
+			channelTokenStr = cfg.ChannelToken
+		}
+		fmt.Println(ui.KeyValue("Channel Token", ui.Yellow(channelTokenStr)))
+	}
 	fmt.Println(ui.KeyValue("Workspace", ui.Dim(cfg.Workspace)))
 	fmt.Println(ui.KeyValue("Concurrency", ui.Bold(strconv.Itoa(cfg.Concurrency))))
 	fmt.Println(ui.KeyValue("Poll Interval", ui.Bold(cfg.PollInterval.String())))

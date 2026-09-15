@@ -21,7 +21,7 @@ export function fetchWebPushConfig() {
 
 export function fetchPushSubscriptions(slug: string) {
 	return apiFetch<PushSubscriptionsResponse>(
-		`/api/v1/${slug}/push_subscriptions`,
+		`/api/v1/${encodeURIComponent(slug)}/push_subscriptions`,
 		{ method: "GET" },
 	);
 }
@@ -31,7 +31,7 @@ export function createPushSubscription(
 	body: { endpoint: string; p256dh_key: string; auth_key: string },
 ) {
 	return apiFetch<PushSubscriptionRecord>(
-		`/api/v1/${slug}/push_subscriptions`,
+		`/api/v1/${encodeURIComponent(slug)}/push_subscriptions`,
 		{
 			method: "POST",
 			body,
@@ -40,13 +40,19 @@ export function createPushSubscription(
 }
 
 export function destroyPushSubscription(slug: string, id: string) {
-	return apiFetch<void>(`/api/v1/${slug}/push_subscriptions/${id}`, {
-		method: "DELETE",
-	});
+	return apiFetch<void>(
+		`/api/v1/${encodeURIComponent(slug)}/push_subscriptions/${encodeURIComponent(id)}`,
+		{
+			method: "DELETE",
+		},
+	);
 }
 
 export function testPushSubscription(slug: string, id: string) {
-	return apiFetch<void>(`/api/v1/${slug}/push_subscriptions/${id}/test`, {
-		method: "POST",
-	});
+	return apiFetch<void>(
+		`/api/v1/${encodeURIComponent(slug)}/push_subscriptions/${encodeURIComponent(id)}/test`,
+		{
+			method: "POST",
+		},
+	);
 }

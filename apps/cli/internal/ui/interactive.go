@@ -656,7 +656,12 @@ func PromptConfigSetWizard(fc *config.FileConfig) error {
 			huh.NewInput().
 				Title("Beep Server URL").
 				Description("API URL of your Beep instance").
-				Placeholder("https://core.example.com or http://core.beep.localhost:3000").
+				Placeholder(func() string {
+					if config.DefaultServerURL != "" {
+						return config.DefaultServerURL
+					}
+					return "https://core.example.com"
+				}()).
 				Value(&server).
 				Validate(func(s string) error {
 					if strings.TrimSpace(s) == "" {
@@ -680,8 +685,8 @@ func PromptConfigSetWizard(fc *config.FileConfig) error {
 
 			huh.NewInput().
 				Title("Local Workspace Directory").
-				Description("Where job scripts and configs are stored (default ~/.beep)").
-				Placeholder("~/.beep").
+				Description(fmt.Sprintf("Where job scripts and configs are stored (default %s)", config.DefaultWorkspaceDisplay())).
+				Placeholder(config.DefaultWorkspaceDisplay()).
 				Value(&workspaceDir),
 
 			huh.NewInput().
@@ -750,6 +755,66 @@ func PromptConfigUnsetSelect(fc *config.FileConfig) (string, error) {
 	var choice string
 	err := huh.NewSelect[string]().
 		Title("Select Config Key to Unset").
+		Options(options...).
+		Value(&choice).
+		Run()
+	if err != nil {
+		return "", err
+	}
+	return choice, nil
+}
+
+// PromptAccountSlug prompts the user interactively for their account slug.
+func PromptAccountSlug() (string, error) {
+	var slug string
+	err := huh.NewInput().
+		Title("Account Slug").
+		Description("Account slug to authorize this device for (e.g. personal, acme)").
+		Placeholder("personal").
+		Value(&slug).
+		Validate(func(s string) error {
+			s = strings.TrimSpace(s)
+			if s == "" {
+				return errors.New("account slug is required")
+			}
+			return nil
+		}).
+		Run()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(strings.ToLower(slug)), nil
+}
+
+// PromptAccountSelect prompts the user to select an account from their available accounts.
+func PromptAccountSelect(accounts []client.MeAccount, defaultSlug string) (string, error) {
+	if len(accounts) == 0 {
+		return "", errors.New("no accounts available to select")
+	}
+
+	options := make([]huh.Option[string], 0, len(accounts))
+	var initialValue string
+	for _, acc := range accounts {
+		label := acc.Name
+		if acc.Personal {
+			label += " (Personal)"
+		}
+		label += fmt.Sprintf(" - %s", acc.Slug)
+		options = append(options, huh.NewOption(label, acc.Slug))
+
+		if defaultSlug != "" && acc.Slug == defaultSlug {
+			initialValue = acc.Slug
+		}
+	}
+
+	if initialValue == "" {
+		initialValue = accounts[0].Slug
+	}
+
+	var choice string = initialValue
+	err := huh.NewSelect[string]().
+		Title("Select Account").
+		Description("Choose an account to connect to").
 		Options(options...).
 		Value(&choice).
 		Run()

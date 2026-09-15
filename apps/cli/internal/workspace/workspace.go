@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"beep/internal/config"
 )
 
 type LocalJob struct {
@@ -38,11 +40,7 @@ type Workspace struct {
 
 func Open(root string) (*Workspace, error) {
 	if root == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("workspace path required: %w", err)
-		}
-		root = filepath.Join(home, ".beep")
+		root = config.DefaultWorkspace()
 	}
 
 	abs, err := filepath.Abs(root)

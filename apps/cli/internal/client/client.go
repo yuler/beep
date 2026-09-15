@@ -18,8 +18,9 @@ import (
 )
 
 type Client struct {
-	cfg        *config.Config
-	httpClient *http.Client
+	cfg              *config.Config
+	httpClient       *http.Client
+	noRedirectClient *http.Client
 }
 
 func New(cfg *config.Config) *Client {
@@ -33,8 +34,16 @@ func New(cfg *config.Config) *Client {
 				}
 				if len(via) > 0 && !strings.EqualFold(req.URL.Host, via[0].URL.Host) {
 					req.Header.Del("X-Runner-Token")
+					req.Header.Del("X-Channel-Token")
+					req.Header.Del("X-CLI-Token")
 				}
 				return nil
+			},
+		},
+		noRedirectClient: &http.Client{
+			Timeout: 35 * time.Second,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
 			},
 		},
 	}
@@ -127,7 +136,7 @@ func (c *Client) ListJobs(ctx context.Context) ([]*ServerJob, error) {
 }
 
 func (c *Client) DeleteJob(ctx context.Context, slug string) error {
-	url := fmt.Sprintf("%s/api/v1/runner/jobs/%s", c.cfg.ServerURL, slug)
+	url := fmt.Sprintf("%s/api/v1/runner/jobs/%s", c.cfg.ServerURL, url.PathEscape(slug))
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return err
@@ -195,7 +204,21 @@ func (c *Client) ReportLog(ctx context.Context, logURL, chunk string) error {
 	if err := c.allowedCallbackURL(logURL); err != nil {
 		return err
 	}
-	return c.postJSON(ctx, logURL, map[string]any{"chunk": chunk}, http.StatusNoContent, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, logURL, mustJSON(map[string]any{"chunk": chunk}))
+	if err != nil {
+		return err
+	}
+	c.setRunnerHeaders(req)
+	resp, err := c.noRedirectClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("report log failed (status %d): %s", resp.StatusCode, string(body))
+	}
+	return nil
 }
 
 func (c *Client) ReportResult(ctx context.Context, resultURL string, result *task.Result) error {
@@ -208,7 +231,21 @@ func (c *Client) ReportResult(ctx context.Context, resultURL string, result *tas
 		"message": result.Message,
 		"metrics": result.Metrics,
 	}
-	return c.postJSON(ctx, resultURL, payload, http.StatusNoContent, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, resultURL, mustJSON(payload))
+	if err != nil {
+		return err
+	}
+	c.setRunnerHeaders(req)
+	resp, err := c.noRedirectClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("report result failed (status %d): %s", resp.StatusCode, string(body))
+	}
+	return nil
 }
 
 func (c *Client) allowedCallbackURL(raw string) error {
@@ -276,14 +313,526 @@ func (c *Client) getJSON(ctx context.Context, url string, want int, dest any) er
 	return json.NewDecoder(resp.Body).Decode(dest)
 }
 
-func (c *Client) setHeaders(req *http.Request) {
+func (c *Client) setBaseHeaders(req *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("X-Runner-Token", c.cfg.RunnerToken)
 	req.Header.Set("User-Agent", fmt.Sprintf("Beep-Runner/%s (%s; %s)", version.Version, runtime.GOOS, runtime.GOARCH))
+}
+
+func (c *Client) setRunnerHeaders(req *http.Request) {
+	c.setBaseHeaders(req)
+	if c.cfg.RunnerToken != "" {
+		req.Header.Set("X-Runner-Token", c.cfg.RunnerToken)
+	}
+}
+
+func (c *Client) setChannelHeaders(req *http.Request) {
+	c.setBaseHeaders(req)
+	token := c.cfg.ChannelToken
+	if token == "" {
+		token = c.cfg.CliToken
+	}
+	if token == "" {
+		token = c.cfg.DeviceToken
+	}
+	if token != "" {
+		req.Header.Set("X-Channel-Token", token)
+		req.Header.Set("X-CLI-Token", token)
+	}
+}
+
+func (c *Client) setAuthHeaders(req *http.Request) {
+	c.setBaseHeaders(req)
+	if c.cfg.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.cfg.AccessToken)
+	}
+	if c.cfg.AccountSlug != "" {
+		req.Header.Set("X-Account-Slug", c.cfg.AccountSlug)
+	}
+}
+
+func (c *Client) setHeaders(req *http.Request) {
+	c.setRunnerHeaders(req)
+}
+
+type CliDelivery struct {
+	ID        string         `json:"id"`
+	BeepRunID *string        `json:"beep_run_id"`
+	Status    string         `json:"status"`
+	Payload   map[string]any `json:"payload"`
+	ExpiresAt *time.Time     `json:"expires_at"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
+type DeviceDelivery = CliDelivery
+
+type CliInboxResponse struct {
+	Deliveries []CliDelivery `json:"deliveries"`
+}
+
+type DeviceInboxResponse = CliInboxResponse
+
+func (c *Client) FetchCliInbox(ctx context.Context) ([]CliDelivery, error) {
+	token := c.cfg.ChannelToken
+	if token == "" {
+		token = c.cfg.CliToken
+	}
+	if token == "" {
+		token = c.cfg.DeviceToken
+	}
+	if token == "" {
+		return nil, nil
+	}
+	url := fmt.Sprintf("%s/api/v1/channels/cli/inbox", c.cfg.ServerURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	c.setChannelHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("fetch cli inbox failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var inboxRes CliInboxResponse
+	if err := json.NewDecoder(resp.Body).Decode(&inboxRes); err != nil {
+		return nil, err
+	}
+	return inboxRes.Deliveries, nil
+}
+
+func (c *Client) FetchDeviceInbox(ctx context.Context) ([]CliDelivery, error) {
+	return c.FetchCliInbox(ctx)
+}
+
+func (c *Client) AckCliDelivery(ctx context.Context, deliveryID string, status string, errorMsg string) error {
+	token := c.cfg.ChannelToken
+	if token == "" {
+		token = c.cfg.CliToken
+	}
+	if token == "" {
+		token = c.cfg.DeviceToken
+	}
+	if token == "" {
+		return fmt.Errorf("missing channel token")
+	}
+	runes := []rune(errorMsg)
+	if len(runes) > 2048 {
+		errorMsg = string(runes[len(runes)-2048:])
+	}
+
+	url := fmt.Sprintf("%s/api/v1/channels/cli/deliveries/%s/ack", c.cfg.ServerURL, url.PathEscape(deliveryID))
+	payload := map[string]any{
+		"status": status,
+	}
+	if errorMsg != "" {
+		payload["error"] = errorMsg
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))
+	if err != nil {
+		return err
+	}
+	c.setChannelHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("ack cli delivery failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+	return nil
+}
+
+func (c *Client) AckDeviceDelivery(ctx context.Context, deliveryID string, status string, errorMsg string) error {
+	return c.AckCliDelivery(ctx, deliveryID, status, errorMsg)
+}
+
+func (c *Client) DisconnectChannel(ctx context.Context) error {
+	token := c.cfg.ChannelToken
+	if token == "" {
+		token = c.cfg.CliToken
+	}
+	if token == "" {
+		token = c.cfg.DeviceToken
+	}
+	if token == "" {
+		return fmt.Errorf("missing channel token")
+	}
+	url := fmt.Sprintf("%s/api/v1/channels/cli/connection", c.cfg.ServerURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	c.setChannelHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Treat already-gone as success so disconnect stays idempotent
+	// (e.g. channel was deleted from the web settings page).
+	if resp.StatusCode == http.StatusNoContent ||
+		resp.StatusCode == http.StatusOK ||
+		resp.StatusCode == http.StatusUnauthorized ||
+		resp.StatusCode == http.StatusNotFound {
+		io.Copy(io.Discard, resp.Body)
+		return nil
+	}
+
+	respBody, _ := io.ReadAll(resp.Body)
+	return fmt.Errorf("disconnect channel failed (status %d): %s", resp.StatusCode, string(respBody))
+}
+
+type DeviceAuthorizationResponse struct {
+	DeviceCode              string `json:"device_code"`
+	UserCode                string `json:"user_code"`
+	VerificationURI         string `json:"verification_uri"`
+	VerificationURIComplete string `json:"verification_uri_complete"`
+	ExpiresIn               int    `json:"expires_in"`
+	Interval                int    `json:"interval"`
+}
+
+type DeviceTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ChannelID   string `json:"channel_id"`
+	ChannelName string `json:"channel_name"`
+}
+
+type OAuthErrorResponse struct {
+	ErrorCode        string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
+func (e *OAuthErrorResponse) Error() string {
+	if e.ErrorDescription != "" {
+		return fmt.Sprintf("%s: %s", e.ErrorCode, e.ErrorDescription)
+	}
+	return e.ErrorCode
+}
+
+const (
+	OAuthErrAuthorizationPending = "authorization_pending"
+	OAuthErrSlowDown             = "slow_down"
+	OAuthErrExpiredToken         = "expired_token"
+	OAuthErrAccessDenied         = "access_denied"
+)
+
+func (c *Client) RequestDeviceAuthorization(ctx context.Context, channelName, accountSlug string) (*DeviceAuthorizationResponse, error) {
+	url := fmt.Sprintf("%s/api/v1/channels/cli/authorizations", c.cfg.ServerURL)
+	payload := map[string]any{
+		"channel_name": channelName,
+	}
+	if accountSlug != "" {
+		payload["account_slug"] = accountSlug
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setAuthHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+	var res DeviceAuthorizationResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) PollDeviceToken(ctx context.Context, deviceCode string) (*DeviceTokenResponse, error) {
+	reqURL := fmt.Sprintf("%s/api/v1/channels/cli/authorizations/token", c.cfg.ServerURL)
+	payload := map[string]any{
+		"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
+		"device_code": deviceCode,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setBaseHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK {
+		var tokenRes DeviceTokenResponse
+		if err := json.Unmarshal(respBody, &tokenRes); err != nil {
+			return nil, err
+		}
+		return &tokenRes, nil
+	}
+
+	var oauthErr OAuthErrorResponse
+	if err := json.Unmarshal(respBody, &oauthErr); err == nil && oauthErr.ErrorCode != "" {
+		return nil, &oauthErr
+	}
+
+	return nil, fmt.Errorf("token request failed (status %d): %s", resp.StatusCode, string(respBody))
+}
+
+func (c *Client) DisconnectRunner(ctx context.Context) error {
+	token := c.cfg.RunnerToken
+	if token == "" {
+		return fmt.Errorf("missing runner token")
+	}
+	url := fmt.Sprintf("%s/api/v1/runner/connection", c.cfg.ServerURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	c.setRunnerHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNoContent ||
+		resp.StatusCode == http.StatusOK ||
+		resp.StatusCode == http.StatusUnauthorized ||
+		resp.StatusCode == http.StatusNotFound {
+		io.Copy(io.Discard, resp.Body)
+		return nil
+	}
+
+	respBody, _ := io.ReadAll(resp.Body)
+	return fmt.Errorf("disconnect runner failed (status %d): %s", resp.StatusCode, string(respBody))
+}
+
+type RunnerTokenResponse struct {
+	AccessToken string   `json:"access_token"`
+	TokenType   string   `json:"token_type"`
+	RunnerID    string   `json:"runner_id"`
+	RunnerName  string   `json:"runner_name"`
+	Tags        []string `json:"tags"`
+}
+
+func (c *Client) RequestRunnerDeviceAuthorization(ctx context.Context, runnerName string, tags []string, metadata map[string]string, accountSlug string) (*DeviceAuthorizationResponse, error) {
+	url := fmt.Sprintf("%s/api/v1/runners/authorizations", c.cfg.ServerURL)
+	payload := map[string]any{
+		"runner_name": runnerName,
+		"tags":        tags,
+		"metadata":    metadata,
+	}
+	if accountSlug != "" {
+		payload["account_slug"] = accountSlug
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setAuthHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+	var res DeviceAuthorizationResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) PollRunnerDeviceToken(ctx context.Context, deviceCode string) (*RunnerTokenResponse, error) {
+	reqURL := fmt.Sprintf("%s/api/v1/runners/authorizations/token", c.cfg.ServerURL)
+	payload := map[string]any{
+		"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
+		"device_code": deviceCode,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setBaseHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK {
+		var tokenRes RunnerTokenResponse
+		if err := json.Unmarshal(respBody, &tokenRes); err != nil {
+			return nil, err
+		}
+		return &tokenRes, nil
+	}
+
+	var oauthErr OAuthErrorResponse
+	if err := json.Unmarshal(respBody, &oauthErr); err == nil && oauthErr.ErrorCode != "" {
+		return nil, &oauthErr
+	}
+
+	return nil, fmt.Errorf("token request failed (status %d): %s", resp.StatusCode, string(respBody))
 }
 
 func mustJSON(payload any) *bytes.Reader {
 	bodyBytes, _ := json.Marshal(payload)
 	return bytes.NewReader(bodyBytes)
+}
+
+type MeIdentity struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Name  string `json:"name"`
+	Staff bool   `json:"staff"`
+}
+
+type MeAccount struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Slug     string `json:"slug"`
+	Personal bool   `json:"personal"`
+}
+
+type MeResponse struct {
+	Identity        MeIdentity  `json:"identity"`
+	Accounts        []MeAccount `json:"accounts"`
+	LastAccountSlug string      `json:"last_account_slug"`
+}
+
+func (c *Client) GetMe(ctx context.Context) (*MeResponse, error) {
+	url := fmt.Sprintf("%s/api/v1/me", c.cfg.ServerURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	c.setAuthHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("authentication token is invalid or expired (status 401)")
+	}
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to fetch user profile (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var me MeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&me); err != nil {
+		return nil, err
+	}
+	return &me, nil
+}
+
+type CliTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	User        struct {
+		ID    string `json:"id"`
+		Email string `json:"email"`
+		Name  string `json:"name"`
+	} `json:"user"`
+}
+
+func (c *Client) RequestCliDeviceAuthorization(ctx context.Context, clientName string) (*DeviceAuthorizationResponse, error) {
+	url := fmt.Sprintf("%s/api/v1/cli/authorizations", c.cfg.ServerURL)
+	payload := map[string]any{
+		"client_name": clientName,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setBaseHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var res DeviceAuthorizationResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) PollCliDeviceToken(ctx context.Context, deviceCode string) (*CliTokenResponse, error) {
+	reqURL := fmt.Sprintf("%s/api/v1/cli/authorizations/token", c.cfg.ServerURL)
+	payload := map[string]any{
+		"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",
+		"device_code": deviceCode,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, mustJSON(payload))
+	if err != nil {
+		return nil, err
+	}
+	c.setBaseHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusOK {
+		var tokenRes CliTokenResponse
+		if err := json.Unmarshal(respBody, &tokenRes); err != nil {
+			return nil, err
+		}
+		return &tokenRes, nil
+	}
+
+	var oauthErr OAuthErrorResponse
+	if err := json.Unmarshal(respBody, &oauthErr); err == nil && oauthErr.ErrorCode != "" {
+		return nil, &oauthErr
+	}
+
+	return nil, fmt.Errorf("token request failed (status %d): %s", resp.StatusCode, string(respBody))
 }

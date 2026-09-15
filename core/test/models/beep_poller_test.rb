@@ -110,7 +110,7 @@ class BeepPollerTest < ActiveSupport::TestCase
     due_once_beep
 
     Beep.poll_due_now
-    assert_no_difference -> { BeepRun.count } do
+    assert_no_difference -> { Beep::Run.count } do
       Beep.poll_due_now
     end
   end

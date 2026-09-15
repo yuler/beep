@@ -30,7 +30,7 @@ These four are load-bearing; everything below follows from them.
 
 **2. Probe outcome lives on `beeper_runs`, delivery outcome on `beep_runs`.** `beeper_runs.signal_status` (`ok` / `alerting` / `error`) is the signal result. `beep_runs.status` (`pending running succeeded failed …`) means *did we deliver*. A healthy probe that creates no Beep is not a skipped or failed delivery.
 
-**3. Notification is a decision on the Beeper; a notify creates a new once Beep.** The alert state machine (`AlertEvaluator`) runs against the Beeper. `should_notify` → `Beeps.create!(kind: once, …)` with channels copied onto the Beep and optional `beeper_id` so the inbox can point back at the Beeper. Delivery then uses the existing Beep path. One notify event → one Beep → N channel types on that Beep (same BeepRun). A 5-minute schedule does not email every 5 minutes for the whole outage.
+**3. Notification is a decision on the Beeper; a notify creates a new once Beep.** The alert state machine (`AlertEvaluator`) runs against the Beeper. `should_notify` → `Beeps.create!(kind: once, …)` with channels copied onto the Beep and optional `beeper_id` so the inbox can point back at the Beeper. Delivery then uses the existing Beep path. One notify event → one Beep → N Channels on that Beep (same BeepRun). A 5-minute schedule does not email every 5 minutes for the whole outage.
 
 **4. Signal production is unified behind `BeeperApp#produce_signal`.** Built-in official receivers (`BeeperApp::Receivers::*`) run in-process in Core. Custom catalog apps may later use an isolated sandbox. Self-hosted **Runner Jobs** are a separate scheduler (`RunnerJob` / `RunnerRun`), not an execution target on official Beepers.
 

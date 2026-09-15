@@ -13,7 +13,14 @@ import (
 
 type FileConfig struct {
 	ServerURL    string `json:"server_url,omitempty"`
+	AccountSlug  string `json:"account_slug,omitempty"`
+	AccessToken  string `json:"access_token,omitempty"`
+	UserEmail    string `json:"user_email,omitempty"`
+	UserName     string `json:"user_name,omitempty"`
 	RunnerToken  string `json:"runner_token,omitempty"`
+	ChannelToken string `json:"channel_token,omitempty"`
+	CliToken     string `json:"cli_token,omitempty"`
+	DeviceToken  string `json:"device_token,omitempty"`
 	Workspace    string `json:"workspace,omitempty"`
 	Concurrency  int    `json:"concurrency,omitempty"`
 	PollInterval string `json:"poll_interval,omitempty"`
@@ -22,7 +29,14 @@ type FileConfig struct {
 
 type Config struct {
 	ServerURL    string
+	AccountSlug  string
+	AccessToken  string
+	UserEmail    string
+	UserName     string
 	RunnerToken  string
+	ChannelToken string
+	CliToken     string
+	DeviceToken  string
 	Concurrency  int
 	PollInterval time.Duration
 	Hostname     string
@@ -30,12 +44,26 @@ type Config struct {
 	ConfigFile   string
 }
 
+var (
+	// DefaultServerURL is injected at build time using -ldflags.
+	DefaultServerURL = ""
+	// DefaultWorkspaceName is injected at build time using -ldflags (e.g. ".beep" or ".beep.local").
+	DefaultWorkspaceName = ".beep"
+)
+
 func DefaultWorkspace() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".beep"
+		return DefaultWorkspaceName
 	}
-	return filepath.Join(home, ".beep")
+	return filepath.Join(home, DefaultWorkspaceName)
+}
+
+func DefaultWorkspaceDisplay() string {
+	if strings.HasPrefix(DefaultWorkspaceName, "/") {
+		return DefaultWorkspaceName
+	}
+	return "~/" + DefaultWorkspaceName
 }
 
 func GetConfigPath(ws string) string {
@@ -45,10 +73,13 @@ func GetConfigPath(ws string) string {
 	if ws == "" {
 		ws = DefaultWorkspace()
 	}
-	if strings.HasPrefix(ws, "~") {
-		home, err := os.UserHomeDir()
-		if err == nil {
-			ws = filepath.Join(home, strings.TrimPrefix(ws, "~"))
+	if ws == "~" {
+		if home, err := os.UserHomeDir(); err == nil {
+			ws = home
+		}
+	} else if strings.HasPrefix(ws, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			ws = filepath.Join(home, strings.TrimPrefix(ws, "~/"))
 		}
 	}
 	abs, err := filepath.Abs(ws)
@@ -75,14 +106,19 @@ func LoadFile(configPath string) (*FileConfig, error) {
 
 func SaveFile(configPath string, fc *FileConfig) error {
 	dir := filepath.Dir(configPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 	data, err := json.MarshalIndent(fc, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(configPath, append(data, '\n'), 0o600)
+	if err := os.WriteFile(configPath, append(data, '\n'), 0o600); err != nil {
+		return err
+	}
+	_ = os.Chmod(configPath, 0o600)
+	_ = os.Chmod(dir, 0o700)
+	return nil
 }
 
 func Load(wsHint string) (*Config, error) {
@@ -102,11 +138,18 @@ func Load(wsHint string) (*Config, error) {
 
 	serverURL := getEnv("BEEP_SERVER", fc.ServerURL)
 	if serverURL == "" {
-		serverURL = "http://core.localhost:3000"
+		serverURL = DefaultServerURL
 	}
 	serverURL = strings.TrimRight(serverURL, "/")
 
 	runnerToken := getEnv("BEEP_RUNNER_TOKEN", fc.RunnerToken)
+	channelToken := getEnv("BEEP_CHANNEL_TOKEN", fc.ChannelToken)
+	if channelToken == "" {
+		channelToken = getEnv("BEEP_CLI_TOKEN", fc.CliToken)
+	}
+	if channelToken == "" {
+		channelToken = getEnv("BEEP_DEVICE_TOKEN", fc.DeviceToken)
+	}
 
 	concurrency := 5
 	if fc.Concurrency > 0 {
@@ -131,9 +174,19 @@ func Load(wsHint string) (*Config, error) {
 		}
 	}
 
+	accountSlug := getEnv("BEEP_ACCOUNT", fc.AccountSlug)
+	accessToken := getEnv("BEEP_ACCESS_TOKEN", fc.AccessToken)
+
 	cfg := &Config{
 		ServerURL:    serverURL,
+		AccountSlug:  accountSlug,
+		AccessToken:  accessToken,
+		UserEmail:    fc.UserEmail,
+		UserName:     fc.UserName,
 		RunnerToken:  runnerToken,
+		ChannelToken: channelToken,
+		CliToken:     channelToken,
+		DeviceToken:  channelToken,
 		Concurrency:  concurrency,
 		PollInterval: pollInterval,
 		Hostname:     hostname,
@@ -144,16 +197,20 @@ func Load(wsHint string) (*Config, error) {
 	return cfg, nil
 }
 
+func (c *Config) IsLoggedIn() bool {
+	return c.AccessToken != ""
+}
+
 func LoadFromEnv() (*Config, error) {
 	return Load("")
 }
 
 func (c *Config) Validate() error {
 	if c.ServerURL == "" {
-		return fmt.Errorf("server URL is required (set via 'beep runner config set --server <url>' or --server or BEEP_SERVER)")
+		return fmt.Errorf("server URL is required (set via 'beep config set server <url>' or --server or BEEP_SERVER)")
 	}
-	if c.RunnerToken == "" {
-		return fmt.Errorf("runner token is required (set via 'beep runner config set --token <token>' or --token or BEEP_RUNNER_TOKEN)")
+	if c.RunnerToken == "" && c.ChannelToken == "" {
+		return fmt.Errorf("runner token or channel token is required (connect via 'beep channel connect' or configure runner token via 'beep config set token <token>')")
 	}
 	if c.Concurrency <= 0 {
 		c.Concurrency = 5

@@ -7,10 +7,12 @@ class Beep < ApplicationRecord
   EXPIRED_AFTER = 1.hour
   TITLE_MAX_LENGTH = 80
   BODY_MAX_LENGTH = 2000
+  SOURCE_TYPES = %w[ Beeper Runner::Job ].freeze
 
   belongs_to :account
+  belongs_to :source, polymorphic: true, optional: true
   belongs_to :beeper, optional: true
-  has_many :runs, class_name: "BeepRun", dependent: :destroy
+  has_many :runs, class_name: "Beep::Run", dependent: :destroy
 
   enum :kind, %w[ once recurring ].index_by(&:itself)
   enum :status, %w[ active paused completed cancelled firing ].index_by(&:itself)
@@ -18,10 +20,11 @@ class Beep < ApplicationRecord
   normalizes :title, with: ->(value) { value.strip.presence }
   normalizes :body, with: ->(value) { value&.strip.presence }
 
+  before_validation :assign_beeper_from_source
   before_validation :assign_default_notification_channels, on: :create
   before_validation :sync_run_attributes
 
-  validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }
+  validates :title, presence: true, length: { maximum: TITLE_MAX_LENGTH }, format: { without: /[\r\n]/ }
   validates :body, length: { maximum: BODY_MAX_LENGTH }, allow_nil: true
   validates :timezone, presence: true
   validates :run_at, absence: true, if: :recurring?
@@ -31,6 +34,7 @@ class Beep < ApplicationRecord
   validate :timezone_is_iana
   validate :validate_cron_expression, if: :recurring?
   validate :validate_notification_channels
+  validate :validate_source
 
   after_create_commit :deliver_if_due_on_create
 
@@ -149,7 +153,11 @@ class Beep < ApplicationRecord
   end
 
   def web_url
-    "#{Rails.application.config.x.web_origin}/#{account.slug}/beeps/#{id}"
+    if persisted?
+      "#{Rails.application.config.x.web_origin}/#{account.slug}/beeps/#{id}"
+    else
+      "#{Rails.application.config.x.web_origin}/#{account.slug}/settings/channels"
+    end
   end
 
   def recipient_users
@@ -163,11 +171,33 @@ class Beep < ApplicationRecord
     { title: title, options: options }
   end
 
+  def source_slug
+    case source_type
+    when "Beeper" then "beeper"
+    when "Runner::Job" then "runner_job"
+    else "beep"
+    end
+  end
+
   def body_text
     Beep::Plaintext.from_markdown(body)
   end
 
   private
+    def assign_beeper_from_source
+      if source.is_a?(Beeper)
+        self.beeper_id = source_id
+      end
+    end
+
+    def validate_source
+      if source_type.present? && SOURCE_TYPES.exclude?(source_type)
+        errors.add(:source, "is not supported")
+      elsif source.present? && source.respond_to?(:account_id) && source.account_id != account_id
+        errors.add(:source, "must belong to the same account")
+      end
+    end
+
     def claim_run(scheduled_for)
       if expired?(scheduled_for)
         runs.create!(scheduled_for: scheduled_for, status: :expired)
@@ -188,10 +218,9 @@ class Beep < ApplicationRecord
 
     def assign_default_notification_channels
       if Array(notification_channels).empty?
-        self.notification_channels = if Current.user
-          Current.user.notification_channels
-        elsif account&.owner_user
-          account.owner_user.notification_channels
+        target_user = Current.user || account&.owner_user
+        self.notification_channels = if target_user
+          target_user.notification_channels.presence || target_user.channels.active.pluck(:id)
         else
           []
         end
@@ -231,7 +260,11 @@ class Beep < ApplicationRecord
     def validate_notification_channels
       return if notification_channels.blank?
 
-      invalid = Array(notification_channels) - User::NOTIFICATION_CHANNELS
+      invalid = Array(notification_channels).reject do |channel|
+        channel.in?(User::NOTIFICATION_CHANNELS) ||
+          channel.to_s.start_with?("cli:") ||
+          channel.to_s.match?(/\A[0-9a-zA-Z_-]{10,40}\z/)
+      end
       if invalid.any?
         errors.add(:notification_channels, "contains unsupported channels: #{invalid.join(', ')}")
       end

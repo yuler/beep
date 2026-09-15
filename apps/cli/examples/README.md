@@ -24,3 +24,14 @@ The process injects `BEEP_RUNNER_LOG_URL`, `BEEP_RUNNER_RESULT_URL`, and `BEEP_R
 ```json
 { "status": "ok", "title": "healthy", "message": "...", "metrics": { "latency_ms": 12 } }
 ```
+
+## Channel hooks
+
+`beep up` pulls CLI channel deliveries and execs `$WORKSPACE/hooks/on-channel` for every event (`beep.fired`, `channel.test`, …). Copy the example, drop the `.example` suffix:
+
+```bash
+cp examples/hooks/on-channel.example ~/.beep/hooks/on-channel
+chmod 755 ~/.beep/hooks/on-channel
+```
+
+Branch on `BEEP_EVENT` inside the script (see `docs/architecture/channel.md` §5). Lookup also checks `$WORKSPACE/.beep/hooks/on-channel`. The hook must be owned by you, executable, and not group/world-writable, or the CLI refuses to run it.

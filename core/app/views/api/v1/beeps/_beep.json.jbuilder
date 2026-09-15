@@ -1,4 +1,5 @@
-json.extract! beep, :id, :title, :body, :kind, :status, :cron, :run_at, :next_run_at, :last_run_at, :timezone, :notification_channels, :beeper_id, :created_at
+json.extract! beep, :id, :title, :body, :kind, :status, :cron, :run_at, :next_run_at, :last_run_at, :timezone, :notification_channels, :beeper_id, :source_type, :source_id, :intent, :metadata, :created_at
+json.source beep.source_slug
 if beep.beeper&.beeper_app
   json.beeper do
     json.extract! beep.beeper.beeper_app, :slug, :name

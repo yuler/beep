@@ -49,7 +49,7 @@ class Api::V1::SessionsControllerTest < ActionDispatch::IntegrationTest
     session = identity.sessions.create!
     sign_in_with_session_cookie(session)
 
-    delete api_v1_session_url, as: :json
+    delete api_v1_session_url, headers: { "X-Requested-With" => "XMLHttpRequest" }, as: :json
 
     assert_response :success
     assert_nil Session.find_by(id: session.id)

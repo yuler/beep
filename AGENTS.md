@@ -36,10 +36,12 @@ Local CORS for web → core `/api/v1` is development-only: [`core/config/initial
 - All version strings must come from the [`VERSION`](VERSION) file at the repo root (`APP_VERSION` build arg in Docker/CI overrides it).
 - Markdown tables must be auto-aligned (pad columns so pipes line up).
 - Do not use superpower or other speculative-driven skills unless explicitly declared.
+- Do not add speculative backwards compatibility or legacy fallback code without asking first; confirm with the user to avoid unnecessary complexity.
 - If something is unclear, ask questions. Keep everything from design to code as simple as possible.
 
 ## Core
 
 - API JSON responses use jbuilder views (`.json.jbuilder`), not inline hashes in controllers.
+- Routes must be RESTful: model endpoints as CRUD with `resources`/`resource`; when an action doesn't map to CRUD, introduce a new resource (e.g. `resource :test, only: %i[create]`) instead of `post :xxx, on: :member/collection`. See [`docs/core/STYLE.md`](docs/core/STYLE.md#crud-controllers).
 - Do not add gems or other package dependencies without asking first.
 - Do not edit or commit [`core/db/queue_schema.rb`](core/db/queue_schema.rb), [`core/db/cable_schema.rb`](core/db/cable_schema.rb), or [`core/db/cache_schema.rb`](core/db/cache_schema.rb); use `bin/rails db:prepare` or per-DB `db:reset:primary` / `db:reset:queue` / `db:reset:cable` — not `db:migrate` or `db:schema:dump`, which overwrite those files when a secondary DB is empty.

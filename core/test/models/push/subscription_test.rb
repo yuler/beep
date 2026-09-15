@@ -123,7 +123,7 @@ class Push::SubscriptionTest < ActiveSupport::TestCase
     updated = Push::Subscription.upsert_for!(users(:john), attributes.merge(p256dh_key: "new-key"))
 
     assert_equal created.id, updated.id
-    assert_equal 1, users(:john).push_subscriptions.where(endpoint: attributes[:endpoint]).count
+    assert_equal 1, users(:john).push_subscriptions.for_endpoint(attributes[:endpoint]).count
     assert_equal "new-key", updated.p256dh_key
   end
 end

@@ -50,7 +50,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :created
-    subscription = users(:john).push_subscriptions.find_by!(endpoint: @endpoint)
+    subscription = users(:john).push_subscriptions.for_endpoint(@endpoint).sole
     assert_equal "new-key", subscription.p256dh_key
     assert_equal "new-auth", subscription.auth_key
   end
@@ -140,7 +140,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert Push::Subscription.exists?(subscription.id)
   end
 
-  test "test sends a notification for the current user's subscription" do
+  test "tests#create sends a notification for the current user's subscription" do
     subscription = users(:john).push_subscriptions.create!(
       endpoint: @endpoint,
       p256dh_key: "key",
@@ -158,7 +158,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert sent
   end
 
-  test "test destroys an expired subscription" do
+  test "tests#create destroys an expired subscription" do
     subscription = users(:john).push_subscriptions.create!(
       endpoint: @endpoint,
       p256dh_key: "key",
@@ -179,7 +179,7 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert_not Push::Subscription.exists?(subscription.id)
   end
 
-  test "test does not send for another user's subscription" do
+  test "tests#create does not send for another user's subscription" do
     subscription = users(:yuler).push_subscriptions.create!(
       endpoint: @endpoint,
       p256dh_key: "key",

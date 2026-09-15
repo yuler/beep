@@ -38,7 +38,7 @@ export function WebPushSetupBanner() {
 	});
 	const matchSettings = useMatchRoute();
 	const onSettings = Boolean(
-		matchSettings({ to: "/$account_slug/settings", fuzzy: false }),
+		matchSettings({ to: "/$account_slug/settings", fuzzy: true }),
 	);
 
 	if (!slug || onSettings) return null;
@@ -46,7 +46,7 @@ export function WebPushSetupBanner() {
 }
 
 function WebPushSetupBannerInner({ slug }: { slug: string }) {
-	const { status, ready, pending, enable, error } = useWebPush(slug);
+	const { status, ready, error } = useWebPush(slug);
 	const [dismissed, setDismissed] = useState(true);
 	const navigate = useNavigate();
 
@@ -67,11 +67,13 @@ function WebPushSetupBannerInner({ slug }: { slug: string }) {
 	const denied = status.permission === "denied";
 
 	function openSettings() {
-		navigate({ to: "/$account_slug/settings", params: { account_slug: slug } });
+		navigate({
+			to: "/$account_slug/settings/channels",
+			params: { account_slug: slug },
+		});
 	}
 
 	function handleClick() {
-		if (!needsIosInstall && !denied && !pending) void enable();
 		openSettings();
 	}
 

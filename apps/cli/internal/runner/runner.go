@@ -1,4 +1,4 @@
-package daemon
+package runner
 
 import (
 	"context"
@@ -17,7 +17,8 @@ import (
 	"beep/internal/workspace"
 )
 
-type Daemon struct {
+// Runner manages local execution of jobs received from Beep Core.
+type Runner struct {
 	cfg       *config.Config
 	client    *client.Client
 	workspace *workspace.Workspace
@@ -28,65 +29,88 @@ type Daemon struct {
 	OnReady   func()
 }
 
-func New(cfg *config.Config, ws *workspace.Workspace) *Daemon {
-	return &Daemon{
+// New creates a new Runner instance.
+func New(cfg *config.Config, ws *workspace.Workspace) *Runner {
+	concurrency := cfg.Concurrency
+	if concurrency <= 0 {
+		concurrency = 5
+	}
+	return &Runner{
 		cfg:       cfg,
 		client:    client.New(cfg),
 		workspace: ws,
 		executor:  exec.NewJobExecutor(),
-		sem:       make(chan struct{}, cfg.Concurrency),
+		sem:       make(chan struct{}, concurrency),
 	}
 }
 
-func (d *Daemon) Start(ctx context.Context) error {
-	log.Printf("%s Connecting to %s %s=%s %s=%s",
-		ui.Bold(ui.Cyan("[beep-runner]")),
-		ui.Bold(d.cfg.ServerURL),
-		ui.Dim("workspace"), ui.Dim(d.workspace.Root),
-		ui.Dim("concurrency"), ui.Yellow(fmt.Sprintf("%d", d.cfg.Concurrency)),
-	)
+// Run starts the runner loop until ctx is canceled.
+func (r *Runner) Run(ctx context.Context) error {
+	if r.cfg.RunnerToken == "" {
+		return fmt.Errorf("runner token is not configured (set via BEEP_RUNNER_TOKEN or config.json)")
+	}
+	if r.workspace == nil {
+		return fmt.Errorf("workspace is not configured")
+	}
 
-	pingRes, err := d.client.Ping(ctx)
+	pingRes, err := r.client.Ping(ctx)
 	if err != nil {
-		return fmt.Errorf("initial handshake failed: %w", err)
+		return fmt.Errorf("runner handshake failed: %w", err)
 	}
-	if d.OnReady != nil {
-		d.OnReady()
-	}
-	log.Printf("%s %s %s (%s)",
+	log.Printf("%s %s %s (%s) %s=%s %s=%s %s=%d",
 		ui.Bold(ui.Cyan("[beep-runner]")),
 		ui.Green("Connected:"),
 		ui.Bold(pingRes.RunnerID),
 		ui.Dim(pingRes.RunnerName),
+		ui.Dim("server"), ui.Bold(r.cfg.ServerURL),
+		ui.Dim("workspace"), ui.Dim(r.workspace.Root),
+		ui.Dim("concurrency"), r.cfg.Concurrency,
 	)
 
-	ticker := time.NewTicker(d.cfg.PollInterval)
+	if r.OnReady != nil {
+		r.OnReady()
+	}
+
+	interval := r.cfg.PollInterval
+	if interval <= 0 {
+		interval = 3 * time.Second
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			log.Printf("%s %s", ui.Bold(ui.Cyan("[beep-runner]")), ui.Yellow("Shutting down..."))
-			d.wg.Wait()
+			r.wg.Wait()
 			return nil
 		case <-ticker.C:
-			d.pollAndExecute(ctx)
+			r.PollAndExecute(ctx)
 		}
 	}
 }
 
-func (d *Daemon) pollAndExecute(ctx context.Context) {
-	for {
-		if len(d.sem) >= cap(d.sem) {
+// PollAndExecute fetches pending jobs and executes them concurrently up to configured concurrency limit.
+func (r *Runner) PollAndExecute(ctx context.Context) {
+	if r.cfg.RunnerToken == "" {
+		return
+	}
+
+	maxPerTick := 2 * cap(r.sem)
+	if maxPerTick <= 0 {
+		maxPerTick = 2
+	}
+	for n := 0; n < maxPerTick; n++ {
+		if len(r.sem) >= cap(r.sem) {
 			pingCtx, pingCancel := context.WithTimeout(ctx, 10*time.Second)
-			_, err := d.client.Ping(pingCtx)
+			_, err := r.client.Ping(pingCtx)
 			pingCancel()
 			if err != nil && ctx.Err() == nil {
 				log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("Heartbeat error:"), err)
 			}
 			return
 		}
-		t, err := d.client.Poll(ctx)
+		t, err := r.client.Poll(ctx)
 		if err != nil {
 			if ctx.Err() == nil {
 				log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("Poll error:"), err)
@@ -97,19 +121,19 @@ func (d *Daemon) pollAndExecute(ctx context.Context) {
 			return
 		}
 
-		d.sem <- struct{}{}
-		d.wg.Add(1)
+		r.sem <- struct{}{}
+		r.wg.Add(1)
 		go func(job *task.Task) {
 			defer func() {
-				<-d.sem
-				d.wg.Done()
+				<-r.sem
+				r.wg.Done()
 			}()
-			d.execute(ctx, job)
+			r.execute(ctx, job)
 		}(t)
 	}
 }
 
-func (d *Daemon) execute(ctx context.Context, job *task.Task) {
+func (r *Runner) execute(ctx context.Context, job *task.Task) {
 	timeout := time.Duration(job.TimeoutSeconds) * time.Second
 	if timeout <= 0 {
 		timeout = 60 * time.Second
@@ -117,27 +141,27 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 	taskCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	argv, err := d.workspace.Resolve(job.JobSlug)
+	argv, err := r.workspace.Resolve(job.JobSlug)
 	if err != nil {
 		result := task.Error("Unknown local job", err.Error(), nil)
-		d.logJobBlock(job, []string{err.Error()}, result)
+		r.logJobBlock(job, []string{err.Error()}, result)
 		errCtx, errCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer errCancel()
-		_ = d.client.ReportLog(errCtx, job.LogURL, err.Error()+"\n")
-		if reportErr := d.client.ReportResult(errCtx, job.ResultURL, result); reportErr != nil {
+		_ = r.client.ReportLog(errCtx, job.LogURL, err.Error()+"\n")
+		if reportErr := r.client.ReportResult(errCtx, job.ResultURL, result); reportErr != nil {
 			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error:"), reportErr)
 		}
 		return
 	}
 
-	env, err := d.jobEnv(job)
+	env, err := r.JobEnv(job)
 	if err != nil {
 		result := task.Error("Workspace environment", err.Error(), nil)
-		d.logJobBlock(job, []string{err.Error()}, result)
+		r.logJobBlock(job, []string{err.Error()}, result)
 		errCtx, errCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer errCancel()
-		_ = d.client.ReportLog(errCtx, job.LogURL, err.Error()+"\n")
-		if reportErr := d.client.ReportResult(errCtx, job.ResultURL, result); reportErr != nil {
+		_ = r.client.ReportLog(errCtx, job.LogURL, err.Error()+"\n")
+		if reportErr := r.client.ReportResult(errCtx, job.ResultURL, result); reportErr != nil {
 			log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error:"), reportErr)
 		}
 		return
@@ -161,7 +185,7 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 			buf.Reset()
 			uploadCtx, uploadCancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer uploadCancel()
-			if err := d.client.ReportLog(uploadCtx, job.LogURL, chunk); err != nil {
+			if err := r.client.ReportLog(uploadCtx, job.LogURL, chunk); err != nil {
 				log.Printf("%s %s %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("log upload:"), err)
 			}
 		}
@@ -186,7 +210,7 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 	var localLines []string
 	var localMu sync.Mutex
 
-	result := d.executor.Run(taskCtx, argv, env, timeout, func(line string) {
+	result := r.executor.Run(taskCtx, argv, env, timeout, func(line string) {
 		cleanLine := strings.TrimRight(line, "\r\n")
 		if cleanLine != "" {
 			localMu.Lock()
@@ -201,18 +225,18 @@ func (d *Daemon) execute(ctx context.Context, job *task.Task) {
 	close(logChan)
 	logWg.Wait()
 
-	d.logJobBlock(job, localLines, result)
+	r.logJobBlock(job, localLines, result)
 
 	resultCtx, resultCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer resultCancel()
-	if err := d.client.ReportResult(resultCtx, job.ResultURL, result); err != nil {
+	if err := r.client.ReportResult(resultCtx, job.ResultURL, result); err != nil {
 		log.Printf("%s %s for %s: %v", ui.Bold(ui.Cyan("[beep-runner]")), ui.Red("result error"), job.ID, err)
 	}
 }
 
-func (d *Daemon) logJobBlock(job *task.Task, lines []string, result *task.Result) {
-	d.logMu.Lock()
-	defer d.logMu.Unlock()
+func (r *Runner) logJobBlock(job *task.Task, lines []string, result *task.Result) {
+	r.logMu.Lock()
+	defer r.logMu.Unlock()
 
 	log.Printf("%s %s %s (%s: %s)",
 		ui.Bold(ui.Cyan("[beep-runner]")),
@@ -243,19 +267,24 @@ func (d *Daemon) logJobBlock(job *task.Task, lines []string, result *task.Result
 	}
 }
 
-func (d *Daemon) jobEnv(job *task.Task) ([]string, error) {
+// JobEnv resolves the execution environment variables for a job.
+func (r *Runner) JobEnv(job *task.Task) ([]string, error) {
 	configJSON, _ := json.Marshal(job.Config)
 
-	wsEnv, err := d.workspace.LoadEnv()
-	if err != nil {
-		return nil, err
+	var wsEnv []string
+	if r.workspace != nil {
+		var err error
+		wsEnv, err = r.workspace.LoadEnv()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var extras []string
 	extras = append(extras, wsEnv...)
 	extras = append(extras, exec.ConfigEnv(job.Config)...)
 	extras = append(extras,
-		"BEEP_RUNNER_SERVER="+d.cfg.ServerURL,
+		"BEEP_RUNNER_SERVER="+r.cfg.ServerURL,
 		"BEEP_RUNNER_RUN_ID="+job.ID,
 		"BEEP_RUNNER_JOB_SLUG="+job.JobSlug,
 		"BEEP_RUNNER_LOG_URL="+job.LogURL,

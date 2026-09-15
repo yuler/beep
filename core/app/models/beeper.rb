@@ -11,7 +11,7 @@ class Beeper < ApplicationRecord
   belongs_to :account
   belongs_to :beeper_app
   has_many :runs, class_name: "BeeperRun", dependent: :destroy
-  has_many :beeps, dependent: :nullify
+  has_many :beeps, as: :source, dependent: :nullify
 
   enum :status, %w[ active paused completed cancelled firing ].index_by(&:itself)
   enum :alert_state, %w[ ok pending alerting recovering ].index_by(&:itself)
@@ -201,6 +201,7 @@ class Beeper < ApplicationRecord
     channels = Array(notification_channels).presence || account.owner_user.notification_channels
     title_text = (signal.title.presence || title).to_s.strip.truncate(Beep::TITLE_MAX_LENGTH)
     body_text = signal.message.to_s.strip.truncate(Beep::BODY_MAX_LENGTH)
+    intent = signal.ok? ? "recovery" : "alert"
 
     account.beeps.create!(
       kind: :once,
@@ -208,7 +209,12 @@ class Beeper < ApplicationRecord
       body: body_text.presence,
       timezone: timezone,
       notification_channels: channels,
-      beeper: self
+      source: self,
+      intent: intent,
+      metadata: {
+        "signal_status" => signal.status.to_s,
+        "beeper_app_slug" => beeper_app&.slug
+      }
     )
   end
 

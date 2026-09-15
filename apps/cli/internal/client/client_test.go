@@ -145,3 +145,107 @@ func TestClientDeleteJobNotFound(t *testing.T) {
 		t.Fatal("expected 404 to return error, got nil")
 	}
 }
+
+func TestClientGetMe(t *testing.T) {
+	var gotAuth, gotAccount string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/me" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		gotAuth = r.Header.Get("Authorization")
+		gotAccount = r.Header.Get("X-Account-Slug")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"identity": map[string]any{
+				"id":    "usr_123",
+				"email": "user@example.com",
+				"name":  "Test User",
+				"staff": false,
+			},
+			"accounts": []map[string]any{
+				{
+					"id":       "acc_123",
+					"name":     "Personal",
+					"slug":     "test-user",
+					"personal": true,
+				},
+			},
+			"last_account_slug": "test-user",
+		})
+	}))
+	defer ts.Close()
+
+	c := New(&config.Config{
+		ServerURL:   ts.URL,
+		AccessToken: "beep_pat_secret",
+		AccountSlug: "test-user",
+	})
+	me, err := c.GetMe(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected GetMe error: %v", err)
+	}
+	if gotAuth != "Bearer beep_pat_secret" {
+		t.Errorf("expected Authorization header 'Bearer beep_pat_secret', got %q", gotAuth)
+	}
+	if gotAccount != "test-user" {
+		t.Errorf("expected X-Account-Slug header 'test-user', got %q", gotAccount)
+	}
+	if me.Identity.Email != "user@example.com" {
+		t.Errorf("expected email user@example.com, got %s", me.Identity.Email)
+	}
+	if me.LastAccountSlug != "test-user" {
+		t.Errorf("expected last_account_slug test-user, got %s", me.LastAccountSlug)
+	}
+}
+
+func TestClientCliDeviceFlow(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/v1/cli/authorizations":
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(map[string]any{
+				"device_code":               "dc_123",
+				"user_code":                 "ABCD-EFGH",
+				"verification_uri":          "http://example.com/device/cli",
+				"verification_uri_complete": "http://example.com/device/cli?code=ABCD-EFGH",
+				"expires_in":                900,
+				"interval":                  5,
+			})
+		case "/api/v1/cli/authorizations/token":
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]any{
+				"access_token": "beep_pat_new_token",
+				"token_type":   "bearer",
+				"user": map[string]any{
+					"id":    "usr_123",
+					"email": "user@example.com",
+					"name":  "Test User",
+				},
+			})
+		default:
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer ts.Close()
+
+	c := New(&config.Config{ServerURL: ts.URL})
+	authRes, err := c.RequestCliDeviceAuthorization(context.Background(), "My Machine")
+	if err != nil {
+		t.Fatalf("unexpected RequestCliDeviceAuthorization error: %v", err)
+	}
+	if authRes.UserCode != "ABCD-EFGH" {
+		t.Errorf("expected user code ABCD-EFGH, got %s", authRes.UserCode)
+	}
+
+	tokenRes, err := c.PollCliDeviceToken(context.Background(), authRes.DeviceCode)
+	if err != nil {
+		t.Fatalf("unexpected PollCliDeviceToken error: %v", err)
+	}
+	if tokenRes.AccessToken != "beep_pat_new_token" {
+		t.Errorf("expected access token beep_pat_new_token, got %s", tokenRes.AccessToken)
+	}
+	if tokenRes.User.Email != "user@example.com" {
+		t.Errorf("expected user email user@example.com, got %s", tokenRes.User.Email)
+	}
+}

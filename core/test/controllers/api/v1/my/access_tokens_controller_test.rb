@@ -52,6 +52,21 @@ class Api::V1::My::AccessTokensControllerTest < ActionDispatch::IntegrationTest
     assert_response :no_content
   end
 
+  test "destroy deletes access token linked to a CLI authorization" do
+    authorization = Cli::Authorization.create_request!(client_name: "Workstation")
+    assert authorization.approve!(identity: @identity, client_name: "Workstation")
+    access_token = authorization.reload.access_token
+
+    assert_difference -> { @identity.access_tokens.count }, -1 do
+      delete api_v1_my_access_token_url(access_token),
+        headers: { "Authorization" => "Bearer #{@token}" },
+        as: :json
+    end
+
+    assert_response :no_content
+    assert_nil authorization.reload.access_token_id
+  end
+
   test "api requests authenticate using Identity::AccessToken" do
     access_token = @identity.access_tokens.create!(description: "API Key", permission: "write")
 

@@ -67,12 +67,42 @@ Rails.application.routes.draw do
         resources :access_tokens, only: %i[ index create destroy ]
       end
 
+      namespace :cli do
+        resources :authorizations, param: :user_code, only: %i[ create show update destroy ]
+        namespace :authorizations do
+          resource :token, only: :create
+        end
+      end
+
       resource :web_push, only: :show, controller: "web_push"
       resources :push_subscriptions, only: %i[ index create destroy ] do
-        post :test, on: :member
+        scope module: :push_subscriptions do
+          resource :test, only: %i[ create ]
+        end
       end
 
       resource :settings, only: %i[ show update ]
+
+      resources :channels, only: %i[ index create destroy ] do
+        scope module: :channels do
+          resource :test, only: %i[ create ]
+        end
+      end
+      namespace :channels do
+        namespace :cli do
+          resource :inbox, only: %i[ show ]
+          resource :connection, only: %i[ destroy ]
+          resources :deliveries, only: [] do
+            scope module: :deliveries do
+              resource :ack, only: :create
+            end
+          end
+          resources :authorizations, param: :user_code, only: %i[ create show update destroy ]
+          namespace :authorizations do
+            resource :token, only: :create
+          end
+        end
+      end
 
       # Beep
       resources :beep_proposals, only: :create
@@ -98,6 +128,13 @@ Rails.application.routes.draw do
         end
       end
 
+      namespace :runners do
+        resources :authorizations, param: :user_code, only: %i[ create show update destroy ]
+        namespace :authorizations do
+          resource :token, only: :create
+        end
+      end
+
       resources :runners, only: %i[ index show create update destroy ] do
         scope module: :runners do
           resource :token, only: %i[ create ]
@@ -117,6 +154,7 @@ Rails.application.routes.draw do
       end
 
       namespace :runner do
+        resource :connection, only: %i[ destroy ]
         resource :ping, only: %i[ create ]
         resources :jobs, only: %i[ index create destroy ]
         namespace :jobs do

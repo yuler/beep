@@ -1,6 +1,6 @@
 require "test_helper"
 
-class BeepRunDeliverTest < ActiveSupport::TestCase
+class Beep::RunDeliverTest < ActiveSupport::TestCase
   setup do
     stub_web_push_dns_resolution
     @account = accounts(:john_account)
@@ -115,7 +115,7 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     sent = 0
     stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
       fail_email_delivery do
-        assert_raises BeepRun::EmailDeliveryError do
+        assert_raises Beep::Run::EmailDeliveryError do
           @run.deliver_now
         end
       end
@@ -204,12 +204,67 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
   end
 
   test "deliver is a no-op for an expired run" do
-    expired_run = BeepRun.create!(beep: @beep, scheduled_for: 1.hour.ago, status: :expired)
+    expired_run = Beep::Run.create!(beep: @beep, scheduled_for: 1.hour.ago, status: :expired)
 
     expired_run.deliver_now
 
     assert expired_run.reload.expired?
     assert_nil expired_run.result
+  end
+
+  test "deliver fails the run when all web push devices error, retries on recovery" do
+    @beep.update!(notification_channels: %w[ web_push ])
+    subscribe("https://fcm.googleapis.com/fcm/send/one")
+    subscribe("https://fcm.googleapis.com/fcm/send/two")
+
+    stub_web_push_payload_send(->(**_kwargs) { raise Timeout::Error }) do
+      assert_raises Beep::Run::DeliveryError do
+        @run.deliver_now
+      end
+    end
+
+    @run.reload
+    assert @run.running?
+    assert_equal %w[ error error ], @run.result.dig("web_push", "deliveries").map { |row| row["status"] }
+
+    sent_endpoints = []
+    stub_web_push_payload_send(->(**kwargs) { sent_endpoints << kwargs[:endpoint] }) do
+      @run.deliver_now
+    end
+
+    assert_equal 2, sent_endpoints.size
+    assert @run.reload.succeeded?
+    assert @beep.reload.completed?
+  end
+
+  test "deliver retries failed cli deliveries without resending email" do
+    channel = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :cli,
+      name: "laptop"
+    )
+    @beep.update!(notification_channels: %w[ cli email ])
+
+    stub_cli_deliver_error do
+      assert_raises Beep::Run::DeliveryError do
+        @run.deliver_now
+      end
+    end
+
+    @run.reload
+    assert @run.running?
+    assert_equal "error", @run.result.dig("cli", "deliveries", 0, "status")
+    assert_equal "sent", @run.result.dig("email", "status")
+    assert_equal 1, ActionMailer::Base.deliveries.size
+    assert_equal 0, channel.deliveries.count
+
+    @run.deliver_now
+
+    assert @run.reload.succeeded?
+    assert_equal 1, channel.deliveries.count
+    assert_equal 1, ActionMailer::Base.deliveries.size
+    assert_equal "queued", @run.result.dig("cli", "deliveries", 1, "status")
   end
 
   private
@@ -223,6 +278,131 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
       beep.update_columns(next_run_at: 1.minute.ago.change(usec: 0))
       beep
     end
+
+  test "deliver queues deliveries for recipient user cli channels" do
+    channel = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :cli,
+      name: "laptop"
+    )
+    @beep.update!(notification_channels: %w[ cli ])
+
+    @run.deliver_now
+    @run.reload
+
+    assert @run.succeeded?
+    assert_equal 1, channel.deliveries.count
+    delivery = channel.deliveries.sole
+    assert_equal "pending", delivery.status
+    assert_equal @beep.title, delivery.payload["title"]
+    assert_equal "queued", @run.result.dig("cli", "deliveries", 0, "status")
+  end
+
+  test "deliver targets specific cli channel by name" do
+    laptop = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :cli,
+      name: "laptop"
+    )
+    desktop = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :cli,
+      name: "desktop"
+    )
+    @beep.update!(notification_channels: %w[ cli:laptop ])
+
+    @run.deliver_now
+    @run.reload
+
+    assert @run.succeeded?
+    assert_equal 1, laptop.deliveries.count
+    assert_equal 0, desktop.deliveries.count
+  end
+
+  test "deliver targets specific channel by direct channel ID" do
+    laptop = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :cli,
+      name: "laptop"
+    )
+    desktop = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :cli,
+      name: "desktop"
+    )
+    @beep.update!(notification_channels: [ laptop.id ])
+
+    @run.deliver_now
+    @run.reload
+
+    assert @run.succeeded?
+    assert_equal 1, laptop.deliveries.count
+    assert_equal 0, desktop.deliveries.count
+    assert_equal "queued", @run.result.dig("cli", "deliveries", 0, "status")
+    assert_equal laptop.id, @run.result.dig("cli", "deliveries", 0, "channel_id")
+  end
+
+  test "deliver to multiple recipients does not skip second user" do
+    jane_identity = Identity.create!(email: "jane@example.com")
+    second_user = @account.users.create!(
+      name: "Jane",
+      identity: jane_identity,
+      role: "member",
+      active: true,
+      notification_channels: [ "email", "web_push" ]
+    )
+    subscribe("https://fcm.googleapis.com/fcm/send/two", user: second_user)
+
+    orig_recipients = Beep.instance_method(:recipient_users)
+    Beep.define_method(:recipient_users) { [ account.owner_user, second_user ] }
+
+    sent = 0
+    ActionMailer::Base.deliveries.clear
+    stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
+      @run.deliver_now
+    end
+
+    assert @run.succeeded?
+    assert_equal 1, sent
+    assert_equal 2, ActionMailer::Base.deliveries.size
+  ensure
+    Beep.define_method(:recipient_users, orig_recipients) if orig_recipients
+  end
+
+  test "deliver is a no-op when already running and no errors occurred" do
+    @run.update_columns(status: "running", result: {})
+    sent = 0
+    ActionMailer::Base.deliveries.clear
+
+    stub_web_push_payload_send(->(**_kwargs) { sent += 1 }) do
+      @run.deliver_now
+    end
+
+    assert_equal 0, sent
+    assert_equal 0, ActionMailer::Base.deliveries.size
+  end
+
+  test "deliver retries email without duplicating explicit channel delivery" do
+    laptop = @account.channels.create!(user: users(:john), kind: :cli, name: "laptop")
+    @beep.update!(notification_channels: [ "email", laptop.id ])
+
+    fail_email_delivery do
+      assert_raises Beep::Run::EmailDeliveryError do
+        @run.deliver_now
+      end
+    end
+
+    assert_equal 1, laptop.deliveries.count
+
+    @run.deliver_now
+    assert_equal 1, laptop.deliveries.count
+    assert @run.reload.succeeded?
+  end
 
     def subscribe(endpoint, user: users(:john))
       Push::Subscription.new(
@@ -241,6 +421,18 @@ class BeepRunDeliverTest < ActiveSupport::TestCase
     ensure
       singleton.alias_method :payload_send, :__orig_payload_send
       singleton.remove_method :__orig_payload_send
+    end
+
+    def stub_cli_deliver_error
+      singleton = Channel::Handlers::Cli.singleton_class
+      singleton.alias_method :__orig_deliver_beep, :deliver_beep
+      singleton.define_method(:deliver_beep) do |channel, _beep, run: nil|
+        { "channel_id" => channel.id, "channel_name" => channel.name, "status" => "error", "error" => "Net::ReadTimeout" }
+      end
+      yield
+    ensure
+      singleton.alias_method :deliver_beep, :__orig_deliver_beep
+      singleton.remove_method :__orig_deliver_beep
     end
 
     def fail_email_delivery

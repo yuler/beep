@@ -4,7 +4,7 @@ Spans `core` (VAPID, subscriptions, send) and `apps/web` (service worker, permis
 
 Send path follows [Campfire](https://github.com/basecamp/once-campfire) / [Fizzy](https://github.com/basecamp/fizzy) (`web-push` + pool). Subscribe path must stay split: do not serve the worker from Rails `GET /service-worker`.
 
-Terms: [`TERMS.md`](../TERMS.md). Channel is the delivery method; `push_subscriptions` are devices.
+Terms: [`TERMS.md`](../TERMS.md). A browser subscription is one Web Push Channel (`kind=web_push`).
 
 ```mermaid
 flowchart TD
@@ -43,7 +43,7 @@ Chromium web push (Chrome / Edge / Opera) subscribes through Google's FCM (`fcm.
 | `apps/web` | SW, permission, `subscribe`, settings, open web URL on notification click  | Hold the VAPID private key  |
 | `core`     | VAPID, CRUD, endpoint checks, send, expire rows, write `beep_runs.result`  | Host the user-facing SW     |
 
-Channel `web_push` means this beep may use browser push. A subscription is a device that can receive it. Several devices for one user are several rows, not several channels.
+A Beep targets Web Push Channel IDs. One browser subscription is one Channel row. Several browsers for one user are several Channels.
 
 ---
 
@@ -56,7 +56,7 @@ Subscribe is done. Due `once` beeps push via `BeepPollerJob` (every 10s) → `be
 - Create: HTTPS + host allowlist (FCM / Mozilla / Apple / WNS). No DNS on create (SQLite write lock)
 - `SsrfProtection#resolved_endpoint_ip` exists; send does not pin IP yet
 - API (jbuilder): `GET/POST/DELETE /api/v1/:slug/push_subscriptions`, `POST .../:id/test` (410 deletes that row)
-- `apps/web`: unhashed `/service-worker.js`, settings, UA-based Tips, device list and remove
+- `apps/web`: unhashed `/service-worker.js`, settings, UA-based Tips, Web Push Channel list and remove
 - Due fire payload:
 
 ```json
@@ -76,7 +76,7 @@ Rotating VAPID keys invalidates every subscription. Serve the public key from th
 ## Next (product loop)
 
 1. **`WebPush::Pool`**: do not POST to FCM inside the job thread. `net-http-persistent` is already in the Gemfile. Delivery pool sends; invalidation pool deletes expired rows (`Rails.application.executor.wrap`); `at_exit` shutdown.
-2. **Delete on send**: also 404 / `OpenSSL::OpenSSLError` (410 / `ExpiredSubscription` / `InvalidSubscription` already delete the row). No TTL; stale devices go away on failed send or from settings.
+2. **Delete on send**: also 404 / `OpenSSL::OpenSSLError` (410 / `ExpiredSubscription` / `InvalidSubscription` already delete the row). No TTL; stale Web Push Channels go away on failed send or from settings.
 3. **Pin IP on send**: pass `resolved_endpoint_ip` into `payload_send`. Skip if there is no public IP; never hit a private address.
 4. **Fan-out** is the owner User's live `notification_channels` (email + that user's `push_subscriptions`). Recurring beeps. Recipients beyond owner come later.
 
@@ -86,7 +86,7 @@ Rotating VAPID keys invalidates every subscription. Serve the public key from th
 
 - Notification `icon`; app badge (installed PWA / Dock only — not a normal browser tab)
 - iOS PWA (manifest, install prompt); copy-only today
-- Attach subscriptions to `identity` so personal and team share one device
+- Attach subscriptions to `identity` so personal and team share one Web Push Channel
 
 ## Do not
 

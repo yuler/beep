@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"strings"
 	"testing"
+
+	"beep/internal/config"
+	"beep/internal/daemon"
 )
 
 func TestStripDaemonFlags(t *testing.T) {
@@ -53,6 +57,19 @@ func TestBuildChildDaemonArgs(t *testing.T) {
 			input:    []string{"up", "--daemon=true"},
 			expected: []string{"runner", "up"},
 		},
+		{
+			input:    []string{"up", "-d", "-t", "secret_token_val", "--workspace", "/tmp/ws"},
+			expected: []string{"runner", "up", "--workspace", "/tmp/ws"},
+		},
+		{
+			input:    []string{"channel", "up", "-d", "--token=secret_val", "--server", "http://localhost:3000"},
+			expected: []string{"runner", "up", "--server", "http://localhost:3000"},
+		},
+		{
+			// Flag values that look like subcommand verbs must survive.
+			input:    []string{"up", "--server", "up"},
+			expected: []string{"runner", "up", "--server", "up"},
+		},
 	}
 
 	for _, tc := range tests {
@@ -102,5 +119,80 @@ func TestStatusAndStopCommandRegistration(t *testing.T) {
 	}
 	if stopCmd.Name() != "stop" {
 		t.Errorf("expected command name 'stop', got %s", stopCmd.Name())
+	}
+}
+
+func TestTopLevelCommandsRegistration(t *testing.T) {
+	for _, name := range []string{"up", "run", "stop", "status"} {
+		cmd, _, err := RootCmd.Find([]string{name})
+		if err != nil {
+			t.Fatalf("failed to find %q command: %v", name, err)
+		}
+		expectedName := name
+		if name == "run" {
+			expectedName = "up"
+		}
+		if cmd.Name() != expectedName {
+			t.Errorf("expected command name %q, got %q", expectedName, cmd.Name())
+		}
+	}
+}
+
+func TestBuildServiceChildArgs(t *testing.T) {
+	runnerArgs := buildServiceChildArgs("runner", []string{"up", "-d", "--workspace", "/var/run"})
+	if strings.Join(runnerArgs, " ") != "runner up --workspace /var/run" {
+		t.Errorf("unexpected runner args: %v", runnerArgs)
+	}
+
+	channelArgs := buildServiceChildArgs("channel", []string{"up", "-d", "--workspace", "/var/run"})
+	if strings.Join(channelArgs, " ") != "channel up --workspace /var/run" {
+		t.Errorf("unexpected channel args: %v", channelArgs)
+	}
+
+	precedingFlagsArgs := buildServiceChildArgs("runner", []string{"--workspace", "/var/run", "up", "-d"})
+	if strings.Join(precedingFlagsArgs, " ") != "runner up --workspace /var/run" {
+		t.Errorf("unexpected runner args with preceding flags: %v", precedingFlagsArgs)
+	}
+}
+
+func TestBuildServiceChildArgsIgnoresConnect(t *testing.T) {
+	args := buildServiceChildArgs("runner", []string{"runner", "connect", "--workspace", "/var/run"})
+	if strings.Join(args, " ") != "runner up --workspace /var/run" {
+		t.Errorf("unexpected runner args: %v", args)
+	}
+
+	channelArgs := buildServiceChildArgs("channel", []string{"channel", "connect", "--workspace", "/var/run"})
+	if strings.Join(channelArgs, " ") != "channel up --workspace /var/run" {
+		t.Errorf("unexpected channel args: %v", channelArgs)
+	}
+}
+
+func TestAutoStartServiceDaemon(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &config.Config{
+		Workspace:    tmpDir,
+		ChannelToken: "beep_ct_test",
+	}
+
+	origStart := startServiceDaemonFn
+	defer func() { startServiceDaemonFn = origStart }()
+
+	var calledService string
+	var calledRawArgs []string
+	startServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+		calledService = service
+		calledRawArgs = rawArgs
+		return nil
+	}
+
+	if err := autoStartServiceDaemon(daemon.ServiceChannel, cfg); err != nil {
+		t.Fatalf("autoStartServiceDaemon failed: %v", err)
+	}
+
+	if calledService != daemon.ServiceChannel {
+		t.Errorf("expected service %q, got %q", daemon.ServiceChannel, calledService)
+	}
+	if len(calledRawArgs) < 2 || calledRawArgs[0] != "--workspace" || calledRawArgs[1] != tmpDir {
+		t.Errorf("expected rawArgs to contain --workspace %s, got %v", tmpDir, calledRawArgs)
 	}
 }

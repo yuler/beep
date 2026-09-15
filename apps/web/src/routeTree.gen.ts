@@ -24,13 +24,22 @@ import { Route as Account_slugSettingsRouteImport } from './routes/$account_slug
 import { Route as AdminJobsRouteImport } from './routes/admin/jobs'
 import { Route as AdminStatsRouteImport } from './routes/admin/stats'
 import { Route as DevLettersRouteImport } from './routes/dev/letters'
+import { Route as DeviceChannelRouteImport } from './routes/device/channel'
+import { Route as DeviceCliRouteImport } from './routes/device/cli'
+import { Route as DeviceRunnerRouteImport } from './routes/device/runner'
 import { Route as MyAccess_tokensRouteImport } from './routes/my/access_tokens'
 import { Route as MySettingsRouteImport } from './routes/my/settings'
 import { Route as SignIndexRouteImport } from './routes/sign/index'
 import { Route as SignVerifyRouteImport } from './routes/sign/verify'
 import { Route as Account_slugBeepersBeeperIdRouteImport } from './routes/$account_slug/beepers_.$beeperId'
 import { Route as Account_slugBeepsBeepIdRouteImport } from './routes/$account_slug/beeps_.$beepId'
+import { Route as Account_slugDeviceChannelRouteImport } from './routes/$account_slug/device/channel'
+import { Route as Account_slugDeviceRunnerRouteImport } from './routes/$account_slug/device/runner'
 import { Route as Account_slugRunnersRunnerIdRouteImport } from './routes/$account_slug/runners_.$runnerId'
+import { Route as Account_slugSettingsIndexRouteImport } from './routes/$account_slug/settings/index'
+import { Route as Account_slugSettingsChannelsRouteImport } from './routes/$account_slug/settings/channels'
+import { Route as Account_slugSettingsGeneralRouteImport } from './routes/$account_slug/settings/general'
+import { Route as Account_slugSettingsNotificationsRouteImport } from './routes/$account_slug/settings/notifications'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -107,6 +116,21 @@ const DevLettersRoute = DevLettersRouteImport.update({
   path: '/letters',
   getParentRoute: () => DevRoute,
 } as any)
+const DeviceChannelRoute = DeviceChannelRouteImport.update({
+  id: '/device/channel',
+  path: '/device/channel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeviceCliRoute = DeviceCliRouteImport.update({
+  id: '/device/cli',
+  path: '/device/cli',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeviceRunnerRoute = DeviceRunnerRouteImport.update({
+  id: '/device/runner',
+  path: '/device/runner',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MyAccess_tokensRoute = MyAccess_tokensRouteImport.update({
   id: '/access_tokens',
   path: '/access_tokens',
@@ -138,11 +162,47 @@ const Account_slugBeepsBeepIdRoute = Account_slugBeepsBeepIdRouteImport.update({
   path: '/beeps/$beepId',
   getParentRoute: () => Account_slugRoute,
 } as any)
+const Account_slugDeviceChannelRoute =
+  Account_slugDeviceChannelRouteImport.update({
+    id: '/device/channel',
+    path: '/device/channel',
+    getParentRoute: () => Account_slugRoute,
+  } as any)
+const Account_slugDeviceRunnerRoute =
+  Account_slugDeviceRunnerRouteImport.update({
+    id: '/device/runner',
+    path: '/device/runner',
+    getParentRoute: () => Account_slugRoute,
+  } as any)
 const Account_slugRunnersRunnerIdRoute =
   Account_slugRunnersRunnerIdRouteImport.update({
     id: '/runners_/$runnerId',
     path: '/runners/$runnerId',
     getParentRoute: () => Account_slugRoute,
+  } as any)
+const Account_slugSettingsIndexRoute =
+  Account_slugSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => Account_slugSettingsRoute,
+  } as any)
+const Account_slugSettingsChannelsRoute =
+  Account_slugSettingsChannelsRouteImport.update({
+    id: '/channels',
+    path: '/channels',
+    getParentRoute: () => Account_slugSettingsRoute,
+  } as any)
+const Account_slugSettingsGeneralRoute =
+  Account_slugSettingsGeneralRouteImport.update({
+    id: '/general',
+    path: '/general',
+    getParentRoute: () => Account_slugSettingsRoute,
+  } as any)
+const Account_slugSettingsNotificationsRoute =
+  Account_slugSettingsNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => Account_slugSettingsRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -156,10 +216,13 @@ export interface FileRoutesByFullPath {
   '/$account_slug/beepers': typeof Account_slugBeepersRoute
   '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/$account_slug/runners': typeof Account_slugRunnersRoute
-  '/$account_slug/settings': typeof Account_slugSettingsRoute
+  '/$account_slug/settings': typeof Account_slugSettingsRouteWithChildren
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
+  '/device/channel': typeof DeviceChannelRoute
+  '/device/cli': typeof DeviceCliRoute
+  '/device/runner': typeof DeviceRunnerRoute
   '/my/access_tokens': typeof MyAccess_tokensRoute
   '/my/settings': typeof MySettingsRoute
   '/sign/verify': typeof SignVerifyRoute
@@ -167,7 +230,13 @@ export interface FileRoutesByFullPath {
   '/sign/': typeof SignIndexRoute
   '/$account_slug/beepers/$beeperId': typeof Account_slugBeepersBeeperIdRoute
   '/$account_slug/beeps/$beepId': typeof Account_slugBeepsBeepIdRoute
+  '/$account_slug/device/channel': typeof Account_slugDeviceChannelRoute
+  '/$account_slug/device/runner': typeof Account_slugDeviceRunnerRoute
   '/$account_slug/runners/$runnerId': typeof Account_slugRunnersRunnerIdRoute
+  '/$account_slug/settings/channels': typeof Account_slugSettingsChannelsRoute
+  '/$account_slug/settings/general': typeof Account_slugSettingsGeneralRoute
+  '/$account_slug/settings/notifications': typeof Account_slugSettingsNotificationsRoute
+  '/$account_slug/settings/': typeof Account_slugSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -178,10 +247,12 @@ export interface FileRoutesByTo {
   '/$account_slug/beepers': typeof Account_slugBeepersRoute
   '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/$account_slug/runners': typeof Account_slugRunnersRoute
-  '/$account_slug/settings': typeof Account_slugSettingsRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
+  '/device/channel': typeof DeviceChannelRoute
+  '/device/cli': typeof DeviceCliRoute
+  '/device/runner': typeof DeviceRunnerRoute
   '/my/access_tokens': typeof MyAccess_tokensRoute
   '/my/settings': typeof MySettingsRoute
   '/sign/verify': typeof SignVerifyRoute
@@ -189,7 +260,13 @@ export interface FileRoutesByTo {
   '/sign': typeof SignIndexRoute
   '/$account_slug/beepers/$beeperId': typeof Account_slugBeepersBeeperIdRoute
   '/$account_slug/beeps/$beepId': typeof Account_slugBeepsBeepIdRoute
+  '/$account_slug/device/channel': typeof Account_slugDeviceChannelRoute
+  '/$account_slug/device/runner': typeof Account_slugDeviceRunnerRoute
   '/$account_slug/runners/$runnerId': typeof Account_slugRunnersRunnerIdRoute
+  '/$account_slug/settings/channels': typeof Account_slugSettingsChannelsRoute
+  '/$account_slug/settings/general': typeof Account_slugSettingsGeneralRoute
+  '/$account_slug/settings/notifications': typeof Account_slugSettingsNotificationsRoute
+  '/$account_slug/settings': typeof Account_slugSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -203,10 +280,13 @@ export interface FileRoutesById {
   '/$account_slug/beepers': typeof Account_slugBeepersRoute
   '/$account_slug/beeps': typeof Account_slugBeepsRoute
   '/$account_slug/runners': typeof Account_slugRunnersRoute
-  '/$account_slug/settings': typeof Account_slugSettingsRoute
+  '/$account_slug/settings': typeof Account_slugSettingsRouteWithChildren
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
+  '/device/channel': typeof DeviceChannelRoute
+  '/device/cli': typeof DeviceCliRoute
+  '/device/runner': typeof DeviceRunnerRoute
   '/my/access_tokens': typeof MyAccess_tokensRoute
   '/my/settings': typeof MySettingsRoute
   '/sign/verify': typeof SignVerifyRoute
@@ -214,7 +294,13 @@ export interface FileRoutesById {
   '/sign/': typeof SignIndexRoute
   '/$account_slug/beepers_/$beeperId': typeof Account_slugBeepersBeeperIdRoute
   '/$account_slug/beeps_/$beepId': typeof Account_slugBeepsBeepIdRoute
+  '/$account_slug/device/channel': typeof Account_slugDeviceChannelRoute
+  '/$account_slug/device/runner': typeof Account_slugDeviceRunnerRoute
   '/$account_slug/runners_/$runnerId': typeof Account_slugRunnersRunnerIdRoute
+  '/$account_slug/settings/channels': typeof Account_slugSettingsChannelsRoute
+  '/$account_slug/settings/general': typeof Account_slugSettingsGeneralRoute
+  '/$account_slug/settings/notifications': typeof Account_slugSettingsNotificationsRoute
+  '/$account_slug/settings/': typeof Account_slugSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -233,6 +319,9 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
+    | '/device/channel'
+    | '/device/cli'
+    | '/device/runner'
     | '/my/access_tokens'
     | '/my/settings'
     | '/sign/verify'
@@ -240,7 +329,13 @@ export interface FileRouteTypes {
     | '/sign/'
     | '/$account_slug/beepers/$beeperId'
     | '/$account_slug/beeps/$beepId'
+    | '/$account_slug/device/channel'
+    | '/$account_slug/device/runner'
     | '/$account_slug/runners/$runnerId'
+    | '/$account_slug/settings/channels'
+    | '/$account_slug/settings/general'
+    | '/$account_slug/settings/notifications'
+    | '/$account_slug/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -251,10 +346,12 @@ export interface FileRouteTypes {
     | '/$account_slug/beepers'
     | '/$account_slug/beeps'
     | '/$account_slug/runners'
-    | '/$account_slug/settings'
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
+    | '/device/channel'
+    | '/device/cli'
+    | '/device/runner'
     | '/my/access_tokens'
     | '/my/settings'
     | '/sign/verify'
@@ -262,7 +359,13 @@ export interface FileRouteTypes {
     | '/sign'
     | '/$account_slug/beepers/$beeperId'
     | '/$account_slug/beeps/$beepId'
+    | '/$account_slug/device/channel'
+    | '/$account_slug/device/runner'
     | '/$account_slug/runners/$runnerId'
+    | '/$account_slug/settings/channels'
+    | '/$account_slug/settings/general'
+    | '/$account_slug/settings/notifications'
+    | '/$account_slug/settings'
   id:
     | '__root__'
     | '/'
@@ -279,6 +382,9 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
+    | '/device/channel'
+    | '/device/cli'
+    | '/device/runner'
     | '/my/access_tokens'
     | '/my/settings'
     | '/sign/verify'
@@ -286,7 +392,13 @@ export interface FileRouteTypes {
     | '/sign/'
     | '/$account_slug/beepers_/$beeperId'
     | '/$account_slug/beeps_/$beepId'
+    | '/$account_slug/device/channel'
+    | '/$account_slug/device/runner'
     | '/$account_slug/runners_/$runnerId'
+    | '/$account_slug/settings/channels'
+    | '/$account_slug/settings/general'
+    | '/$account_slug/settings/notifications'
+    | '/$account_slug/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -297,6 +409,9 @@ export interface RootRouteChildren {
   DevRoute: typeof DevRouteWithChildren
   MyRoute: typeof MyRouteWithChildren
   SignRoute: typeof SignRouteWithChildren
+  DeviceChannelRoute: typeof DeviceChannelRoute
+  DeviceCliRoute: typeof DeviceCliRoute
+  DeviceRunnerRoute: typeof DeviceRunnerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -406,6 +521,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevLettersRouteImport
       parentRoute: typeof DevRoute
     }
+    '/device/channel': {
+      id: '/device/channel'
+      path: '/device/channel'
+      fullPath: '/device/channel'
+      preLoaderRoute: typeof DeviceChannelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/device/cli': {
+      id: '/device/cli'
+      path: '/device/cli'
+      fullPath: '/device/cli'
+      preLoaderRoute: typeof DeviceCliRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/device/runner': {
+      id: '/device/runner'
+      path: '/device/runner'
+      fullPath: '/device/runner'
+      preLoaderRoute: typeof DeviceRunnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/my/access_tokens': {
       id: '/my/access_tokens'
       path: '/access_tokens'
@@ -448,6 +584,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Account_slugBeepsBeepIdRouteImport
       parentRoute: typeof Account_slugRoute
     }
+    '/$account_slug/device/channel': {
+      id: '/$account_slug/device/channel'
+      path: '/device/channel'
+      fullPath: '/$account_slug/device/channel'
+      preLoaderRoute: typeof Account_slugDeviceChannelRouteImport
+      parentRoute: typeof Account_slugRoute
+    }
+    '/$account_slug/device/runner': {
+      id: '/$account_slug/device/runner'
+      path: '/device/runner'
+      fullPath: '/$account_slug/device/runner'
+      preLoaderRoute: typeof Account_slugDeviceRunnerRouteImport
+      parentRoute: typeof Account_slugRoute
+    }
     '/$account_slug/runners_/$runnerId': {
       id: '/$account_slug/runners_/$runnerId'
       path: '/runners/$runnerId'
@@ -455,17 +605,65 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Account_slugRunnersRunnerIdRouteImport
       parentRoute: typeof Account_slugRoute
     }
+    '/$account_slug/settings/': {
+      id: '/$account_slug/settings/'
+      path: '/'
+      fullPath: '/$account_slug/settings/'
+      preLoaderRoute: typeof Account_slugSettingsIndexRouteImport
+      parentRoute: typeof Account_slugSettingsRoute
+    }
+    '/$account_slug/settings/channels': {
+      id: '/$account_slug/settings/channels'
+      path: '/channels'
+      fullPath: '/$account_slug/settings/channels'
+      preLoaderRoute: typeof Account_slugSettingsChannelsRouteImport
+      parentRoute: typeof Account_slugSettingsRoute
+    }
+    '/$account_slug/settings/general': {
+      id: '/$account_slug/settings/general'
+      path: '/general'
+      fullPath: '/$account_slug/settings/general'
+      preLoaderRoute: typeof Account_slugSettingsGeneralRouteImport
+      parentRoute: typeof Account_slugSettingsRoute
+    }
+    '/$account_slug/settings/notifications': {
+      id: '/$account_slug/settings/notifications'
+      path: '/notifications'
+      fullPath: '/$account_slug/settings/notifications'
+      preLoaderRoute: typeof Account_slugSettingsNotificationsRouteImport
+      parentRoute: typeof Account_slugSettingsRoute
+    }
   }
 }
+
+interface Account_slugSettingsRouteChildren {
+  Account_slugSettingsChannelsRoute: typeof Account_slugSettingsChannelsRoute
+  Account_slugSettingsGeneralRoute: typeof Account_slugSettingsGeneralRoute
+  Account_slugSettingsNotificationsRoute: typeof Account_slugSettingsNotificationsRoute
+  Account_slugSettingsIndexRoute: typeof Account_slugSettingsIndexRoute
+}
+
+const Account_slugSettingsRouteChildren: Account_slugSettingsRouteChildren = {
+  Account_slugSettingsChannelsRoute: Account_slugSettingsChannelsRoute,
+  Account_slugSettingsGeneralRoute: Account_slugSettingsGeneralRoute,
+  Account_slugSettingsNotificationsRoute:
+    Account_slugSettingsNotificationsRoute,
+  Account_slugSettingsIndexRoute: Account_slugSettingsIndexRoute,
+}
+
+const Account_slugSettingsRouteWithChildren =
+  Account_slugSettingsRoute._addFileChildren(Account_slugSettingsRouteChildren)
 
 interface Account_slugRouteChildren {
   Account_slugBeepersRoute: typeof Account_slugBeepersRoute
   Account_slugBeepsRoute: typeof Account_slugBeepsRoute
   Account_slugRunnersRoute: typeof Account_slugRunnersRoute
-  Account_slugSettingsRoute: typeof Account_slugSettingsRoute
+  Account_slugSettingsRoute: typeof Account_slugSettingsRouteWithChildren
   Account_slugIndexRoute: typeof Account_slugIndexRoute
   Account_slugBeepersBeeperIdRoute: typeof Account_slugBeepersBeeperIdRoute
   Account_slugBeepsBeepIdRoute: typeof Account_slugBeepsBeepIdRoute
+  Account_slugDeviceChannelRoute: typeof Account_slugDeviceChannelRoute
+  Account_slugDeviceRunnerRoute: typeof Account_slugDeviceRunnerRoute
   Account_slugRunnersRunnerIdRoute: typeof Account_slugRunnersRunnerIdRoute
 }
 
@@ -473,10 +671,12 @@ const Account_slugRouteChildren: Account_slugRouteChildren = {
   Account_slugBeepersRoute: Account_slugBeepersRoute,
   Account_slugBeepsRoute: Account_slugBeepsRoute,
   Account_slugRunnersRoute: Account_slugRunnersRoute,
-  Account_slugSettingsRoute: Account_slugSettingsRoute,
+  Account_slugSettingsRoute: Account_slugSettingsRouteWithChildren,
   Account_slugIndexRoute: Account_slugIndexRoute,
   Account_slugBeepersBeeperIdRoute: Account_slugBeepersBeeperIdRoute,
   Account_slugBeepsBeepIdRoute: Account_slugBeepsBeepIdRoute,
+  Account_slugDeviceChannelRoute: Account_slugDeviceChannelRoute,
+  Account_slugDeviceRunnerRoute: Account_slugDeviceRunnerRoute,
   Account_slugRunnersRunnerIdRoute: Account_slugRunnersRunnerIdRoute,
 }
 
@@ -538,6 +738,9 @@ const rootRouteChildren: RootRouteChildren = {
   DevRoute: DevRouteWithChildren,
   MyRoute: MyRouteWithChildren,
   SignRoute: SignRouteWithChildren,
+  DeviceChannelRoute: DeviceChannelRoute,
+  DeviceCliRoute: DeviceCliRoute,
+  DeviceRunnerRoute: DeviceRunnerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

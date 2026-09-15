@@ -95,3 +95,79 @@ export function regenerateRunnerToken(accountSlug: string, runnerId: string) {
 		},
 	);
 }
+
+export type RunnerDeviceAuthInfo = {
+	user_code: string;
+	runner_name?: string;
+	tags?: string[];
+	metadata?: {
+		os?: string;
+		arch?: string;
+		hostname?: string;
+		version?: string;
+	};
+	status: string;
+	expires_in: number;
+};
+
+export async function verifyRunnerDeviceCode(
+	accountSlug: string,
+	userCode: string,
+): Promise<RunnerDeviceAuthInfo> {
+	return apiFetch<RunnerDeviceAuthInfo>(
+		`/api/v1/${encodeURIComponent(accountSlug)}/runners/authorizations/${encodeURIComponent(userCode)}`,
+		{
+			method: "GET",
+		},
+	);
+}
+
+export async function approveRunnerDeviceAuth(
+	accountSlug: string,
+	data: {
+		user_code: string;
+		runner_name?: string;
+		tags?: string[];
+	},
+): Promise<{
+	status: string;
+	runner: {
+		id: string;
+		name: string;
+		tags: string[];
+		status: string;
+		masked_token?: string;
+	};
+}> {
+	return apiFetch<{
+		status: string;
+		runner: {
+			id: string;
+			name: string;
+			tags: string[];
+			status: string;
+			masked_token?: string;
+		};
+	}>(
+		`/api/v1/${encodeURIComponent(accountSlug)}/runners/authorizations/${encodeURIComponent(data.user_code)}`,
+		{
+			method: "PATCH",
+			body: {
+				runner_name: data.runner_name,
+				tags: data.tags,
+			},
+		},
+	);
+}
+
+export async function denyRunnerDeviceAuth(
+	accountSlug: string,
+	user_code: string,
+): Promise<void> {
+	await apiFetch(
+		`/api/v1/${encodeURIComponent(accountSlug)}/runners/authorizations/${encodeURIComponent(user_code)}`,
+		{
+			method: "DELETE",
+		},
+	);
+}

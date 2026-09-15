@@ -192,7 +192,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     beep.runs.create!(scheduled_for: @run_at, status: :succeeded)
 
     assert_difference -> { Beep.count }, -1 do
-      assert_difference -> { BeepRun.count }, -1 do
+      assert_difference -> { Beep::Run.count }, -1 do
         delete "/api/v1/#{@account.slug}/beeps/#{beep.id}",
           headers: { "Authorization" => "Bearer #{@token}" },
           as: :json
