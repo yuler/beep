@@ -111,6 +111,8 @@ Environment variables:
 - `BEEP_EVENT_ID`: Unique delivery ID.
 - `BEEP_EVENT_TITLE`: Notification title.
 
+Workspace `.env` and `.env.local` are loaded into the hook process the same way as runner jobs: missing files are skipped; `.env.local` overrides `.env`; a file that exists but cannot be read fails the hook. Delivery `BEEP_EVENT_*` vars are set last.
+
 ```bash
 #!/usr/bin/env bash
 # hooks/on-channel — every CLI channel delivery

@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"beep/internal/client"
+	"beep/internal/envx"
 	"beep/internal/proc"
+	"beep/internal/workspace"
 )
 
 func FindHook(workspaceRoot string) string {
@@ -71,8 +73,7 @@ func DispatchHook(ctx context.Context, workspaceRoot string, delivery client.Cli
 	sourceID, _ := delivery.Payload["source_id"].(string)
 	intent, _ := delivery.Payload["intent"].(string)
 
-	env := os.Environ()
-	env = append(env,
+	env, err := hookEnv(workspaceRoot, []string{
 		fmt.Sprintf("BEEP_EVENT=%s", eventName),
 		fmt.Sprintf("BEEP_EVENT_SOURCE=%s", source),
 		fmt.Sprintf("BEEP_EVENT_SOURCE_TYPE=%s", sourceType),
@@ -81,7 +82,10 @@ func DispatchHook(ctx context.Context, workspaceRoot string, delivery client.Cli
 		fmt.Sprintf("BEEP_EVENT_JSON=%s", string(payloadBytes)),
 		fmt.Sprintf("BEEP_EVENT_ID=%s", delivery.ID),
 		fmt.Sprintf("BEEP_EVENT_TITLE=%s", title),
-	)
+	})
+	if err != nil {
+		return "", hookName, fmt.Errorf("hook %s failed: %w", hookPath, err)
+	}
 
 	execCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
@@ -96,6 +100,30 @@ func DispatchHook(ctx context.Context, workspaceRoot string, delivery client.Cli
 		return string(out), hookName, fmt.Errorf("hook %s failed: %w (output: %s)", hookPath, err, truncateHookOutput(string(out)))
 	}
 	return string(out), hookName, nil
+}
+
+// hookEnv is host env, then workspace .env / .env.local (.env.local wins), then event vars.
+func hookEnv(workspaceRoot string, eventEnv []string) ([]string, error) {
+	wsEnv, err := (&workspace.Workspace{Root: workspaceRoot}).LoadEnv()
+	if err != nil {
+		return nil, fmt.Errorf("load workspace env: %w", err)
+	}
+
+	merged := envx.New()
+	set := func(item string) {
+		key, val, _ := strings.Cut(item, "=")
+		merged.Set(key, val)
+	}
+	for _, item := range os.Environ() {
+		set(item)
+	}
+	for _, item := range wsEnv {
+		set(item)
+	}
+	for _, item := range eventEnv {
+		set(item)
+	}
+	return merged.Slice(), nil
 }
 
 func truncateHookOutput(s string) string {

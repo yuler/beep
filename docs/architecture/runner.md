@@ -55,8 +55,8 @@ Default workspace: `~/.beep` (override with `--workspace` / `-w` or `BEEP_WORKSP
 ```
 ~/.beep/
   config.json
-  .env                # workspace environment variables (autoloaded for jobs)
-  .env.local          # local overrides (optional, autoloaded for jobs)
+  .env                # workspace environment variables (autoloaded for jobs and channel hooks)
+  .env.local          # local overrides (optional; same autoload as .env)
   .socket             # domain socket for single-instance guarantee
   logs/
     2026-09-04.log    # daily rotated logs (ANSI stripped)
@@ -168,7 +168,7 @@ Global flags: `--workspace` / `-w`, `--server`, `--token`, `--no-color`, `--no-i
 
 Injected env at exec time:
 - Base environment from host `os.Environ()` (excluding blocked sensitive keys like `BEEP_RUNNER_TOKEN`).
-- Workspace environment variables from `<workspace>/.env` and `<workspace>/.env.local` (missing files are skipped; a file that exists but cannot be read fails the job).
+- Workspace environment variables from `<workspace>/.env` and `<workspace>/.env.local` (missing files are skipped; `.env.local` overrides `.env`; a file that exists but cannot be read fails the job). Channel hooks use the same files.
 - Job configuration from Beep Core (`BEEP_RUNNER_CONFIG_*`).
 - Runtime context: `BEEP_RUNNER_SERVER`, `BEEP_RUNNER_RUN_ID`, `BEEP_RUNNER_JOB_SLUG`, `BEEP_RUNNER_LOG_URL`, `BEEP_RUNNER_RESULT_URL`, `BEEP_RUNNER_CONFIG`.
 

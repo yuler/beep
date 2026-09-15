@@ -105,6 +105,33 @@ func TestDispatchHookEmptyRootReturnsEmpty(t *testing.T) {
 	}
 }
 
+func TestDispatchHookLoadsWorkspaceEnvWithLocalOverride(t *testing.T) {
+	root := t.TempDir()
+	writeHook(t, root, "on-channel", `#!/bin/sh
+echo "from_env=$FROM_ENV override=$OVERRIDE_KEY"
+`)
+	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("FROM_ENV=env_value\nOVERRIDE_KEY=from_env\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".env.local"), []byte("OVERRIDE_KEY=from_local\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	out, _, err := DispatchHook(context.Background(), root, client.CliDelivery{
+		ID:      "del_env",
+		Payload: map[string]any{"event": "beep.fired"},
+	})
+	if err != nil {
+		t.Fatalf("DispatchHook: %v", err)
+	}
+	if !strings.Contains(out, "from_env=env_value") {
+		t.Fatalf("expected .env value in output, got %q", out)
+	}
+	if !strings.Contains(out, "override=from_local") {
+		t.Fatalf("expected .env.local to override .env, got %q", out)
+	}
+}
+
 func TestDispatchHookRejectsGroupWritableHook(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX permission bits not supported on Windows")
