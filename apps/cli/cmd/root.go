@@ -3,9 +3,11 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"beep/internal/config"
 	"beep/internal/ui"
+	"beep/internal/updater"
 
 	"github.com/spf13/cobra"
 )
@@ -24,6 +26,19 @@ Execute 'beep <command> --help' for detailed usage of a specific command.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if flagNoColor {
 			ui.SetEnabled(false)
+		}
+		name := cmd.Name()
+		if name != "upgrade" && name != "update" && !strings.HasPrefix(name, "__") {
+			updater.TriggerBackgroundCheck(flagWorkspace)
+		}
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		name := cmd.Name()
+		if name == "upgrade" || name == "update" || name == "version" || name == "completion" || strings.HasPrefix(name, "__") {
+			return
+		}
+		if notice := updater.CheckNotice(flagWorkspace); notice != "" {
+			fmt.Fprint(os.Stderr, notice)
 		}
 	},
 }
@@ -53,4 +68,5 @@ func init() {
 	RootCmd.AddCommand(channelCmd)
 	RootCmd.AddCommand(configCmd)
 	RootCmd.AddCommand(versionCmd)
+	RootCmd.AddCommand(upgradeCmd)
 }
