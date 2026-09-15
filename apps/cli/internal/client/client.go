@@ -343,8 +343,8 @@ func (c *Client) setChannelHeaders(req *http.Request) {
 
 func (c *Client) setAuthHeaders(req *http.Request) {
 	c.setBaseHeaders(req)
-	if c.cfg.AuthToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.cfg.AuthToken)
+	if c.cfg.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.cfg.AccessToken)
 	}
 	if c.cfg.AccountSlug != "" {
 		req.Header.Set("X-Account-Slug", c.cfg.AccountSlug)
@@ -768,7 +768,6 @@ type CliTokenResponse struct {
 		Email string `json:"email"`
 		Name  string `json:"name"`
 	} `json:"user"`
-	AccountSlug string `json:"account_slug"`
 }
 
 func (c *Client) RequestCliDeviceAuthorization(ctx context.Context, clientName string) (*DeviceAuthorizationResponse, error) {

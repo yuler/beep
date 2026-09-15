@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"time"
 
 	"beep/internal/browser"
@@ -44,24 +43,14 @@ var channelConnectCmd = &cobra.Command{
 		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer cancel()
 
-		if err := ensureLoggedIn(ctx, cfg); err != nil {
+		me, err := ensureLoggedIn(ctx, cfg)
+		if err != nil {
 			return err
 		}
 
-		accountSlug := strings.TrimSpace(flagChannelAccount)
-		if accountSlug == "" {
-			accountSlug = cfg.AccountSlug
-		}
-		if accountSlug == "" {
-			if ui.IsInteractive() {
-				slug, err := ui.PromptAccountSlug()
-				if err != nil {
-					return err
-				}
-				accountSlug = slug
-			} else {
-				return fmt.Errorf("account slug is required (set via --account <slug> or BEEP_ACCOUNT or 'beep config set account <slug>')")
-			}
+		accountSlug, err := resolveAccountSlug(me, flagChannelAccount, cfg.AccountSlug)
+		if err != nil {
+			return err
 		}
 
 		c := client.New(cfg)
@@ -140,9 +129,6 @@ var channelConnectCmd = &cobra.Command{
 				fc.ChannelToken = tokenRes.AccessToken
 				fc.CliToken = ""
 				fc.DeviceToken = ""
-				if accountSlug != "" {
-					fc.AccountSlug = accountSlug
-				}
 				if err := config.SaveFile(configPath, fc); err != nil {
 					return fmt.Errorf("failed to save config: %w", err)
 				}

@@ -14,7 +14,7 @@ import (
 type FileConfig struct {
 	ServerURL    string `json:"server_url,omitempty"`
 	AccountSlug  string `json:"account_slug,omitempty"`
-	AuthToken    string `json:"auth_token,omitempty"`
+	AccessToken  string `json:"access_token,omitempty"`
 	UserEmail    string `json:"user_email,omitempty"`
 	UserName     string `json:"user_name,omitempty"`
 	RunnerToken  string `json:"runner_token,omitempty"`
@@ -30,7 +30,7 @@ type FileConfig struct {
 type Config struct {
 	ServerURL    string
 	AccountSlug  string
-	AuthToken    string
+	AccessToken  string
 	UserEmail    string
 	UserName     string
 	RunnerToken  string
@@ -175,12 +175,12 @@ func Load(wsHint string) (*Config, error) {
 	}
 
 	accountSlug := getEnv("BEEP_ACCOUNT", fc.AccountSlug)
-	authToken := getEnv("BEEP_AUTH_TOKEN", fc.AuthToken)
+	accessToken := getEnv("BEEP_ACCESS_TOKEN", fc.AccessToken)
 
 	cfg := &Config{
 		ServerURL:    serverURL,
 		AccountSlug:  accountSlug,
-		AuthToken:    authToken,
+		AccessToken:  accessToken,
 		UserEmail:    fc.UserEmail,
 		UserName:     fc.UserName,
 		RunnerToken:  runnerToken,
@@ -198,7 +198,7 @@ func Load(wsHint string) (*Config, error) {
 }
 
 func (c *Config) IsLoggedIn() bool {
-	return c.AuthToken != ""
+	return c.AccessToken != ""
 }
 
 func LoadFromEnv() (*Config, error) {

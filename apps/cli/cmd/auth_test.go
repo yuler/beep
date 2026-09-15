@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"beep/internal/client"
 	"beep/internal/config"
 )
 
@@ -38,7 +39,7 @@ func TestAuthLogoutClearsSessionOnly(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "config.json")
 	initial := &config.FileConfig{
 		ServerURL:    "http://example.com",
-		AuthToken:    "beep_pat_test123",
+		AccessToken:  "beep_pat_test123",
 		UserEmail:    "test@example.com",
 		UserName:     "Test User",
 		RunnerToken:  "beep_rt_keep_this",
@@ -61,8 +62,8 @@ func TestAuthLogoutClearsSessionOnly(t *testing.T) {
 		t.Fatalf("failed to load updated config: %v", err)
 	}
 
-	if updated.AuthToken != "" {
-		t.Errorf("expected AuthToken to be cleared, got %q", updated.AuthToken)
+	if updated.AccessToken != "" {
+		t.Errorf("expected AccessToken to be cleared, got %q", updated.AccessToken)
 	}
 	if updated.UserEmail != "" {
 		t.Errorf("expected UserEmail to be cleared, got %q", updated.UserEmail)
@@ -92,7 +93,7 @@ func TestRunnerConnectRequiresLogin(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "config.json")
 	initial := &config.FileConfig{
 		ServerURL: "http://example.com",
-		// No AuthToken!
+		// No AccessToken!
 	}
 	if err := config.SaveFile(configPath, initial); err != nil {
 		t.Fatalf("failed to save initial config: %v", err)
@@ -125,7 +126,7 @@ func TestChannelConnectRequiresLogin(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "config.json")
 	initial := &config.FileConfig{
 		ServerURL: "http://example.com",
-		// No AuthToken!
+		// No AccessToken!
 	}
 	if err := config.SaveFile(configPath, initial); err != nil {
 		t.Fatalf("failed to save initial config: %v", err)
@@ -196,8 +197,8 @@ func TestRunnerConnectSucceedsPastLoginWhenLoggedIn(t *testing.T) {
 
 	configPath := filepath.Join(tmpDir, "config.json")
 	initial := &config.FileConfig{
-		ServerURL: server.URL,
-		AuthToken: "beep_pat_logged_in",
+		ServerURL:   server.URL,
+		AccessToken: "beep_pat_logged_in",
 	}
 	if err := config.SaveFile(configPath, initial); err != nil {
 		t.Fatalf("failed to save config: %v", err)
@@ -218,5 +219,42 @@ func TestRunnerConnectSucceedsPastLoginWhenLoggedIn(t *testing.T) {
 	}
 	if gotRunnerAuth != "Bearer beep_pat_logged_in" {
 		t.Errorf("expected /api/v1/runners/authorizations to be called with 'Bearer beep_pat_logged_in', got %q", gotRunnerAuth)
+	}
+}
+
+func TestResolveAccountSlug(t *testing.T) {
+	// 1. Explicit flag/env takes priority
+	slug, err := resolveAccountSlug(nil, "my-explicit-slug", "")
+	if err != nil || slug != "my-explicit-slug" {
+		t.Errorf("expected my-explicit-slug, got %s (err: %v)", slug, err)
+	}
+
+	// 2. Configured account takes precedence when no explicit flag
+	slug, err = resolveAccountSlug(nil, "", "my-cfg-slug")
+	if err != nil || slug != "my-cfg-slug" {
+		t.Errorf("expected my-cfg-slug, got %s (err: %v)", slug, err)
+	}
+
+	// 3. Single account auto-selection
+	singleMe := &client.MeResponse{
+		Accounts: []client.MeAccount{
+			{ID: "1", Name: "Personal", Slug: "personal-slug", Personal: true},
+		},
+	}
+	slug, err = resolveAccountSlug(singleMe, "", "")
+	if err != nil || slug != "personal-slug" {
+		t.Errorf("expected auto-selected personal-slug, got %s (err: %v)", slug, err)
+	}
+
+	// 4. Non-interactive with multiple accounts returns error requiring explicit account
+	multiMe := &client.MeResponse{
+		Accounts: []client.MeAccount{
+			{ID: "1", Name: "Personal", Slug: "personal-slug", Personal: true},
+			{ID: "2", Name: "Team", Slug: "team-slug", Personal: false},
+		},
+	}
+	_, err = resolveAccountSlug(multiMe, "", "")
+	if err == nil {
+		t.Fatal("expected error in non-interactive mode with multiple accounts, got nil")
 	}
 }

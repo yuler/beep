@@ -83,8 +83,8 @@ var configSetCmd = &cobra.Command{
 					fc.AccountSlug = strings.TrimSpace(val)
 					updated = true
 					i++
-				case "auth_token", "auth-token", "user_token", "user-token":
-					fc.AuthToken = val
+				case "access_token", "access-token", "user_token", "user-token":
+					fc.AccessToken = val
 					updated = true
 					i++
 				case "token", "runner_token", "runner-token", "auth":
@@ -174,8 +174,8 @@ var configUnsetCmd = &cobra.Command{
 			fc.ServerURL = ""
 		case "account", "account_slug", "account-slug", "slug":
 			fc.AccountSlug = ""
-		case "auth_token", "auth-token", "user_token", "user-token":
-			fc.AuthToken = ""
+		case "access_token", "access-token", "user_token", "user-token":
+			fc.AccessToken = ""
 			fc.UserEmail = ""
 			fc.UserName = ""
 		case "token", "runner_token", "runner-token":
@@ -246,10 +246,10 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	if cfg.AccountSlug != "" {
 		fmt.Println(ui.KeyValue("Account Slug", ui.Bold(cfg.AccountSlug)))
 	}
-	if cfg.AuthToken != "" {
-		authTokenStr := config.MaskToken(cfg.AuthToken)
+	if cfg.AccessToken != "" {
+		accessTokenStr := config.MaskToken(cfg.AccessToken)
 		if flagShowToken {
-			authTokenStr = cfg.AuthToken
+			accessTokenStr = cfg.AccessToken
 		}
 		displayName := cfg.UserEmail
 		if cfg.UserName != "" {
@@ -258,7 +258,7 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 		if displayName != "" {
 			fmt.Println(ui.KeyValue("Logged In As", ui.Green(displayName)))
 		}
-		fmt.Println(ui.KeyValue("Auth Token", ui.Yellow(authTokenStr)))
+		fmt.Println(ui.KeyValue("Access Token", ui.Yellow(accessTokenStr)))
 	}
 	fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(tokenStr)))
 	if cfg.ChannelToken != "" {

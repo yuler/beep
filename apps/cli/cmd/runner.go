@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strings"
 	"time"
 
 	"beep/internal/browser"
@@ -125,24 +124,14 @@ func newRunnerConnectCmd() *cobra.Command {
 			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer cancel()
 
-			if err := ensureLoggedIn(ctx, cfg); err != nil {
+			me, err := ensureLoggedIn(ctx, cfg)
+			if err != nil {
 				return err
 			}
 
-			accountSlug := strings.TrimSpace(account)
-			if accountSlug == "" {
-				accountSlug = cfg.AccountSlug
-			}
-			if accountSlug == "" {
-				if ui.IsInteractive() {
-					slug, err := ui.PromptAccountSlug()
-					if err != nil {
-						return err
-					}
-					accountSlug = slug
-				} else {
-					return fmt.Errorf("account slug is required (set via --account <slug> or BEEP_ACCOUNT or 'beep config set account <slug>')")
-				}
+			accountSlug, err := resolveAccountSlug(me, account, cfg.AccountSlug)
+			if err != nil {
+				return err
 			}
 
 			c := client.New(cfg)
@@ -228,9 +217,6 @@ func newRunnerConnectCmd() *cobra.Command {
 					}
 
 					fc.RunnerToken = tokenRes.AccessToken
-					if accountSlug != "" {
-						fc.AccountSlug = accountSlug
-					}
 					if err := config.SaveFile(configPath, fc); err != nil {
 						return fmt.Errorf("failed to save config: %w", err)
 					}

@@ -38,9 +38,9 @@ func isHeadless() bool {
 	return false
 }
 
-func ensureLoggedIn(ctx context.Context, cfg *config.Config) error {
+func ensureLoggedIn(ctx context.Context, cfg *config.Config) (*client.MeResponse, error) {
 	if !cfg.IsLoggedIn() {
-		return fmt.Errorf("not logged in. Please run 'beep auth login' first")
+		return nil, fmt.Errorf("not logged in. Please run 'beep auth login' first")
 	}
 
 	c := client.New(cfg)
@@ -50,20 +50,35 @@ func ensureLoggedIn(ctx context.Context, cfg *config.Config) error {
 	me, err := c.GetMe(verifyCtx)
 	if err != nil {
 		if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "invalid or expired") {
-			return fmt.Errorf("stored login session is invalid or expired. Please run 'beep auth login' first")
+			return nil, fmt.Errorf("stored login session is invalid or expired. Please run 'beep auth login' first")
 		}
 		// On temporary network errors during pre-flight check, proceed with stored token
-		return nil
+		return nil, nil
 	}
 
-	if cfg.AccountSlug == "" {
-		if me.LastAccountSlug != "" {
-			cfg.AccountSlug = me.LastAccountSlug
-		} else if len(me.Accounts) > 0 {
-			cfg.AccountSlug = me.Accounts[0].Slug
-		}
+	return me, nil
+}
+
+func resolveAccountSlug(me *client.MeResponse, explicitAccount string, cfgAccount string) (string, error) {
+	if explicit := strings.TrimSpace(explicitAccount); explicit != "" {
+		return explicit, nil
 	}
-	return nil
+	if cfgAccount != "" {
+		return cfgAccount, nil
+	}
+	if me != nil && len(me.Accounts) > 0 {
+		if len(me.Accounts) == 1 {
+			return me.Accounts[0].Slug, nil
+		}
+		if ui.IsInteractive() {
+			return ui.PromptAccountSelect(me.Accounts, me.LastAccountSlug)
+		}
+		return "", fmt.Errorf("account slug is required (set via --account <slug> or BEEP_ACCOUNT)")
+	}
+	if ui.IsInteractive() {
+		return ui.PromptAccountSlug()
+	}
+	return "", fmt.Errorf("account slug is required (set via --account <slug> or BEEP_ACCOUNT)")
 }
 
 var authLoginCmd = &cobra.Command{
@@ -153,12 +168,9 @@ var authLoginCmd = &cobra.Command{
 					fc = &config.FileConfig{}
 				}
 
-				fc.AuthToken = tokenRes.AccessToken
+				fc.AccessToken = tokenRes.AccessToken
 				fc.UserEmail = tokenRes.User.Email
 				fc.UserName = tokenRes.User.Name
-				if tokenRes.AccountSlug != "" && fc.AccountSlug == "" {
-					fc.AccountSlug = tokenRes.AccountSlug
-				}
 
 				if err := config.SaveFile(configPath, fc); err != nil {
 					return fmt.Errorf("failed to save config: %w", err)
@@ -177,9 +189,6 @@ var authLoginCmd = &cobra.Command{
 					ui.Bold("Logged in as:"),
 					ui.Cyan(displayName),
 				)
-				if tokenRes.AccountSlug != "" {
-					fmt.Printf("  %s %s\n", ui.Dim("Active account:"), ui.Yellow(tokenRes.AccountSlug))
-				}
 				fmt.Printf("%s Config saved to %s\n", ui.Green("✓"), ui.Dim(configPath))
 				return nil
 			}
@@ -216,13 +225,13 @@ var authLogoutCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		configPath := config.GetConfigPath(flagWorkspace)
 		fc, err := config.LoadFile(configPath)
-		if err != nil || fc.AuthToken == "" {
+		if err != nil || fc.AccessToken == "" {
 			fmt.Println(ui.Dim("No active login session found in " + configPath))
 			return nil
 		}
 
 		userEmail := fc.UserEmail
-		fc.AuthToken = ""
+		fc.AccessToken = ""
 		fc.UserEmail = ""
 		fc.UserName = ""
 
@@ -271,7 +280,7 @@ var authStatusCmd = &cobra.Command{
 			}
 			// Offline or network error
 			fmt.Println(ui.Yellow("⚠ Could not verify authentication with server (network error): ") + err.Error())
-			fmt.Printf("Stored token: %s\n", ui.Dim(config.MaskToken(cfg.AuthToken)))
+			fmt.Printf("Stored token: %s\n", ui.Dim(config.MaskToken(cfg.AccessToken)))
 			if cfg.UserEmail != "" {
 				fmt.Printf("Logged in as: %s\n", ui.Cyan(cfg.UserEmail))
 			}
@@ -292,7 +301,7 @@ var authStatusCmd = &cobra.Command{
 		} else if me.LastAccountSlug != "" {
 			fmt.Printf("  %s %s\n", ui.Dim("Active account:"), ui.Yellow(me.LastAccountSlug))
 		}
-		fmt.Printf("  %s %s\n", ui.Dim("Token:"), ui.Dim(config.MaskToken(cfg.AuthToken)))
+		fmt.Printf("  %s %s\n", ui.Dim("Token:"), ui.Dim(config.MaskToken(cfg.AccessToken)))
 
 		if len(me.Accounts) > 1 {
 			fmt.Println()

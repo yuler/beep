@@ -177,7 +177,7 @@ func TestClientGetMe(t *testing.T) {
 
 	c := New(&config.Config{
 		ServerURL:   ts.URL,
-		AuthToken:   "beep_pat_secret",
+		AccessToken: "beep_pat_secret",
 		AccountSlug: "test-user",
 	})
 	me, err := c.GetMe(context.Background())
@@ -222,7 +222,6 @@ func TestClientCliDeviceFlow(t *testing.T) {
 					"email": "user@example.com",
 					"name":  "Test User",
 				},
-				"account_slug": "test-user",
 			})
 		default:
 			t.Errorf("unexpected path: %s", r.URL.Path)

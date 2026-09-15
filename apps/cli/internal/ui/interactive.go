@@ -785,3 +785,42 @@ func PromptAccountSlug() (string, error) {
 	}
 	return strings.TrimSpace(strings.ToLower(slug)), nil
 }
+
+// PromptAccountSelect prompts the user to select an account from their available accounts.
+func PromptAccountSelect(accounts []client.MeAccount, defaultSlug string) (string, error) {
+	if len(accounts) == 0 {
+		return "", errors.New("no accounts available to select")
+	}
+
+	options := make([]huh.Option[string], 0, len(accounts))
+	var initialValue string
+	for _, acc := range accounts {
+		label := acc.Name
+		if acc.Personal {
+			label += " (Personal)"
+		}
+		label += fmt.Sprintf(" - %s", acc.Slug)
+		options = append(options, huh.NewOption(label, acc.Slug))
+
+		if defaultSlug != "" && acc.Slug == defaultSlug {
+			initialValue = acc.Slug
+		}
+	}
+
+	if initialValue == "" {
+		initialValue = accounts[0].Slug
+	}
+
+	var choice string = initialValue
+	err := huh.NewSelect[string]().
+		Title("Select Account").
+		Description("Choose an account to connect to").
+		Options(options...).
+		Value(&choice).
+		Run()
+	if err != nil {
+		return "", err
+	}
+	return choice, nil
+}
+
