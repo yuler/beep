@@ -1,7 +1,7 @@
 package updater
 
 import (
-	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,14 +10,19 @@ import (
 
 func TestProbeNotification(t *testing.T) {
 	tmpDir := t.TempDir()
-	statePath := filepath.Join(tmpDir, "update.json")
 
-	// Set version for test
 	oldVersion := version.Version
 	version.Version = "0.2.1"
 	defer func() { version.Version = oldVersion }()
 
-	// Pre-populate state with newer version
+	oldAllow := allowNoticeWithoutTTY
+	allowNoticeWithoutTTY = true
+	defer func() { allowNoticeWithoutTTY = oldAllow }()
+
+	t.Setenv("BEEP_NO_UPDATE_CHECK", "")
+	t.Setenv("CI", "")
+
+	statePath := GetStateFilePath(tmpDir)
 	state := &State{
 		LastCheckedAt:   time.Now(),
 		LatestVersion:   "v0.3.0",
@@ -27,37 +32,35 @@ func TestProbeNotification(t *testing.T) {
 		t.Fatalf("failed to save state: %v", err)
 	}
 
-	// In tests, os.Stderr might not be a terminal, but let's test the version & notification logic directly
-	// by simulating what CheckNotice does
+	notice := CheckNotice(tmpDir)
+	if notice == "" {
+		t.Fatalf("expected non-empty notice from CheckNotice")
+	}
+	if !strings.Contains(notice, "v0.3.0") {
+		t.Errorf("expected notice to mention v0.3.0, got %q", notice)
+	}
+
+	// CheckNotice must not mark notified by itself
 	st, err := LoadState(statePath)
 	if err != nil {
-		t.Fatalf("failed to load state: %v", err)
+		t.Fatalf("LoadState: %v", err)
+	}
+	if st.NotifiedVersion != "" {
+		t.Errorf("CheckNotice should not set NotifiedVersion, got %q", st.NotifiedVersion)
 	}
 
-	if CompareVersions(st.LatestVersion, version.Version) <= 0 {
-		t.Errorf("expected LatestVersion %s to be newer than %s", st.LatestVersion, version.Version)
+	if err := MarkNotified(tmpDir); err != nil {
+		t.Fatalf("MarkNotified: %v", err)
 	}
 
-	// Verify one-time notification mechanism
-	if st.LatestVersion == st.NotifiedVersion {
-		t.Errorf("expected not notified yet")
-	}
-
-	st.NotifiedVersion = st.LatestVersion
-	if err := SaveState(statePath, st); err != nil {
-		t.Fatalf("failed to save state: %v", err)
+	notice2 := CheckNotice(tmpDir)
+	if notice2 != "" {
+		t.Errorf("expected empty notice after MarkNotified, got %q", notice2)
 	}
 
 	reloaded, _ := LoadState(statePath)
 	if reloaded.NotifiedVersion != "v0.3.0" {
 		t.Errorf("expected notified version v0.3.0, got %s", reloaded.NotifiedVersion)
-	}
-
-	// Next time: since st.LatestVersion == st.NotifiedVersion, should not notify
-	if reloaded.LatestVersion == reloaded.NotifiedVersion {
-		// Suppressed as expected!
-	} else {
-		t.Errorf("expected notification to be suppressed on repeat checks")
 	}
 }
 
@@ -71,5 +74,14 @@ func TestIsCheckDisabled(t *testing.T) {
 	t.Setenv("CI", "")
 	if IsCheckDisabled() {
 		t.Errorf("expected IsCheckDisabled() to be false when disabled flag is 0 and CI is empty")
+	}
+}
+
+func TestDownloadClientHasNoShortTimeout(t *testing.T) {
+	if downloadHTTPClient.Timeout != 0 {
+		t.Errorf("downloadHTTPClient.Timeout = %v; want 0 (rely on context only)", downloadHTTPClient.Timeout)
+	}
+	if apiHTTPClient.Timeout == 0 {
+		t.Errorf("apiHTTPClient.Timeout should be non-zero for API calls")
 	}
 }

@@ -41,8 +41,29 @@ type ReleaseInfo struct {
 	Assets      []ReleaseAsset `json:"assets"`
 }
 
-var httpClient = &http.Client{
+// apiHTTPClient is used for short GitHub API / metadata requests.
+var apiHTTPClient = &http.Client{
 	Timeout: 15 * time.Second,
+}
+
+// downloadHTTPClient is used for large asset downloads. It has no Client.Timeout
+// so long transfers are not cut off; callers must cancel via context instead.
+var downloadHTTPClient = &http.Client{}
+
+// SetHTTPClientsForTest replaces the package HTTP clients for tests and returns
+// a restore function that puts the originals back.
+func SetHTTPClientsForTest(api, download *http.Client) (restore func()) {
+	prevAPI, prevDownload := apiHTTPClient, downloadHTTPClient
+	if api != nil {
+		apiHTTPClient = api
+	}
+	if download != nil {
+		downloadHTTPClient = download
+	}
+	return func() {
+		apiHTTPClient = prevAPI
+		downloadHTTPClient = prevDownload
+	}
 }
 
 // FetchLatestRelease fetches the latest published release for the repository.
@@ -59,7 +80,7 @@ func FetchLatestRelease(ctx context.Context, repo string) (*ReleaseInfo, error) 
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", fmt.Sprintf("beep-cli/%s", version.Version))
 
-	resp, err := httpClient.Do(req)
+	resp, err := apiHTTPClient.Do(req)
 	if err == nil {
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
@@ -100,7 +121,7 @@ func FetchReleaseByTag(ctx context.Context, repo, tag string) (*ReleaseInfo, err
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", fmt.Sprintf("beep-cli/%s", version.Version))
 
-	resp, err := httpClient.Do(req)
+	resp, err := apiHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("network error fetching release %s: %w", tag, err)
 	}

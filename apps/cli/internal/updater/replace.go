@@ -21,6 +21,9 @@ import (
 	"beep/internal/version"
 )
 
+// maxArchiveBytes caps the size of a downloaded release archive (256 MiB).
+const maxArchiveBytes int64 = 256 << 20
+
 // UpgradeOptions specifies parameters for upgrading beep CLI.
 type UpgradeOptions struct {
 	TargetVersion string // "latest" or specific tag like "v0.2.2"
@@ -28,6 +31,8 @@ type UpgradeOptions struct {
 	Repo          string // default "yuler/beep"
 	Workspace     string
 	OnProgress    func(stage string)
+	// Release, when set with a non-empty Tag, skips FetchLatestRelease / FetchReleaseByTag.
+	Release *ReleaseInfo
 }
 
 // UpgradeResult contains details of a completed upgrade.
@@ -72,7 +77,7 @@ func Upgrade(ctx context.Context, opts UpgradeOptions) (*UpgradeResult, error) {
 	// Check writable permissions on target directory
 	probeFile := filepath.Join(targetDir, fmt.Sprintf(".beep-probe-%d.tmp", time.Now().UnixNano()))
 	if err := os.WriteFile(probeFile, []byte("ok"), 0o600); err != nil {
-		return nil, fmt.Errorf("permission denied writing to %s\nPlease run with sudo: sudo beep upgrade", targetDir)
+		return nil, fmt.Errorf("permission denied writing to %s\nFix directory ownership/permissions, or if installed via Homebrew run: brew upgrade beep", targetDir)
 	}
 	_ = os.Remove(probeFile)
 
@@ -81,14 +86,18 @@ func Upgrade(ctx context.Context, opts UpgradeOptions) (*UpgradeResult, error) {
 	}
 
 	var rel *ReleaseInfo
-	targetVer := strings.TrimSpace(opts.TargetVersion)
-	if targetVer == "" || strings.EqualFold(targetVer, "latest") {
-		rel, err = FetchLatestRelease(ctx, repo)
+	if opts.Release != nil && opts.Release.Tag != "" {
+		rel = opts.Release
 	} else {
-		rel, err = FetchReleaseByTag(ctx, repo, targetVer)
-	}
-	if err != nil {
-		return nil, err
+		targetVer := strings.TrimSpace(opts.TargetVersion)
+		if targetVer == "" || strings.EqualFold(targetVer, "latest") {
+			rel, err = FetchLatestRelease(ctx, repo)
+		} else {
+			rel, err = FetchReleaseByTag(ctx, repo, targetVer)
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	rawVersion := rel.Tag
@@ -142,7 +151,7 @@ func Upgrade(ctx context.Context, opts UpgradeOptions) (*UpgradeResult, error) {
 	}
 	downloadReq.Header.Set("User-Agent", fmt.Sprintf("beep-cli/%s", version.Version))
 
-	downloadResp, err := httpClient.Do(downloadReq)
+	downloadResp, err := downloadHTTPClient.Do(downloadReq)
 	if err != nil {
 		archiveTmp.Close()
 		return nil, fmt.Errorf("download failed: %w", err)
@@ -154,7 +163,7 @@ func Upgrade(ctx context.Context, opts UpgradeOptions) (*UpgradeResult, error) {
 		return nil, fmt.Errorf("failed to download release asset from %s (HTTP %d)", archiveURL, downloadResp.StatusCode)
 	}
 
-	if _, err := io.Copy(multiWriter, downloadResp.Body); err != nil {
+	if err := copyArchiveLimited(multiWriter, downloadResp.Body, downloadResp.ContentLength, maxArchiveBytes); err != nil {
 		archiveTmp.Close()
 		return nil, fmt.Errorf("error writing archive: %w", err)
 	}
@@ -248,6 +257,24 @@ func Upgrade(ctx context.Context, opts UpgradeOptions) (*UpgradeResult, error) {
 	}, nil
 }
 
+// copyArchiveLimited copies from src to dst, rejecting bodies larger than maxBytes.
+// When contentLength > 0 and exceeds maxBytes, it fails early without reading.
+func copyArchiveLimited(dst io.Writer, src io.Reader, contentLength, maxBytes int64) error {
+	if contentLength > 0 && contentLength > maxBytes {
+		return fmt.Errorf("release archive Content-Length %d exceeds limit of %d bytes", contentLength, maxBytes)
+	}
+
+	limited := io.LimitReader(src, maxBytes+1)
+	n, err := io.Copy(dst, limited)
+	if err != nil {
+		return err
+	}
+	if n > maxBytes {
+		return fmt.Errorf("release archive exceeds size limit of %d bytes", maxBytes)
+	}
+	return nil
+}
+
 func fetchExpectedChecksum(ctx context.Context, checksumURL, archiveName string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, checksumURL, nil)
 	if err != nil {
@@ -255,7 +282,7 @@ func fetchExpectedChecksum(ctx context.Context, checksumURL, archiveName string)
 	}
 	req.Header.Set("User-Agent", fmt.Sprintf("beep-cli/%s", version.Version))
 
-	resp, err := httpClient.Do(req)
+	resp, err := apiHTTPClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch checksums.txt: %w", err)
 	}

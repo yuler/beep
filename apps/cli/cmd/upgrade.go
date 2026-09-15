@@ -139,6 +139,7 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		Force:         flagUpgradeForce,
 		Repo:          repo,
 		Workspace:     ws,
+		Release:       rel,
 		OnProgress: func(stage string) {
 			fmt.Printf("%s %s\n", ui.Cyan("●"), stage)
 		},

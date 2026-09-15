@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -128,4 +129,47 @@ func TestCheckIfHomebrew(t *testing.T) {
 			t.Errorf("CheckIfHomebrew(%q) = %v; want %v", c.path, got, c.expected)
 		}
 	}
+}
+
+
+func TestCopyArchiveLimited(t *testing.T) {
+	t.Run("rejects oversized Content-Length", func(t *testing.T) {
+		src := strings.NewReader("tiny")
+		var dst bytes.Buffer
+		err := copyArchiveLimited(&dst, src, maxArchiveBytes+1, maxArchiveBytes)
+		if err == nil {
+			t.Fatal("expected error for oversized Content-Length")
+		}
+		if !strings.Contains(err.Error(), "Content-Length") {
+			t.Errorf("expected Content-Length in error, got %v", err)
+		}
+		if dst.Len() != 0 {
+			t.Errorf("expected no bytes written on early reject")
+		}
+	})
+
+	t.Run("rejects oversized body without Content-Length", func(t *testing.T) {
+		limit := int64(16)
+		body := bytes.Repeat([]byte("x"), int(limit)+8)
+		var dst bytes.Buffer
+		err := copyArchiveLimited(&dst, bytes.NewReader(body), -1, limit)
+		if err == nil {
+			t.Fatal("expected error for oversized body")
+		}
+		if !strings.Contains(err.Error(), "size limit") {
+			t.Errorf("expected size limit in error, got %v", err)
+		}
+	})
+
+	t.Run("copies within limit", func(t *testing.T) {
+		payload := []byte("hello-archive")
+		var dst bytes.Buffer
+		err := copyArchiveLimited(&dst, bytes.NewReader(payload), int64(len(payload)), maxArchiveBytes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !bytes.Equal(dst.Bytes(), payload) {
+			t.Errorf("got %q, want %q", dst.Bytes(), payload)
+		}
+	})
 }

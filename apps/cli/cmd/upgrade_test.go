@@ -62,16 +62,21 @@ func TestUpgradeCheckMode(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	// Override HTTP client transport to redirect GitHub API to our mock server
-	origTransport := http.DefaultTransport
-	defer func() { http.DefaultTransport = origTransport }()
+	mockTransport := &rewritingTransport{
+		base:   http.DefaultTransport,
+		target: ts.URL,
+	}
+	mockClient := &http.Client{Transport: mockTransport, Timeout: 15 * time.Second}
+	restore := updater.SetHTTPClientsForTest(mockClient, mockClient)
+	defer restore()
 
-	// Point BEEP_REPO and test version
 	oldVersion := version.Version
 	version.Version = "0.2.1"
 	defer func() { version.Version = oldVersion }()
 
-	// Test with a mock check
+	t.Setenv("BEEP_REPO", "yuler/beep")
+	t.Setenv("BEEP_NO_UPDATE_CHECK", "1")
+
 	cmd := newUpgradeCmd()
 	cmd.SetArgs([]string{"--check"})
 	flagUpgradeCheck = true
@@ -85,14 +90,34 @@ func TestUpgradeCheckMode(t *testing.T) {
 		flagUpgradeYes = false
 	}()
 
-	// If network access to github fails in sandbox, runUpgrade will return an error or test output
-	// Let's verify runUpgrade behaves cleanly
 	out := captureOutput(func() {
-		_ = cmd.Execute()
+		err := cmd.Execute()
+		if err != nil {
+			t.Errorf("cmd.Execute error: %v", err)
+		}
 	})
-	if !strings.Contains(out, "Checking for updates") {
-		t.Logf("output: %s", out)
+
+	if !strings.Contains(out, "new release") && !strings.Contains(out, "v0.3.0") {
+		t.Fatalf("expected output to mention new release / v0.3.0, got: %q", out)
 	}
+	if strings.Contains(out, "already up to date") {
+		t.Fatalf("unexpected up-to-date soft-log in output: %q", out)
+	}
+}
+
+type rewritingTransport struct {
+	base   http.RoundTripper
+	target string
+}
+
+func (t *rewritingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	clone := req.Clone(req.Context())
+	u, err := http.NewRequestWithContext(req.Context(), req.Method, t.target+req.URL.Path, req.Body)
+	if err != nil {
+		return nil, err
+	}
+	u.Header = clone.Header
+	return t.base.RoundTrip(u)
 }
 
 func TestRootRegisteredUpgrade(t *testing.T) {
@@ -130,5 +155,23 @@ func TestUpgradeNoticeOnRootCmd(t *testing.T) {
 	st, err := updater.LoadState(statePath)
 	if err != nil || st.LatestVersion != "v0.9.0" {
 		t.Fatalf("failed to read state: %v", err)
+	}
+}
+
+func TestSkipUpdateHooks(t *testing.T) {
+	cases := map[string]bool{
+		"upgrade":    true,
+		"update":     true,
+		"version":    true,
+		"completion": true,
+		"help":       true,
+		"__complete": true,
+		"status":     false,
+		"up":         false,
+	}
+	for name, want := range cases {
+		if got := skipUpdateHooks(name); got != want {
+			t.Errorf("skipUpdateHooks(%q) = %v; want %v", name, got, want)
+		}
 	}
 }
