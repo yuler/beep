@@ -43,7 +43,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
   test "create makes a once beep and copies run_at to next_run_at" do
     assert_difference -> { @account.beeps.count }, 1 do
       post "/api/v1/#{@account.slug}/beeps",
-        params: { title: "Call mom", body: "Bring **milk**", run_at: @run_at.iso8601 },
+        params: { title: "Call mom", body: "Bring **milk**", run_at: @run_at.iso8601, intent: "lunch_break" },
         headers: { "Authorization" => "Bearer #{@token}" },
         as: :json
     end
@@ -53,6 +53,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Call mom", body["title"]
     assert_equal "Bring **milk**", body["body"]
     assert_equal "once", body["kind"]
+    assert_equal "lunch_break", body["intent"]
     assert_nil body["cron"]
     assert_equal "active", body["status"]
     assert_equal "UTC", body["timezone"]
