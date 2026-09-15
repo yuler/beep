@@ -355,6 +355,120 @@ func (c *Client) setHeaders(req *http.Request) {
 	c.setRunnerHeaders(req)
 }
 
+type apiErrorResponse struct {
+	Error   string `json:"error"`
+	Message string `json:"message"`
+	Code    string `json:"code"`
+}
+
+func parseAPIError(resp *http.Response) error {
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("authentication required or session expired (status 401); please run 'beep auth login' first")
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("resource not found on server (404)")
+	}
+	var apiErr apiErrorResponse
+	if err := json.Unmarshal(respBody, &apiErr); err == nil {
+		if apiErr.Message != "" {
+			return fmt.Errorf("%s", apiErr.Message)
+		}
+		if apiErr.Error != "" {
+			return fmt.Errorf("%s", apiErr.Error)
+		}
+	}
+	trimmed := strings.TrimSpace(string(respBody))
+	if trimmed != "" {
+		return fmt.Errorf("request failed (status %d): %s", resp.StatusCode, trimmed)
+	}
+	return fmt.Errorf("request failed (status %d)", resp.StatusCode)
+}
+
+func (c *Client) getAuthJSON(ctx context.Context, url string, dest any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	c.setAuthHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return parseAPIError(resp)
+	}
+	if dest == nil {
+		io.Copy(io.Discard, resp.Body)
+		return nil
+	}
+	return json.NewDecoder(resp.Body).Decode(dest)
+}
+
+func (c *Client) postAuthJSON(ctx context.Context, url string, payload any, want int, dest any) error {
+	var body io.Reader
+	if payload != nil {
+		body = mustJSON(payload)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+	if err != nil {
+		return err
+	}
+	c.setAuthHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != want {
+		return parseAPIError(resp)
+	}
+	if dest == nil {
+		io.Copy(io.Discard, resp.Body)
+		return nil
+	}
+	return json.NewDecoder(resp.Body).Decode(dest)
+}
+
+func (c *Client) deleteAuth(ctx context.Context, url string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	c.setAuthHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return parseAPIError(resp)
+	}
+	return nil
+}
+
+func (c *Client) deleteAuthJSON(ctx context.Context, url string, dest any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	c.setAuthHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return parseAPIError(resp)
+	}
+	if dest != nil && resp.StatusCode == http.StatusOK {
+		return json.NewDecoder(resp.Body).Decode(dest)
+	}
+	io.Copy(io.Discard, resp.Body)
+	return nil
+}
+
 type CliDelivery struct {
 	ID        string         `json:"id"`
 	BeepRunID *string        `json:"beep_run_id"`

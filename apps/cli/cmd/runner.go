@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"time"
 
 	"beep/internal/browser"
@@ -104,9 +105,8 @@ func newRunnerStatusCmd() *cobra.Command {
 
 func newRunnerConnectCmd() *cobra.Command {
 	var (
-		name    string
-		account string
-		tags    []string
+		name string
+		tags []string
 	)
 	cmd := &cobra.Command{
 		Use:   "connect",
@@ -129,7 +129,7 @@ func newRunnerConnectCmd() *cobra.Command {
 				return err
 			}
 
-			accountSlug, err := resolveAccountSlug(me, account, cfg.AccountSlug)
+			accountSlug, err := resolveAccountSlug(me, flagAccount, cfg.AccountSlug)
 			if err != nil {
 				return err
 			}
@@ -259,7 +259,6 @@ func newRunnerConnectCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Runner display name (defaults to hostname)")
-	cmd.Flags().StringVarP(&account, "account", "a", "", "Account slug to connect to")
 	cmd.Flags().StringSliceVar(&tags, "tags", nil, "Runner tags (defaults to [\"default\"])")
 	return cmd
 }
@@ -330,6 +329,9 @@ func loadConfig() (*config.Config, error) {
 	}
 	if flagWorkspace != "" {
 		cfg.Workspace = flagWorkspace
+	}
+	if flagAccount != "" {
+		cfg.AccountSlug = strings.TrimSpace(flagAccount)
 	}
 	return cfg, nil
 }
