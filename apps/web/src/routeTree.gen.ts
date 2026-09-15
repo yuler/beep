@@ -24,6 +24,7 @@ import { Route as Account_slugSettingsRouteImport } from './routes/$account_slug
 import { Route as AdminJobsRouteImport } from './routes/admin/jobs'
 import { Route as AdminStatsRouteImport } from './routes/admin/stats'
 import { Route as DevLettersRouteImport } from './routes/dev/letters'
+import { Route as DeviceCliRouteImport } from './routes/device/cli'
 import { Route as MyAccess_tokensRouteImport } from './routes/my/access_tokens'
 import { Route as MySettingsRouteImport } from './routes/my/settings'
 import { Route as SignIndexRouteImport } from './routes/sign/index'
@@ -112,6 +113,11 @@ const DevLettersRoute = DevLettersRouteImport.update({
   id: '/letters',
   path: '/letters',
   getParentRoute: () => DevRoute,
+} as any)
+const DeviceCliRoute = DeviceCliRouteImport.update({
+  id: '/device/cli',
+  path: '/device/cli',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const MyAccess_tokensRoute = MyAccess_tokensRouteImport.update({
   id: '/access_tokens',
@@ -202,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
+  '/device/cli': typeof DeviceCliRoute
   '/my/access_tokens': typeof MyAccess_tokensRoute
   '/my/settings': typeof MySettingsRoute
   '/sign/verify': typeof SignVerifyRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
+  '/device/cli': typeof DeviceCliRoute
   '/my/access_tokens': typeof MyAccess_tokensRoute
   '/my/settings': typeof MySettingsRoute
   '/sign/verify': typeof SignVerifyRoute
@@ -260,6 +268,7 @@ export interface FileRoutesById {
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/dev/letters': typeof DevLettersRoute
+  '/device/cli': typeof DeviceCliRoute
   '/my/access_tokens': typeof MyAccess_tokensRoute
   '/my/settings': typeof MySettingsRoute
   '/sign/verify': typeof SignVerifyRoute
@@ -292,6 +301,7 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
+    | '/device/cli'
     | '/my/access_tokens'
     | '/my/settings'
     | '/sign/verify'
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
+    | '/device/cli'
     | '/my/access_tokens'
     | '/my/settings'
     | '/sign/verify'
@@ -349,6 +360,7 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/admin/stats'
     | '/dev/letters'
+    | '/device/cli'
     | '/my/access_tokens'
     | '/my/settings'
     | '/sign/verify'
@@ -373,6 +385,7 @@ export interface RootRouteChildren {
   DevRoute: typeof DevRouteWithChildren
   MyRoute: typeof MyRouteWithChildren
   SignRoute: typeof SignRouteWithChildren
+  DeviceCliRoute: typeof DeviceCliRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -481,6 +494,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dev/letters'
       preLoaderRoute: typeof DevLettersRouteImport
       parentRoute: typeof DevRoute
+    }
+    '/device/cli': {
+      id: '/device/cli'
+      path: '/device/cli'
+      fullPath: '/device/cli'
+      preLoaderRoute: typeof DeviceCliRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/my/access_tokens': {
       id: '/my/access_tokens'
@@ -678,6 +698,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevRoute: DevRouteWithChildren,
   MyRoute: MyRouteWithChildren,
   SignRoute: SignRouteWithChildren,
+  DeviceCliRoute: DeviceCliRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
