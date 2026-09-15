@@ -18,6 +18,7 @@ import {
 	verifyCliDeviceCode,
 } from "@/lib/api/cli-auth";
 import { ApiError } from "@/lib/api/client";
+import { resolveDashboardTarget } from "@/lib/auth/account";
 import { requireSession } from "@/lib/auth/guards";
 import { parseDeviceSearch } from "@/lib/device-search";
 import { translateError } from "@/lib/i18n-labels";
@@ -45,6 +46,7 @@ function CliDeviceAuthPage() {
 		"idle" | "verified" | "approved" | "denied"
 	>("idle");
 	const [error, setError] = useState<string | null>(null);
+	const dashboardTarget = resolveDashboardTarget(me.accounts);
 
 	const handleVerifyCode = useCallback(
 		async (userCode: string) => {
@@ -134,15 +136,28 @@ function CliDeviceAuthPage() {
 							<p className="text-xs text-muted-foreground">
 								You can close this tab and return to your terminal.
 							</p>
-							<Link
-								to="/"
-								className={buttonVariants({
-									variant: "outline",
-									size: "sm",
-								})}
-							>
-								Go to Dashboard
-							</Link>
+							{dashboardTarget.kind === "account" ? (
+								<Link
+									to="/$account_slug"
+									params={{ account_slug: dashboardTarget.slug }}
+									className={buttonVariants({
+										variant: "outline",
+										size: "sm",
+									})}
+								>
+									Go to Dashboard
+								</Link>
+							) : (
+								<Link
+									to="/accounts"
+									className={buttonVariants({
+										variant: "outline",
+										size: "sm",
+									})}
+								>
+									Go to Dashboard
+								</Link>
+							)}
 						</CardContent>
 					</Card>
 				) : status === "denied" ? (
