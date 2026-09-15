@@ -131,7 +131,6 @@ func TestCheckIfHomebrew(t *testing.T) {
 	}
 }
 
-
 func TestCopyArchiveLimited(t *testing.T) {
 	t.Run("rejects oversized Content-Length", func(t *testing.T) {
 		src := strings.NewReader("tiny")
