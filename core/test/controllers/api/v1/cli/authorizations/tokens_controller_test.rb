@@ -112,4 +112,10 @@ class Api::V1::Cli::Authorizations::TokensControllerTest < ActionDispatch::Integ
     assert_response :bad_request
     assert_equal "invalid_grant", response.parsed_body["error"]
   end
+
+  test "filters device_code from logs" do
+    filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+    filtered = filter.filter(device_code: "secret_device_code_123")
+    assert_equal "[FILTERED]", filtered[:device_code]
+  end
 end

@@ -51,6 +51,8 @@ class Api::V1::Runners::AuthorizationsController < Api::V1::BaseController
 
   private
     def rate_limit_exceeded
-      render json: { error: "slow_down", error_description: "Too many requests" }, status: :too_many_requests
+      @device_flow_error = "slow_down"
+      @device_flow_error_description = "Too many requests"
+      render "api/v1/runners/authorizations/device_flow_error", status: :too_many_requests
     end
 end
