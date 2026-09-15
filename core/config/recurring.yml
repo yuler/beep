@@ -16,15 +16,15 @@ prune_beeper_runs: &prune_beeper_runs
 
 prune_channel_authorizations: &prune_channel_authorizations
   class: PruneChannelAuthorizationsJob
-  schedule: every 10 minutes
+  schedule: every day at 03:10
 
 prune_runner_authorizations: &prune_runner_authorizations
   class: PruneRunnerAuthorizationsJob
-  schedule: every 10 minutes
+  schedule: every day at 03:20
 
 prune_cli_authorizations: &prune_cli_authorizations
   class: PruneCliAuthorizationsJob
-  schedule: every 10 minutes
+  schedule: every day at 03:30
 
 development:
   beep_poller:
