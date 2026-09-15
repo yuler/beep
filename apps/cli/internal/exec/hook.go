@@ -7,9 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"syscall"
 	"time"
 
 	"beep/internal/client"
@@ -107,26 +105,4 @@ func truncateHookOutput(s string) string {
 		return s
 	}
 	return string(runes[len(runes)-maxLen:])
-}
-
-func isSafeHook(path string) bool {
-	info, err := os.Stat(path)
-	if err != nil || info.IsDir() {
-		return false
-	}
-	if runtime.GOOS == "windows" {
-		return true
-	}
-	if info.Mode().Perm()&0o022 != 0 {
-		return false
-	}
-	if info.Mode().Perm()&0o111 == 0 {
-		return false
-	}
-	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-		if int(stat.Uid) != os.Getuid() {
-			return false
-		}
-	}
-	return true
 }
