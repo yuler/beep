@@ -1,5 +1,6 @@
 class Beep::Run < ApplicationRecord
-  class EmailDeliveryError < StandardError; end
+  class DeliveryError < StandardError; end
+  class EmailDeliveryError < DeliveryError; end
 
   belongs_to :beep
 
@@ -47,7 +48,7 @@ class Beep::Run < ApplicationRecord
     end
 
     def any_delivery_failed?
-      email_failed?(stringify_result)
+      email_failed?(stringify_result) || channel_deliveries_failed?(stringify_result)
     end
 
     def stringify_result
@@ -82,6 +83,7 @@ class Beep::Run < ApplicationRecord
       end
 
       raise EmailDeliveryError, payload_result.dig("email", "error") if email_failed?(payload_result)
+      raise DeliveryError, "Channel delivery failed: #{failed_delivery_groups(payload_result).join(", ")}" if channel_deliveries_failed?(payload_result)
 
       payload_result
     end
@@ -92,7 +94,7 @@ class Beep::Run < ApplicationRecord
 
     def deliver_web_push(user, payload_result)
       existing_deliveries = payload_result.dig("web_push", "deliveries") || []
-      existing_channel_ids = existing_deliveries.map { |d| d["channel_id"] || d["subscription_id"] }.compact
+      existing_channel_ids = attempted_channel_ids(existing_deliveries)
 
       subscriptions = user.channels.active.where(kind: :web_push).to_a
       new_subscriptions = subscriptions.reject { |ch| existing_channel_ids.include?(ch.id) }
@@ -126,6 +128,30 @@ class Beep::Run < ApplicationRecord
       payload_result.dig("email", "status") == "error"
     end
 
+    # A channel group only fails the run when nothing got through: a single
+    # errored device alongside a sent/queued one is tolerated (per-device
+    # errors stay recorded in the payload). Groups are keyed by channel kind,
+    # so this covers both broadcast ("cli", "web_push") and explicit channel
+    # ID deliveries merged under the same key.
+    def channel_deliveries_failed?(payload_result)
+      failed_delivery_groups(payload_result).any?
+    end
+
+    def failed_delivery_groups(payload_result)
+      %w[ cli web_push ].select do |kind|
+        deliveries = Array(payload_result.dig(kind, "deliveries"))
+        deliveries.any? { |d| d["status"] == "error" } &&
+          deliveries.none? { |d| d["status"].in?(%w[ sent queued ]) }
+      end
+    end
+
+    # Deliveries that errored are re-attempted on retry; sent/queued/expired
+    # ones are never duplicated.
+    def attempted_channel_ids(deliveries)
+      deliveries.reject { |d| d["status"] == "error" }
+        .map { |d| d["channel_id"] || d["subscription_id"] }.compact
+    end
+
     def send_email(user, payload_result)
       BeepMailer.beep(self, user: user).deliver_now
       record_email_result(user, payload_result, status: "sent")
@@ -151,7 +177,7 @@ class Beep::Run < ApplicationRecord
 
     def deliver_cli(user, channels, payload_result)
       existing_deliveries = payload_result.dig("cli", "deliveries") || []
-      existing_channel_ids = existing_deliveries.map { |d| d["channel_id"] }.compact
+      existing_channel_ids = attempted_channel_ids(existing_deliveries)
 
       target_channels = user.channels.active.where(kind: :cli)
       specific_names = channels.select { |c| c.to_s.start_with?("cli:") }.map { |c| c.to_s.delete_prefix("cli:") }
@@ -175,7 +201,7 @@ class Beep::Run < ApplicationRecord
         deliver_email(user, payload_result)
       else
         existing_deliveries = payload_result.dig(channel.kind, "deliveries") || []
-        existing_channel_ids = existing_deliveries.map { |d| d["channel_id"] }.compact
+        existing_channel_ids = attempted_channel_ids(existing_deliveries)
         return payload_result if existing_channel_ids.include?(channel.id)
 
         delivery_record = deliver_to(channel)

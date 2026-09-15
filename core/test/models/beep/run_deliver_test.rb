@@ -212,6 +212,61 @@ class Beep::RunDeliverTest < ActiveSupport::TestCase
     assert_nil expired_run.result
   end
 
+  test "deliver fails the run when all web push devices error, retries on recovery" do
+    @beep.update!(notification_channels: %w[ web_push ])
+    subscribe("https://fcm.googleapis.com/fcm/send/one")
+    subscribe("https://fcm.googleapis.com/fcm/send/two")
+
+    stub_web_push_payload_send(->(**_kwargs) { raise Timeout::Error }) do
+      assert_raises Beep::Run::DeliveryError do
+        @run.deliver_now
+      end
+    end
+
+    @run.reload
+    assert @run.running?
+    assert_equal %w[ error error ], @run.result.dig("web_push", "deliveries").map { |row| row["status"] }
+
+    sent_endpoints = []
+    stub_web_push_payload_send(->(**kwargs) { sent_endpoints << kwargs[:endpoint] }) do
+      @run.deliver_now
+    end
+
+    assert_equal 2, sent_endpoints.size
+    assert @run.reload.succeeded?
+    assert @beep.reload.completed?
+  end
+
+  test "deliver retries failed cli deliveries without resending email" do
+    channel = Channel.create!(
+      account: @account,
+      user: users(:john),
+      kind: :cli,
+      name: "laptop"
+    )
+    @beep.update!(notification_channels: %w[ cli email ])
+
+    stub_cli_deliver_error do
+      assert_raises Beep::Run::DeliveryError do
+        @run.deliver_now
+      end
+    end
+
+    @run.reload
+    assert @run.running?
+    assert_equal "error", @run.result.dig("cli", "deliveries", 0, "status")
+    assert_equal "sent", @run.result.dig("email", "status")
+    assert_equal 1, ActionMailer::Base.deliveries.size
+    assert_equal 0, channel.deliveries.count
+
+    @run.deliver_now
+
+    assert @run.reload.succeeded?
+    assert_equal 1, channel.deliveries.count
+    assert_equal 1, ActionMailer::Base.deliveries.size
+    assert_equal "queued", @run.result.dig("cli", "deliveries", 1, "status")
+  end
+
   private
     def due_once_beep(account: @account)
       beep = Beep.create!(
@@ -366,6 +421,18 @@ class Beep::RunDeliverTest < ActiveSupport::TestCase
     ensure
       singleton.alias_method :payload_send, :__orig_payload_send
       singleton.remove_method :__orig_payload_send
+    end
+
+    def stub_cli_deliver_error
+      singleton = Channel::Handlers::Cli.singleton_class
+      singleton.alias_method :__orig_deliver_beep, :deliver_beep
+      singleton.define_method(:deliver_beep) do |channel, _beep, run: nil|
+        { "channel_id" => channel.id, "channel_name" => channel.name, "status" => "error", "error" => "Net::ReadTimeout" }
+      end
+      yield
+    ensure
+      singleton.alias_method :deliver_beep, :__orig_deliver_beep
+      singleton.remove_method :__orig_deliver_beep
     end
 
     def fail_email_delivery
