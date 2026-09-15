@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -105,6 +106,9 @@ func TestDispatchHookEmptyRootReturnsEmpty(t *testing.T) {
 }
 
 func TestDispatchHookRejectsGroupWritableHook(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX permission bits not supported on Windows")
+	}
 	root := t.TempDir()
 	path := writeHook(t, root, "on-channel", "#!/bin/sh\necho hi\n")
 	if err := os.Chmod(path, 0o775); err != nil {
@@ -124,6 +128,9 @@ func TestDispatchHookRejectsGroupWritableHook(t *testing.T) {
 }
 
 func TestDispatchHookRejectsNonExecutableHook(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX permission bits not supported on Windows")
+	}
 	root := t.TempDir()
 	path := writeHook(t, root, "on-channel", "#!/bin/sh\necho hi\n")
 	if err := os.Chmod(path, 0o644); err != nil {
