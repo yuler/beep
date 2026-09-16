@@ -215,53 +215,11 @@ func PromptJobCreate(defaults JobCreateParams) (*JobCreateParams, error) {
 	}
 
 	// 7. Timezone
-	detectedTZ, tzOK := workspace.DetectTimezoneOK()
-	if res.Timezone == "" {
-		if tzOK {
-			res.Timezone = detectedTZ
-		}
+	tz, err := PromptTimezone(res.Timezone)
+	if err != nil {
+		return nil, err
 	}
-
-	if res.Timezone == "" {
-		zones := workspace.ListIANATimezones()
-		options := make([]huh.Option[string], 0, len(zones))
-		for _, z := range zones {
-			options = append(options, huh.NewOption(z, z))
-		}
-		err = huh.NewSelect[string]().
-			Title("Timezone").
-			Description("Could not detect host timezone — pick an IANA zone (type to filter)").
-			Options(options...).
-			Value(&res.Timezone).
-			Run()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		tzDesc := "IANA timezone for cron evaluation"
-		if tzOK && res.Timezone == detectedTZ {
-			tzDesc = fmt.Sprintf("Detected from this machine (%s) — edit if needed", detectedTZ)
-		}
-		err = huh.NewInput().
-			Title("Timezone").
-			Description(tzDesc).
-			Value(&res.Timezone).
-			Validate(func(s string) error {
-				s = strings.TrimSpace(s)
-				if s == "" {
-					return errors.New("timezone is required")
-				}
-				if !workspace.ValidIANATimezone(s) {
-					return fmt.Errorf("%q is not a valid IANA timezone", s)
-				}
-				return nil
-			}).
-			Run()
-		if err != nil {
-			return nil, err
-		}
-	}
-	res.Timezone = strings.TrimSpace(res.Timezone)
+	res.Timezone = tz
 
 	// 8. SyncToServer
 	err = huh.NewConfirm().

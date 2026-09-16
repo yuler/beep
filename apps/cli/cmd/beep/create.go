@@ -64,7 +64,11 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {
 				tz := flagTimezone
-				if tz == "" {
+				if tz != "" {
+					if !workspace.ValidIANATimezone(tz) {
+						return fmt.Errorf("invalid --timezone %q: must be a valid IANA timezone (e.g. Asia/Shanghai, UTC, America/New_York)", tz)
+					}
+				} else if !cmdutil.IsInteractive(cmd) {
 					if detected, ok := workspace.DetectTimezoneOK(); ok {
 						tz = detected
 					} else {
@@ -127,12 +131,13 @@ Examples:
 						}
 						req, err := params.ToRequest()
 						if err != nil {
-							ui.PrintErrorList("Invalid input", client.ExtractErrorList(err))
+							errList := client.ExtractErrorList(err)
+							ui.PrintErrorList("Invalid input", errList)
 							retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
 							if promptErr != nil || !retry {
 								return err
 							}
-							prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels)
+							prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels, errList)
 							if pErr != nil {
 								return pErr
 							}
@@ -145,12 +150,13 @@ Examples:
 							break
 						}
 
-						ui.PrintErrorList("Creation failed", client.ExtractErrorList(err))
+						errList := client.ExtractErrorList(err)
+						ui.PrintErrorList("Creation failed", errList)
 						retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs and retry?", true)
 						if promptErr != nil || !retry {
 							return err
 						}
-						prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels)
+						prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels, errList)
 						if pErr != nil {
 							return pErr
 						}
@@ -159,6 +165,13 @@ Examples:
 				} else {
 					if params.Title == "" {
 						return fmt.Errorf("beep title is required (e.g. beep beep create \"Meeting in 10m\" --in 10m)")
+					}
+					if params.Timezone == "" {
+						if detected, ok := workspace.DetectTimezoneOK(); ok {
+							params.Timezone = detected
+						} else {
+							params.Timezone = "UTC"
+						}
 					}
 					if params.ScheduleKind == "" {
 						params.ScheduleKind = "instant"

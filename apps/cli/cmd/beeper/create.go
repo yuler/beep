@@ -60,7 +60,11 @@ Examples:
 				}
 
 				tz := flagTimezone
-				if tz == "" {
+				if tz != "" {
+					if !workspace.ValidIANATimezone(tz) {
+						return fmt.Errorf("invalid --timezone %q: must be a valid IANA timezone (e.g. Asia/Shanghai, UTC, America/New_York)", tz)
+					}
+				} else if !cmdutil.IsInteractive(cmd) {
 					if detected, ok := workspace.DetectTimezoneOK(); ok {
 						tz = detected
 					} else {
@@ -102,12 +106,13 @@ Examples:
 					for {
 						req, err := params.ToRequest()
 						if err != nil {
-							ui.PrintErrorList("Invalid input", client.ExtractErrorList(err))
+							errList := client.ExtractErrorList(err)
+							ui.PrintErrorList("Invalid input", errList)
 							retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
 							if promptErr != nil || !retry {
 								return err
 							}
-							prompted, pErr := ui.PromptBeeperAdjust(params, apps, defaultChannels)
+							prompted, pErr := ui.PromptBeeperAdjust(params, apps, defaultChannels, errList)
 							if pErr != nil {
 								return pErr
 							}
@@ -120,12 +125,13 @@ Examples:
 							break
 						}
 
-						ui.PrintErrorList("Creation failed", client.ExtractErrorList(err))
+						errList := client.ExtractErrorList(err)
+						ui.PrintErrorList("Creation failed", errList)
 						retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs and retry?", true)
 						if promptErr != nil || !retry {
 							return err
 						}
-						prompted, pErr := ui.PromptBeeperAdjust(params, apps, defaultChannels)
+						prompted, pErr := ui.PromptBeeperAdjust(params, apps, defaultChannels, errList)
 						if pErr != nil {
 							return pErr
 						}
@@ -134,6 +140,13 @@ Examples:
 				} else {
 					if params.AppSlug == "" {
 						return errors.New("--app slug is required (view available apps with 'beep beeper apps')")
+					}
+					if params.Timezone == "" {
+						if detected, ok := workspace.DetectTimezoneOK(); ok {
+							params.Timezone = detected
+						} else {
+							params.Timezone = "UTC"
+						}
 					}
 					if params.Title == "" {
 						selectedApp, err := c.GetBeeperApp(ctx, params.AppSlug)
