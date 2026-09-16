@@ -114,4 +114,6 @@ func init() {
 	RootCmd.AddCommand(configCmd)
 	RootCmd.AddCommand(versionCmd)
 	RootCmd.AddCommand(upgradeCmd)
+
+	RootCmd.InitDefaultCompletionCmd()
 }
