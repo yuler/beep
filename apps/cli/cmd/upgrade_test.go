@@ -12,6 +12,8 @@ import (
 	"beep/internal/ui"
 	"beep/internal/updater"
 	"beep/internal/version"
+
+	"github.com/spf13/cobra"
 )
 
 func TestUpgradeCmdHelpAndAliases(t *testing.T) {
@@ -159,19 +161,33 @@ func TestUpgradeNoticeOnRootCmd(t *testing.T) {
 }
 
 func TestSkipUpdateHooks(t *testing.T) {
-	cases := map[string]bool{
-		"upgrade":    true,
-		"update":     true,
-		"version":    true,
-		"completion": true,
-		"help":       true,
-		"__complete": true,
-		"status":     false,
-		"up":         false,
+	findCases := []struct {
+		args []string
+		want bool
+	}{
+		{[]string{"upgrade"}, true},
+		{[]string{"update"}, true},
+		{[]string{"version"}, true},
+		{[]string{"completion"}, true},
+		{[]string{"completion", "bash"}, true},
+		{[]string{"completion", "zsh"}, true},
+		{[]string{"completion", "fish"}, true},
+		{[]string{"help"}, true},
+		{[]string{"status"}, false},
+		{[]string{"up"}, false},
 	}
-	for name, want := range cases {
-		if got := skipUpdateHooks(name); got != want {
-			t.Errorf("skipUpdateHooks(%q) = %v; want %v", name, got, want)
+	for _, tc := range findCases {
+		cmd, _, err := RootCmd.Find(tc.args)
+		if err != nil {
+			t.Fatalf("RootCmd.Find(%v): %v", tc.args, err)
 		}
+		if got := skipUpdateHooks(cmd); got != tc.want {
+			t.Errorf("skipUpdateHooks after Find(%v) (leaf %q) = %v; want %v", tc.args, cmd.Name(), got, tc.want)
+		}
+	}
+
+	internal := &cobra.Command{Use: "__complete"}
+	if got := skipUpdateHooks(internal); !got {
+		t.Errorf("skipUpdateHooks(__complete) = %v; want true", got)
 	}
 }
