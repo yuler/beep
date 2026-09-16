@@ -26,6 +26,6 @@ Domain vocabulary for beep scheduling, delivery, tenancy, and Beepers.
 
 ## Trigger semantics
 
-- `once`: detail-page **Send now** is a real delivery that consumes the schedule — `run_at` updates to send time and after success the Beep is `completed` with `next_run_at = nil`. If `run_at` is still in the future the UI confirms this before sending.
+- `once`: detail-page **Send now** is a real delivery that consumes the schedule — `run_at` updates to send time and after success the Beep is `completed` with `next_run_at = nil`. If `run_at` is still in the future the UI confirms this before sending. Completed once beeps can still be sent manually (e.g. for testing).
 - `recurring`: detail-page **Trigger run** is an extra run — the schedule captured before firing is restored on completion (unless already due, in which case it recalculates to avoid duplicate firing), so the next slot is preserved.
 - Channel settings **Test** (`deliver_test!`) only verifies delivery and rendering: no `beep_run`, no status or schedule change.

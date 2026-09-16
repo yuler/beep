@@ -56,11 +56,9 @@ function BeepDetailPage() {
 	const isOnce = beep.kind === "once";
 
 	async function handleTrigger() {
-		if (beep.status === "completed") {
-			return;
-		}
 		if (
 			isOnce &&
+			beep.status !== "completed" &&
 			beep.run_at &&
 			Number(new Date(beep.run_at)) > Date.now() &&
 			!window.confirm(m.beeps_send_now_confirm_future())
@@ -208,8 +206,7 @@ function BeepDetailPage() {
 								triggering ||
 								deleting ||
 								togglingStatus ||
-								beep.status === "firing" ||
-								beep.status === "completed"
+								beep.status === "firing"
 							}
 							aria-label={
 								isOnce ? m.beeps_send_beep_now() : m.beeps_trigger_run()

@@ -214,6 +214,30 @@ class BeepTest < ActiveSupport::TestCase
     assert_nil beep.next_run_at
   end
 
+  test "trigger_run! on a completed once beep creates a new run and transitions back to firing then completed" do
+    beep = Beep.create!(
+      account: @account,
+      kind: :once,
+      title: "Completed Once",
+      run_at: 1.hour.from_now
+    )
+    run1 = beep.trigger_run!
+    beep.finish_firing(last_run_at: run1.scheduled_for)
+    assert beep.reload.completed?
+    assert_equal 1, beep.runs.count
+
+    travel 10.seconds do
+      run2 = beep.trigger_run!
+      assert beep.reload.firing?
+      assert_equal run2.scheduled_for.to_i, beep.run_at.to_i
+      assert_nil beep.next_run_at
+      beep.finish_firing(last_run_at: run2.scheduled_for)
+      assert beep.reload.completed?
+      assert_equal run2.scheduled_for.to_i, beep.last_run_at.to_i
+      assert_equal 2, beep.runs.count
+    end
+  end
+
   test "trigger_run! supports recurring beeps without validation errors" do
     beep = Beep.create!(
       account: @account,
