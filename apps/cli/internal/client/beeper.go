@@ -2,9 +2,13 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
+
+	"beep/internal/schedule"
 )
 
 type BeeperAppInput struct {
@@ -176,3 +180,86 @@ func (c *Client) ListBeeperRuns(ctx context.Context, id string) ([]*BeeperRun, e
 	}
 	return res.Runs, nil
 }
+
+// MaskToken redacts a token preserving only the first 8 characters.
+func MaskToken(tok string) string {
+	if tok == "" {
+		return ""
+	}
+	if len(tok) <= 8 {
+		return "••••••••"
+	}
+	return tok[:8] + "••••••••"
+}
+
+// Redacted returns a clone of Beeper with PingToken masked unless revealToken is true.
+func (b *Beeper) Redacted(revealToken bool) *Beeper {
+	if b == nil {
+		return nil
+	}
+	clone := *b
+	if !revealToken {
+		clone.PingToken = MaskToken(clone.PingToken)
+	}
+	return &clone
+}
+
+// RedactBeepers returns a copy of the list with PingToken masked unless revealToken is true.
+func RedactBeepers(list []*Beeper, revealToken bool) []*Beeper {
+	res := make([]*Beeper, len(list))
+	for i, b := range list {
+		res[i] = b.Redacted(revealToken)
+	}
+	return res
+}
+
+// CreateBeeperParams encapsulates user parameters for creating a Beeper.
+type CreateBeeperParams struct {
+	AppSlug  string
+	Title    string
+	Body     string
+	Cron     string
+	Timezone string
+	Config   map[string]any
+	Channels string
+}
+
+// ToRequest validates and transforms CreateBeeperParams into a CreateBeeperRequest.
+func (p *CreateBeeperParams) ToRequest() (*CreateBeeperRequest, error) {
+	appSlug := strings.TrimSpace(p.AppSlug)
+	if appSlug == "" {
+		return nil, errors.New("--app slug is required (view available apps with 'beep beeper apps')")
+	}
+
+	cron := strings.TrimSpace(p.Cron)
+	if cron != "" {
+		if err := schedule.Validate(cron); err != nil {
+			return nil, fmt.Errorf("invalid cron expression: %w", err)
+		}
+	}
+
+	tz := strings.TrimSpace(p.Timezone)
+	if tz == "" {
+		tz = "UTC"
+	}
+
+	req := &CreateBeeperRequest{
+		BeeperAppSlug: appSlug,
+		Title:         strings.TrimSpace(p.Title),
+		Body:          strings.TrimSpace(p.Body),
+		Cron:          cron,
+		Timezone:      tz,
+		Config:        p.Config,
+	}
+
+	if trimmedChannels := strings.TrimSpace(p.Channels); trimmedChannels != "" {
+		for _, ch := range strings.Split(trimmedChannels, ",") {
+			if trimmed := strings.TrimSpace(ch); trimmed != "" {
+				req.NotificationChannels = append(req.NotificationChannels, trimmed)
+			}
+		}
+	}
+
+	return req, nil
+}
+

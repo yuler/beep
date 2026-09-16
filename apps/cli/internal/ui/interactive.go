@@ -823,3 +823,34 @@ func PromptAccountSelect(accounts []client.MeAccount, defaultSlug string) (strin
 	}
 	return choice, nil
 }
+
+// PromptSelectResource displays a selectable list of options and returns the selected value.
+func PromptSelectResource(title string, options []huh.Option[string]) (string, error) {
+	if len(options) == 0 {
+		return "", errors.New("no options available")
+	}
+	var choice string
+	err := huh.NewSelect[string]().
+		Title(title).
+		Options(options...).
+		Value(&choice).
+		Run()
+	if err != nil {
+		return "", err
+	}
+	return choice, nil
+}
+
+// PromptConfirm asks the user for a yes/no confirmation.
+func PromptConfirm(title string, defaultVal bool) (bool, error) {
+	confirmed := defaultVal
+	err := huh.NewConfirm().
+		Title(title).
+		Value(&confirmed).
+		Run()
+	if err != nil {
+		return false, err
+	}
+	return confirmed, nil
+}
+

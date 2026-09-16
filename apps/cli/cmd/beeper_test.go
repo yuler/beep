@@ -3,13 +3,10 @@ package cmd
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"beep/internal/client"
-	"beep/internal/config"
 
 	"github.com/spf13/cobra"
 )
@@ -27,36 +24,9 @@ func TestBeeperCommandsRegistration(t *testing.T) {
 }
 
 func setupBeeperTestEnv(t *testing.T, handler http.HandlerFunc) (string, func()) {
-	server := httptest.NewServer(handler)
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.json")
-	fc := &config.FileConfig{
-		ServerURL:   server.URL,
-		AccessToken: "beep_at_test_token",
-	}
-	if err := config.SaveFile(configPath, fc); err != nil {
-		t.Fatalf("failed to save test config: %v", err)
-	}
-
-	oldWs := flagWorkspace
-	oldServer := flagServer
-	oldAccount := flagAccount
-	oldJSON := flagJSON
-
-	flagWorkspace = tmpDir
-	flagServer = server.URL
-	flagAccount = ""
-	flagJSON = false
-
-	cleanup := func() {
-		server.Close()
-		flagWorkspace = oldWs
-		flagServer = oldServer
-		flagAccount = oldAccount
-		flagJSON = oldJSON
-	}
-	return server.URL, cleanup
+	return setupCLITestEnv(t, handler)
 }
+
 
 func TestBeeperListCommand(t *testing.T) {
 	var gotHeaderAccount string
