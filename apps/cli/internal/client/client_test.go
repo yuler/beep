@@ -249,3 +249,70 @@ func TestClientCliDeviceFlow(t *testing.T) {
 		t.Errorf("expected user email user@example.com, got %s", tokenRes.User.Email)
 	}
 }
+
+func TestParseAPIError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/errors-array":
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code":    "VALIDATION_ERROR",
+				"message": "Title can't be blank and Cron is invalid",
+				"errors":  []string{"Title can't be blank", "Cron is invalid"},
+			})
+		case "/api/errors-map":
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"code":    "VALIDATION_ERROR",
+				"message": "Validation failed",
+				"errors": map[string][]string{
+					"title": {"can't be blank"},
+				},
+			})
+		case "/api/message-only":
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"message": "Bad request parameter",
+			})
+		}
+	}))
+	defer ts.Close()
+
+	c := New(&config.Config{ServerURL: ts.URL})
+
+	// 1. Errors array
+	resp1, err := c.httpClient.Get(ts.URL + "/api/errors-array")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp1.Body.Close()
+	err1 := parseAPIError(resp1)
+	errList1 := ExtractErrorList(err1)
+	if len(errList1) != 2 || errList1[0] != "Title can't be blank" || errList1[1] != "Cron is invalid" {
+		t.Errorf("unexpected error list from array: %v", errList1)
+	}
+
+	// 2. Errors map
+	resp2, err := c.httpClient.Get(ts.URL + "/api/errors-map")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp2.Body.Close()
+	err2 := parseAPIError(resp2)
+	errList2 := ExtractErrorList(err2)
+	if len(errList2) != 1 || errList2[0] != "title can't be blank" {
+		t.Errorf("unexpected error list from map: %v", errList2)
+	}
+
+	// 3. Message only
+	resp3, err := c.httpClient.Get(ts.URL + "/api/message-only")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp3.Body.Close()
+	err3 := parseAPIError(resp3)
+	errList3 := ExtractErrorList(err3)
+	if len(errList3) != 1 || errList3[0] != "Bad request parameter" {
+		t.Errorf("unexpected error list from message only: %v", errList3)
+	}
+}

@@ -107,6 +107,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
+    assert_includes response.parsed_body["errors"], "Title can't be blank"
   end
 
   test "create requires authentication" do

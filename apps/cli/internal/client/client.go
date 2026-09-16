@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -355,10 +356,52 @@ func (c *Client) setHeaders(req *http.Request) {
 	c.setRunnerHeaders(req)
 }
 
-type apiErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message"`
-	Code    string `json:"code"`
+// APIError represents an error response from the server API.
+type APIError struct {
+	StatusCode int      `json:"status_code"`
+	Code       string   `json:"code"`
+	Message    string   `json:"message"`
+	Errors     []string `json:"errors"`
+}
+
+func (e *APIError) Error() string {
+	if len(e.Errors) > 1 {
+		return strings.Join(e.Errors, "; ")
+	}
+	if len(e.Errors) == 1 {
+		return e.Errors[0]
+	}
+	if e.Message != "" {
+		return e.Message
+	}
+	if e.Code != "" {
+		return e.Code
+	}
+	return fmt.Sprintf("request failed (status %d)", e.StatusCode)
+}
+
+// ExtractErrorList extracts error details from an error, prioritizing structured error lists.
+func ExtractErrorList(err error) []string {
+	if err == nil {
+		return nil
+	}
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		if len(apiErr.Errors) > 0 {
+			return apiErr.Errors
+		}
+		if apiErr.Message != "" {
+			return []string{apiErr.Message}
+		}
+	}
+	return []string{err.Error()}
+}
+
+type rawAPIErrorResponse struct {
+	Error   string          `json:"error"`
+	Message string          `json:"message"`
+	Code    string          `json:"code"`
+	Errors  json.RawMessage `json:"errors"`
 }
 
 func parseAPIError(resp *http.Response) error {
@@ -369,15 +412,50 @@ func parseAPIError(resp *http.Response) error {
 	if resp.StatusCode == http.StatusNotFound {
 		return fmt.Errorf("resource not found on server (404)")
 	}
-	var apiErr apiErrorResponse
-	if err := json.Unmarshal(respBody, &apiErr); err == nil {
-		if apiErr.Message != "" {
-			return fmt.Errorf("%s", apiErr.Message)
+
+	var raw rawAPIErrorResponse
+	if err := json.Unmarshal(respBody, &raw); err == nil {
+		apiErr := &APIError{
+			StatusCode: resp.StatusCode,
+			Code:       raw.Code,
+			Message:    raw.Message,
 		}
-		if apiErr.Error != "" {
-			return fmt.Errorf("%s", apiErr.Error)
+		if apiErr.Message == "" && raw.Error != "" {
+			apiErr.Message = raw.Error
+		}
+
+		if len(raw.Errors) > 0 {
+			var strList []string
+			if err := json.Unmarshal(raw.Errors, &strList); err == nil && len(strList) > 0 {
+				apiErr.Errors = strList
+			} else {
+				var mapList map[string][]string
+				if err := json.Unmarshal(raw.Errors, &mapList); err == nil && len(mapList) > 0 {
+					for field, msgs := range mapList {
+						for _, m := range msgs {
+							apiErr.Errors = append(apiErr.Errors, fmt.Sprintf("%s %s", field, m))
+						}
+					}
+				} else {
+					var mapAny map[string]any
+					if err := json.Unmarshal(raw.Errors, &mapAny); err == nil && len(mapAny) > 0 {
+						for field, val := range mapAny {
+							apiErr.Errors = append(apiErr.Errors, fmt.Sprintf("%s: %v", field, val))
+						}
+					}
+				}
+			}
+		}
+
+		if len(apiErr.Errors) == 0 && apiErr.Message != "" {
+			apiErr.Errors = []string{apiErr.Message}
+		}
+
+		if apiErr.Message != "" || len(apiErr.Errors) > 0 {
+			return apiErr
 		}
 	}
+
 	trimmed := strings.TrimSpace(string(respBody))
 	if trimmed != "" {
 		return fmt.Errorf("request failed (status %d): %s", resp.StatusCode, trimmed)

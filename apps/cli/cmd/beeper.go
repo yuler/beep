@@ -340,8 +340,14 @@ Examples:
 					return fmt.Errorf("failed to list beeper apps: %w", err)
 				}
 
+				// Default channel selection comes from account settings.
+				defaultChannels := client.DefaultNotificationChannels
+				if s, err := c.GetSettings(ctx); err == nil && s != nil {
+					defaultChannels = client.SanitizeChannelDefaults(s.NotificationChannels)
+				}
+
 				if params.AppSlug == "" || params.Title == "" {
-					prompted, err := ui.PromptBeeperCreate(params, apps)
+					prompted, err := ui.PromptBeeperCreate(params, apps, defaultChannels)
 					if err != nil {
 						return err
 					}
@@ -351,13 +357,12 @@ Examples:
 				for {
 					req, err := params.ToRequest()
 					if err != nil {
-						fmt.Println()
-						fmt.Println(ui.Error("Invalid input: %s", err))
+						ui.PrintErrorList("Invalid input", client.ExtractErrorList(err))
 						retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
 						if promptErr != nil || !retry {
 							return err
 						}
-						prompted, pErr := ui.PromptBeeperCreate(params, apps)
+						prompted, pErr := ui.PromptBeeperAdjust(params, apps, defaultChannels)
 						if pErr != nil {
 							return pErr
 						}
@@ -370,13 +375,12 @@ Examples:
 						break
 					}
 
-					fmt.Println()
-					fmt.Println(ui.Error("Creation failed: %s", err))
+					ui.PrintErrorList("Creation failed", client.ExtractErrorList(err))
 					retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs and retry?", true)
 					if promptErr != nil || !retry {
 						return err
 					}
-					prompted, pErr := ui.PromptBeeperCreate(params, apps)
+					prompted, pErr := ui.PromptBeeperAdjust(params, apps, defaultChannels)
 					if pErr != nil {
 						return pErr
 					}

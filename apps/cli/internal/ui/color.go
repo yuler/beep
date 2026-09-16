@@ -112,3 +112,15 @@ func StatusBadge(status string) string {
 		return Gray(fmt.Sprintf("[%s]", status))
 	}
 }
+
+// PrintErrorList prints an error header followed by bullet-pointed error items.
+func PrintErrorList(header string, errs []string) {
+	fmt.Println()
+	fmt.Println(Error("%s:", header))
+	if len(errs) == 0 {
+		return
+	}
+	for _, err := range errs {
+		fmt.Printf("  %s %s\n", Red("•"), err)
+	}
+}

@@ -15,14 +15,26 @@ import (
 // PromptBeepCreate prompts the user sequentially for beep creation parameters.
 // If any parameter was already supplied via flags, its prompt is skipped.
 // Optional parameters can be skipped by pressing Enter.
-func PromptBeepCreate(initial client.CreateBeepParams) (*client.CreateBeepParams, error) {
+// defaultChannels carries the channels selected in account settings and
+// pre-selects them in the channels multi-select.
+func PromptBeepCreate(initial client.CreateBeepParams, defaultChannels []string) (*client.CreateBeepParams, error) {
+	return promptBeep(initial, defaultChannels, false)
+}
+
+// PromptBeepAdjust prompts the user to review and adjust their inputs.
+// All fields are presented with their current values pre-filled.
+func PromptBeepAdjust(initial client.CreateBeepParams, defaultChannels []string) (*client.CreateBeepParams, error) {
+	return promptBeep(initial, defaultChannels, true)
+}
+
+func promptBeep(initial client.CreateBeepParams, defaultChannels []string, adjust bool) (*client.CreateBeepParams, error) {
 	res := initial
 
 	// 1. Title (required)
-	if strings.TrimSpace(res.Title) == "" {
+	if adjust || strings.TrimSpace(res.Title) == "" {
 		err := huh.NewInput().
-			Title("Reminder Title").
-			Description("Short description of what you want to be reminded about").
+			Title("Beep Title").
+			Description("Name of this beep, shown when it fires").
 			Placeholder("e.g. Deploy finished, Check server logs").
 			Value(&res.Title).
 			Validate(func(s string) error {
@@ -39,7 +51,7 @@ func PromptBeepCreate(initial client.CreateBeepParams) (*client.CreateBeepParams
 	res.Title = strings.TrimSpace(res.Title)
 
 	// 2. Message Body (optional)
-	if strings.TrimSpace(res.Body) == "" {
+	if adjust || strings.TrimSpace(res.Body) == "" {
 		err := huh.NewInput().
 			Title("Message Body (optional)").
 			Description("Optional details or markdown body (press Enter to skip)").
@@ -52,12 +64,13 @@ func PromptBeepCreate(initial client.CreateBeepParams) (*client.CreateBeepParams
 	res.Body = strings.TrimSpace(res.Body)
 
 	// 3. Schedule Type & Value
-	// If ScheduleKind is empty, prompt user to select schedule mode
-	if res.ScheduleKind == "" {
-		res.ScheduleKind = "instant"
+	if adjust || res.ScheduleKind == "" {
+		if res.ScheduleKind == "" {
+			res.ScheduleKind = "instant"
+		}
 		err := huh.NewSelect[string]().
 			Title("Schedule Type").
-			Description("How this reminder should be scheduled").
+			Description("How this beep should be scheduled").
 			Options(
 				huh.NewOption("Instant (fire immediately)", "instant"),
 				huh.NewOption("Relative delay (e.g. 15m, 2h, 1d)", "delay"),
@@ -71,11 +84,19 @@ func PromptBeepCreate(initial client.CreateBeepParams) (*client.CreateBeepParams
 		}
 	}
 
+	if adjust && initial.ScheduleKind != res.ScheduleKind {
+		res.ScheduleVal = ""
+	}
+
 	// Step-by-step detail prompt based on schedule mode
 	switch res.ScheduleKind {
+	case "instant":
+		res.ScheduleVal = ""
 	case "delay":
-		if strings.TrimSpace(res.ScheduleVal) == "" {
-			res.ScheduleVal = "15m"
+		if adjust || strings.TrimSpace(res.ScheduleVal) == "" {
+			if strings.TrimSpace(res.ScheduleVal) == "" {
+				res.ScheduleVal = "15m"
+			}
 			err := huh.NewInput().
 				Title("Delay Duration").
 				Description("Duration before firing (e.g. 10m, 2h, 1d)").
@@ -93,8 +114,10 @@ func PromptBeepCreate(initial client.CreateBeepParams) (*client.CreateBeepParams
 			}
 		}
 	case "at":
-		if strings.TrimSpace(res.ScheduleVal) == "" {
-			res.ScheduleVal = "16:30"
+		if adjust || strings.TrimSpace(res.ScheduleVal) == "" {
+			if strings.TrimSpace(res.ScheduleVal) == "" {
+				res.ScheduleVal = "16:30"
+			}
 			err := huh.NewInput().
 				Title("Specific Time / Date").
 				Description("When to fire (e.g. 16:30, 2026-10-01 10:00)").
@@ -116,8 +139,10 @@ func PromptBeepCreate(initial client.CreateBeepParams) (*client.CreateBeepParams
 			}
 		}
 	case "cron":
-		if strings.TrimSpace(res.ScheduleVal) == "" {
-			res.ScheduleVal = "0 9 * * 1-5"
+		if adjust || strings.TrimSpace(res.ScheduleVal) == "" {
+			if strings.TrimSpace(res.ScheduleVal) == "" {
+				res.ScheduleVal = "0 9 * * 1-5"
+			}
 			err := huh.NewInput().
 				Title("Cron Expression").
 				Description("Standard 5-part cron expression (e.g. 0 9 * * 1-5)").
@@ -136,11 +161,13 @@ func PromptBeepCreate(initial client.CreateBeepParams) (*client.CreateBeepParams
 	}
 
 	// 4. Timezone
-	if strings.TrimSpace(res.Timezone) == "" {
-		if detected, ok := workspace.DetectTimezoneOK(); ok {
-			res.Timezone = detected
-		} else {
-			res.Timezone = "UTC"
+	if adjust || strings.TrimSpace(res.Timezone) == "" {
+		if strings.TrimSpace(res.Timezone) == "" {
+			if detected, ok := workspace.DetectTimezoneOK(); ok {
+				res.Timezone = detected
+			} else {
+				res.Timezone = "UTC"
+			}
 		}
 		err := huh.NewInput().
 			Title("Timezone").
@@ -152,16 +179,17 @@ func PromptBeepCreate(initial client.CreateBeepParams) (*client.CreateBeepParams
 		}
 	}
 
-	// 5. Notification Channels (optional)
-	if strings.TrimSpace(res.Channels) == "" {
-		err := huh.NewInput().
-			Title("Notification Channels (optional)").
-			Description("Comma-separated channel names or IDs (press Enter to skip)").
-			Value(&res.Channels).
-			Run()
+	// 5. Notification Channels (optional, multi-select with account defaults)
+	if adjust || strings.TrimSpace(res.Channels) == "" {
+		chDefaults := defaultChannels
+		if strings.TrimSpace(res.Channels) != "" {
+			chDefaults = strings.Split(res.Channels, ",")
+		}
+		channels, err := PromptNotificationChannels(chDefaults)
 		if err != nil {
 			return nil, err
 		}
+		res.Channels = channels
 	}
 	res.Channels = strings.TrimSpace(res.Channels)
 

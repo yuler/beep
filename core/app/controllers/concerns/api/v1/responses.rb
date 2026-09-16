@@ -21,8 +21,10 @@ module Api::V1::Responses
     render_json_error(status: :too_many_requests, message: "Too Many Requests", code: "TOO_MANY_REQUESTS")
   end
 
-  def render_json_error(status:, message:, code: nil)
-    render json: { code:, message: }, status:
+  def render_json_error(status:, message:, code: nil, errors: nil)
+    payload = { code:, message: }.compact
+    payload[:errors] = errors if errors.present?
+    render json: payload, status:
   end
 
   def render_json(json: {}, status: :ok)

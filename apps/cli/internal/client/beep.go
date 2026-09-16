@@ -164,7 +164,7 @@ type CreateBeepParams struct {
 // ToRequest validates and transforms CreateBeepParams into a CreateBeepRequest.
 func (p *CreateBeepParams) ToRequest() (*CreateBeepRequest, error) {
 	if strings.TrimSpace(p.Title) == "" {
-		return nil, errors.New("reminder title is required")
+		return nil, errors.New("beep title is required")
 	}
 
 	tz := strings.TrimSpace(p.Timezone)

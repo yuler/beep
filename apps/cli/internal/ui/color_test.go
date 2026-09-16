@@ -25,3 +25,10 @@ func TestColorFormatting(t *testing.T) {
 		t.Fatalf("expected plain string when disabled, got %q", resNoColor)
 	}
 }
+
+func TestPrintErrorList(t *testing.T) {
+	SetEnabled(false)
+	// Should not panic on empty or populated lists
+	PrintErrorList("Creation failed", nil)
+	PrintErrorList("Creation failed", []string{"Title can't be blank", "Run at must be in the future"})
+}

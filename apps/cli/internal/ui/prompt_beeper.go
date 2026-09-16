@@ -14,7 +14,19 @@ import (
 
 // PromptBeeperCreate prompts the user sequentially for beeper creation parameters.
 // If any parameter was already supplied via flags, its prompt is skipped.
-func PromptBeeperCreate(initial client.CreateBeeperParams, apps []*client.BeeperApp) (*client.CreateBeeperParams, error) {
+// defaultChannels carries the channels selected in account settings and
+// pre-selects them in the channels multi-select.
+func PromptBeeperCreate(initial client.CreateBeeperParams, apps []*client.BeeperApp, defaultChannels []string) (*client.CreateBeeperParams, error) {
+	return promptBeeper(initial, apps, defaultChannels, false)
+}
+
+// PromptBeeperAdjust prompts the user to review and adjust their inputs.
+// All fields are presented with their current values pre-filled.
+func PromptBeeperAdjust(initial client.CreateBeeperParams, apps []*client.BeeperApp, defaultChannels []string) (*client.CreateBeeperParams, error) {
+	return promptBeeper(initial, apps, defaultChannels, true)
+}
+
+func promptBeeper(initial client.CreateBeeperParams, apps []*client.BeeperApp, defaultChannels []string, adjust bool) (*client.CreateBeeperParams, error) {
 	if len(apps) == 0 {
 		return nil, errors.New("no beeper apps available on server")
 	}
@@ -64,8 +76,10 @@ func PromptBeeperCreate(initial client.CreateBeeperParams, apps []*client.Beeper
 	}
 
 	// 2. Title
-	if strings.TrimSpace(res.Title) == "" {
-		res.Title = selectedApp.Name
+	if adjust || strings.TrimSpace(res.Title) == "" {
+		if strings.TrimSpace(res.Title) == "" {
+			res.Title = selectedApp.Name
+		}
 		err := huh.NewInput().
 			Title("Beeper Title").
 			Description("Name of this monitor probe").
@@ -84,7 +98,7 @@ func PromptBeeperCreate(initial client.CreateBeeperParams, apps []*client.Beeper
 	res.Title = strings.TrimSpace(res.Title)
 
 	// 3. Message Body / Description (optional)
-	if strings.TrimSpace(res.Body) == "" {
+	if adjust || strings.TrimSpace(res.Body) == "" {
 		err := huh.NewInput().
 			Title("Description / Body (optional)").
 			Description("Optional details or markdown body (press Enter to skip)").
@@ -97,8 +111,10 @@ func PromptBeeperCreate(initial client.CreateBeeperParams, apps []*client.Beeper
 	res.Body = strings.TrimSpace(res.Body)
 
 	// 4. Cron Schedule
-	if strings.TrimSpace(res.Cron) == "" {
-		res.Cron = selectedApp.DefaultCron
+	if adjust || strings.TrimSpace(res.Cron) == "" {
+		if strings.TrimSpace(res.Cron) == "" {
+			res.Cron = selectedApp.DefaultCron
+		}
 		err := huh.NewInput().
 			Title("Cron Schedule").
 			Description(fmt.Sprintf("Schedule expression (default: %s)", selectedApp.DefaultCron)).
@@ -118,13 +134,18 @@ func PromptBeeperCreate(initial client.CreateBeeperParams, apps []*client.Beeper
 
 	// 5. Dynamic App Config Inputs
 	for _, input := range selectedApp.Inputs {
-		if _, exists := res.Config[input.Name]; exists {
-			continue
+		if !adjust {
+			if _, exists := res.Config[input.Name]; exists {
+				continue
+			}
 		}
 
 		defaultVal := ""
 		if input.Default != nil {
 			defaultVal = fmt.Sprintf("%v", input.Default)
+		}
+		if current, exists := res.Config[input.Name]; exists && current != nil {
+			defaultVal = fmt.Sprintf("%v", current)
 		}
 
 		val := defaultVal
@@ -153,15 +174,19 @@ func PromptBeeperCreate(initial client.CreateBeeperParams, apps []*client.Beeper
 		trimmedVal := strings.TrimSpace(val)
 		if trimmedVal != "" {
 			res.Config[input.Name] = trimmedVal
+		} else {
+			delete(res.Config, input.Name)
 		}
 	}
 
 	// 6. Timezone
-	if strings.TrimSpace(res.Timezone) == "" {
-		if detected, ok := workspace.DetectTimezoneOK(); ok {
-			res.Timezone = detected
-		} else {
-			res.Timezone = "UTC"
+	if adjust || strings.TrimSpace(res.Timezone) == "" {
+		if strings.TrimSpace(res.Timezone) == "" {
+			if detected, ok := workspace.DetectTimezoneOK(); ok {
+				res.Timezone = detected
+			} else {
+				res.Timezone = "UTC"
+			}
 		}
 		err := huh.NewInput().
 			Title("Timezone").
@@ -173,16 +198,17 @@ func PromptBeeperCreate(initial client.CreateBeeperParams, apps []*client.Beeper
 		}
 	}
 
-	// 7. Notification Channels (optional)
-	if strings.TrimSpace(res.Channels) == "" {
-		err := huh.NewInput().
-			Title("Notification Channels (optional)").
-			Description("Comma-separated channel names or IDs (press Enter to skip)").
-			Value(&res.Channels).
-			Run()
+	// 7. Notification Channels (optional, multi-select with account defaults)
+	if adjust || strings.TrimSpace(res.Channels) == "" {
+		chDefaults := defaultChannels
+		if strings.TrimSpace(res.Channels) != "" {
+			chDefaults = strings.Split(res.Channels, ",")
+		}
+		channels, err := PromptNotificationChannels(chDefaults)
 		if err != nil {
 			return nil, err
 		}
+		res.Channels = channels
 	}
 	res.Channels = strings.TrimSpace(res.Channels)
 
