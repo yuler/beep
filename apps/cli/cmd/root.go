@@ -24,12 +24,18 @@ var (
 // skipUpdateHooks returns true for commands that should not trigger background
 // update checks or print update notices (upgrade/update/version/completion/help
 // and cobra internal __* commands).
-func skipUpdateHooks(name string) bool {
-	switch name {
-	case "upgrade", "update", "version", "completion", "help":
-		return true
+func skipUpdateHooks(cmd *cobra.Command) bool {
+	for c := cmd; c != nil; c = c.Parent() {
+		name := c.Name()
+		switch name {
+		case "upgrade", "update", "version", "completion", "help":
+			return true
+		}
+		if strings.HasPrefix(name, "__") {
+			return true
+		}
 	}
-	return strings.HasPrefix(name, "__")
+	return false
 }
 
 var RootCmd = &cobra.Command{
@@ -42,12 +48,12 @@ Execute 'beep <command> --help' for detailed usage of a specific command.`,
 		if flagNoColor {
 			ui.SetEnabled(false)
 		}
-		if !skipUpdateHooks(cmd.Name()) {
+		if !skipUpdateHooks(cmd) {
 			updater.TriggerBackgroundCheck(flagWorkspace)
 		}
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		if skipUpdateHooks(cmd.Name()) {
+		if skipUpdateHooks(cmd) {
 			return
 		}
 		if notice := updater.CheckNotice(flagWorkspace); notice != "" {
