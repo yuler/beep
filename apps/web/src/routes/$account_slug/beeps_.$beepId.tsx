@@ -53,7 +53,17 @@ function BeepDetailPage() {
 	const [togglingStatus, setTogglingStatus] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	const isOnce = beep.kind === "once";
+
 	async function handleTrigger() {
+		if (
+			isOnce &&
+			beep.run_at &&
+			Number(new Date(beep.run_at)) > Date.now() &&
+			!window.confirm(m.beeps_send_now_confirm_future())
+		) {
+			return;
+		}
 		setTriggering(true);
 		setError(null);
 		try {
@@ -197,15 +207,21 @@ function BeepDetailPage() {
 								togglingStatus ||
 								beep.status === "firing"
 							}
-							aria-label={m.beeps_trigger_run()}
+							aria-label={
+								isOnce ? m.beeps_send_beep_now() : m.beeps_trigger_run()
+							}
 							onClick={() => void handleTrigger()}
 						>
 							<Play data-icon="inline-start" />
 							{triggering
-								? m.beeps_triggering()
+								? isOnce
+									? m.beeps_sending()
+									: m.beeps_triggering()
 								: beep.status === "firing"
 									? m.beeps_firing_action()
-									: m.beeps_trigger_run()}
+									: isOnce
+										? m.beeps_send_beep_now()
+										: m.beeps_trigger_run()}
 						</Button>
 						<Button
 							variant="destructive"

@@ -289,6 +289,7 @@
   "beeps_schedule_completed": "Completed",
   "beeps_search_placeholder": "Search beeps…",
   "beeps_send_beep_now": "Send beep now",
+  "beeps_send_now_confirm_future": "This once beep is scheduled for the future. Send it now and end the schedule?",
   "beeps_send_immediately": "Send immediately (now)",
   "beeps_send_immediately_hint": "Will be delivered right after creation.",
   "beeps_sending": "Sending…",

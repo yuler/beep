@@ -53,8 +53,12 @@ class Beep < ApplicationRecord
 
   def trigger_run!
     scheduled_for = Time.current
-    attributes = { status: :firing, next_run_at: nil }
-    attributes[:run_at] = run_at || scheduled_for if once?
+    if once?
+      attributes = { status: :firing, next_run_at: nil }
+      attributes[:run_at] = run_at || scheduled_for
+    else
+      attributes = { status: :firing }
+    end
     update!(attributes)
 
     run = begin
@@ -125,16 +129,15 @@ class Beep < ApplicationRecord
   def finish_firing(last_run_at:)
     reload
 
-    next_run_at = once? ? nil : calculate_next_run_at(from: Time.current)
     if paused?
       attributes = { last_run_at: last_run_at }
-      attributes[:next_run_at] = next_run_at if recurring?
+      attributes[:next_run_at] = preserved_or_next_run_at(last_run_at) if recurring?
       update!(attributes)
     elsif firing?
       if once?
         update!(status: :completed, next_run_at: nil, last_run_at: last_run_at)
       else
-        update!(status: :active, next_run_at: next_run_at, last_run_at: last_run_at)
+        update!(status: :active, next_run_at: preserved_or_next_run_at(last_run_at), last_run_at: last_run_at)
       end
     else
       update!(last_run_at: last_run_at)
@@ -149,6 +152,18 @@ class Beep < ApplicationRecord
         next_time = parsed.next_time(from)
         next_time ? Time.at(next_time.to_i).utc : nil
       end
+    end
+  end
+
+  # Manual trigger on a recurring beep is an extra run: keep the schedule
+  # captured before firing. Automatic runs have next_run_at == scheduled slot,
+  # so fall through to recalculation.
+  def preserved_or_next_run_at(last_run_at)
+    preserved = next_run_at
+    if preserved.present? && preserved.to_i != last_run_at.to_i
+      preserved
+    else
+      calculate_next_run_at(from: Time.current)
     end
   end
 

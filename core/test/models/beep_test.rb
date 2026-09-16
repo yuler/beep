@@ -215,18 +215,64 @@ class BeepTest < ActiveSupport::TestCase
       title: "Standup",
       cron: "0 9 * * *"
     )
+    scheduled = beep.next_run_at
 
     run = beep.trigger_run!
     beep.reload
 
     assert beep.firing?
-    assert_nil beep.next_run_at
+    assert_equal scheduled, beep.next_run_at
     assert_nil beep.run_at
     assert run.pending?
 
     beep.finish_firing(last_run_at: run.scheduled_for)
     assert beep.reload.active?
-    assert_not_nil beep.next_run_at
+    assert_equal scheduled, beep.next_run_at
+  end
+
+  test "manual trigger on recurring beep is an extra run preserving next_run_at" do
+    travel_to Time.utc(2026, 8, 25, 2, 0, 0) do
+      beep = Beep.create!(
+        account: @account,
+        kind: :recurring,
+        title: "Daily morning",
+        timezone: "Asia/Shanghai",
+        cron: "0 9 * * *"
+      )
+      scheduled = beep.next_run_at
+
+      run = beep.trigger_run!
+      assert_not_equal scheduled.to_i, run.scheduled_for.to_i
+
+      beep.finish_firing(last_run_at: run.scheduled_for)
+
+      assert beep.reload.active?
+      assert_equal scheduled, beep.next_run_at
+      assert_equal run.scheduled_for.to_i, beep.last_run_at.to_i
+    end
+  end
+
+  test "automatic recurring run still recalculates next_run_at" do
+    beep = nil
+    scheduled = nil
+    travel_to Time.utc(2026, 8, 25, 2, 0, 0) do
+      beep = Beep.create!(
+        account: @account,
+        kind: :recurring,
+        title: "Daily morning",
+        timezone: "Asia/Shanghai",
+        cron: "0 9 * * *"
+      )
+      scheduled = beep.next_run_at
+      beep.update_columns(status: "firing")
+    end
+
+    travel_to(scheduled + 5.minutes) do
+      Beep.find(beep.id).finish_firing(last_run_at: scheduled)
+    end
+
+    assert beep.reload.active?
+    assert beep.next_run_at > scheduled
   end
 
   test "recurring beep validates cron expression format" do

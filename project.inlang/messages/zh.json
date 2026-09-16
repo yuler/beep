@@ -289,6 +289,7 @@
   "beeps_schedule_completed": "已完成",
   "beeps_search_placeholder": "搜索 beep…",
   "beeps_send_beep_now": "立即发送 beep",
+  "beeps_send_now_confirm_future": "这条单次 beep 的执行时间还在未来。确认现在发出并结束这条排期吗？",
   "beeps_send_immediately": "立即发送（现在）",
   "beeps_send_immediately_hint": "创建后将立即投递。",
   "beeps_sending": "发送中…",
