@@ -16,7 +16,7 @@ import (
 // NewCmdPause creates the 'beeper pause' subcommand.
 func NewCmdPause() *cobra.Command {
 	return &cobra.Command{
-		Use:     "pause [id]",
+		Use:   "pause [id]",
 		Short: "Pause a monitor beeper",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -36,8 +36,6 @@ func findBeepCmd(t *testing.T, sub string) *cobra.Command {
 	return cmd
 }
 
-
-
 func TestBeepListCommand(t *testing.T) {
 	var gotHeaderAccount string
 	mockBeeps := []*client.Beep{
@@ -371,4 +369,3 @@ func TestBeepOmittedIDNonInteractive(t *testing.T) {
 		}
 	}
 }
-

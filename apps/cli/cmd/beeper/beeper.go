@@ -115,4 +115,3 @@ func FormatRunStatus(s string) string {
 		return s
 	}
 }
-

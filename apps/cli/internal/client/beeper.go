@@ -262,4 +262,3 @@ func (p *CreateBeeperParams) ToRequest() (*CreateBeeperRequest, error) {
 
 	return req, nil
 }
-

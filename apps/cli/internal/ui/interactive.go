@@ -853,4 +853,3 @@ func PromptConfirm(title string, defaultVal bool) (bool, error) {
 	}
 	return confirmed, nil
 }
-

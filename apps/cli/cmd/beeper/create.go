@@ -19,13 +19,13 @@ import (
 // NewCmdCreate creates the 'beeper create' subcommand.
 func NewCmdCreate() *cobra.Command {
 	var (
-		flagApp       string
-		flagTitle     string
-		flagBody      string
-		flagCron      string
-		flagTimezone  string
-		flagChannels  string
-		flagConfigs   []string
+		flagApp      string
+		flagTitle    string
+		flagBody     string
+		flagCron     string
+		flagTimezone string
+		flagChannels string
+		flagConfigs  []string
 	)
 
 	cmd := &cobra.Command{

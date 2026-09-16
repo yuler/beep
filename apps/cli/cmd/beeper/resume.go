@@ -16,7 +16,7 @@ import (
 // NewCmdResume creates the 'beeper resume' subcommand.
 func NewCmdResume() *cobra.Command {
 	return &cobra.Command{
-		Use:     "resume [id]",
+		Use:   "resume [id]",
 		Short: "Resume a paused monitor beeper",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

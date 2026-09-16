@@ -15,7 +15,7 @@ import (
 )
 
 // NewCmdBeep creates and returns the parent 'beep' command.
-func NewCmdBeep() *cobra.Command{
+func NewCmdBeep() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "beep",
 		Short: "Manage reminder and notification beeps",
