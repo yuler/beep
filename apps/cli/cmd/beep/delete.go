@@ -26,6 +26,17 @@ func NewCmdDelete() *cobra.Command {
 					return err
 				}
 
+				if cmdutil.IsInteractive(cmd) && !cmdutil.IsJSON(cmd) {
+					confirm, err := ui.PromptConfirm(fmt.Sprintf("Are you sure you want to delete beep %s?", id), false)
+					if err != nil {
+						return err
+					}
+					if !confirm {
+						fmt.Println(ui.Dim("Cancelled."))
+						return nil
+					}
+				}
+
 				if err := c.DeleteBeep(ctx, id); err != nil {
 					return err
 				}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"beep/internal/client"
@@ -70,9 +71,9 @@ func NewCmdShow() *cobra.Command {
 				if tokenDisplay != "" {
 					fmt.Println(ui.KeyValue("Ping Token", ui.Yellow(tokenDisplay)))
 					if flagShowToken {
-						fmt.Println(ui.KeyValue("Ping URL", fmt.Sprintf("%s/api/v1/beeper_apps/heartbeat/pings/%s", cfg.ServerURL, b.PingToken)))
+						fmt.Println(ui.KeyValue("Ping URL", fmt.Sprintf("%s/api/v1/beeper_apps/heartbeat/pings/%s", cfg.ServerURL, url.PathEscape(b.PingToken))))
 					} else {
-						fmt.Println(ui.KeyValue("Ping URL", fmt.Sprintf("%s/api/v1/beeper_apps/heartbeat/pings/%s", cfg.ServerURL, client.MaskToken(b.PingToken))))
+						fmt.Println(ui.KeyValue("Ping URL", fmt.Sprintf("%s/api/v1/beeper_apps/heartbeat/pings/%s", cfg.ServerURL, url.PathEscape(client.MaskToken(b.PingToken)))))
 					}
 				}
 				if b.LastPingAt != "" {

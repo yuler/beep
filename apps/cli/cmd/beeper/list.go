@@ -73,10 +73,7 @@ func NewCmdList() *cobra.Command {
 						lastRun = b.LastRunAt
 					}
 
-					title := b.Title
-					if len(title) > 24 {
-						title = title[:21] + "..."
-					}
+					title := ui.Truncate(b.Title, 24)
 
 					fmt.Printf("  %-10s  %-24s  %-12s  %-10s  %-10s  %-14s  %s\n",
 						b.ID,

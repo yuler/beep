@@ -60,10 +60,7 @@ func NewCmdList() *cobra.Command {
 				for _, b := range beeps {
 					statusStr := FormatBeepStatus(b.Status)
 					scheduleStr := FormatBeepSchedule(b)
-					title := b.Title
-					if len(title) > 24 {
-						title = title[:21] + "..."
-					}
+					title := ui.Truncate(b.Title, 24)
 
 					chans := "-"
 					if len(b.NotificationChannels) > 0 {

@@ -89,6 +89,9 @@ func IsJSON(cmd *cobra.Command) bool {
 
 // IsInteractive returns true if interactive mode is permitted.
 func IsInteractive(cmd *cobra.Command) bool {
+	if IsJSON(cmd) {
+		return false
+	}
 	noInteractive, _ := cmd.Root().PersistentFlags().GetBool("no-interactive")
 	if noInteractive {
 		return false

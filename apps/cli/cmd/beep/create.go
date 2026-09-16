@@ -3,6 +3,7 @@ package beep
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	"beep/internal/ui"
 	"beep/internal/workspace"
 
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +70,7 @@ Examples:
 					if !workspace.ValidIANATimezone(tz) {
 						return fmt.Errorf("invalid --timezone %q: must be a valid IANA timezone (e.g. Asia/Shanghai, UTC, America/New_York)", tz)
 					}
-				} else if !cmdutil.IsInteractive(cmd) {
+				} else {
 					if detected, ok := workspace.DetectTimezoneOK(); ok {
 						tz = detected
 					} else {
@@ -140,7 +142,9 @@ Examples:
 							if err == nil {
 								return nil
 							}
-							if strings.Contains(strings.ToLower(err.Error()), "cancelled") {
+							if errors.Is(err, huh.ErrUserAborted) || errors.Is(err, context.Canceled) ||
+								strings.Contains(strings.ToLower(err.Error()), "user aborted") ||
+								strings.Contains(strings.ToLower(err.Error()), "cancelled") {
 								return nil
 							}
 							// If AI proposal failed (e.g. offline/unconfigured), warn and fall back to manual form
@@ -277,10 +281,10 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 	}
 
 	resolvedTz := proposal.Timezone
-	if resolvedTz == "" {
+	if resolvedTz == "" || !workspace.ValidIANATimezone(resolvedTz) {
 		resolvedTz = tz
 	}
-	if resolvedTz == "" {
+	if resolvedTz == "" || !workspace.ValidIANATimezone(resolvedTz) {
 		resolvedTz = "UTC"
 	}
 

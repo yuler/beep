@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"beep/internal/client"
@@ -54,9 +55,10 @@ Examples:
 
 				for _, item := range flagConfigs {
 					parts := strings.SplitN(item, "=", 2)
-					if len(parts) == 2 {
-						configMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+					if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" {
+						return fmt.Errorf("invalid --config %q: must be in key=value format", item)
 					}
+					configMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
 				}
 
 				tz := flagTimezone
@@ -64,7 +66,7 @@ Examples:
 					if !workspace.ValidIANATimezone(tz) {
 						return fmt.Errorf("invalid --timezone %q: must be a valid IANA timezone (e.g. Asia/Shanghai, UTC, America/New_York)", tz)
 					}
-				} else if !cmdutil.IsInteractive(cmd) {
+				} else {
 					if detected, ok := workspace.DetectTimezoneOK(); ok {
 						tz = detected
 					} else {
@@ -191,7 +193,7 @@ Examples:
 					fmt.Printf("  %s %s/api/v1/beeper_apps/heartbeat/pings/%s\n",
 						ui.Dim("Ping URL:"),
 						cfg.ServerURL,
-						b.PingToken,
+						url.PathEscape(b.PingToken),
 					)
 				}
 				return nil

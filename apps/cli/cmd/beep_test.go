@@ -74,6 +74,13 @@ func TestBeepListCommand(t *testing.T) {
 			Cron:                 "0 9 * * *",
 			NotificationChannels: []string{"slack"},
 		},
+		{
+			ID:                   "beep_chinese",
+			Title:                "这是一个非常长的中文标题用来测试截断是否会出现乱码字符",
+			Status:               "active",
+			Kind:                 "once",
+			NotificationChannels: []string{"email"},
+		},
 	}
 
 	_, cleanup := setupBeepTestEnv(t, func(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +140,7 @@ func TestBeepListCommand(t *testing.T) {
 	if err := json.Unmarshal([]byte(jsonOut), &parsed); err != nil {
 		t.Fatalf("expected valid JSON array, got error: %v, raw: %s", err, jsonOut)
 	}
-	if len(parsed) != 1 || parsed[0].ID != "beep_123" {
+	if len(parsed) != 2 || parsed[0].ID != "beep_123" || parsed[1].ID != "beep_chinese" {
 		t.Errorf("unexpected parsed JSON: %+v", parsed)
 	}
 }
@@ -233,6 +240,9 @@ func TestBeepCreateCommand(t *testing.T) {
 	if receivedBody.Title != "Instant Test" || receivedBody.Kind != "once" || receivedBody.RunAt == "" {
 		t.Errorf("unexpected instant create request: %+v", receivedBody)
 	}
+	if receivedBody.Timezone == "" {
+		t.Errorf("expected auto-detected timezone to be set on instant create, got empty")
+	}
 
 	// 2. Delay with --in 15m
 	createCmd.Flags().Set("in", "15m")
@@ -245,6 +255,9 @@ func TestBeepCreateCommand(t *testing.T) {
 	}
 	if receivedBody.Title != "Delay Test" || receivedBody.Kind != "once" || receivedBody.RunAt == "" {
 		t.Errorf("unexpected delay create request: %+v", receivedBody)
+	}
+	if receivedBody.Timezone == "" {
+		t.Errorf("expected auto-detected timezone to be set on delay create, got empty")
 	}
 
 	// 3. Recurring with --cron

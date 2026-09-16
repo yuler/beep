@@ -50,14 +50,8 @@ func NewCmdApps() *cobra.Command {
 				)
 
 				for _, a := range apps {
-					name := a.Name
-					if len(name) > 24 {
-						name = name[:21] + "..."
-					}
-					desc := a.Description
-					if len(desc) > 40 {
-						desc = desc[:37] + "..."
-					}
+					name := ui.Truncate(a.Name, 24)
+					desc := ui.Truncate(a.Description, 40)
 					fmt.Printf("  %-16s  %-24s  %-16s  %s\n",
 						a.Slug,
 						name,

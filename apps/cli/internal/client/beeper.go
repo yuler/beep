@@ -253,8 +253,10 @@ func (p *CreateBeeperParams) ToRequest() (*CreateBeeperRequest, error) {
 	}
 
 	if trimmedChannels := strings.TrimSpace(p.Channels); trimmedChannels != "" {
+		seen := make(map[string]bool)
 		for _, ch := range strings.Split(trimmedChannels, ",") {
-			if trimmed := strings.TrimSpace(ch); trimmed != "" {
+			if trimmed := strings.TrimSpace(ch); trimmed != "" && !seen[trimmed] {
+				seen[trimmed] = true
 				req.NotificationChannels = append(req.NotificationChannels, trimmed)
 			}
 		}

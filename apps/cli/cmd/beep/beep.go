@@ -56,10 +56,7 @@ func ResolveBeepID(ctx context.Context, c *client.Client, cmd *cobra.Command, ar
 
 	options := make([]huh.Option[string], 0, len(beeps))
 	for _, b := range beeps {
-		title := b.Title
-		if len(title) > 30 {
-			title = title[:27] + "..."
-		}
+		title := ui.Truncate(b.Title, 30)
 		label := fmt.Sprintf("%-30s (%s - %s)", title, b.ID, b.Status)
 		options = append(options, huh.NewOption(label, b.ID))
 	}

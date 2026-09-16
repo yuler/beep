@@ -279,8 +279,10 @@ func (p *CreateBeepParams) ToRequest() (*CreateBeepRequest, error) {
 	}
 
 	if trimmedChannels := strings.TrimSpace(p.Channels); trimmedChannels != "" {
+		seen := make(map[string]bool)
 		for _, ch := range strings.Split(trimmedChannels, ",") {
-			if trimmed := strings.TrimSpace(ch); trimmed != "" {
+			if trimmed := strings.TrimSpace(ch); trimmed != "" && !seen[trimmed] {
+				seen[trimmed] = true
 				req.NotificationChannels = append(req.NotificationChannels, trimmed)
 			}
 		}
@@ -332,15 +334,25 @@ func ParseInDuration(s string) (time.Duration, error) {
 	if s == "" {
 		return 0, errors.New("empty duration")
 	}
+	var d time.Duration
+	var err error
 	if strings.HasSuffix(s, "d") {
 		daysStr := strings.TrimSuffix(s, "d")
-		days, err := strconv.Atoi(daysStr)
-		if err != nil {
-			return 0, fmt.Errorf("invalid days format %q: %w", s, err)
+		days, aErr := strconv.Atoi(daysStr)
+		if aErr != nil {
+			return 0, fmt.Errorf("invalid days format %q: %w", s, aErr)
 		}
-		return time.Duration(days) * 24 * time.Hour, nil
+		d = time.Duration(days) * 24 * time.Hour
+	} else {
+		d, err = time.ParseDuration(s)
+		if err != nil {
+			return 0, err
+		}
 	}
-	return time.ParseDuration(s)
+	if d <= 0 {
+		return 0, fmt.Errorf("duration must be greater than zero: %q", s)
+	}
+	return d, nil
 }
 
 // ParseAtTime parses a specific time/datetime string relative to location.

@@ -7,6 +7,7 @@ import (
 
 	"beep/internal/client"
 	"beep/internal/schedule"
+	"beep/internal/workspace"
 
 	"github.com/charmbracelet/huh"
 )
@@ -275,13 +276,19 @@ func promptBeepSchedule(res *client.CreateBeepParams) error {
 			return err
 		}
 	case "at":
+		tzName := res.Timezone
+		if tzName == "" {
+			if detected, ok := workspace.DetectTimezoneOK(); ok {
+				tzName = detected
+			}
+		}
+		loc, _ := time.LoadLocation(tzName)
+		if loc == nil {
+			loc = time.Local
+		}
 		if strings.TrimSpace(res.ScheduleVal) == "" {
 			res.ScheduleVal = "16:30"
 		} else if parsed, err := time.Parse(time.RFC3339, res.ScheduleVal); err == nil {
-			loc, locErr := time.LoadLocation(res.Timezone)
-			if locErr != nil {
-				loc = time.Local
-			}
 			res.ScheduleVal = parsed.In(loc).Format("2006-01-02 15:04")
 		}
 		err := huh.NewInput().
@@ -292,11 +299,7 @@ func promptBeepSchedule(res *client.CreateBeepParams) error {
 				if strings.TrimSpace(s) == "" {
 					return errors.New("time is required")
 				}
-				loc, err := time.LoadLocation(res.Timezone)
-				if err != nil {
-					loc = time.Local
-				}
-				_, err = client.ParseAtTime(s, loc)
+				_, err := client.ParseAtTime(s, loc)
 				return err
 			}).
 			Run()

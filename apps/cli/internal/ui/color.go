@@ -124,3 +124,16 @@ func PrintErrorList(header string, errs []string) {
 		fmt.Printf("  %s %s\n", Red("•"), err)
 	}
 }
+
+// Truncate safely truncates a string to at most maxRunes, appending "..." if truncated.
+// It uses rune slicing to avoid corrupting multi-byte UTF-8 sequences.
+func Truncate(s string, maxRunes int) string {
+	runes := []rune(s)
+	if len(runes) <= maxRunes {
+		return s
+	}
+	if maxRunes <= 3 {
+		return string(runes[:maxRunes])
+	}
+	return string(runes[:maxRunes-3]) + "..."
+}

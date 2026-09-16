@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -431,16 +432,26 @@ func parseAPIError(resp *http.Response) error {
 			} else {
 				var mapList map[string][]string
 				if err := json.Unmarshal(raw.Errors, &mapList); err == nil && len(mapList) > 0 {
-					for field, msgs := range mapList {
-						for _, m := range msgs {
+					fields := make([]string, 0, len(mapList))
+					for field := range mapList {
+						fields = append(fields, field)
+					}
+					sort.Strings(fields)
+					for _, field := range fields {
+						for _, m := range mapList[field] {
 							apiErr.Errors = append(apiErr.Errors, fmt.Sprintf("%s %s", field, m))
 						}
 					}
 				} else {
 					var mapAny map[string]any
 					if err := json.Unmarshal(raw.Errors, &mapAny); err == nil && len(mapAny) > 0 {
-						for field, val := range mapAny {
-							apiErr.Errors = append(apiErr.Errors, fmt.Sprintf("%s: %v", field, val))
+						fields := make([]string, 0, len(mapAny))
+						for field := range mapAny {
+							fields = append(fields, field)
+						}
+						sort.Strings(fields)
+						for _, field := range fields {
+							apiErr.Errors = append(apiErr.Errors, fmt.Sprintf("%s: %v", field, mapAny[field]))
 						}
 					}
 				}
@@ -458,6 +469,9 @@ func parseAPIError(resp *http.Response) error {
 
 	trimmed := strings.TrimSpace(string(respBody))
 	if trimmed != "" {
+		if len(trimmed) > 500 {
+			trimmed = trimmed[:500] + "..."
+		}
 		return fmt.Errorf("request failed (status %d): %s", resp.StatusCode, trimmed)
 	}
 	return fmt.Errorf("request failed (status %d)", resp.StatusCode)
