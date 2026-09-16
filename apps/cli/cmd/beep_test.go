@@ -12,13 +12,40 @@ import (
 )
 
 func TestBeepCommandsRegistration(t *testing.T) {
+	// 1. Legacy namespace 'beep' must be registered and hidden
+	legacyBeep, _, err := RootCmd.Find([]string{"beep"})
+	if err != nil {
+		t.Fatalf("failed to find 'beep' legacy command: %v", err)
+	}
+	if !legacyBeep.Hidden {
+		t.Errorf("expected legacy 'beep' command to be hidden, got Hidden = false")
+	}
+
 	for _, sub := range []string{"list", "show", "create", "delete", "pause", "resume", "run"} {
-		cmd, _, err := RootCmd.Find([]string{"beep", sub})
+		// Canonical top-level command
+		topCmd, _, err := RootCmd.Find([]string{sub})
 		if err != nil {
-			t.Fatalf("failed to find 'beep %s': %v", sub, err)
+			t.Fatalf("failed to find canonical top-level %q: %v", sub, err)
 		}
-		if cmd.Name() != sub {
-			t.Errorf("expected command name %q, got %q", sub, cmd.Name())
+		if topCmd.Name() != sub {
+			t.Errorf("expected top-level command name %q, got %q", sub, topCmd.Name())
+		}
+		if topCmd.GroupID != "beeps" {
+			t.Errorf("expected command %q to have GroupID 'beeps', got %q", sub, topCmd.GroupID)
+		}
+
+		// Backward-compatible legacy command 'beep <subcommand>'
+		legacyCmd, _, err := RootCmd.Find([]string{"beep", sub})
+		if err != nil {
+			t.Fatalf("failed to find legacy 'beep %s': %v", sub, err)
+		}
+		if legacyCmd.Name() != sub {
+			t.Errorf("expected legacy command name %q, got %q", sub, legacyCmd.Name())
+		}
+
+		// Verify independent command instances (no shared pointer between Root and legacy parent)
+		if topCmd == legacyCmd {
+			t.Errorf("top-level %q and legacy 'beep %s' share the same *cobra.Command pointer instance", sub, sub)
 		}
 	}
 }
@@ -29,9 +56,9 @@ func setupBeepTestEnv(t *testing.T, handler http.HandlerFunc) (string, func()) {
 
 func findBeepCmd(t *testing.T, sub string) *cobra.Command {
 	t.Helper()
-	cmd, _, err := RootCmd.Find([]string{"beep", sub})
+	cmd, _, err := RootCmd.Find([]string{sub})
 	if err != nil {
-		t.Fatalf("failed to find 'beep %s': %v", sub, err)
+		t.Fatalf("failed to find %q: %v", sub, err)
 	}
 	return cmd
 }
@@ -254,14 +281,19 @@ func TestBeepCreateCommand(t *testing.T) {
 }
 
 func TestBeepCreateMutuallyExclusiveFlags(t *testing.T) {
-	cmd := RootCmd
-	cmd.SetArgs([]string{"beep", "create", "Conflict Test", "--cron", "0 * * * *", "--in", "10m"})
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatalf("expected mutually exclusive error for --cron and --in, got nil")
-	}
-	if !strings.Contains(err.Error(), "none of the others can be") && !strings.Contains(err.Error(), "mutually exclusive") {
-		t.Errorf("unexpected error message: %v", err)
+	for _, args := range [][]string{
+		{"beep", "create", "Conflict Test", "--cron", "0 * * * *", "--in", "10m"},
+		{"create", "Conflict Test", "--cron", "0 * * * *", "--in", "10m"},
+	} {
+		cmd := RootCmd
+		cmd.SetArgs(args)
+		err := cmd.Execute()
+		if err == nil {
+			t.Fatalf("expected mutually exclusive error for args %v, got nil", args)
+		}
+		if !strings.Contains(err.Error(), "none of the others can be") && !strings.Contains(err.Error(), "mutually exclusive") {
+			t.Errorf("unexpected error message for args %v: %v", args, err)
+		}
 	}
 }
 
@@ -367,5 +399,142 @@ func TestBeepOmittedIDNonInteractive(t *testing.T) {
 		} else if !strings.Contains(err.Error(), "beep ID is required") {
 			t.Errorf("expected 'beep ID is required' error for %s, got: %v", c.Name(), err)
 		}
+	}
+}
+
+func TestBeepDualPathExecutionParity(t *testing.T) {
+	mockBeep := &client.Beep{
+		ID:        "beep_parity_1",
+		Title:     "Parity Check",
+		Status:    "active",
+		Kind:      "recurring",
+		Cron:      "0 8 * * *",
+		Timezone:  "Asia/Shanghai",
+		NextRunAt: "2026-09-17T08:00:00+08:00",
+	}
+
+	_, cleanup := setupBeepTestEnv(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/me" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"identity": map[string]any{"id": "id_1", "email": "test@example.com"},
+			})
+			return
+		}
+		if r.URL.Path == "/api/v1/beeps" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"beeps": []*client.Beep{mockBeep},
+			})
+			return
+		}
+		if r.URL.Path == "/api/v1/beeps/beep_parity_1" {
+			_ = json.NewEncoder(w).Encode(mockBeep)
+			return
+		}
+		http.NotFound(w, r)
+	})
+	defer cleanup()
+
+	// 1. List - Plain table parity
+	topList, _, _ := RootCmd.Find([]string{"list"})
+	legacyList, _, _ := RootCmd.Find([]string{"beep", "list"})
+
+	outTop, err := captureStdout(func() error { return topList.RunE(topList, nil) })
+	if err != nil {
+		t.Fatalf("top-level list failed: %v", err)
+	}
+	outLegacy, err := captureStdout(func() error { return legacyList.RunE(legacyList, nil) })
+	if err != nil {
+		t.Fatalf("legacy beep list failed: %v", err)
+	}
+	if outTop != outLegacy {
+		t.Errorf("list output mismatch between top-level and legacy:\nTop:\n%s\nLegacy:\n%s", outTop, outLegacy)
+	}
+
+	// 2. List - JSON parity
+	flagJSON = true
+	jsonTop, err := captureStdout(func() error { return topList.RunE(topList, nil) })
+	if err != nil {
+		t.Fatalf("top-level list --json failed: %v", err)
+	}
+	jsonLegacy, err := captureStdout(func() error { return legacyList.RunE(legacyList, nil) })
+	if err != nil {
+		t.Fatalf("legacy beep list --json failed: %v", err)
+	}
+	flagJSON = false
+	if jsonTop != jsonLegacy {
+		t.Errorf("list --json output mismatch:\nTop:\n%s\nLegacy:\n%s", jsonTop, jsonLegacy)
+	}
+
+	// 3. Show - Parity
+	topShow, _, _ := RootCmd.Find([]string{"show"})
+	legacyShow, _, _ := RootCmd.Find([]string{"beep", "show"})
+
+	showTop, err := captureStdout(func() error { return topShow.RunE(topShow, []string{"beep_parity_1"}) })
+	if err != nil {
+		t.Fatalf("top-level show failed: %v", err)
+	}
+	showLegacy, err := captureStdout(func() error { return legacyShow.RunE(legacyShow, []string{"beep_parity_1"}) })
+	if err != nil {
+		t.Fatalf("legacy beep show failed: %v", err)
+	}
+	if showTop != showLegacy {
+		t.Errorf("show output mismatch:\nTop:\n%s\nLegacy:\n%s", showTop, showLegacy)
+	}
+}
+
+func TestNoConflictWithRunnerAndOtherCommands(t *testing.T) {
+	// Top-level 'run' resolves to beep run
+	runCmd, _, err := RootCmd.Find([]string{"run"})
+	if err != nil {
+		t.Fatalf("failed to find 'run' command: %v", err)
+	}
+	if runCmd.Name() != "run" {
+		t.Errorf("expected 'run' to resolve to command name 'run', got %q", runCmd.Name())
+	}
+	if runCmd.GroupID != "beeps" {
+		t.Errorf("expected 'run' to have GroupID 'beeps', got %q", runCmd.GroupID)
+	}
+
+	// 'runner up' alias 'run' resolves to runner up
+	runnerRunCmd, _, err := RootCmd.Find([]string{"runner", "run"})
+	if err != nil {
+		t.Fatalf("failed to find 'runner run': %v", err)
+	}
+	if runnerRunCmd.Name() != "up" {
+		t.Errorf("expected 'runner run' to resolve to 'up', got %q", runnerRunCmd.Name())
+	}
+
+	// 'runner up' resolves to up
+	runnerUpCmd, _, err := RootCmd.Find([]string{"runner", "up"})
+	if err != nil {
+		t.Fatalf("failed to find 'runner up': %v", err)
+	}
+	if runnerUpCmd.Name() != "up" {
+		t.Errorf("expected 'runner up' to resolve to 'up', got %q", runnerUpCmd.Name())
+	}
+
+	// Regression checks for secondary namespaces and subcommands
+	beeperListCmd, _, err := RootCmd.Find([]string{"beeper", "list"})
+	if err != nil {
+		t.Fatalf("failed to find 'beeper list': %v", err)
+	}
+	if beeperListCmd.Name() != "list" {
+		t.Errorf("expected 'beeper list' name to be 'list', got %q", beeperListCmd.Name())
+	}
+
+	configShowCmd, _, err := RootCmd.Find([]string{"config", "show"})
+	if err != nil {
+		t.Fatalf("failed to find 'config show': %v", err)
+	}
+	if configShowCmd.Name() != "show" {
+		t.Errorf("expected 'config show' name to be 'show', got %q", configShowCmd.Name())
+	}
+
+	runnerJobListCmd, _, err := RootCmd.Find([]string{"runner", "job", "list"})
+	if err != nil {
+		t.Fatalf("failed to find 'runner job list': %v", err)
+	}
+	if runnerJobListCmd.Name() != "list" {
+		t.Errorf("expected 'runner job list' name to be 'list', got %q", runnerJobListCmd.Name())
 	}
 }

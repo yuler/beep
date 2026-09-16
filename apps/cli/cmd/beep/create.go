@@ -45,21 +45,21 @@ Optional --body and --channels can also be combined with --natural to supplement
 
 Examples:
   # Instant beep (fires immediately)
-  beep beep create "Deploy finished"
+  beep create "Deploy finished"
 
   # Relative delay
-  beep beep create "Meeting starts" --in 15m
-  beep beep create "Check logs" --in 2h
+  beep create "Meeting starts" --in 15m
+  beep create "Check logs" --in 2h
 
   # Specific datetime
-  beep beep create "Doctor appointment" --at "16:30"
-  beep beep create "Release v1.0" --at "2026-10-01 10:00"
+  beep create "Doctor appointment" --at "16:30"
+  beep create "Release v1.0" --at "2026-10-01 10:00"
 
   # Recurring cron
-  beep beep create "Daily Standup" --cron "0 10 * * 1-5"
+  beep create "Daily Standup" --cron "0 10 * * 1-5"
 
   # Natural language via DeepSeek AI
-  beep beep create -n "remind me in 30 minutes to drink water"`,
+  beep create -n "remind me in 30 minutes to drink water"`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {
@@ -197,7 +197,7 @@ Examples:
 					}
 				} else {
 					if params.Title == "" {
-						return fmt.Errorf("beep title is required (e.g. beep beep create \"Meeting in 10m\" --in 10m)")
+						return fmt.Errorf("beep title is required (e.g. beep create \"Meeting in 10m\" --in 10m)")
 					}
 					if params.Timezone == "" {
 						if detected, ok := workspace.DetectTimezoneOK(); ok {

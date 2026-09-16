@@ -381,4 +381,3 @@ func PromptBeepNaturalPrompt() (string, error) {
 	}
 	return strings.TrimSpace(promptText), nil
 }
-

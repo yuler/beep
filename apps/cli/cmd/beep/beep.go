@@ -43,7 +43,7 @@ func ResolveBeepID(ctx context.Context, c *client.Client, cmd *cobra.Command, ar
 	}
 
 	if !cmdutil.IsInteractive(cmd) {
-		return "", fmt.Errorf("beep ID is required (e.g. beep beep %s <id>)", action)
+		return "", fmt.Errorf("beep ID is required (e.g. beep %s <id>)", action)
 	}
 
 	beeps, err := c.ListBeeps(ctx)

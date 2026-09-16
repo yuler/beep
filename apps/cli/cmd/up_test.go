@@ -123,17 +123,13 @@ func TestStatusAndStopCommandRegistration(t *testing.T) {
 }
 
 func TestTopLevelCommandsRegistration(t *testing.T) {
-	for _, name := range []string{"up", "run", "stop", "status"} {
+	for _, name := range []string{"up", "stop", "status"} {
 		cmd, _, err := RootCmd.Find([]string{name})
 		if err != nil {
 			t.Fatalf("failed to find %q command: %v", name, err)
 		}
-		expectedName := name
-		if name == "run" {
-			expectedName = "up"
-		}
-		if cmd.Name() != expectedName {
-			t.Errorf("expected command name %q, got %q", expectedName, cmd.Name())
+		if cmd.Name() != name {
+			t.Errorf("expected command name %q, got %q", name, cmd.Name())
 		}
 	}
 }
