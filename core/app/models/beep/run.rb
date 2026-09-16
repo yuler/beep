@@ -4,6 +4,8 @@ class Beep::Run < ApplicationRecord
 
   belongs_to :beep
 
+  has_many :channel_deliveries, class_name: "Channel::Delivery", foreign_key: :beep_run_id, dependent: :destroy
+
   enum :status, %w[ pending running succeeded failed skipped expired ].index_by(&:itself)
 
   def deliver_later
