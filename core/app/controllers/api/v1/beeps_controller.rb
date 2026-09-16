@@ -1,6 +1,7 @@
 class Api::V1::BeepsController < Api::V1::BaseController
   def index
-    @beeps = Current.account.beeps.includes(:runs, beeper: :beeper_app).order(created_at: :desc)
+    @beeps = set_page_and_extract_portion_from Current.account.beeps.includes(:runs, beeper: :beeper_app),
+                                               ordered_by: { created_at: :desc, id: :desc }
     render :index
   end
 

@@ -8,23 +8,32 @@ import { BeepList } from "@/components/beeps/beep-list";
 import { BeepQuickCreate } from "@/components/beeps/beep-quick-create";
 import { BeepStats } from "@/components/beeps/beep-stats";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { fetchBeeps } from "@/lib/api/beeps";
+import { fetchBeepStats, fetchBeeps } from "@/lib/api/beeps";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 
 export const Route = createFileRoute("/$account_slug/beeps")({
-	loader: withAuthRedirects(({ params }) =>
-		fetchBeeps(params?.account_slug ?? ""),
-	),
+	loader: withAuthRedirects(async ({ params }) => {
+		const slug = params?.account_slug ?? "";
+		const [beepsRes, statsRes] = await Promise.all([
+			fetchBeeps(slug),
+			fetchBeepStats(slug),
+		]);
+		return {
+			beeps: beepsRes.beeps,
+			pagination: beepsRes.pagination,
+			stats: statsRes.stats,
+		};
+	}),
 	component: BeepsPage,
 });
 
 function BeepsPage() {
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
-	const { beeps } = Route.useLoaderData();
+	const { beeps, pagination, stats } = Route.useLoaderData();
 
 	async function handleCreated() {
 		await router.invalidate();
@@ -54,8 +63,13 @@ function BeepsPage() {
 				</div>
 
 				<BeepQuickCreate slug={slug} onCreated={handleCreated} />
-				<BeepStats beeps={beeps} />
-				<BeepList beeps={beeps} slug={slug} variant="full" />
+				<BeepStats stats={stats} beeps={beeps} />
+				<BeepList
+					beeps={beeps}
+					initialPagination={pagination}
+					slug={slug}
+					variant="full"
+				/>
 			</div>
 		</>
 	);

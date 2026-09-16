@@ -32,6 +32,50 @@ class Api::V1::BeepersControllerTest < ActionDispatch::IntegrationTest
     assert_equal beeper.id, beepers.first["id"]
     assert_equal "My Uptime", beepers.first["title"]
     assert_equal "site-uptime", beepers.first["beeper_app"]["slug"]
+
+    pagination = response.parsed_body["pagination"]
+    assert_equal 1, pagination["page"]
+    assert_equal 1, pagination["total_count"]
+    assert_equal false, pagination["has_more"]
+    assert_nil pagination["next_page"]
+  end
+
+  test "index paginates beepers with geared pagination" do
+    18.times do |i|
+      Beeper.create!(
+        account: @account,
+        beeper_app: @beeper_app,
+        title: "Beeper #{i}",
+        cron: "*/5 * * * *",
+        timezone: "UTC",
+        config: { "target_url" => "https://example.com" }
+      )
+    end
+
+    get "/api/v1/#{@account.slug}/beepers",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    body = response.parsed_body
+    assert_equal 15, body["beepers"].size
+    assert_equal true, body["pagination"]["has_more"]
+    assert_not_nil body["pagination"]["next_page"]
+    assert_equal 18, body["pagination"]["total_count"]
+    assert_equal "18", response.headers["X-Total-Count"]
+    assert_match(/rel="next"/, response.headers["Link"])
+
+    # Fetch second page
+    get "/api/v1/#{@account.slug}/beepers",
+      params: { page: body["pagination"]["next_page"] },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    body2 = response.parsed_body
+    assert_equal 3, body2["beepers"].size
+    assert_equal false, body2["pagination"]["has_more"]
+    assert_nil body2["pagination"]["next_page"]
   end
 
   test "index returns run stats and only the most recent runs, newest first" do

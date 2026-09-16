@@ -2,7 +2,7 @@ class Api::V1::Beepers::RunsController < Api::V1::BaseController
   before_action :set_beeper
 
   def index
-    @runs = @beeper.runs.order(scheduled_for: :desc).limit(BeeperRun::LIST_LIMIT)
+    @runs = set_page_and_extract_portion_from @beeper.runs, ordered_by: { scheduled_for: :desc, id: :desc }
     render :index
   end
 

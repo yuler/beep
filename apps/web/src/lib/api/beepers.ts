@@ -96,8 +96,21 @@ export type Beeper = {
 	runs?: BeeperRun[];
 };
 
+export type PaginationMeta = {
+	page: number;
+	next_page: string | null;
+	has_more: boolean;
+	total_count?: number;
+};
+
 export type BeepersResponse = {
 	beepers: Beeper[];
+	pagination?: PaginationMeta;
+};
+
+export type BeeperRunsResponse = {
+	runs: BeeperRun[];
+	pagination?: PaginationMeta;
 };
 
 export function fetchBeeperApps() {
@@ -112,8 +125,14 @@ export function fetchBeeperApp(slug: string) {
 	});
 }
 
-export function fetchBeepers(accountSlug: string) {
-	return apiFetch<BeepersResponse>(`/api/v1/${accountSlug}/beepers`, {
+export function fetchBeepers(
+	accountSlug: string,
+	options?: { page?: string | null },
+) {
+	const query = options?.page
+		? `?page=${encodeURIComponent(options.page)}`
+		: "";
+	return apiFetch<BeepersResponse>(`/api/v1/${accountSlug}/beepers${query}`, {
 		method: "GET",
 	});
 }
@@ -124,9 +143,16 @@ export function fetchBeeper(accountSlug: string, beeperId: string) {
 	});
 }
 
-export function fetchBeeperRuns(accountSlug: string, beeperId: string) {
-	return apiFetch<{ runs: BeeperRun[] }>(
-		`/api/v1/${accountSlug}/beepers/${beeperId}/runs`,
+export function fetchBeeperRuns(
+	accountSlug: string,
+	beeperId: string,
+	options?: { page?: string | null },
+) {
+	const query = options?.page
+		? `?page=${encodeURIComponent(options.page)}`
+		: "";
+	return apiFetch<BeeperRunsResponse>(
+		`/api/v1/${accountSlug}/beepers/${beeperId}/runs${query}`,
 		{ method: "GET" },
 	);
 }

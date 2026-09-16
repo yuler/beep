@@ -35,12 +35,39 @@ export type Beep = {
 	runs: BeepRun[];
 };
 
-export type BeepsResponse = {
-	beeps: Beep[];
+export type PaginationMeta = {
+	page: number;
+	next_page: string | null;
+	has_more: boolean;
+	total_count?: number;
 };
 
-export function fetchBeeps(slug: string) {
-	return apiFetch<BeepsResponse>(`/api/v1/${slug}/beeps`, {
+export type BeepsResponse = {
+	beeps: Beep[];
+	pagination?: PaginationMeta;
+};
+
+export type BeepStatsData = {
+	active: number;
+	due_today: number;
+	firing: number;
+};
+
+export type BeepStatsResponse = {
+	stats: BeepStatsData;
+};
+
+export function fetchBeeps(slug: string, options?: { page?: string | null }) {
+	const query = options?.page
+		? `?page=${encodeURIComponent(options.page)}`
+		: "";
+	return apiFetch<BeepsResponse>(`/api/v1/${slug}/beeps${query}`, {
+		method: "GET",
+	});
+}
+
+export function fetchBeepStats(slug: string) {
+	return apiFetch<BeepStatsResponse>(`/api/v1/${slug}/beeps/stats`, {
 		method: "GET",
 	});
 }

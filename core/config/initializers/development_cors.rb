@@ -45,7 +45,7 @@ if Rails.env.development?
           cors_headers({
             "Access-Control-Allow-Methods" => "GET, POST, PUT, PATCH, DELETE, OPTIONS",
             "Access-Control-Allow-Headers" => "Authorization, Content-Type, X-Account-Slug, X-Requested-With",
-            "Access-Control-Expose-Headers" => "X-Magic-Link-Code",
+            "Access-Control-Expose-Headers" => "X-Magic-Link-Code, Link, X-Total-Count",
             "Access-Control-Max-Age" => "86400"
           }, origin),
           []
@@ -59,7 +59,9 @@ if Rails.env.development?
           headers["Access-Control-Allow-Credentials"] = "true"
           headers["Access-Control-Expose-Headers"] = [
             headers["Access-Control-Expose-Headers"],
-            "X-Magic-Link-Code"
+            "X-Magic-Link-Code",
+            "Link",
+            "X-Total-Count"
           ].compact.join(", ")
           headers["Vary"] = [ headers["Vary"], "Origin" ].compact.join(", ")
         end

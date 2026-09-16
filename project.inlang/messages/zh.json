@@ -332,6 +332,7 @@
   "common_language": "语言",
   "common_last_used": "上次使用 {date}",
   "common_loading": "加载中...",
+  "common_load_more": "加载更多",
   "common_login": "登录",
   "common_more": "更多",
   "common_never_used": "从未使用",

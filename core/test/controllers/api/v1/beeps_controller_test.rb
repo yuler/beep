@@ -24,6 +24,45 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal newer.id, response.parsed_body["beeps"].first["id"]
     assert_equal older.id, response.parsed_body["beeps"].second["id"]
     assert_equal [], response.parsed_body["beeps"].first["runs"]
+
+    pagination = response.parsed_body["pagination"]
+    assert_equal 1, pagination["page"]
+    assert_equal 2, pagination["total_count"]
+    assert_equal false, pagination["has_more"]
+    assert_nil pagination["next_page"]
+    assert_equal "2", response.headers["X-Total-Count"]
+  end
+
+  test "index paginates with geared cursor and sets Link headers" do
+    18.times do |i|
+      @account.beeps.create!(kind: :once, title: "Beep #{i}", run_at: @run_at + i.minutes)
+    end
+
+    get "/api/v1/#{@account.slug}/beeps",
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    body = response.parsed_body
+    assert_equal 15, body["beeps"].size
+    assert_equal true, body["pagination"]["has_more"]
+    assert_not_nil body["pagination"]["next_page"]
+    assert_equal 18, body["pagination"]["total_count"]
+    assert_equal "18", response.headers["X-Total-Count"]
+    assert_match(/rel="next"/, response.headers["Link"])
+
+    # Fetch second page using next_page cursor
+    next_cursor = body["pagination"]["next_page"]
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { page: next_cursor },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    body2 = response.parsed_body
+    assert_equal 3, body2["beeps"].size
+    assert_equal false, body2["pagination"]["has_more"]
+    assert_nil body2["pagination"]["next_page"]
   end
 
   test "index requires authentication" do

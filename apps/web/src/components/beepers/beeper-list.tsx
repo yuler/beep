@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { Edit } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Edit, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditBeeperDialog } from "@/components/beepers/edit-beeper-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,11 @@ import {
 	SortableHeader,
 } from "@/components/ui/data-table";
 import { ProgressBar, StatusPill } from "@/components/ui/status-pill";
-import type { Beeper } from "@/lib/api/beepers";
+import {
+	type Beeper,
+	fetchBeepers,
+	type PaginationMeta,
+} from "@/lib/api/beepers";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import {
 	beeperHealthIsDestructive,
@@ -247,14 +251,64 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 }
 
 export function BeeperList({
-	beepers,
+	beepers: initialBeepers,
+	initialPagination,
 	slug,
 }: {
 	beepers: Beeper[];
+	initialPagination?: PaginationMeta;
 	slug: string;
 }) {
 	const navigate = useNavigate();
 	const router = useRouter();
+	const [items, setItems] = useState<Beeper[]>(initialBeepers);
+	const [pagination, setPagination] = useState<PaginationMeta | undefined>(
+		initialPagination,
+	);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		setItems(initialBeepers);
+		setPagination(initialPagination);
+	}, [initialBeepers, initialPagination]);
+
+	const loadMore = useCallback(async () => {
+		if (isLoadingMore || !pagination?.has_more || !pagination.next_page) return;
+		setIsLoadingMore(true);
+		try {
+			const res = await fetchBeepers(slug, { page: pagination.next_page });
+			setItems((prev) => {
+				const existingIds = new Set(prev.map((b) => b.id));
+				const newUnique = res.beepers.filter((b) => !existingIds.has(b.id));
+				return [...prev, ...newUnique];
+			});
+			setPagination(res.pagination);
+		} catch (err) {
+			console.error("Failed to load more beepers", err);
+		} finally {
+			setIsLoadingMore(false);
+		}
+	}, [isLoadingMore, pagination, slug]);
+
+	useEffect(() => {
+		if (!pagination?.has_more) return;
+		const node = sentinelRef.current;
+		if (!node) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					loadMore();
+				}
+			},
+			{ rootMargin: "200px" },
+		);
+
+		observer.observe(node);
+		return () => observer.disconnect();
+	}, [pagination?.has_more, loadMore]);
+
 	const [editingBeeper, setEditingBeeper] = useState<Beeper | null>(null);
 
 	const columns = useBeeperColumns(slug, (beeper) => {
@@ -265,12 +319,12 @@ export function BeeperList({
 		<>
 			{/* Mobile Card List View (< md) */}
 			<div className="flex flex-col gap-3 md:hidden">
-				{beepers.length === 0 ? (
+				{items.length === 0 ? (
 					<div className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
 						{m.beepers_empty_no_beepers()}
 					</div>
 				) : (
-					beepers.map((beeper) => {
+					items.map((beeper) => {
 						const channels = beeper.notification_channels ?? [];
 						const successRate = beeperRunSuccessRate(beeper);
 
@@ -395,7 +449,7 @@ export function BeeperList({
 			{/* Desktop Table View (>= md) */}
 			<div className="hidden md:block">
 				<DataTable
-					data={beepers}
+					data={items}
 					columns={columns}
 					getRowId={(beeper) => beeper.id}
 					emptyMessage={m.beepers_empty_no_beepers()}
@@ -407,6 +461,28 @@ export function BeeperList({
 					}
 				/>
 			</div>
+
+			{pagination?.has_more ? (
+				<div ref={sentinelRef} className="flex justify-center py-4">
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						disabled={isLoadingMore}
+						onClick={loadMore}
+						className="gap-2"
+					>
+						{isLoadingMore ? (
+							<>
+								<Loader2 className="size-4 animate-spin" />
+								{m.common_loading()}
+							</>
+						) : (
+							m.common_load_more()
+						)}
+					</Button>
+				</div>
+			) : null}
 
 			{editingBeeper ? (
 				<EditBeeperDialog

@@ -34,8 +34,8 @@ class Api::V1::Beepers::RunsControllerTest < ActionDispatch::IntegrationTest
     assert_equal scheduled.sort.reverse, scheduled
   end
 
-  test "index caps runs at LIST_LIMIT" do
-    (BeeperRun::LIST_LIMIT + 1).times do |i|
+  test "index paginates runs with geared pagination" do
+    20.times do |i|
       @beeper.runs.create!(scheduled_for: (i + 1).minutes.ago, status: :succeeded)
     end
 
@@ -45,9 +45,26 @@ class Api::V1::Beepers::RunsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     runs = response.parsed_body["runs"]
-    assert_equal BeeperRun::LIST_LIMIT, runs.size
+    pagination = response.parsed_body["pagination"]
+    assert_equal 15, runs.size
+    assert_equal true, pagination["has_more"]
+    assert_not_nil pagination["next_page"]
+    assert_equal 20, pagination["total_count"]
     newest = @beeper.runs.order(scheduled_for: :desc).first
     assert_equal newest.id, runs.first["id"]
+
+    # Fetch second page
+    get "/api/v1/#{@account.slug}/beepers/#{@beeper.id}/runs",
+      params: { page: pagination["next_page"] },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    runs2 = response.parsed_body["runs"]
+    pagination2 = response.parsed_body["pagination"]
+    assert_equal 5, runs2.size
+    assert_equal false, pagination2["has_more"]
+    assert_nil pagination2["next_page"]
   end
 
   test "index returns empty runs when none exist" do

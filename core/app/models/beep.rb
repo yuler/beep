@@ -49,6 +49,29 @@ class Beep < ApplicationRecord
     def reclaim_stale_firing
       firing.where(updated_at: ..STALE_FIRING_AFTER.ago).find_each(&:reclaim_stale)
     end
+
+    def stats_for(account, now = Time.current)
+      scope = account.beeps
+      due_today_count = scope.where(status: %w[active firing])
+                             .where("next_run_at IS NOT NULL OR run_at IS NOT NULL")
+                             .find_each.count { |beep| beep.due_today?(now) }
+
+      {
+        active: scope.active.count,
+        due_today: due_today_count,
+        firing: scope.firing.count
+      }
+    end
+  end
+
+  def due_today?(now = Time.current)
+    return false unless active? || firing?
+
+    run_time = next_run_at || run_at
+    return false unless run_time
+
+    tz = Time.find_zone(timezone) || Time.zone
+    run_time.in_time_zone(tz).to_date == now.in_time_zone(tz).to_date
   end
 
   def trigger_run!

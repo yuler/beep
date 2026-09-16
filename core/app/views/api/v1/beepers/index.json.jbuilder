@@ -4,3 +4,4 @@ json.beepers @beepers do |beeper|
     run_stats: @run_stats.fetch(beeper.id, { total: 0, succeeded: 0 }),
     runs: @recent_runs.fetch(beeper.id, [])
 end
+json.partial! "api/v1/shared/pagination", page: @page

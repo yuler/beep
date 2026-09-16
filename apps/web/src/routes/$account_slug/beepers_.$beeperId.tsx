@@ -9,13 +9,14 @@ import {
 	ChevronRight,
 	Copy,
 	Edit,
+	Loader2,
 	Pause,
 	Play,
 	SlidersHorizontal,
 	Trash2,
 	Webhook,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EditBeeperDialog } from "@/components/beepers/edit-beeper-dialog";
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -63,11 +64,15 @@ export const Route = createFileRoute("/$account_slug/beepers_/$beeperId")({
 		const slug = params?.account_slug ?? "";
 		const beeperId = params?.beeperId ?? "";
 		try {
-			const [beeper, { runs }] = await Promise.all([
+			const [beeper, runsRes] = await Promise.all([
 				fetchBeeper(slug, beeperId),
 				fetchBeeperRuns(slug, beeperId),
 			]);
-			return { beeper, runs };
+			return {
+				beeper,
+				runs: runsRes.runs,
+				pagination: runsRes.pagination,
+			};
 		} catch (err) {
 			if (err instanceof ApiError && err.status === 404) {
 				throw notFound();
@@ -107,13 +112,46 @@ const SIGNAL_STATUS_VARIANT: Record<
 function BeeperDetailPage() {
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
-	const { beeper, runs } = Route.useLoaderData();
+	const {
+		beeper,
+		runs: initialRuns,
+		pagination: initialPagination,
+	} = Route.useLoaderData();
+	const [runs, setRuns] = useState<BeeperRun[]>(initialRuns);
+	const [pagination, setPagination] = useState(initialPagination);
+	const [isLoadingMoreRuns, setIsLoadingMoreRuns] = useState(false);
 	const [deleting, setDeleting] = useState(false);
 	const [triggering, setTriggering] = useState(false);
 	const [togglingStatus, setTogglingStatus] = useState(false);
 	const [hasCopiedPing, setHasCopiedPing] = useState(false);
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		setRuns(initialRuns);
+		setPagination(initialPagination);
+	}, [initialRuns, initialPagination]);
+
+	async function loadMoreRuns() {
+		if (isLoadingMoreRuns || !pagination?.has_more || !pagination.next_page)
+			return;
+		setIsLoadingMoreRuns(true);
+		try {
+			const res = await fetchBeeperRuns(slug, beeper.id, {
+				page: pagination.next_page,
+			});
+			setRuns((prev) => {
+				const existingIds = new Set(prev.map((r) => r.id));
+				const newUnique = res.runs.filter((r) => !existingIds.has(r.id));
+				return [...prev, ...newUnique];
+			});
+			setPagination(res.pagination);
+		} catch (err) {
+			console.error("Failed to load more runs", err);
+		} finally {
+			setIsLoadingMoreRuns(false);
+		}
+	}
 
 	const pingUrl = beeper.ping_token
 		? `${publicApiOrigin()}/api/v1/beeper_apps/heartbeat/pings/${beeper.ping_token}`
@@ -595,6 +633,27 @@ function BeeperDetailPage() {
 								))}
 							</ul>
 						)}
+						{pagination?.has_more ? (
+							<div className="flex justify-center border-t p-2">
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									disabled={isLoadingMoreRuns}
+									onClick={loadMoreRuns}
+									className="gap-2 text-xs"
+								>
+									{isLoadingMoreRuns ? (
+										<>
+											<Loader2 className="size-3.5 animate-spin" />
+											{m.common_loading()}
+										</>
+									) : (
+										m.common_load_more()
+									)}
+								</Button>
+							</div>
+						) : null}
 					</details>
 				</div>
 			</div>

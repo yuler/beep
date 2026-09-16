@@ -1,7 +1,14 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
-import { Activity, Clock, Repeat, Search, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+	Activity,
+	Clock,
+	Loader2,
+	Repeat,
+	Search,
+	Sparkles,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -12,7 +19,7 @@ import {
 } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { ProgressBar, StatusPill } from "@/components/ui/status-pill";
-import type { Beep } from "@/lib/api/beeps";
+import { type Beep, fetchBeeps, type PaginationMeta } from "@/lib/api/beeps";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import { beepRunAt } from "@/lib/beep-stats";
 import { beepRunStatusLabel, beepStatusLabel } from "@/lib/i18n-labels";
@@ -199,21 +206,71 @@ const FILTER_TABS: {
 ];
 
 export function BeepList({
-	beeps,
+	beeps: initialBeeps,
+	initialPagination,
 	slug,
 	variant = "full",
 }: {
 	beeps: Beep[];
+	initialPagination?: PaginationMeta;
 	slug: string;
 	variant?: "compact" | "full";
 }) {
 	const navigate = useNavigate();
+	const [items, setItems] = useState<Beep[]>(initialBeeps);
+	const [pagination, setPagination] = useState<PaginationMeta | undefined>(
+		initialPagination,
+	);
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		setItems(initialBeeps);
+		setPagination(initialPagination);
+	}, [initialBeeps, initialPagination]);
+
+	const loadMore = useCallback(async () => {
+		if (isLoadingMore || !pagination?.has_more || !pagination.next_page) return;
+		setIsLoadingMore(true);
+		try {
+			const res = await fetchBeeps(slug, { page: pagination.next_page });
+			setItems((prev) => {
+				const existingIds = new Set(prev.map((b) => b.id));
+				const newUnique = res.beeps.filter((b) => !existingIds.has(b.id));
+				return [...prev, ...newUnique];
+			});
+			setPagination(res.pagination);
+		} catch (err) {
+			console.error("Failed to load more beeps", err);
+		} finally {
+			setIsLoadingMore(false);
+		}
+	}, [isLoadingMore, pagination, slug]);
+
+	useEffect(() => {
+		if (!pagination?.has_more) return;
+		const node = sentinelRef.current;
+		if (!node) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					loadMore();
+				}
+			},
+			{ rootMargin: "200px" },
+		);
+
+		observer.observe(node);
+		return () => observer.disconnect();
+	}, [pagination?.has_more, loadMore]);
+
 	const [search, setSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
 	const columns = useBeepColumns(slug, variant);
 
 	const filteredBeeps = useMemo(() => {
-		return beeps.filter((beep) => {
+		return items.filter((beep) => {
 			if (statusFilter === "active" && beep.status !== "active") return false;
 			if (statusFilter === "firing" && beep.status !== "firing") return false;
 			if (statusFilter === "completed" && beep.status !== "completed")
@@ -231,19 +288,19 @@ export function BeepList({
 
 			return true;
 		});
-	}, [beeps, statusFilter, search]);
+	}, [items, statusFilter, search]);
 
 	const counts = useMemo(() => {
 		return {
-			all: beeps.length,
-			active: beeps.filter((b) => b.status === "active").length,
-			firing: beeps.filter((b) => b.status === "firing").length,
-			recurring: beeps.filter((b) => b.kind === "recurring").length,
-			completed: beeps.filter((b) => b.status === "completed").length,
+			all: items.length,
+			active: items.filter((b) => b.status === "active").length,
+			firing: items.filter((b) => b.status === "firing").length,
+			recurring: items.filter((b) => b.kind === "recurring").length,
+			completed: items.filter((b) => b.status === "completed").length,
 		};
-	}, [beeps]);
+	}, [items]);
 
-	if (beeps.length === 0) {
+	if (items.length === 0) {
 		return (
 			<Card className="flex flex-col items-center justify-center p-8 text-center">
 				<div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -432,6 +489,28 @@ export function BeepList({
 							}
 						/>
 					</div>
+
+					{pagination?.has_more ? (
+						<div ref={sentinelRef} className="flex justify-center py-4">
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								disabled={isLoadingMore}
+								onClick={loadMore}
+								className="gap-2"
+							>
+								{isLoadingMore ? (
+									<>
+										<Loader2 className="size-4 animate-spin" />
+										{m.common_loading()}
+									</>
+								) : (
+									m.common_load_more()
+								)}
+							</Button>
+						</div>
+					) : null}
 				</>
 			)}
 		</div>
