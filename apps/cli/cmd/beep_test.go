@@ -27,6 +27,16 @@ func setupBeepTestEnv(t *testing.T, handler http.HandlerFunc) (string, func()) {
 	return setupCLITestEnv(t, handler)
 }
 
+func findBeepCmd(t *testing.T, sub string) *cobra.Command {
+	t.Helper()
+	cmd, _, err := RootCmd.Find([]string{"beep", sub})
+	if err != nil {
+		t.Fatalf("failed to find 'beep %s': %v", sub, err)
+	}
+	return cmd
+}
+
+
 
 func TestBeepListCommand(t *testing.T) {
 	var gotHeaderAccount string
@@ -60,8 +70,9 @@ func TestBeepListCommand(t *testing.T) {
 	defer cleanup()
 
 	// 1. Plain table output without --account (personal default, header empty)
+	listCmd := findBeepCmd(t, "list")
 	out, err := captureStdout(func() error {
-		return beepListCmd.RunE(beepListCmd, nil)
+		return listCmd.RunE(listCmd, nil)
 	})
 	if err != nil {
 		t.Fatalf("beep list failed: %v", err)
@@ -76,7 +87,7 @@ func TestBeepListCommand(t *testing.T) {
 	// 2. With --account team-slug
 	flagAccount = "team-slug"
 	_, err = captureStdout(func() error {
-		return beepListCmd.RunE(beepListCmd, nil)
+		return listCmd.RunE(listCmd, nil)
 	})
 	if err != nil {
 		t.Fatalf("beep list with account failed: %v", err)
@@ -88,7 +99,7 @@ func TestBeepListCommand(t *testing.T) {
 	// 3. With --json
 	flagJSON = true
 	jsonOut, err := captureStdout(func() error {
-		return beepListCmd.RunE(beepListCmd, nil)
+		return listCmd.RunE(listCmd, nil)
 	})
 	if err != nil {
 		t.Fatalf("beep list --json failed: %v", err)
@@ -132,8 +143,9 @@ func TestBeepShowCommand(t *testing.T) {
 	})
 	defer cleanup()
 
+	showCmd := findBeepCmd(t, "show")
 	out, err := captureStdout(func() error {
-		return beepShowCmd.RunE(beepShowCmd, []string{"beep_456"})
+		return showCmd.RunE(showCmd, []string{"beep_456"})
 	})
 	if err != nil {
 		t.Fatalf("beep show failed: %v", err)
@@ -184,9 +196,11 @@ func TestBeepCreateCommand(t *testing.T) {
 	flagNoInteractive = true
 	defer func() { flagNoInteractive = false }()
 
+	createCmd := findBeepCmd(t, "create")
+
 	// 1. Instant reminder (no schedule flags)
 	_, err := captureStdout(func() error {
-		return beepCreateCmd.RunE(beepCreateCmd, []string{"Instant Test"})
+		return createCmd.RunE(createCmd, []string{"Instant Test"})
 	})
 	if err != nil {
 		t.Fatalf("beep create instant failed: %v", err)
@@ -196,11 +210,11 @@ func TestBeepCreateCommand(t *testing.T) {
 	}
 
 	// 2. Delay with --in 15m
-	flagBeepIn = "15m"
+	createCmd.Flags().Set("in", "15m")
 	_, err = captureStdout(func() error {
-		return beepCreateCmd.RunE(beepCreateCmd, []string{"Delay Test"})
+		return createCmd.RunE(createCmd, []string{"Delay Test"})
 	})
-	flagBeepIn = ""
+	createCmd.Flags().Set("in", "")
 	if err != nil {
 		t.Fatalf("beep create with --in failed: %v", err)
 	}
@@ -209,11 +223,11 @@ func TestBeepCreateCommand(t *testing.T) {
 	}
 
 	// 3. Recurring with --cron
-	flagBeepCron = "*/5 * * * *"
+	createCmd.Flags().Set("cron", "*/5 * * * *")
 	_, err = captureStdout(func() error {
-		return beepCreateCmd.RunE(beepCreateCmd, []string{"Cron Test"})
+		return createCmd.RunE(createCmd, []string{"Cron Test"})
 	})
-	flagBeepCron = ""
+	createCmd.Flags().Set("cron", "")
 	if err != nil {
 		t.Fatalf("beep create with --cron failed: %v", err)
 	}
@@ -222,16 +236,16 @@ func TestBeepCreateCommand(t *testing.T) {
 	}
 
 	// 4. Natural create with --json, merging --body and --channels
-	flagBeepNatural = "check database backup"
-	flagBeepBody = "Custom body"
-	flagBeepChannels = "slack,email"
+	createCmd.Flags().Set("natural", "check database backup")
+	createCmd.Flags().Set("body", "Custom body")
+	createCmd.Flags().Set("channels", "slack,email")
 	flagJSON = true
 	_, err = captureStdout(func() error {
-		return beepCreateCmd.RunE(beepCreateCmd, nil)
+		return createCmd.RunE(createCmd, nil)
 	})
-	flagBeepNatural = ""
-	flagBeepBody = ""
-	flagBeepChannels = ""
+	createCmd.Flags().Set("natural", "")
+	createCmd.Flags().Set("body", "")
+	createCmd.Flags().Set("channels", "")
 	flagJSON = false
 	if err != nil {
 		t.Fatalf("natural create with --json failed: %v", err)
@@ -288,8 +302,13 @@ func TestBeepActionsCommands(t *testing.T) {
 	})
 	defer cleanup()
 
+	pauseCmd := findBeepCmd(t, "pause")
+	resumeCmd := findBeepCmd(t, "resume")
+	runCmd := findBeepCmd(t, "run")
+	deleteCmd := findBeepCmd(t, "delete")
+
 	// Pause
-	if _, err := captureStdout(func() error { return beepPauseCmd.RunE(beepPauseCmd, []string{"b1"}) }); err != nil {
+	if _, err := captureStdout(func() error { return pauseCmd.RunE(pauseCmd, []string{"b1"}) }); err != nil {
 		t.Fatalf("pause failed: %v", err)
 	}
 	if pausedID != "b1" {
@@ -297,7 +316,7 @@ func TestBeepActionsCommands(t *testing.T) {
 	}
 
 	// Resume
-	if _, err := captureStdout(func() error { return beepResumeCmd.RunE(beepResumeCmd, []string{"b1"}) }); err != nil {
+	if _, err := captureStdout(func() error { return resumeCmd.RunE(resumeCmd, []string{"b1"}) }); err != nil {
 		t.Fatalf("resume failed: %v", err)
 	}
 	if resumedID != "b1" {
@@ -305,7 +324,7 @@ func TestBeepActionsCommands(t *testing.T) {
 	}
 
 	// Run
-	if _, err := captureStdout(func() error { return beepRunCmd.RunE(beepRunCmd, []string{"b1"}) }); err != nil {
+	if _, err := captureStdout(func() error { return runCmd.RunE(runCmd, []string{"b1"}) }); err != nil {
 		t.Fatalf("run failed: %v", err)
 	}
 	if runID != "b1" {
@@ -313,7 +332,7 @@ func TestBeepActionsCommands(t *testing.T) {
 	}
 
 	// Delete
-	if _, err := captureStdout(func() error { return beepDeleteCmd.RunE(beepDeleteCmd, []string{"b1"}) }); err != nil {
+	if _, err := captureStdout(func() error { return deleteCmd.RunE(deleteCmd, []string{"b1"}) }); err != nil {
 		t.Fatalf("delete failed: %v", err)
 	}
 	if deletedID != "b1" {
@@ -336,7 +355,13 @@ func TestBeepOmittedIDNonInteractive(t *testing.T) {
 	flagNoInteractive = true
 	defer func() { flagNoInteractive = false }()
 
-	commands := []*cobra.Command{beepShowCmd, beepDeleteCmd, beepPauseCmd, beepResumeCmd, beepRunCmd}
+	commands := []*cobra.Command{
+		findBeepCmd(t, "show"),
+		findBeepCmd(t, "delete"),
+		findBeepCmd(t, "pause"),
+		findBeepCmd(t, "resume"),
+		findBeepCmd(t, "run"),
+	}
 	for _, c := range commands {
 		err := c.RunE(c, nil)
 		if err == nil {
@@ -346,3 +371,4 @@ func TestBeepOmittedIDNonInteractive(t *testing.T) {
 		}
 	}
 }
+

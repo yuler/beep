@@ -27,6 +27,16 @@ func setupBeeperTestEnv(t *testing.T, handler http.HandlerFunc) (string, func())
 	return setupCLITestEnv(t, handler)
 }
 
+func findBeeperCmd(t *testing.T, sub string) *cobra.Command {
+	t.Helper()
+	cmd, _, err := RootCmd.Find([]string{"beeper", sub})
+	if err != nil {
+		t.Fatalf("failed to find 'beeper %s': %v", sub, err)
+	}
+	return cmd
+}
+
+
 
 func TestBeeperListCommand(t *testing.T) {
 	var gotHeaderAccount string
@@ -68,8 +78,9 @@ func TestBeeperListCommand(t *testing.T) {
 	defer cleanup()
 
 	// 1. Plain list without --account (personal default, header empty)
+	listCmd := findBeeperCmd(t, "list")
 	out, err := captureStdout(func() error {
-		return beeperListCmd.RunE(beeperListCmd, nil)
+		return listCmd.RunE(listCmd, nil)
 	})
 	if err != nil {
 		t.Fatalf("beeper list failed: %v", err)
@@ -84,7 +95,7 @@ func TestBeeperListCommand(t *testing.T) {
 	// 2. With --account team-alpha
 	flagAccount = "team-alpha"
 	_, err = captureStdout(func() error {
-		return beeperListCmd.RunE(beeperListCmd, nil)
+		return listCmd.RunE(listCmd, nil)
 	})
 	if err != nil {
 		t.Fatalf("beeper list with account failed: %v", err)
@@ -96,7 +107,7 @@ func TestBeeperListCommand(t *testing.T) {
 	// 3. With --json (verify token is masked)
 	flagJSON = true
 	jsonOut, err := captureStdout(func() error {
-		return beeperListCmd.RunE(beeperListCmd, nil)
+		return listCmd.RunE(listCmd, nil)
 	})
 	if err != nil {
 		t.Fatalf("beeper list --json failed: %v", err)
@@ -136,9 +147,11 @@ func TestBeeperShowCommandTokenMasking(t *testing.T) {
 	})
 	defer cleanup()
 
+	showCmd := findBeeperCmd(t, "show")
+
 	// 1. Default masked in human show
 	out, err := captureStdout(func() error {
-		return beeperShowCmd.RunE(beeperShowCmd, []string{"beeper_202"})
+		return showCmd.RunE(showCmd, []string{"beeper_202"})
 	})
 	if err != nil {
 		t.Fatalf("beeper show failed: %v", err)
@@ -150,7 +163,7 @@ func TestBeeperShowCommandTokenMasking(t *testing.T) {
 	// 2. Default masked in --json show
 	flagJSON = true
 	jsonOut, err := captureStdout(func() error {
-		return beeperShowCmd.RunE(beeperShowCmd, []string{"beeper_202"})
+		return showCmd.RunE(showCmd, []string{"beeper_202"})
 	})
 	flagJSON = false
 	if err != nil {
@@ -165,11 +178,10 @@ func TestBeeperShowCommandTokenMasking(t *testing.T) {
 	}
 
 	// 3. Unmasked with --show-token
-	flagBeeperShowToken = true
-	defer func() { flagBeeperShowToken = false }()
+	showCmd.Flags().Set("show-token", "true")
 
 	out, err = captureStdout(func() error {
-		return beeperShowCmd.RunE(beeperShowCmd, []string{"beeper_202"})
+		return showCmd.RunE(showCmd, []string{"beeper_202"})
 	})
 	if err != nil {
 		t.Fatalf("beeper show --show-token failed: %v", err)
@@ -181,9 +193,10 @@ func TestBeeperShowCommandTokenMasking(t *testing.T) {
 	// 4. Unmasked in --json with --show-token
 	flagJSON = true
 	jsonOut, err = captureStdout(func() error {
-		return beeperShowCmd.RunE(beeperShowCmd, []string{"beeper_202"})
+		return showCmd.RunE(showCmd, []string{"beeper_202"})
 	})
 	flagJSON = false
+	showCmd.Flags().Set("show-token", "false")
 	if err != nil {
 		t.Fatalf("beeper show --show-token --json failed: %v", err)
 	}
@@ -217,8 +230,9 @@ func TestBeeperAppsCommand(t *testing.T) {
 	})
 	defer cleanup()
 
+	appsCmd := findBeeperCmd(t, "apps")
 	out, err := captureStdout(func() error {
-		return beeperAppsCmd.RunE(beeperAppsCmd, nil)
+		return appsCmd.RunE(appsCmd, nil)
 	})
 	if err != nil {
 		t.Fatalf("beeper apps failed: %v", err)
@@ -264,16 +278,17 @@ func TestBeeperCreateCommand(t *testing.T) {
 	flagNoInteractive = true
 	defer func() { flagNoInteractive = false }()
 
-	flagBeeperApp = "heartbeat-ping"
-	flagBeeperTitle = "Gateway Ping"
-	flagBeeperConfigs = []string{"ping_interval=300"}
+	createCmd := findBeeperCmd(t, "create")
+	createCmd.Flags().Set("app", "heartbeat-ping")
+	createCmd.Flags().Set("title", "Gateway Ping")
+	createCmd.Flags().Set("config", "ping_interval=300")
 
 	out, err := captureStdout(func() error {
-		return beeperCreateCmd.RunE(beeperCreateCmd, nil)
+		return createCmd.RunE(createCmd, nil)
 	})
-	flagBeeperApp = ""
-	flagBeeperTitle = ""
-	flagBeeperConfigs = nil
+	createCmd.Flags().Set("app", "")
+	createCmd.Flags().Set("title", "")
+	createCmd.Flags().Set("config", "")
 
 	if err != nil {
 		t.Fatalf("beeper create failed: %v", err)
@@ -330,8 +345,14 @@ func TestBeeperActionsCommands(t *testing.T) {
 	})
 	defer cleanup()
 
+	pauseCmd := findBeeperCmd(t, "pause")
+	resumeCmd := findBeeperCmd(t, "resume")
+	runCmd := findBeeperCmd(t, "run")
+	runsCmd := findBeeperCmd(t, "runs")
+	deleteCmd := findBeeperCmd(t, "delete")
+
 	// Pause
-	if _, err := captureStdout(func() error { return beeperPauseCmd.RunE(beeperPauseCmd, []string{"bp1"}) }); err != nil {
+	if _, err := captureStdout(func() error { return pauseCmd.RunE(pauseCmd, []string{"bp1"}) }); err != nil {
 		t.Fatalf("pause failed: %v", err)
 	}
 	if pausedID != "bp1" {
@@ -339,7 +360,7 @@ func TestBeeperActionsCommands(t *testing.T) {
 	}
 
 	// Resume
-	if _, err := captureStdout(func() error { return beeperResumeCmd.RunE(beeperResumeCmd, []string{"bp1"}) }); err != nil {
+	if _, err := captureStdout(func() error { return resumeCmd.RunE(resumeCmd, []string{"bp1"}) }); err != nil {
 		t.Fatalf("resume failed: %v", err)
 	}
 	if resumedID != "bp1" {
@@ -347,7 +368,7 @@ func TestBeeperActionsCommands(t *testing.T) {
 	}
 
 	// Run
-	if _, err := captureStdout(func() error { return beeperRunCmd.RunE(beeperRunCmd, []string{"bp1"}) }); err != nil {
+	if _, err := captureStdout(func() error { return runCmd.RunE(runCmd, []string{"bp1"}) }); err != nil {
 		t.Fatalf("run failed: %v", err)
 	}
 	if runID != "bp1" {
@@ -355,7 +376,7 @@ func TestBeeperActionsCommands(t *testing.T) {
 	}
 
 	// Runs
-	if _, err := captureStdout(func() error { return beeperRunsCmd.RunE(beeperRunsCmd, []string{"bp1"}) }); err != nil {
+	if _, err := captureStdout(func() error { return runsCmd.RunE(runsCmd, []string{"bp1"}) }); err != nil {
 		t.Fatalf("runs failed: %v", err)
 	}
 	if runsID != "bp1" {
@@ -363,7 +384,7 @@ func TestBeeperActionsCommands(t *testing.T) {
 	}
 
 	// Delete
-	if _, err := captureStdout(func() error { return beeperDeleteCmd.RunE(beeperDeleteCmd, []string{"bp1"}) }); err != nil {
+	if _, err := captureStdout(func() error { return deleteCmd.RunE(deleteCmd, []string{"bp1"}) }); err != nil {
 		t.Fatalf("delete failed: %v", err)
 	}
 	if deletedID != "bp1" {
@@ -386,7 +407,14 @@ func TestBeeperOmittedIDNonInteractive(t *testing.T) {
 	flagNoInteractive = true
 	defer func() { flagNoInteractive = false }()
 
-	commands := []*cobra.Command{beeperShowCmd, beeperDeleteCmd, beeperPauseCmd, beeperResumeCmd, beeperRunCmd, beeperRunsCmd}
+	commands := []*cobra.Command{
+		findBeeperCmd(t, "show"),
+		findBeeperCmd(t, "delete"),
+		findBeeperCmd(t, "pause"),
+		findBeeperCmd(t, "resume"),
+		findBeeperCmd(t, "run"),
+		findBeeperCmd(t, "runs"),
+	}
 	for _, c := range commands {
 		err := c.RunE(c, nil)
 		if err == nil {
@@ -396,3 +424,4 @@ func TestBeeperOmittedIDNonInteractive(t *testing.T) {
 		}
 	}
 }
+

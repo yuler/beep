@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"beep/cmd/beep"
+	"beep/cmd/beeper"
 	"beep/internal/config"
 	"beep/internal/ui"
 	"beep/internal/updater"
@@ -79,8 +81,8 @@ func init() {
 
 	// Top-level subcommands
 	RootCmd.AddCommand(authCmd)
-	RootCmd.AddCommand(beepCmd)
-	RootCmd.AddCommand(beeperCmd)
+	RootCmd.AddCommand(beep.NewCmdBeep())
+	RootCmd.AddCommand(beeper.NewCmdBeeper())
 	RootCmd.AddCommand(runnerCmd)
 	RootCmd.AddCommand(channelCmd)
 	RootCmd.AddCommand(configCmd)
