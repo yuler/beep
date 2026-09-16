@@ -316,3 +316,63 @@ func TestParseAPIError(t *testing.T) {
 		t.Errorf("unexpected error list from message only: %v", errList3)
 	}
 }
+
+func TestProposalErrorsUnmarshal(t *testing.T) {
+	tests := []struct {
+		name     string
+		jsonStr  string
+		hasError bool
+		expected []string
+	}{
+		{
+			name:     "empty object",
+			jsonStr:  `{"errors": {}}`,
+			hasError: false,
+			expected: nil,
+		},
+		{
+			name:     "object with fields",
+			jsonStr:  `{"errors": {"cron": "can't be blank", "title": "is required"}}`,
+			hasError: true,
+			expected: []string{"cron can't be blank", "title is required"},
+		},
+		{
+			name:     "array of strings",
+			jsonStr:  `{"errors": ["failed to parse datetime"]}`,
+			hasError: true,
+			expected: []string{"failed to parse datetime"},
+		},
+		{
+			name:     "null errors",
+			jsonStr:  `{"errors": null}`,
+			hasError: false,
+			expected: nil,
+		},
+		{
+			name:     "object with string arrays",
+			jsonStr:  `{"errors": {"cron": ["can't be blank"]}}`,
+			hasError: true,
+			expected: []string{"cron can't be blank"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var proposal BeepProposal
+			if err := json.Unmarshal([]byte(tc.jsonStr), &proposal); err != nil {
+				t.Fatalf("failed to unmarshal: %v", err)
+			}
+			if proposal.HasErrors() != tc.hasError {
+				t.Errorf("expected hasErrors=%v, got %v", tc.hasError, proposal.HasErrors())
+			}
+			if len(proposal.Errors) != len(tc.expected) {
+				t.Fatalf("expected %d errors, got %d (%v)", len(tc.expected), len(proposal.Errors), proposal.Errors)
+			}
+			for i, exp := range tc.expected {
+				if proposal.Errors[i] != exp {
+					t.Errorf("expected error %q, got %q", exp, proposal.Errors[i])
+				}
+			}
+		})
+	}
+}

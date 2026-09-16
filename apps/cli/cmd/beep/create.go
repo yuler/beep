@@ -212,8 +212,14 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 		return fmt.Errorf("natural language parse failed: %w", err)
 	}
 
-	if len(proposal.Errors) > 0 {
+	if proposal.HasErrors() {
 		return fmt.Errorf("could not understand reminder: %s", strings.Join(proposal.Errors, ", "))
+	}
+	if proposal.Title == "" {
+		if proposal.Message != "" {
+			return fmt.Errorf("could not understand reminder: %s", proposal.Message)
+		}
+		return fmt.Errorf("could not understand reminder from prompt")
 	}
 
 	if cmdutil.IsInteractive(cmd) && !cmdutil.IsJSON(cmd) {

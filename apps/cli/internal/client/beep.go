@@ -2,10 +2,12 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -60,17 +62,115 @@ type CreateBeepRequest struct {
 	Metadata             map[string]any `json:"metadata,omitempty"`
 }
 
+// ProposalErrors represents errors returned in BeepProposal, which can be an object
+// (map of field to error message, e.g. {"cron": "can't be blank"} or {}), an array
+// of strings, or a map of string to array of strings.
+type ProposalErrors []string
+
+func (pe *ProposalErrors) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		*pe = nil
+		return nil
+	}
+
+	// 1. Array of strings: ["error 1", "error 2"]
+	var list []string
+	if err := json.Unmarshal(data, &list); err == nil {
+		*pe = list
+		return nil
+	}
+
+	// 2. Map of string to string: {"cron": "can't be blank"}
+	var mapStr map[string]string
+	if err := json.Unmarshal(data, &mapStr); err == nil {
+		if len(mapStr) == 0 {
+			*pe = nil
+			return nil
+		}
+		keys := make([]string, 0, len(mapStr))
+		for k := range mapStr {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		res := make([]string, 0, len(keys))
+		for _, k := range keys {
+			res = append(res, fmt.Sprintf("%s %s", k, mapStr[k]))
+		}
+		*pe = res
+		return nil
+	}
+
+	// 3. Map of string to []string: {"cron": ["can't be blank"]}
+	var mapList map[string][]string
+	if err := json.Unmarshal(data, &mapList); err == nil {
+		if len(mapList) == 0 {
+			*pe = nil
+			return nil
+		}
+		keys := make([]string, 0, len(mapList))
+		for k := range mapList {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		var res []string
+		for _, k := range keys {
+			for _, msg := range mapList[k] {
+				res = append(res, fmt.Sprintf("%s %s", k, msg))
+			}
+		}
+		*pe = res
+		return nil
+	}
+
+	// 4. Map of string to any
+	var mapAny map[string]any
+	if err := json.Unmarshal(data, &mapAny); err == nil {
+		if len(mapAny) == 0 {
+			*pe = nil
+			return nil
+		}
+		keys := make([]string, 0, len(mapAny))
+		for k := range mapAny {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		res := make([]string, 0, len(keys))
+		for _, k := range keys {
+			res = append(res, fmt.Sprintf("%s %v", k, mapAny[k]))
+		}
+		*pe = res
+		return nil
+	}
+
+	// 5. Single string
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		if s != "" {
+			*pe = []string{s}
+		} else {
+			*pe = nil
+		}
+		return nil
+	}
+
+	return nil
+}
+
 type BeepProposal struct {
-	Intent      string   `json:"intent"`
-	Kind        string   `json:"kind"`
-	Title       string   `json:"title"`
-	Body        string   `json:"body"`
-	RunAt       string   `json:"run_at"`
-	Cron        string   `json:"cron"`
-	Timezone    string   `json:"timezone"`
-	Errors      []string `json:"errors"`
-	Confirmable bool     `json:"confirmable"`
-	Message     string   `json:"message"`
+	Intent      string         `json:"intent"`
+	Kind        string         `json:"kind"`
+	Title       string         `json:"title"`
+	Body        string         `json:"body"`
+	RunAt       string         `json:"run_at"`
+	Cron        string         `json:"cron"`
+	Timezone    string         `json:"timezone"`
+	Errors      ProposalErrors `json:"errors"`
+	Confirmable bool           `json:"confirmable"`
+	Message     string         `json:"message"`
+}
+
+func (p *BeepProposal) HasErrors() bool {
+	return p != nil && len(p.Errors) > 0
 }
 
 type listBeepsResponse struct {
