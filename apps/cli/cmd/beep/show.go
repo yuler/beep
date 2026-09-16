@@ -19,7 +19,7 @@ func NewCmdShow() *cobra.Command {
 	return &cobra.Command{
 		Use:     "show [id]",
 		Aliases: []string{"view", "info"},
-		Short:   "Show details and recent run history of a reminder beep",
+		Short:   "Show details and recent run history of a beep",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {

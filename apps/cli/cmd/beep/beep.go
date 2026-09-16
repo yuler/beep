@@ -18,8 +18,8 @@ import (
 func NewCmdBeep() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "beep",
-		Short: "Manage reminder and notification beeps",
-		Long:  ui.Bold(ui.Cyan("Beep Management")) + ` - Create, list, trigger, pause, and delete reminder beeps.`,
+		Short: "Manage beeps and notifications",
+		Long:  ui.Bold(ui.Cyan("Beep Management")) + ` - Create, list, trigger, pause, and delete beeps.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},

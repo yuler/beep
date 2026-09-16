@@ -18,7 +18,7 @@ func NewCmdRun() *cobra.Command {
 	return &cobra.Command{
 		Use:     "run [id]",
 		Aliases: []string{"trigger"},
-		Short:   "Immediately trigger a reminder beep",
+		Short:   "Immediately trigger a beep",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {

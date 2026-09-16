@@ -29,8 +29,8 @@ func NewCmdCreate() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create [title]",
-		Short: "Create a reminder beep",
-		Long: `Create a reminder beep.
+		Short: "Create a beep",
+		Long: `Create a beep.
 
 Scheduling modes (mutually exclusive):
   - Instant (default): fires immediately when no schedule flags are provided
@@ -44,7 +44,7 @@ When using --json, interactive confirmation is skipped.
 Optional --body and --channels can also be combined with --natural to supplement proposal fields.
 
 Examples:
-  # Instant reminder (fires immediately)
+  # Instant beep (fires immediately)
   beep beep create "Deploy finished"
 
   # Relative delay
@@ -202,18 +202,21 @@ Examples:
 				if b.Timezone != "" {
 					fmt.Printf("  %s %s\n", ui.Dim("Timezone:"), b.Timezone)
 				}
+				if len(b.NotificationChannels) > 0 {
+					fmt.Printf("  %s %s\n", ui.Dim("Channels:"), strings.Join(b.NotificationChannels, ", "))
+				}
 				return nil
 			})
 		},
 	}
 
-	cmd.Flags().StringVarP(&flagBody, "body", "b", "", "Reminder markdown body / message")
+	cmd.Flags().StringVarP(&flagBody, "body", "b", "", "Beep markdown body / message")
 	cmd.Flags().StringVar(&flagIn, "in", "", "Delay duration before firing (e.g. 15m, 2h, 1d)")
 	cmd.Flags().StringVar(&flagAt, "at", "", "Specific time to fire (e.g. 16:30, 2026-10-01 10:00)")
 	cmd.Flags().StringVarP(&flagCron, "cron", "c", "", "Recurring cron schedule (e.g. '0 9 * * *')")
 	cmd.Flags().StringVarP(&flagTimezone, "timezone", "z", "", "Timezone (defaults to local timezone)")
 	cmd.Flags().StringVar(&flagChannels, "channels", "", "Comma-separated notification channel names or IDs")
-	cmd.Flags().StringVarP(&flagNatural, "natural", "n", "", "Natural language reminder prompt parsed by AI")
+	cmd.Flags().StringVarP(&flagNatural, "natural", "n", "", "Natural language beep prompt parsed by AI")
 	cmd.MarkFlagsMutuallyExclusive("cron", "in", "at", "natural")
 
 	return cmd
@@ -226,31 +229,75 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 	}
 
 	if proposal.HasErrors() {
-		return fmt.Errorf("could not understand reminder: %s", strings.Join(proposal.Errors, ", "))
+		return fmt.Errorf("could not understand beep: %s", strings.Join(proposal.Errors, ", "))
 	}
 	if proposal.Title == "" {
 		if proposal.Message != "" {
-			return fmt.Errorf("could not understand reminder: %s", proposal.Message)
+			return fmt.Errorf("could not understand beep: %s", proposal.Message)
 		}
-		return fmt.Errorf("could not understand reminder from prompt")
+		return fmt.Errorf("could not understand beep from prompt")
+	}
+
+	body := proposal.Body
+	if bodyFlag != "" {
+		body = bodyFlag
+	}
+
+	resolvedTz := proposal.Timezone
+	if resolvedTz == "" {
+		resolvedTz = tz
+	}
+	if resolvedTz == "" {
+		resolvedTz = "UTC"
+	}
+
+	var channels []string
+	if channelsFlag != "" {
+		for _, ch := range strings.Split(channelsFlag, ",") {
+			if trimmed := strings.TrimSpace(ch); trimmed != "" {
+				channels = append(channels, trimmed)
+			}
+		}
 	}
 
 	if cmdutil.IsInteractive(cmd) && !cmdutil.IsJSON(cmd) {
+		displayChannels := channels
+		if len(displayChannels) == 0 {
+			if s, err := c.GetSettings(ctx); err == nil && s != nil {
+				displayChannels = client.SanitizeChannelDefaults(s.NotificationChannels)
+			}
+		}
+
 		fmt.Println()
-		fmt.Printf("  %s %s\n", ui.Bold("AI Proposal:"), ui.Cyan(proposal.Title))
-		if proposal.Body != "" {
-			fmt.Printf("  %s %s\n", ui.Dim("Body:"), proposal.Body)
+		fmt.Println(ui.Bold(ui.Cyan("  Proposed Beep:")))
+		fmt.Println(ui.KeyValue("Title", proposal.Title))
+		if body != "" {
+			if strings.Contains(body, "\n") {
+				fmt.Println(ui.KeyValue("Body", ""))
+				for _, line := range strings.Split(body, "\n") {
+					fmt.Printf("      %s\n", line)
+				}
+			} else {
+				fmt.Println(ui.KeyValue("Body", body))
+			}
 		}
-		fmt.Printf("  %s %s\n", ui.Dim("Kind:"), proposal.Kind)
+		fmt.Println(ui.KeyValue("Kind", proposal.Kind))
 		if proposal.Cron != "" {
-			fmt.Printf("  %s %s\n", ui.Dim("Cron:"), proposal.Cron)
+			fmt.Println(ui.KeyValue("Cron", proposal.Cron))
+		} else if proposal.RunAt != "" {
+			fmt.Println(ui.KeyValue("Run At", proposal.RunAt))
+		} else {
+			fmt.Println(ui.KeyValue("Schedule", ui.Dim("instant")))
 		}
-		if proposal.RunAt != "" {
-			fmt.Printf("  %s %s\n", ui.Dim("Run At:"), proposal.RunAt)
+		if resolvedTz != "" {
+			fmt.Println(ui.KeyValue("Timezone", resolvedTz))
+		}
+		if len(displayChannels) > 0 {
+			fmt.Println(ui.KeyValue("Channels", strings.Join(displayChannels, ", ")))
 		}
 		fmt.Println()
 
-		confirmed, confirmErr := ui.PromptConfirm("Create this reminder?", true)
+		confirmed, confirmErr := ui.PromptConfirm("Create this beep?", true)
 		if confirmErr != nil {
 			return confirmErr
 		}
@@ -260,26 +307,17 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 		}
 	}
 
-	body := proposal.Body
-	if bodyFlag != "" {
-		body = bodyFlag
-	}
-
 	req := &client.CreateBeepRequest{
 		Title:    proposal.Title,
 		Body:     body,
 		Kind:     proposal.Kind,
 		Cron:     proposal.Cron,
 		RunAt:    proposal.RunAt,
-		Timezone: proposal.Timezone,
+		Timezone: resolvedTz,
 	}
 
-	if channelsFlag != "" {
-		for _, ch := range strings.Split(channelsFlag, ",") {
-			if trimmed := strings.TrimSpace(ch); trimmed != "" {
-				req.NotificationChannels = append(req.NotificationChannels, trimmed)
-			}
-		}
+	if len(channels) > 0 {
+		req.NotificationChannels = channels
 	}
 
 	b, err := c.CreateBeep(ctx, req)
@@ -298,5 +336,11 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 
 	fmt.Println(ui.Success("Created beep %s (%s)", ui.Bold(b.Title), ui.Dim(b.ID)))
 	fmt.Printf("  %s %s\n", ui.Dim("Schedule:"), FormatBeepSchedule(b))
+	if b.Timezone != "" {
+		fmt.Printf("  %s %s\n", ui.Dim("Timezone:"), b.Timezone)
+	}
+	if len(b.NotificationChannels) > 0 {
+		fmt.Printf("  %s %s\n", ui.Dim("Channels:"), strings.Join(b.NotificationChannels, ", "))
+	}
 	return nil
 }

@@ -17,7 +17,7 @@ func NewCmdDelete() *cobra.Command {
 	return &cobra.Command{
 		Use:     "delete [id]",
 		Aliases: []string{"rm"},
-		Short:   "Delete a reminder beep",
+		Short:   "Delete a beep",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {

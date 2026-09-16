@@ -17,7 +17,7 @@ import (
 func NewCmdPause() *cobra.Command {
 	return &cobra.Command{
 		Use:   "pause [id]",
-		Short: "Pause a recurring reminder beep",
+		Short: "Pause a recurring beep",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {

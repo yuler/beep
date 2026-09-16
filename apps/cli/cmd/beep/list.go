@@ -19,7 +19,7 @@ func NewCmdList() *cobra.Command {
 	return &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "List reminder beeps",
+		Short:   "List beeps",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {
 				beeps, err := c.ListBeeps(ctx)
