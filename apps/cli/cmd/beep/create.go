@@ -251,78 +251,149 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 		resolvedTz = "UTC"
 	}
 
-	var channels []string
-	if channelsFlag != "" {
-		for _, ch := range strings.Split(channelsFlag, ",") {
-			if trimmed := strings.TrimSpace(ch); trimmed != "" {
-				channels = append(channels, trimmed)
-			}
+	schedKind := "instant"
+	schedVal := ""
+	if proposal.Kind == "recurring" && proposal.Cron != "" {
+		schedKind = "cron"
+		schedVal = proposal.Cron
+	} else if proposal.RunAt != "" {
+		schedKind = "at"
+		schedVal = proposal.RunAt
+	}
+
+	params := client.CreateBeepParams{
+		Title:        proposal.Title,
+		Body:         body,
+		ScheduleKind: schedKind,
+		ScheduleVal:  schedVal,
+		Timezone:     resolvedTz,
+		Channels:     channelsFlag,
+	}
+
+	defaultChannels := client.DefaultNotificationChannels
+	if cmdutil.IsInteractive(cmd) {
+		if s, err := c.GetSettings(ctx); err == nil && s != nil {
+			defaultChannels = client.SanitizeChannelDefaults(s.NotificationChannels)
+		}
+		if params.Channels == "" && len(defaultChannels) > 0 {
+			params.Channels = strings.Join(defaultChannels, ",")
 		}
 	}
 
 	if cmdutil.IsInteractive(cmd) && !cmdutil.IsJSON(cmd) {
-		displayChannels := channels
-		if len(displayChannels) == 0 {
-			if s, err := c.GetSettings(ctx); err == nil && s != nil {
-				displayChannels = client.SanitizeChannelDefaults(s.NotificationChannels)
-			}
-		}
-
-		fmt.Println()
-		fmt.Println(ui.Bold(ui.Cyan("  Proposed Beep:")))
-		fmt.Println(ui.KeyValue("Title", proposal.Title))
-		if body != "" {
-			if strings.Contains(body, "\n") {
-				fmt.Println(ui.KeyValue("Body", ""))
-				for _, line := range strings.Split(body, "\n") {
-					fmt.Printf("      %s\n", line)
+		for {
+			var displayChannels []string
+			if strings.TrimSpace(params.Channels) != "" {
+				for _, ch := range strings.Split(params.Channels, ",") {
+					if trimmed := strings.TrimSpace(ch); trimmed != "" {
+						displayChannels = append(displayChannels, trimmed)
+					}
 				}
-			} else {
-				fmt.Println(ui.KeyValue("Body", body))
 			}
-		}
-		fmt.Println(ui.KeyValue("Kind", proposal.Kind))
-		if proposal.Cron != "" {
-			fmt.Println(ui.KeyValue("Cron", proposal.Cron))
-		} else if proposal.RunAt != "" {
-			fmt.Println(ui.KeyValue("Run At", proposal.RunAt))
-		} else {
-			fmt.Println(ui.KeyValue("Schedule", ui.Dim("instant")))
-		}
-		if resolvedTz != "" {
-			fmt.Println(ui.KeyValue("Timezone", resolvedTz))
-		}
-		if len(displayChannels) > 0 {
-			fmt.Println(ui.KeyValue("Channels", strings.Join(displayChannels, ", ")))
-		}
-		fmt.Println()
 
-		confirmed, confirmErr := ui.PromptConfirm("Create this beep?", true)
-		if confirmErr != nil {
-			return confirmErr
-		}
-		if !confirmed {
-			fmt.Println(ui.Dim("Cancelled."))
-			return nil
+			fmt.Println()
+			fmt.Println(ui.Bold(ui.Cyan("  Proposed Beep:")))
+			fmt.Println(ui.KeyValue("Title", params.Title))
+			if params.Body != "" {
+				if strings.Contains(params.Body, "\n") {
+					fmt.Println(ui.KeyValue("Body", ""))
+					for _, line := range strings.Split(params.Body, "\n") {
+						fmt.Printf("      %s\n", line)
+					}
+				} else {
+					fmt.Println(ui.KeyValue("Body", params.Body))
+				}
+			}
+
+			kind := "once"
+			if params.ScheduleKind == "cron" {
+				kind = "recurring"
+			}
+			fmt.Println(ui.KeyValue("Kind", kind))
+
+			switch params.ScheduleKind {
+			case "cron":
+				fmt.Println(ui.KeyValue("Cron", params.ScheduleVal))
+			case "at":
+				fmt.Println(ui.KeyValue("Run At", params.ScheduleVal))
+			case "delay":
+				fmt.Println(ui.KeyValue("Delay", params.ScheduleVal))
+			default:
+				fmt.Println(ui.KeyValue("Schedule", ui.Dim("instant")))
+			}
+
+			if params.Timezone != "" {
+				fmt.Println(ui.KeyValue("Timezone", params.Timezone))
+			}
+			if len(displayChannels) > 0 {
+				fmt.Println(ui.KeyValue("Channels", strings.Join(displayChannels, ", ")))
+			}
+			fmt.Println()
+
+			action, actionErr := ui.PromptBeepProposalAction()
+			if actionErr != nil {
+				return actionErr
+			}
+			if action == "cancel" {
+				fmt.Println(ui.Dim("Cancelled."))
+				return nil
+			}
+			if action == "edit" {
+				prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels, nil)
+				if pErr != nil {
+					return pErr
+				}
+				params = *prompted
+				continue
+			}
+
+			break
 		}
 	}
 
-	req := &client.CreateBeepRequest{
-		Title:    proposal.Title,
-		Body:     body,
-		Kind:     proposal.Kind,
-		Cron:     proposal.Cron,
-		RunAt:    proposal.RunAt,
-		Timezone: resolvedTz,
-	}
+	var b *client.Beep
+	for {
+		if params.ScheduleKind == "" {
+			params.ScheduleKind = "instant"
+		}
+		req, err := params.ToRequest()
+		if err != nil {
+			if !cmdutil.IsInteractive(cmd) {
+				return err
+			}
+			errList := client.ExtractErrorList(err)
+			ui.PrintErrorList("Invalid input", errList)
+			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
+			if promptErr != nil || !retry {
+				return err
+			}
+			prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels, errList)
+			if pErr != nil {
+				return pErr
+			}
+			params = *prompted
+			continue
+		}
 
-	if len(channels) > 0 {
-		req.NotificationChannels = channels
-	}
-
-	b, err := c.CreateBeep(ctx, req)
-	if err != nil {
-		return err
+		b, err = c.CreateBeep(ctx, req)
+		if err != nil {
+			if !cmdutil.IsInteractive(cmd) {
+				return err
+			}
+			errList := client.ExtractErrorList(err)
+			ui.PrintErrorList("Creation failed", errList)
+			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs and retry?", true)
+			if promptErr != nil || !retry {
+				return err
+			}
+			prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels, errList)
+			if pErr != nil {
+				return pErr
+			}
+			params = *prompted
+			continue
+		}
+		break
 	}
 
 	if cmdutil.IsJSON(cmd) {

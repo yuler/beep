@@ -277,6 +277,12 @@ func promptBeepSchedule(res *client.CreateBeepParams) error {
 	case "at":
 		if strings.TrimSpace(res.ScheduleVal) == "" {
 			res.ScheduleVal = "16:30"
+		} else if parsed, err := time.Parse(time.RFC3339, res.ScheduleVal); err == nil {
+			loc, locErr := time.LoadLocation(res.Timezone)
+			if locErr != nil {
+				loc = time.Local
+			}
+			res.ScheduleVal = parsed.In(loc).Format("2006-01-02 15:04")
 		}
 		err := huh.NewInput().
 			Title("Specific Time / Date").
@@ -317,4 +323,22 @@ func promptBeepSchedule(res *client.CreateBeepParams) error {
 		}
 	}
 	return nil
+}
+
+// PromptBeepProposalAction asks the user what to do with a proposed beep: create, edit, or cancel.
+func PromptBeepProposalAction() (string, error) {
+	var choice string = "create"
+	err := huh.NewSelect[string]().
+		Title("Create this beep?").
+		Options(
+			huh.NewOption("Create beep", "create"),
+			huh.NewOption("Edit details", "edit"),
+			huh.NewOption("Cancel", "cancel"),
+		).
+		Value(&choice).
+		Run()
+	if err != nil {
+		return "", err
+	}
+	return choice, nil
 }
