@@ -172,7 +172,7 @@ Examples:
 				}
 
 				if cmdutil.IsJSON(cmd) {
-					redacted := b.Redacted(false)
+					redacted := b.Redacted(true)
 					data, err := json.MarshalIndent(redacted, "", "  ")
 					if err != nil {
 						return err

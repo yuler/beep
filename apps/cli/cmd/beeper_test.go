@@ -297,6 +297,26 @@ func TestBeeperCreateCommand(t *testing.T) {
 	if !strings.Contains(out, "ping_token_123") {
 		t.Errorf("expected ping token in output: %s", out)
 	}
+
+	flagJSON = true
+	jsonOut, err := captureStdout(func() error {
+		createCmd.Flags().Set("app", "heartbeat-ping")
+		createCmd.Flags().Set("title", "Gateway Ping JSON")
+		return createCmd.RunE(createCmd, nil)
+	})
+	flagJSON = false
+	createCmd.Flags().Set("app", "")
+	createCmd.Flags().Set("title", "")
+	if err != nil {
+		t.Fatalf("beeper create --json failed: %v", err)
+	}
+	var created client.Beeper
+	if err := json.Unmarshal([]byte(jsonOut), &created); err != nil {
+		t.Fatalf("failed to unmarshal create --json output: %v", err)
+	}
+	if created.PingToken != "ping_token_123" {
+		t.Errorf("expected full ping_token in create --json, got %q", created.PingToken)
+	}
 }
 
 func TestBeeperActionsCommands(t *testing.T) {
