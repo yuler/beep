@@ -105,12 +105,12 @@ Rails.application.routes.draw do
       end
 
       # Beep
-      namespace :beeps do
-        resource :stats, only: :show
-      end
       resources :beep_proposals, only: :create
       resources :beeps, only: %i[ index show create update destroy ] do
         scope module: :beeps do
+          collection do
+            resource :stats, only: :show, as: :beeps_stats
+          end
           resource :pause, only: %i[ create destroy ]
           resources :runs, only: %i[ index create ]
         end
