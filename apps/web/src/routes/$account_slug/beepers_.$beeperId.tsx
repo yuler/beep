@@ -120,7 +120,7 @@ function BeeperDetailPage() {
 	const [runs, setRuns] = useState<BeeperRun[]>(initialRuns);
 	const [pagination, setPagination] = useState(initialPagination);
 	const [isLoadingMoreRuns, setIsLoadingMoreRuns] = useState(false);
-	const [isRunsOpen, setIsRunsOpen] = useState(false);
+	const [isRunsOpen, setIsRunsOpen] = useState(true);
 	const runsSentinelRef = useRef<HTMLDivElement | null>(null);
 	const [deleting, setDeleting] = useState(false);
 	const [triggering, setTriggering] = useState(false);
@@ -575,6 +575,7 @@ function BeeperDetailPage() {
 
 				<div>
 					<details
+						open
 						className="group/runs rounded-lg border bg-muted/20 text-sm"
 						onToggle={(e) => setIsRunsOpen(e.currentTarget.open)}
 					>

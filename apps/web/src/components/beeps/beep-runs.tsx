@@ -41,7 +41,7 @@ export function BeepRuns({
 		initialPagination,
 	);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
-	const [isOpen, setIsOpen] = useState(false);
+	const [isOpen, setIsOpen] = useState(true);
 	const sentinelRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
@@ -98,6 +98,7 @@ export function BeepRuns({
 
 	return (
 		<details
+			open
 			className="group/runs rounded-lg border bg-muted/20 text-sm"
 			onToggle={(e) => setIsOpen(e.currentTarget.open)}
 		>
