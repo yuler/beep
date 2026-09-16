@@ -60,7 +60,7 @@ Examples:
 
   # Natural language via DeepSeek AI
   beep beep create -n "remind me in 30 minutes to drink water"`,
-		Args: cobra.MaximumNArgs(1),
+		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {
 				tz := flagTimezone
@@ -76,14 +76,14 @@ Examples:
 					}
 				}
 
-				// 1. Natural language creation
+				// 1. Natural language creation via -n / --natural flag
 				if flagNatural != "" {
 					return handleNaturalCreate(ctx, c, cmd, flagNatural, flagBody, flagChannels, tz)
 				}
 
-				var title string
+				var argText string
 				if len(args) > 0 {
-					title = strings.TrimSpace(args[0])
+					argText = strings.TrimSpace(strings.Join(args, " "))
 				}
 
 				schedKind := ""
@@ -100,7 +100,7 @@ Examples:
 				}
 
 				params := client.CreateBeepParams{
-					Title:        title,
+					Title:        argText,
 					Body:         flagBody,
 					ScheduleKind: schedKind,
 					ScheduleVal:  schedVal,
@@ -114,6 +114,39 @@ Examples:
 					defaultChannels := client.DefaultNotificationChannels
 					if s, err := c.GetSettings(ctx); err == nil && s != nil {
 						defaultChannels = client.SanitizeChannelDefaults(s.NotificationChannels)
+					}
+
+					// When no explicit schedule flags are given in interactive mode, default to AI proposal:
+					// 1. If args were provided (e.g. `beep create xxx`), directly pass them to AI proposal
+					// 2. If no args were provided, prompt user to choose between natural language or form
+					if schedKind == "" {
+						prompt := argText
+						if prompt == "" {
+							mode, modeErr := ui.PromptBeepCreateMode()
+							if modeErr != nil {
+								return modeErr
+							}
+							if mode == "natural" {
+								var pErr error
+								prompt, pErr = ui.PromptBeepNaturalPrompt()
+								if pErr != nil {
+									return pErr
+								}
+							}
+						}
+
+						if prompt != "" {
+							err := handleNaturalCreate(ctx, c, cmd, prompt, flagBody, flagChannels, tz)
+							if err == nil {
+								return nil
+							}
+							if strings.Contains(strings.ToLower(err.Error()), "cancelled") {
+								return nil
+							}
+							// If AI proposal failed (e.g. offline/unconfigured), warn and fall back to manual form
+							fmt.Println(ui.Warn("AI proposal unavailable (%v), falling back to form...", err))
+							params.Title = prompt
+						}
 					}
 
 					isMissingInfo := params.Title == "" || (params.ScheduleKind == "" && len(args) == 0)

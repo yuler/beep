@@ -342,3 +342,43 @@ func PromptBeepProposalAction() (string, error) {
 	}
 	return choice, nil
 }
+
+// PromptBeepCreateMode asks the user how they want to create the beep: natural language or form.
+func PromptBeepCreateMode() (string, error) {
+	var mode string = "natural"
+	err := huh.NewSelect[string]().
+		Title("Creation Mode").
+		Description("How would you like to create this beep?").
+		Options(
+			huh.NewOption("Natural language (AI prompt)", "natural"),
+			huh.NewOption("Interactive form (step-by-step)", "form"),
+		).
+		Value(&mode).
+		Run()
+	if err != nil {
+		return "", err
+	}
+	return mode, nil
+}
+
+// PromptBeepNaturalPrompt prompts for a natural language description of the beep.
+func PromptBeepNaturalPrompt() (string, error) {
+	var promptText string
+	err := huh.NewInput().
+		Title("Natural Language Prompt").
+		Description("Describe your beep in plain language (e.g. 'remind me in 30 minutes to drink water')").
+		Placeholder("e.g. Check server logs tomorrow at 10am").
+		Value(&promptText).
+		Validate(func(s string) error {
+			if strings.TrimSpace(s) == "" {
+				return errors.New("prompt is required")
+			}
+			return nil
+		}).
+		Run()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(promptText), nil
+}
+
