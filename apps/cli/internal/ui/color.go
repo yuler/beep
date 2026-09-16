@@ -112,3 +112,28 @@ func StatusBadge(status string) string {
 		return Gray(fmt.Sprintf("[%s]", status))
 	}
 }
+
+// PrintErrorList prints an error header followed by bullet-pointed error items.
+func PrintErrorList(header string, errs []string) {
+	fmt.Println()
+	fmt.Println(Error("%s:", header))
+	if len(errs) == 0 {
+		return
+	}
+	for _, err := range errs {
+		fmt.Printf("  %s %s\n", Red("•"), err)
+	}
+}
+
+// Truncate safely truncates a string to at most maxRunes, appending "..." if truncated.
+// It uses rune slicing to avoid corrupting multi-byte UTF-8 sequences.
+func Truncate(s string, maxRunes int) string {
+	runes := []rune(s)
+	if len(runes) <= maxRunes {
+		return s
+	}
+	if maxRunes <= 3 {
+		return string(runes[:maxRunes])
+	}
+	return string(runes[:maxRunes-3]) + "..."
+}

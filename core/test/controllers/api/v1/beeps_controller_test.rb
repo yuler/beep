@@ -107,6 +107,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
+    assert_includes response.parsed_body["errors"], "Title can't be blank"
   end
 
   test "create requires authentication" do
@@ -202,6 +203,27 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :no_content
     assert_nil Beep.find_by(id: beep.id)
+  end
+
+  test "destroy deletes the beep with channel deliveries" do
+    beep = @account.beeps.create!(kind: :once, title: "Call mom", run_at: @run_at)
+    run = beep.runs.create!(scheduled_for: @run_at, status: :succeeded)
+    channel = @account.channels.create!(user: users(:john), kind: :cli, name: "laptop")
+    delivery = channel.deliveries.create!(beep_run: run, payload: { title: "Test" })
+
+    assert_difference -> { Beep.count }, -1 do
+      assert_difference -> { Beep::Run.count }, -1 do
+        assert_difference -> { Channel::Delivery.count }, -1 do
+          delete "/api/v1/#{@account.slug}/beeps/#{beep.id}",
+            headers: { "Authorization" => "Bearer #{@token}" },
+            as: :json
+        end
+      end
+    end
+
+    assert_response :no_content
+    assert_nil Beep.find_by(id: beep.id)
+    assert_nil Channel::Delivery.find_by(id: delivery.id)
   end
 
   test "destroy requires authentication" do

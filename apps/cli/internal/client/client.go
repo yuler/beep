@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -353,6 +355,210 @@ func (c *Client) setAuthHeaders(req *http.Request) {
 
 func (c *Client) setHeaders(req *http.Request) {
 	c.setRunnerHeaders(req)
+}
+
+// APIError represents an error response from the server API.
+type APIError struct {
+	StatusCode int      `json:"status_code"`
+	Code       string   `json:"code"`
+	Message    string   `json:"message"`
+	Errors     []string `json:"errors"`
+}
+
+func (e *APIError) Error() string {
+	if len(e.Errors) > 1 {
+		return strings.Join(e.Errors, "; ")
+	}
+	if len(e.Errors) == 1 {
+		return e.Errors[0]
+	}
+	if e.Message != "" {
+		return e.Message
+	}
+	if e.Code != "" {
+		return e.Code
+	}
+	return fmt.Sprintf("request failed (status %d)", e.StatusCode)
+}
+
+// ExtractErrorList extracts error details from an error, prioritizing structured error lists.
+func ExtractErrorList(err error) []string {
+	if err == nil {
+		return nil
+	}
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		if len(apiErr.Errors) > 0 {
+			return apiErr.Errors
+		}
+		if apiErr.Message != "" {
+			return []string{apiErr.Message}
+		}
+	}
+	return []string{err.Error()}
+}
+
+type rawAPIErrorResponse struct {
+	Error   string          `json:"error"`
+	Message string          `json:"message"`
+	Code    string          `json:"code"`
+	Errors  json.RawMessage `json:"errors"`
+}
+
+func parseAPIError(resp *http.Response) error {
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("authentication required or session expired (status 401); please run 'beep auth login' first")
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("resource not found on server (404)")
+	}
+
+	var raw rawAPIErrorResponse
+	if err := json.Unmarshal(respBody, &raw); err == nil {
+		apiErr := &APIError{
+			StatusCode: resp.StatusCode,
+			Code:       raw.Code,
+			Message:    raw.Message,
+		}
+		if apiErr.Message == "" && raw.Error != "" {
+			apiErr.Message = raw.Error
+		}
+
+		if len(raw.Errors) > 0 {
+			var strList []string
+			if err := json.Unmarshal(raw.Errors, &strList); err == nil && len(strList) > 0 {
+				apiErr.Errors = strList
+			} else {
+				var mapList map[string][]string
+				if err := json.Unmarshal(raw.Errors, &mapList); err == nil && len(mapList) > 0 {
+					fields := make([]string, 0, len(mapList))
+					for field := range mapList {
+						fields = append(fields, field)
+					}
+					sort.Strings(fields)
+					for _, field := range fields {
+						for _, m := range mapList[field] {
+							apiErr.Errors = append(apiErr.Errors, fmt.Sprintf("%s %s", field, m))
+						}
+					}
+				} else {
+					var mapAny map[string]any
+					if err := json.Unmarshal(raw.Errors, &mapAny); err == nil && len(mapAny) > 0 {
+						fields := make([]string, 0, len(mapAny))
+						for field := range mapAny {
+							fields = append(fields, field)
+						}
+						sort.Strings(fields)
+						for _, field := range fields {
+							apiErr.Errors = append(apiErr.Errors, fmt.Sprintf("%s: %v", field, mapAny[field]))
+						}
+					}
+				}
+			}
+		}
+
+		if len(apiErr.Errors) == 0 && apiErr.Message != "" {
+			apiErr.Errors = []string{apiErr.Message}
+		}
+
+		if apiErr.Message != "" || len(apiErr.Errors) > 0 {
+			return apiErr
+		}
+	}
+
+	trimmed := strings.TrimSpace(string(respBody))
+	if trimmed != "" {
+		if len(trimmed) > 500 {
+			trimmed = trimmed[:500] + "..."
+		}
+		return fmt.Errorf("request failed (status %d): %s", resp.StatusCode, trimmed)
+	}
+	return fmt.Errorf("request failed (status %d)", resp.StatusCode)
+}
+
+func (c *Client) getAuthJSON(ctx context.Context, url string, dest any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	c.setAuthHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return parseAPIError(resp)
+	}
+	if dest == nil {
+		io.Copy(io.Discard, resp.Body)
+		return nil
+	}
+	return json.NewDecoder(resp.Body).Decode(dest)
+}
+
+func (c *Client) postAuthJSON(ctx context.Context, url string, payload any, want int, dest any) error {
+	var body io.Reader
+	if payload != nil {
+		body = mustJSON(payload)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+	if err != nil {
+		return err
+	}
+	c.setAuthHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != want {
+		return parseAPIError(resp)
+	}
+	if dest == nil {
+		io.Copy(io.Discard, resp.Body)
+		return nil
+	}
+	return json.NewDecoder(resp.Body).Decode(dest)
+}
+
+func (c *Client) deleteAuth(ctx context.Context, url string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	c.setAuthHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return parseAPIError(resp)
+	}
+	return nil
+}
+
+func (c *Client) deleteAuthJSON(ctx context.Context, url string, dest any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	c.setAuthHeaders(req)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return parseAPIError(resp)
+	}
+	if dest != nil && resp.StatusCode == http.StatusOK {
+		return json.NewDecoder(resp.Body).Decode(dest)
+	}
+	io.Copy(io.Discard, resp.Body)
+	return nil
 }
 
 type CliDelivery struct {

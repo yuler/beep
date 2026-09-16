@@ -29,7 +29,8 @@ class Api::V1::BeepersController < Api::V1::BaseController
         render_json_error(
           status: :unprocessable_entity,
           message: @beeper.errors.full_messages.to_sentence,
-          code: "VALIDATION_ERROR"
+          code: "VALIDATION_ERROR",
+          errors: @beeper.errors.full_messages
         )
       end
     else
@@ -50,7 +51,8 @@ class Api::V1::BeepersController < Api::V1::BaseController
       render_json_error(
         status: :unprocessable_entity,
         message: @beeper.errors.full_messages.to_sentence,
-        code: "VALIDATION_ERROR"
+        code: "VALIDATION_ERROR",
+        errors: @beeper.errors.full_messages
       )
     end
   end

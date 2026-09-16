@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"beep/cmd/beep"
+	"beep/cmd/beeper"
 	"beep/internal/config"
 	"beep/internal/ui"
 	"beep/internal/updater"
@@ -15,6 +17,8 @@ import (
 var (
 	flagNoColor       bool
 	flagNoInteractive bool
+	flagAccount       string
+	flagJSON          bool
 )
 
 // skipUpdateHooks returns true for commands that should not trigger background
@@ -67,13 +71,43 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&flagWorkspace, "workspace", "w", "", fmt.Sprintf("Local job workspace directory (default %s, env: BEEP_WORKSPACE)", config.DefaultWorkspaceDisplay()))
 	RootCmd.PersistentFlags().StringVarP(&flagServer, "server", "s", "", "Beep server URL (env: BEEP_SERVER)")
 	RootCmd.PersistentFlags().StringVarP(&flagToken, "token", "t", "", "Runner authentication token (env: BEEP_RUNNER_TOKEN)")
+	RootCmd.PersistentFlags().StringVarP(&flagAccount, "account", "a", "", "Account slug to operate on (defaults to config account_slug or personal account; env: BEEP_ACCOUNT)")
+	RootCmd.PersistentFlags().BoolVar(&flagJSON, "json", false, "Output results in JSON format")
+
+	// Command groups
+	RootCmd.AddGroup(
+		&cobra.Group{ID: "beeps", Title: "Beep Commands:"},
+	)
+
+	// Flattened beep commands (canonical)
+	beepCommands := []*cobra.Command{
+		beep.NewCmdList(),
+		beep.NewCmdShow(),
+		beep.NewCmdCreate(),
+		beep.NewCmdDelete(),
+		beep.NewCmdPause(),
+		beep.NewCmdResume(),
+		beep.NewCmdRun(),
+	}
+	for _, cmd := range beepCommands {
+		cmd.GroupID = "beeps"
+		RootCmd.AddCommand(cmd)
+	}
+
+	// Legacy beep namespace (hidden compatibility alias)
+	legacyBeepCmd := beep.NewCmdBeep()
+	legacyBeepCmd.Hidden = true
+	RootCmd.AddCommand(legacyBeepCmd)
+
+	// Beeper commands
+	RootCmd.AddCommand(beeper.NewCmdBeeper())
 
 	// Daemon commands
 	RootCmd.AddCommand(newUpCmd())
 	RootCmd.AddCommand(newStopCmd())
 	RootCmd.AddCommand(newStatusCmd())
 
-	// Top-level subcommands
+	// System / management subcommands
 	RootCmd.AddCommand(authCmd)
 	RootCmd.AddCommand(runnerCmd)
 	RootCmd.AddCommand(channelCmd)

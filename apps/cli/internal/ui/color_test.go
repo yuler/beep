@@ -25,3 +25,32 @@ func TestColorFormatting(t *testing.T) {
 		t.Fatalf("expected plain string when disabled, got %q", resNoColor)
 	}
 }
+
+func TestPrintErrorList(t *testing.T) {
+	SetEnabled(false)
+	// Should not panic on empty or populated lists
+	PrintErrorList("Creation failed", nil)
+	PrintErrorList("Creation failed", []string{"Title can't be blank", "Run at must be in the future"})
+}
+
+func TestTruncate(t *testing.T) {
+	if got := Truncate("hello", 10); got != "hello" {
+		t.Errorf("expected 'hello', got %q", got)
+	}
+	if got := Truncate("hello world", 8); got != "hello..." {
+		t.Errorf("expected 'hello...', got %q", got)
+	}
+	// Multi-byte Chinese characters
+	chinese := "这是一个非常长的测试提醒标题用于验证截断"
+	truncated := Truncate(chinese, 10)
+	if len([]rune(truncated)) != 10 {
+		t.Errorf("expected 10 runes, got %d runes (%q)", len([]rune(truncated)), truncated)
+	}
+	if !strings.HasSuffix(truncated, "...") {
+		t.Errorf("expected suffix '...', got %q", truncated)
+	}
+	// Small maxRunes
+	if got := Truncate("abcde", 2); got != "ab" {
+		t.Errorf("expected 'ab', got %q", got)
+	}
+}

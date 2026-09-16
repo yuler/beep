@@ -31,9 +31,8 @@ var (
 
 func newUpCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "up",
-		Aliases: []string{"run"},
-		Short:   "Start daemon services to listen for notifications and execute tasks",
+		Use:   "up",
+		Short: "Start daemon services to listen for notifications and execute tasks",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUp(cmd, args)
 		},

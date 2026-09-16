@@ -48,8 +48,12 @@ var configSetCmd = &cobra.Command{
 			fc.ServerURL = strings.TrimRight(flagSetConfig.ServerURL, "/")
 			updated = true
 		}
-		if flagSetConfig.AccountSlug != "" {
-			fc.AccountSlug = strings.TrimSpace(flagSetConfig.AccountSlug)
+		accountVal := flagSetConfig.AccountSlug
+		if accountVal == "" && flagAccount != "" {
+			accountVal = flagAccount
+		}
+		if accountVal != "" {
+			fc.AccountSlug = strings.TrimSpace(accountVal)
 			updated = true
 		}
 		if flagSetConfig.RunnerToken != "" {
@@ -217,7 +221,6 @@ func init() {
 	configCmd.Flags().BoolVar(&flagShowToken, "show-token", false, "Display unmasked runner token")
 
 	configSetCmd.Flags().StringVar(&flagSetConfig.ServerURL, "server", "", "Beep server URL")
-	configSetCmd.Flags().StringVarP(&flagSetConfig.AccountSlug, "account", "a", "", "Account slug")
 	configSetCmd.Flags().StringVar(&flagSetConfig.RunnerToken, "token", "", "Runner token")
 	configSetCmd.Flags().StringVar(&flagSetConfig.Workspace, "workspace", "", "Workspace directory")
 	configSetCmd.Flags().IntVar(&flagSetConfig.Concurrency, "concurrency", 0, "Max concurrency")
