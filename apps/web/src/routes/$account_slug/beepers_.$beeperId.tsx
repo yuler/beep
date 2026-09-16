@@ -16,7 +16,7 @@ import {
 	Trash2,
 	Webhook,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { EditBeeperDialog } from "@/components/beepers/edit-beeper-dialog";
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -120,6 +120,8 @@ function BeeperDetailPage() {
 	const [runs, setRuns] = useState<BeeperRun[]>(initialRuns);
 	const [pagination, setPagination] = useState(initialPagination);
 	const [isLoadingMoreRuns, setIsLoadingMoreRuns] = useState(false);
+	const [isRunsOpen, setIsRunsOpen] = useState(false);
+	const runsSentinelRef = useRef<HTMLDivElement | null>(null);
 	const [deleting, setDeleting] = useState(false);
 	const [triggering, setTriggering] = useState(false);
 	const [togglingStatus, setTogglingStatus] = useState(false);
@@ -132,7 +134,7 @@ function BeeperDetailPage() {
 		setPagination(initialPagination);
 	}, [initialRuns, initialPagination]);
 
-	async function loadMoreRuns() {
+	const loadMoreRuns = useCallback(async () => {
 		if (isLoadingMoreRuns || !pagination?.has_more || !pagination.next_page)
 			return;
 		setIsLoadingMoreRuns(true);
@@ -151,7 +153,25 @@ function BeeperDetailPage() {
 		} finally {
 			setIsLoadingMoreRuns(false);
 		}
-	}
+	}, [isLoadingMoreRuns, pagination, slug, beeper.id]);
+
+	useEffect(() => {
+		if (!isRunsOpen || !pagination?.has_more) return;
+		const node = runsSentinelRef.current;
+		if (!node) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					void loadMoreRuns();
+				}
+			},
+			{ rootMargin: "150px" },
+		);
+
+		observer.observe(node);
+		return () => observer.disconnect();
+	}, [isRunsOpen, pagination?.has_more, loadMoreRuns]);
 
 	const pingUrl = beeper.ping_token
 		? `${publicApiOrigin()}/api/v1/beeper_apps/heartbeat/pings/${beeper.ping_token}`
@@ -554,11 +574,16 @@ function BeeperDetailPage() {
 				/>
 
 				<div>
-					<details className="group/runs rounded-lg border bg-muted/20 text-sm">
+					<details
+						className="group/runs rounded-lg border bg-muted/20 text-sm"
+						onToggle={(e) => setIsRunsOpen(e.currentTarget.open)}
+					>
 						<summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
 							<ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open/runs:rotate-90" />
 							<span className="font-medium">{m.beepers_execution_runs()}</span>
-							<span className="text-muted-foreground">{runs.length}</span>
+							<span className="text-muted-foreground">
+								{pagination?.total_count ?? runs.length}
+							</span>
 						</summary>
 						{runs.length === 0 ? (
 							<p className="border-t px-3 py-2 text-xs text-muted-foreground">
@@ -634,7 +659,10 @@ function BeeperDetailPage() {
 							</ul>
 						)}
 						{pagination?.has_more ? (
-							<div className="flex justify-center border-t p-2">
+							<div
+								ref={runsSentinelRef}
+								className="flex justify-center border-t p-2"
+							>
 								<Button
 									type="button"
 									variant="ghost"

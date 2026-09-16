@@ -112,7 +112,7 @@ Rails.application.routes.draw do
       resources :beeps, only: %i[ index show create update destroy ] do
         scope module: :beeps do
           resource :pause, only: %i[ create destroy ]
-          resources :runs, only: :create
+          resources :runs, only: %i[ index create ]
         end
       end
 

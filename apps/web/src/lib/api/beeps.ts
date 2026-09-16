@@ -78,6 +78,27 @@ export function fetchBeep(slug: string, beepId: string) {
 	});
 }
 
+export type BeepRunsResponse = {
+	runs: BeepRun[];
+	pagination?: PaginationMeta;
+};
+
+export function fetchBeepRuns(
+	slug: string,
+	beepId: string,
+	options?: { page?: string | null },
+) {
+	const query = options?.page
+		? `?page=${encodeURIComponent(options.page)}`
+		: "";
+	return apiFetch<BeepRunsResponse>(
+		`/api/v1/${slug}/beeps/${beepId}/runs${query}`,
+		{
+			method: "GET",
+		},
+	);
+}
+
 export function createBeep(
 	slug: string,
 	body: {
