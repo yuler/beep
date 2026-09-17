@@ -21,8 +21,6 @@ with:
 
   %s completion install
 
-The generated completions automatically support both 'beep' and 'beep-local'.
-
 If you prefer to configure it manually, follow the instructions below:
 
 ### bash
@@ -69,105 +67,7 @@ func initCompletionCmd() {
 			c.Short = "Generate shell completion scripts or install completion to your shell"
 			c.Long = getCompletionHelpText(binName)
 			c.AddCommand(newCmdCompletionInstall())
-			wrapShellCompletions(c)
 			break
-		}
-	}
-}
-
-func wrapShellCompletions(completionCmd *cobra.Command) {
-	for _, sub := range completionCmd.Commands() {
-		switch sub.Name() {
-		case "bash":
-			origRunE := sub.RunE
-			sub.RunE = func(cmd *cobra.Command, args []string) error {
-				if origRunE != nil {
-					if err := origRunE(cmd, args); err != nil {
-						return err
-					}
-				}
-				binName := config.BinaryName()
-				otherBin := "beep-local"
-				if binName == "beep-local" {
-					otherBin = "beep"
-				}
-				fnName := "__start_" + binName
-				w := cmd.OutOrStdout()
-				fmt.Fprintf(w, `
-# Register completion for %s
-if [[ $(type -t compopt) = "builtin" ]]; then
-    complete -o default -F %s %s 2>/dev/null || true
-else
-    complete -o default -o nospace -F %s %s 2>/dev/null || true
-fi
-`, otherBin, fnName, otherBin, fnName, otherBin)
-				return nil
-			}
-		case "zsh":
-			origRunE := sub.RunE
-			sub.RunE = func(cmd *cobra.Command, args []string) error {
-				if origRunE != nil {
-					if err := origRunE(cmd, args); err != nil {
-						return err
-					}
-				}
-				binName := config.BinaryName()
-				otherBin := "beep-local"
-				if binName == "beep-local" {
-					otherBin = "beep"
-				}
-				fnName := "_" + binName
-				w := cmd.OutOrStdout()
-				fmt.Fprintf(w, `
-# Register completion for %s
-compdef %s %s 2>/dev/null || true
-`, otherBin, fnName, otherBin)
-				return nil
-			}
-		case "fish":
-			origRunE := sub.RunE
-			sub.RunE = func(cmd *cobra.Command, args []string) error {
-				if origRunE != nil {
-					if err := origRunE(cmd, args); err != nil {
-						return err
-					}
-				}
-				binName := config.BinaryName()
-				otherBin := "beep-local"
-				if binName == "beep-local" {
-					otherBin = "beep"
-				}
-				sanitized := strings.ReplaceAll(binName, "-", "_")
-				w := cmd.OutOrStdout()
-				fmt.Fprintf(w, `
-# Register completion for %s
-complete -c %s -e 2>/dev/null || true
-complete -c %s -n '__%s_clear_perform_completion_once_result' 2>/dev/null || true
-complete -c %s -n 'not __%s_requires_order_preservation && __%s_prepare_completions' -f -a '$__%s_comp_results' 2>/dev/null || true
-complete -k -c %s -n '__%s_requires_order_preservation && __%s_prepare_completions' -f -a '$__%s_comp_results' 2>/dev/null || true
-`, otherBin, otherBin, otherBin, sanitized, otherBin, sanitized, sanitized, sanitized, otherBin, sanitized, sanitized, sanitized)
-				return nil
-			}
-		case "powershell":
-			origRunE := sub.RunE
-			sub.RunE = func(cmd *cobra.Command, args []string) error {
-				if origRunE != nil {
-					if err := origRunE(cmd, args); err != nil {
-						return err
-					}
-				}
-				binName := config.BinaryName()
-				otherBin := "beep-local"
-				if binName == "beep-local" {
-					otherBin = "beep"
-				}
-				w := cmd.OutOrStdout()
-				fmt.Fprintf(w, `
-# Register completion for %s
-Register-ArgumentCompleter -Native -CommandName '%s' -ScriptBlock $scriptblock -ErrorAction SilentlyContinue
-`, otherBin, otherBin)
-				return nil
-			}
 		}
 	}
 }

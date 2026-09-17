@@ -82,7 +82,7 @@ func TestCompletionScripts(t *testing.T) {
 	}
 }
 
-func TestCompletionSubcommandsIncludeBeepLocal(t *testing.T) {
+func TestCompletionSubcommandsClean(t *testing.T) {
 	shells := []string{"bash", "zsh", "fish", "powershell"}
 	for _, shell := range shells {
 		t.Run(shell, func(t *testing.T) {
@@ -96,8 +96,8 @@ func TestCompletionSubcommandsIncludeBeepLocal(t *testing.T) {
 				t.Fatalf("completion %s failed: %v", shell, err)
 			}
 			out := buf.String()
-			if !strings.Contains(out, "beep-local") {
-				t.Errorf("expected completion %s script to include 'beep-local' registration", shell)
+			if strings.Contains(out, "beep-local") {
+				t.Errorf("completion %s script should not include 'beep-local' by default", shell)
 			}
 		})
 	}
