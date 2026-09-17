@@ -53,14 +53,7 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 	cmd := exec.Command(exe, childArgs...)
 	cmd.Env = append(os.Environ(), "BEEP_DAEMON_CHILD=1")
 	if service == daemon.ServiceChannel {
-		token := cfg.ChannelToken
-		if token == "" {
-			token = cfg.CliToken
-		}
-		if token == "" {
-			token = cfg.DeviceToken
-		}
-		if token != "" {
+		if token := cfg.ChannelAuthToken(); token != "" {
 			cmd.Env = append(cmd.Env, "BEEP_CHANNEL_TOKEN="+token)
 		}
 	} else if service == daemon.ServiceRunner && cfg.RunnerToken != "" {
@@ -180,14 +173,7 @@ func ShowSingleServiceStatus(service string, cfg *config.Config) error {
 			fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(config.MaskToken(cfg.RunnerToken))))
 		}
 		if service == daemon.ServiceChannel {
-			chToken := cfg.ChannelToken
-			if chToken == "" {
-				chToken = cfg.CliToken
-			}
-			if chToken == "" {
-				chToken = cfg.DeviceToken
-			}
-			if chToken != "" {
+			if chToken := cfg.ChannelAuthToken(); chToken != "" {
 				fmt.Println(ui.KeyValue("Channel Token", ui.Yellow(config.MaskToken(chToken))))
 			}
 		}
@@ -203,14 +189,7 @@ func ShowSingleServiceStatus(service string, cfg *config.Config) error {
 			fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(config.MaskToken(cfg.RunnerToken))))
 		}
 		if service == daemon.ServiceChannel {
-			chToken := cfg.ChannelToken
-			if chToken == "" {
-				chToken = cfg.CliToken
-			}
-			if chToken == "" {
-				chToken = cfg.DeviceToken
-			}
-			if chToken != "" {
+			if chToken := cfg.ChannelAuthToken(); chToken != "" {
 				fmt.Println(ui.KeyValue("Channel Token", ui.Yellow(config.MaskToken(chToken))))
 			}
 		}
@@ -272,13 +251,7 @@ func RunRunnerService(cfg *config.Config, daemonMode bool, rawArgs []string) err
 
 // RunChannelService runs the channel daemon either in background or foreground.
 func RunChannelService(cfg *config.Config, daemonMode bool, rawArgs []string) error {
-	token := cfg.ChannelToken
-	if token == "" {
-		token = cfg.CliToken
-	}
-	if token == "" {
-		token = cfg.DeviceToken
-	}
+	token := cfg.ChannelAuthToken()
 	if token == "" {
 		return fmt.Errorf("channel token is not configured (run '%s channel connect')", config.BinaryName())
 	}
@@ -338,6 +311,8 @@ func StripDaemonFlags(args []string) []string {
 }
 
 // BuildServiceChildArgs builds the arguments passed to the spawned child process.
+// Token flags are stripped so they do not appear in the child process list;
+// StartServiceBackgroundDaemon injects tokens from cfg via the environment instead.
 func BuildServiceChildArgs(service string, args []string) []string {
 	stripped := StripDaemonFlags(args)
 	var flags []string

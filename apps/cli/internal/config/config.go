@@ -44,6 +44,27 @@ type Config struct {
 	ConfigFile   string
 }
 
+// ChannelAuthToken returns the channel token, falling back to CLI then device tokens.
+func (c *Config) ChannelAuthToken() string {
+	if c.ChannelToken != "" {
+		return c.ChannelToken
+	}
+	if c.CliToken != "" {
+		return c.CliToken
+	}
+	return c.DeviceToken
+}
+
+// HasChannelService reports whether a channel daemon can be started with the current config.
+func (c *Config) HasChannelService() bool {
+	return c.ChannelAuthToken() != ""
+}
+
+// HasRunnerService reports whether a runner daemon can be started with the current config.
+func (c *Config) HasRunnerService() bool {
+	return c.RunnerToken != ""
+}
+
 var (
 	// DefaultServerURL is injected at build time using -ldflags.
 	DefaultServerURL = ""

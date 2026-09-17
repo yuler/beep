@@ -1,6 +1,9 @@
 package service
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/spf13/cobra"
 )
 
@@ -21,4 +24,15 @@ func NewCmdService() *cobra.Command {
 	cmd.AddCommand(NewCmdStatus())
 
 	return cmd
+}
+
+func parseServiceArg(args []string) (string, error) {
+	if len(args) == 0 {
+		return "", nil
+	}
+	target := strings.ToLower(args[0])
+	if target != "runner" && target != "channel" {
+		return "", fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+	}
+	return target, nil
 }

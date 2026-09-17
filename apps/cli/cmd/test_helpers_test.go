@@ -7,10 +7,22 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"beep/internal/config"
+
+	"github.com/spf13/cobra"
 )
+
+func mustFindCmd(t *testing.T, path ...string) *cobra.Command {
+	t.Helper()
+	cmd, _, err := RootCmd.Find(path)
+	if err != nil {
+		t.Fatalf("failed to find %q: %v", strings.Join(path, " "), err)
+	}
+	return cmd
+}
 
 func setupCLITestEnv(t *testing.T, handler http.HandlerFunc) (string, func()) {
 	server := httptest.NewServer(handler)

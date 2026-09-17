@@ -132,11 +132,16 @@ func TestStatusAndStopCommandRegistration(t *testing.T) {
 }
 
 func TestServiceCommandRegistration(t *testing.T) {
-	// Root level commands must NOT have up, stop, status directly
 	for _, name := range []string{"up", "stop", "status"} {
-		cmd, _, _ := RootCmd.Find([]string{name})
-		if cmd != nil && cmd.Name() == name && cmd.Parent() == RootCmd {
-			t.Errorf("expected %q not to be a direct root command", name)
+		for _, cmd := range RootCmd.Commands() {
+			if cmd.Name() == name {
+				t.Errorf("expected %q not to be a top-level command", name)
+			}
+			for _, alias := range cmd.Aliases {
+				if alias == name {
+					t.Errorf("expected %q not to be a top-level alias of %q", name, cmd.Name())
+				}
+			}
 		}
 	}
 

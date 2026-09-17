@@ -106,7 +106,7 @@ func TestRunnerConnectRequiresLogin(t *testing.T) {
 		flagNoInteractive = false
 	}()
 
-	cmd := newRunnerConnectCmd()
+	cmd := mustFindCmd(t, "runner", "connect")
 	err = cmd.RunE(cmd, nil)
 	if err == nil {
 		t.Fatal("expected runner connect to fail without login, but got nil")
@@ -139,7 +139,8 @@ func TestChannelConnectRequiresLogin(t *testing.T) {
 		flagNoInteractive = false
 	}()
 
-	err = channelConnectCmd.RunE(channelConnectCmd, nil)
+	cmd := mustFindCmd(t, "channel", "connect")
+	err = cmd.RunE(cmd, nil)
 	if err == nil {
 		t.Fatal("expected channel connect to fail without login, but got nil")
 	}
@@ -211,7 +212,7 @@ func TestRunnerConnectSucceedsPastLoginWhenLoggedIn(t *testing.T) {
 		flagNoInteractive = false
 	}()
 
-	cmd := newRunnerConnectCmd()
+	cmd := mustFindCmd(t, "runner", "connect")
 	_ = cmd.RunE(cmd, nil)
 
 	if gotMeAuth != "Bearer beep_pat_logged_in" {

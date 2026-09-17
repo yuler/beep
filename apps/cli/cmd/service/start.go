@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"time"
 
@@ -38,12 +37,9 @@ func NewCmdStart() *cobra.Command {
 		Short:   "Start daemon services to listen for notifications and execute tasks",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			target := ""
-			if len(args) > 0 {
-				target = strings.ToLower(args[0])
-			}
-			if target != "" && target != "runner" && target != "channel" {
-				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+			target, err := parseServiceArg(args)
+			if err != nil {
+				return err
 			}
 
 			cfg, err := cmdutil.LoadConfig(cmd)
@@ -79,8 +75,8 @@ func NewCmdStart() *cobra.Command {
 }
 
 func runStartAll(cfg *config.Config, daemonMode bool) error {
-	hasRunner := cfg.RunnerToken != ""
-	hasChannel := cfg.ChannelToken != "" || cfg.CliToken != "" || cfg.DeviceToken != ""
+	hasRunner := cfg.HasRunnerService()
+	hasChannel := cfg.HasChannelService()
 
 	if !hasRunner && !hasChannel {
 		return fmt.Errorf("no services configured. To configure:\n  Runner:  set BEEP_RUNNER_TOKEN or configure config.json\n  Channel: run '%s channel connect'", config.BinaryName())
@@ -161,7 +157,7 @@ func runStartAll(cfg *config.Config, daemonMode bool) error {
 		}
 		go func() {
 			defer wg.Done()
-			if err := r.Run(ctx); err != nil && err != context.Canceled {
+			if err := r.Run(ctx); err != nil && ctx.Err() == nil {
 				runnerErr = err
 				cancel()
 			}
@@ -177,7 +173,7 @@ func runStartAll(cfg *config.Config, daemonMode bool) error {
 		}
 		go func() {
 			defer wg.Done()
-			if err := ch.Run(ctx); err != nil && err != context.Canceled {
+			if err := ch.Run(ctx); err != nil && ctx.Err() == nil {
 				channelErr = err
 				cancel()
 			}

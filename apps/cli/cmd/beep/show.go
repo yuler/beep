@@ -90,7 +90,9 @@ func NewCmdShow() *cobra.Command {
 							FormatRunStatus(r.Status),
 						)
 					}
-					_ = tbl.Print()
+					if err := tbl.Print(); err != nil {
+						return err
+					}
 				}
 				fmt.Println()
 				return nil

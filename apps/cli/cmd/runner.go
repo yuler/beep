@@ -6,8 +6,6 @@ import (
 	cmdrunner "beep/cmd/runner"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
-
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -17,44 +15,6 @@ var (
 )
 
 var runnerCmd = cmdrunner.NewCmdRunner()
-
-func newRunnerConnectCmd() *cobra.Command {
-	cmd := cmdrunner.NewCmdConnect()
-	origRunE := cmd.RunE
-	cmd.RunE = func(c *cobra.Command, args []string) error {
-		if flagWorkspace != "" {
-			cmdutil.SetOverrideWorkspace(flagWorkspace)
-			defer cmdutil.SetOverrideWorkspace("")
-		}
-		return origRunE(c, args)
-	}
-	return cmd
-}
-
-func newRunnerDisconnectCmd() *cobra.Command {
-	cmd := cmdrunner.NewCmdDisconnect()
-	origRunE := cmd.RunE
-	cmd.RunE = func(c *cobra.Command, args []string) error {
-		if flagWorkspace != "" {
-			cmdutil.SetOverrideWorkspace(flagWorkspace)
-			defer cmdutil.SetOverrideWorkspace("")
-		}
-		return origRunE(c, args)
-	}
-	return cmd
-}
-
-func newRunnerUpCmd() *cobra.Command {
-	return cmdrunner.NewCmdUp()
-}
-
-func newRunnerStopCmd() *cobra.Command {
-	return cmdrunner.NewCmdStop()
-}
-
-func newRunnerStatusCmd() *cobra.Command {
-	return cmdrunner.NewCmdStatus()
-}
 
 func loadConfig() (*config.Config, error) {
 	workspace := flagWorkspace

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"beep/internal/cliservice"
@@ -36,12 +35,9 @@ services to restart. In non-interactive environments (e.g. CI or scripts),
 restarts all configured services.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			target := ""
-			if len(args) > 0 {
-				target = strings.ToLower(args[0])
-			}
-			if target != "" && target != "runner" && target != "channel" {
-				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+			target, err := parseServiceArg(args)
+			if err != nil {
+				return err
 			}
 
 			cfg, err := cmdutil.LoadConfig(cmd)
@@ -83,18 +79,11 @@ restarts all configured services.`,
 func restartService(service string, cfg *config.Config, timeout time.Duration, force bool) error {
 	switch service {
 	case daemon.ServiceRunner:
-		if cfg.RunnerToken == "" {
+		if !cfg.HasRunnerService() {
 			return fmt.Errorf("runner token is not configured (set via BEEP_RUNNER_TOKEN or config.json)")
 		}
 	case daemon.ServiceChannel:
-		token := cfg.ChannelToken
-		if token == "" {
-			token = cfg.CliToken
-		}
-		if token == "" {
-			token = cfg.DeviceToken
-		}
-		if token == "" {
+		if !cfg.HasChannelService() {
 			return fmt.Errorf("channel token is not configured (run '%s channel connect')", config.BinaryName())
 		}
 	}
@@ -115,8 +104,8 @@ func restartService(service string, cfg *config.Config, timeout time.Duration, f
 }
 
 func restartAll(cfg *config.Config, timeout time.Duration, force bool) error {
-	hasRunner := cfg.RunnerToken != ""
-	hasChannel := cfg.ChannelToken != "" || cfg.CliToken != "" || cfg.DeviceToken != ""
+	hasRunner := cfg.HasRunnerService()
+	hasChannel := cfg.HasChannelService()
 
 	if !hasRunner && !hasChannel {
 		return fmt.Errorf("no services configured. To configure:\n  Runner:  set BEEP_RUNNER_TOKEN or configure config.json\n  Channel: run '%s channel connect'", config.BinaryName())
@@ -154,8 +143,8 @@ func promptRestartServices(options []huh.Option[string], defaultSelected []strin
 }
 
 func restartInteractive(cfg *config.Config, timeout time.Duration, force bool) error {
-	hasRunner := cfg.RunnerToken != ""
-	hasChannel := cfg.ChannelToken != "" || cfg.CliToken != "" || cfg.DeviceToken != ""
+	hasRunner := cfg.HasRunnerService()
+	hasChannel := cfg.HasChannelService()
 
 	if !hasRunner && !hasChannel {
 		return fmt.Errorf("no services configured. To configure:\n  Runner:  set BEEP_RUNNER_TOKEN or configure config.json\n  Channel: run '%s channel connect'", config.BinaryName())

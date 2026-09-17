@@ -60,7 +60,8 @@ func TestDisconnectCommandClearsToken(t *testing.T) {
 	flagWorkspace = tmpDir
 	defer func() { flagWorkspace = "" }()
 
-	err := channelDisconnectCmd.RunE(channelDisconnectCmd, nil)
+	cmd := mustFindCmd(t, "channel", "disconnect")
+	err := cmd.RunE(cmd, nil)
 	if err != nil {
 		t.Fatalf("channel disconnect failed: %v", err)
 	}
@@ -105,7 +106,8 @@ func TestDisconnectCommandClearsTokenWhenServerGone(t *testing.T) {
 	flagWorkspace = tmpDir
 	defer func() { flagWorkspace = "" }()
 
-	if err := channelDisconnectCmd.RunE(channelDisconnectCmd, nil); err != nil {
+	cmd := mustFindCmd(t, "channel", "disconnect")
+	if err := cmd.RunE(cmd, nil); err != nil {
 		t.Fatalf("channel disconnect failed: %v", err)
 	}
 
@@ -250,8 +252,9 @@ func TestChannelConnectAutomaticallyStartsDaemon(t *testing.T) {
 		return nil
 	}
 
-	if err := channelConnectCmd.RunE(channelConnectCmd, nil); err != nil {
-		t.Fatalf("channelConnectCmd failed: %v", err)
+	cmd := mustFindCmd(t, "channel", "connect")
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatalf("channel connect failed: %v", err)
 	}
 
 	if startedService != "channel" {

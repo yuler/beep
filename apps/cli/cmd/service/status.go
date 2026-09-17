@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"beep/internal/cliservice"
@@ -21,12 +20,9 @@ func NewCmdStatus() *cobra.Command {
 		Short: "Check running status and information of Beep services",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			target := ""
-			if len(args) > 0 {
-				target = strings.ToLower(args[0])
-			}
-			if target != "" && target != "runner" && target != "channel" {
-				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+			target, err := parseServiceArg(args)
+			if err != nil {
+				return err
 			}
 
 			cfg, err := cmdutil.LoadConfig(cmd)
@@ -58,14 +54,6 @@ func runStatusAll(cfg *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to query channel daemon status: %w", err)
 	}
-
-	fmt.Println(ui.Bold(ui.Cyan("Beep Status:")))
-	fmt.Println(ui.KeyValue("Workspace", ui.Dim(cfg.Workspace)))
-	if cfg.ServerURL != "" {
-		fmt.Println(ui.KeyValue("Server", ui.Bold(cfg.ServerURL)))
-	}
-	printAuthStatus(cfg)
-	fmt.Println()
 
 	// Runner Section
 	fmt.Println(ui.Bold("● Runner Service:"))
@@ -100,13 +88,7 @@ func runStatusAll(cfg *config.Config) error {
 	}
 	fmt.Printf("  %s %s\n", ui.Dim("Socket:"), daemon.SocketPath(cfg.Workspace, daemon.ServiceChannel))
 	fmt.Printf("  %s %s\n", ui.Dim("Logs:  "), daemon.DailyLogPath(cfg.Workspace, daemon.ServiceChannel, today))
-	chToken := cfg.ChannelToken
-	if chToken == "" {
-		chToken = cfg.CliToken
-	}
-	if chToken == "" {
-		chToken = cfg.DeviceToken
-	}
+	chToken := cfg.ChannelAuthToken()
 	if chToken != "" {
 		fmt.Printf("  %s %s\n", ui.Dim("Token: "), ui.Yellow(config.MaskToken(chToken)))
 	} else {
@@ -123,27 +105,4 @@ func runStatusAll(cfg *config.Config) error {
 	}
 
 	return nil
-}
-
-func printAuthStatus(cfg *config.Config) {
-	if cfg.IsLoggedIn() {
-		fmt.Println(ui.KeyValue("Auth", ui.Green("logged in")+" "+ui.Green("●")))
-		user := cfg.UserEmail
-		if cfg.UserName != "" && cfg.UserEmail != "" {
-			user = fmt.Sprintf("%s (%s)", cfg.UserName, cfg.UserEmail)
-		} else if cfg.UserName != "" {
-			user = cfg.UserName
-		}
-		if user != "" {
-			fmt.Println(ui.KeyValue("User", ui.Cyan(user)))
-		}
-		if cfg.AccountSlug != "" {
-			fmt.Println(ui.KeyValue("Account", ui.Yellow(cfg.AccountSlug)))
-		}
-		if cfg.AccessToken != "" {
-			fmt.Println(ui.KeyValue("Token", ui.Yellow(config.MaskToken(cfg.AccessToken))))
-		}
-	} else {
-		fmt.Println(ui.KeyValue("Auth", ui.Dim("not logged in")+" "+ui.Dim("○")))
-	}
 }

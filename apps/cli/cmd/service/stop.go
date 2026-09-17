@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"beep/internal/cliservice"
@@ -26,12 +25,9 @@ func NewCmdStop() *cobra.Command {
 		Short:   "Stop running Beep daemon services (runner and channel)",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			target := ""
-			if len(args) > 0 {
-				target = strings.ToLower(args[0])
-			}
-			if target != "" && target != "runner" && target != "channel" {
-				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+			target, err := parseServiceArg(args)
+			if err != nil {
+				return err
 			}
 
 			cfg, err := cmdutil.LoadConfig(cmd)

@@ -82,6 +82,25 @@ func TestGhHelpFormatting(t *testing.T) {
 	}
 }
 
+func TestCompletionHelpSortsInstallFirst(t *testing.T) {
+	completionCmd, _, err := RootCmd.Find([]string{"completion"})
+	if err != nil {
+		t.Fatalf("failed to find completion command: %v", err)
+	}
+
+	var buf bytes.Buffer
+	if err := RenderGhHelp(&buf, completionCmd); err != nil {
+		t.Fatalf("RenderGhHelp failed: %v", err)
+	}
+
+	out := buf.String()
+	installIdx := strings.Index(out, "install:")
+	bashIdx := strings.Index(out, "bash:")
+	if installIdx == -1 || bashIdx == -1 || installIdx > bashIdx {
+		t.Errorf("expected 'install:' before 'bash:' in completion help, got:\n%s", out)
+	}
+}
+
 func TestSubcommandHelpFormatting(t *testing.T) {
 	beeperCmd, _, err := RootCmd.Find([]string{"beeper"})
 	if err != nil {
