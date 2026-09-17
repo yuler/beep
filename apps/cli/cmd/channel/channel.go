@@ -11,7 +11,7 @@ func NewCmdChannel() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "channel",
 		Short: "Connect this CLI as a notification channel",
-		Long:    ui.Bold(ui.Cyan("Notification Channel Management")) + ` - Connect, run, and manage CLI notification channels.`,
+		Long:  ui.Bold(ui.Cyan("Notification Channel Management")) + ` - Connect, run, and manage CLI notification channels.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},

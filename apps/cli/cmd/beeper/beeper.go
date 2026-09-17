@@ -20,7 +20,7 @@ func NewCmdBeeper() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "beeper",
 		Short: "Manage monitor probe beepers",
-		Long:    ui.Bold(ui.Cyan("Beeper Management")) + ` - Manage monitoring probes, view catalog apps, and check probe runs.`,
+		Long:  ui.Bold(ui.Cyan("Beeper Management")) + ` - Manage monitoring probes, view catalog apps, and check probe runs.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},

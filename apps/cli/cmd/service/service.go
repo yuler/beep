@@ -9,7 +9,7 @@ func NewCmdService() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "service",
 		Short: "Manage local background daemon services (runner and channel)",
-		Long:    "Manage local background daemon services for executing jobs (runner) and receiving notifications (channel).",
+		Long:  "Manage local background daemon services for executing jobs (runner) and receiving notifications (channel).",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
