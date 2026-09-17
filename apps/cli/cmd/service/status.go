@@ -116,9 +116,10 @@ func runStatusAll(cfg *config.Config) error {
 	if (runnerStatus == nil || runnerStatus.PID <= 0) && (channelStatus == nil || channelStatus.PID <= 0) {
 		fmt.Println()
 		fmt.Println(ui.Section("Start commands:"))
-		fmt.Printf("  All services:  %s  (background: %s)\n", ui.Green("beep service start"), ui.Cyan("beep service start -d"))
-		fmt.Printf("  Runner only:   %s  (background: %s)\n", ui.Green("beep service start runner"), ui.Cyan("beep service start runner -d"))
-		fmt.Printf("  Channel only:  %s  (background: %s)\n", ui.Green("beep service start channel"), ui.Cyan("beep service start channel -d"))
+		binName := config.BinaryName()
+		fmt.Printf("  All services:  %s  (background: %s)\n", ui.Green(binName+" service start"), ui.Cyan(binName+" service start -d"))
+		fmt.Printf("  Runner only:   %s  (background: %s)\n", ui.Green(binName+" service start runner"), ui.Cyan(binName+" service start runner -d"))
+		fmt.Printf("  Channel only:  %s  (background: %s)\n", ui.Green(binName+" service start channel"), ui.Cyan(binName+" service start channel -d"))
 	}
 
 	return nil

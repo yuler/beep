@@ -35,7 +35,7 @@ func NewCmdUnset() *cobra.Command {
 				key = selectedKey
 			} else {
 				fmt.Println(ui.Section("Usage:"))
-				fmt.Printf("  %s\n", ui.Cyan("beep config unset <key>"))
+				fmt.Printf("  %s\n", ui.Cyan(fmt.Sprintf("%s config unset <key>", config.BinaryName())))
 				fmt.Printf("  %s: server, account, token, workspace, concurrency, poll-interval\n", ui.Dim("Keys"))
 				return nil
 			}

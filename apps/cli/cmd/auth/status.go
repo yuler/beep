@@ -31,7 +31,7 @@ func NewCmdStatus() *cobra.Command {
 				if cfg.ServerURL != "" {
 					fmt.Printf("Server: %s\n", ui.Cyan(cfg.ServerURL))
 				}
-				fmt.Printf("\n%s Run %s to log in.\n", ui.Dim("Tip:"), ui.Cyan("beep auth login"))
+				fmt.Printf("\n%s Run %s to log in.\n", ui.Dim("Tip:"), ui.Cyan(config.BinaryName()+" auth login"))
 				return nil
 			}
 
@@ -49,7 +49,7 @@ func NewCmdStatus() *cobra.Command {
 			if err != nil {
 				if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "invalid or expired") {
 					fmt.Println(ui.Error("Stored login session is expired or invalid."))
-					fmt.Printf("Run %s to re-authenticate.\n", ui.Cyan("beep auth login"))
+					fmt.Printf("Run %s to re-authenticate.\n", ui.Cyan(config.BinaryName()+" auth login"))
 					return nil
 				}
 				// Offline or network error

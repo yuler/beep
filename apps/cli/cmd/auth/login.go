@@ -35,7 +35,7 @@ func NewCmdLogin() *cobra.Command {
 			}
 
 			if cfg.ServerURL == "" {
-				return fmt.Errorf("server URL is not configured (set via BEEP_SERVER or 'beep config set server <url>')")
+				return fmt.Errorf("server URL is not configured (set via BEEP_SERVER or '%s config set server <url>')", config.BinaryName())
 			}
 
 			c := client.New(cfg)
@@ -101,7 +101,7 @@ func NewCmdLogin() *cobra.Command {
 				}
 
 				if time.Now().After(deadline) {
-					return fmt.Errorf("device authorization expired, please run 'beep auth login' again")
+					return fmt.Errorf("device authorization expired, please run '%s auth login' again", config.BinaryName())
 				}
 
 				pollCtx, pollCancel := context.WithTimeout(ctx, 10*time.Second)
@@ -152,7 +152,7 @@ func NewCmdLogin() *cobra.Command {
 					case client.OAuthErrAccessDenied:
 						return fmt.Errorf("authorization was denied in the web browser")
 					case client.OAuthErrExpiredToken:
-						return fmt.Errorf("authorization request expired, please run 'beep auth login' again")
+						return fmt.Errorf("authorization request expired, please run '%s auth login' again", config.BinaryName())
 					default:
 						return fmt.Errorf("authorization failed: %s", oauthErr.Error())
 					}

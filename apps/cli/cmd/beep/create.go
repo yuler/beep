@@ -32,7 +32,7 @@ func NewCmdCreate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [title]",
 		Short: "Create a beep",
-		Long: `Create a beep.
+		Long: fmt.Sprintf(`Create a beep.
 
 Scheduling modes (mutually exclusive):
   - Instant (default): fires immediately when no schedule flags are provided
@@ -47,21 +47,23 @@ Optional --body and --channels can also be combined with --natural to supplement
 
 Examples:
   # Instant beep (fires immediately)
-  beep create "Deploy finished"
+  %s create "Deploy finished"
 
   # Relative delay
-  beep create "Meeting starts" --in 15m
-  beep create "Check logs" --in 2h
+  %s create "Meeting starts" --in 15m
+  %s create "Check logs" --in 2h
 
   # Specific datetime
-  beep create "Doctor appointment" --at "16:30"
-  beep create "Release v1.0" --at "2026-10-01 10:00"
+  %s create "Doctor appointment" --at "16:30"
+  %s create "Release v1.0" --at "2026-10-01 10:00"
 
   # Recurring cron
-  beep create "Daily Standup" --cron "0 10 * * 1-5"
+  %s create "Daily Standup" --cron "0 10 * * 1-5"
 
   # Natural language via DeepSeek AI
-  beep create -n "remind me in 30 minutes to drink water"`,
+  %s create -n "remind me in 30 minutes to drink water"`,
+			config.BinaryName(), config.BinaryName(), config.BinaryName(),
+			config.BinaryName(), config.BinaryName(), config.BinaryName(), config.BinaryName()),
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {
@@ -204,7 +206,7 @@ Examples:
 					}
 				} else {
 					if params.Title == "" {
-						return fmt.Errorf("beep title is required (e.g. beep create \"Meeting in 10m\" --in 10m)")
+						return fmt.Errorf("beep title is required (e.g. %s create \"Meeting in 10m\" --in 10m)", config.BinaryName())
 					}
 					if params.Timezone == "" {
 						if detected, ok := workspace.DetectTimezoneOK(); ok {

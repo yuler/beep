@@ -216,8 +216,8 @@ func ShowSingleServiceStatus(service string, cfg *config.Config) error {
 		}
 		fmt.Println()
 		fmt.Println(ui.Section("Start commands:"))
-		fmt.Printf("  Foreground: %s\n", ui.Green(fmt.Sprintf("beep service start %s", service)))
-		fmt.Printf("  Background: %s\n", ui.Cyan(fmt.Sprintf("beep service start %s -d", service)))
+		fmt.Printf("  Foreground: %s\n", ui.Green(fmt.Sprintf("%s service start %s", config.BinaryName(), service)))
+		fmt.Printf("  Background: %s\n", ui.Cyan(fmt.Sprintf("%s service start %s -d", config.BinaryName(), service)))
 	}
 	return nil
 }
@@ -280,7 +280,7 @@ func RunChannelService(cfg *config.Config, daemonMode bool, rawArgs []string) er
 		token = cfg.DeviceToken
 	}
 	if token == "" {
-		return fmt.Errorf("channel token is not configured (run 'beep channel connect')")
+		return fmt.Errorf("channel token is not configured (run '%s channel connect')", config.BinaryName())
 	}
 
 	isChild := os.Getenv("BEEP_DAEMON_CHILD") == "1"

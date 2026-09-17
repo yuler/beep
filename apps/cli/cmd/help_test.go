@@ -105,3 +105,39 @@ func TestSubcommandHelpFormatting(t *testing.T) {
 		t.Errorf("subcommand help should not contain root completion install tip")
 	}
 }
+
+func TestGhHelpWithCustomBinName(t *testing.T) {
+	t.Setenv("BEEP_BIN_NAME", "beep-local")
+
+	var buf bytes.Buffer
+	if err := RenderGhHelp(&buf, RootCmd); err != nil {
+		t.Fatalf("RenderGhHelp failed: %v", err)
+	}
+
+	out := buf.String()
+
+	if !strings.Contains(out, "beep-local <command> [flags]") {
+		t.Errorf("expected USAGE section with 'beep-local <command> [flags]', got: %s", out)
+	}
+	if !strings.Contains(out, "Use 'beep-local <command> --help' for more information about a command.") {
+		t.Errorf("expected LEARN MORE tip with 'beep-local <command> --help', got: %s", out)
+	}
+	if !strings.Contains(out, "Install shell completion with 'beep-local completion install'") {
+		t.Errorf("expected completion install tip with 'beep-local completion install', got: %s", out)
+	}
+
+	beeperCmd, _, err := RootCmd.Find([]string{"beeper"})
+	if err != nil {
+		t.Fatalf("failed to find beeper command: %v", err)
+	}
+
+	var subBuf bytes.Buffer
+	if err := RenderGhHelp(&subBuf, beeperCmd); err != nil {
+		t.Fatalf("RenderGhHelp on beeper failed: %v", err)
+	}
+
+	subOut := subBuf.String()
+	if !strings.Contains(subOut, "beep-local beeper <command> [flags]") {
+		t.Errorf("expected USAGE with 'beep-local beeper <command> [flags]', got: %s", subOut)
+	}
+}

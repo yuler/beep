@@ -69,7 +69,7 @@ func Upgrade(ctx context.Context, opts UpgradeOptions) (*UpgradeResult, error) {
 
 	// Homebrew check
 	if CheckIfHomebrew(execPath) && !opts.Force {
-		return nil, fmt.Errorf("beep appears to be installed via Homebrew (%s).\nWe recommend running: 'brew upgrade beep'\nOr pass '--force' to proceed with binary upgrade anyway", execPath)
+		return nil, fmt.Errorf("%s appears to be installed via Homebrew (%s).\nWe recommend running: 'brew upgrade beep'\nOr pass '--force' to proceed with binary upgrade anyway", config.BinaryName(), execPath)
 	}
 
 	targetDir := filepath.Dir(execPath)
@@ -109,7 +109,7 @@ func Upgrade(ctx context.Context, opts UpgradeOptions) (*UpgradeResult, error) {
 	if !opts.Force {
 		cmp := CompareVersions(rawVersion, version.Version)
 		if cmp == 0 {
-			return nil, fmt.Errorf("beep is already at the latest version (%s)", version.Version)
+			return nil, fmt.Errorf("%s is already at the latest version (%s)", config.BinaryName(), version.Version)
 		}
 	}
 

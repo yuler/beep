@@ -8,6 +8,7 @@ import (
 
 	"beep/internal/client"
 	"beep/internal/cmdutil"
+	"beep/internal/config"
 	"beep/internal/ui"
 
 	"github.com/charmbracelet/huh"
@@ -43,7 +44,7 @@ func ResolveBeepID(ctx context.Context, c *client.Client, cmd *cobra.Command, ar
 	}
 
 	if !cmdutil.IsInteractive(cmd) {
-		return "", fmt.Errorf("beep ID is required (e.g. beep %s <id>)", action)
+		return "", fmt.Errorf("beep ID is required (e.g. %s %s <id>)", config.BinaryName(), action)
 	}
 
 	beeps, err := c.ListBeeps(ctx)

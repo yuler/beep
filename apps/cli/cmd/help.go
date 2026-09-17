@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"beep/internal/config"
 	"beep/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -28,6 +29,10 @@ func GhHelpFunc(cmd *cobra.Command, args []string) {
 
 // RenderGhHelp renders the gh-style help to the provided writer.
 func RenderGhHelp(w io.Writer, cmd *cobra.Command) error {
+	if cmd != nil && cmd.Root() != nil {
+		cmd.Root().Use = config.BinaryName()
+	}
+
 	// 1. Long or Short Description
 	desc := strings.TrimSpace(cmd.Long)
 	if desc == "" {
@@ -42,11 +47,7 @@ func RenderGhHelp(w io.Writer, cmd *cobra.Command) error {
 	// 2. USAGE
 	fmt.Fprintln(w, ui.Bold("USAGE"))
 	if cmd.HasAvailableSubCommands() {
-		if cmd.Parent() == nil {
-			fmt.Fprintln(w, "  beep <command> [flags]")
-		} else {
-			fmt.Fprintf(w, "  %s <command> [flags]\n", cmd.CommandPath())
-		}
+		fmt.Fprintf(w, "  %s <command> [flags]\n", cmd.CommandPath())
 	} else {
 		fmt.Fprintf(w, "  %s\n", cmd.UseLine())
 	}
@@ -92,16 +93,17 @@ func RenderGhHelp(w io.Writer, cmd *cobra.Command) error {
 	}
 
 	// 8. LEARN MORE
+	binName := config.BinaryName()
 	fmt.Fprintln(w, ui.Bold("LEARN MORE"))
 	if cmd.HasAvailableSubCommands() {
 		if cmd.Parent() == nil {
-			fmt.Fprintln(w, "  Use 'beep <command> --help' for more information about a command.")
+			fmt.Fprintf(w, "  Use '%s <command> --help' for more information about a command.\n", binName)
 		} else {
 			fmt.Fprintf(w, "  Use '%s <command> --help' for more information about a command.\n", cmd.CommandPath())
 		}
 	}
 	if cmd.Parent() == nil {
-		fmt.Fprintln(w, "  Install shell completion with 'beep completion install' (or 'beep completion --help')")
+		fmt.Fprintf(w, "  Install shell completion with '%s completion install' (or '%s completion --help')\n", binName, binName)
 	}
 	fmt.Fprintln(w, "  Read the documentation at https://github.com/yuler/beep")
 
@@ -156,8 +158,9 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 		maxNameWidth = 12
 	}
 
+	binName := config.BinaryName()
 	var groupDescriptions = map[string]string{
-		"beeps": "Subcommands can be run directly (e.g. 'beep list') without repeating 'beep beep'",
+		"beeps": fmt.Sprintf("Subcommands can be run directly (e.g. '%s list') without repeating '%s beep'", binName, binName),
 	}
 
 	printGroup := func(id, title string, commands []*cobra.Command) {

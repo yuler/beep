@@ -83,7 +83,7 @@ func runStartAll(cfg *config.Config, daemonMode bool) error {
 	hasChannel := cfg.ChannelToken != "" || cfg.CliToken != "" || cfg.DeviceToken != ""
 
 	if !hasRunner && !hasChannel {
-		return fmt.Errorf("no services configured. To configure:\n  Runner:  set BEEP_RUNNER_TOKEN or configure config.json\n  Channel: run 'beep channel connect'")
+		return fmt.Errorf("no services configured. To configure:\n  Runner:  set BEEP_RUNNER_TOKEN or configure config.json\n  Channel: run '%s channel connect'", config.BinaryName())
 	}
 
 	isChild := os.Getenv("BEEP_DAEMON_CHILD") == "1"

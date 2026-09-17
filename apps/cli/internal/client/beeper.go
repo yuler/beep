@@ -2,12 +2,12 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"beep/internal/config"
 	"beep/internal/schedule"
 )
 
@@ -228,7 +228,7 @@ type CreateBeeperParams struct {
 func (p *CreateBeeperParams) ToRequest() (*CreateBeeperRequest, error) {
 	appSlug := strings.TrimSpace(p.AppSlug)
 	if appSlug == "" {
-		return nil, errors.New("--app slug is required (view available apps with 'beep beeper apps')")
+		return nil, fmt.Errorf("--app slug is required (view available apps with '%s beeper apps')", config.BinaryName())
 	}
 
 	cron := strings.TrimSpace(p.Cron)

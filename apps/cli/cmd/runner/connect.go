@@ -38,7 +38,7 @@ func NewCmdConnect() *cobra.Command {
 			}
 
 			if cfg.ServerURL == "" {
-				return fmt.Errorf("server URL is not configured (set via BEEP_SERVER or 'beep config set server <url>')")
+				return fmt.Errorf("server URL is not configured (set via BEEP_SERVER or '%s config set server <url>')", config.BinaryName())
 			}
 
 			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -129,7 +129,7 @@ func NewCmdConnect() *cobra.Command {
 				}
 
 				if time.Now().After(deadline) {
-					return fmt.Errorf("device authorization expired, please run 'beep runner connect' again")
+					return fmt.Errorf("device authorization expired, please run '%s runner connect' again", config.BinaryName())
 				}
 
 				pollCtx, pollCancel := context.WithTimeout(ctx, 10*time.Second)

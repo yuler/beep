@@ -8,6 +8,7 @@ import (
 
 	"beep/internal/client"
 	"beep/internal/cmdutil"
+	"beep/internal/config"
 	"beep/internal/ui"
 	"beep/internal/workspace"
 
@@ -40,7 +41,7 @@ func NewCmdPush() *cobra.Command {
 
 			if len(localJobs) == 0 {
 				fmt.Println(ui.Warn("No local jobs found in %s/jobs", ws.Root))
-				fmt.Printf("Create one with: %s\n", ui.Cyan("beep runner job create <slug>"))
+				fmt.Printf("Create one with: %s\n", ui.Cyan(fmt.Sprintf("%s runner job create <slug>", config.BinaryName())))
 				return nil
 			}
 

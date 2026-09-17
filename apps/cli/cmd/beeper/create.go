@@ -3,7 +3,6 @@ package beeper
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -32,20 +31,21 @@ func NewCmdCreate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a monitor probe beeper",
-		Long: `Create a monitor probe beeper.
+		Long: fmt.Sprintf(`Create a monitor probe beeper.
 
 Interactive mode guides you through selecting an app template and configuring its options.
 In non-interactive mode or when flags are provided, options are read from flags.
 
 Examples:
   # Interactive creation wizard
-  beep beeper create
+  %s beeper create
 
   # Heartbeat probe
-  beep beeper create --app heartbeat --title "Production API Heartbeat" --cron "*/5 * * * *"
+  %s beeper create --app heartbeat --title "Production API Heartbeat" --cron "*/5 * * * *"
 
   # HTTP check probe
-  beep beeper create --app http --title "Website Health" --cron "*/5 * * * *" --config url=https://example.com`,
+  %s beeper create --app http --title "Website Health" --cron "*/5 * * * *" --config url=https://example.com`,
+			config.BinaryName(), config.BinaryName(), config.BinaryName()),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {
 				appSlug := strings.TrimSpace(flagApp)
@@ -144,7 +144,7 @@ Examples:
 					}
 				} else {
 					if params.AppSlug == "" {
-						return errors.New("--app slug is required (view available apps with 'beep beeper apps')")
+						return fmt.Errorf("--app slug is required (view available apps with '%s beeper apps')", config.BinaryName())
 					}
 					if params.Timezone == "" {
 						if detected, ok := workspace.DetectTimezoneOK(); ok {

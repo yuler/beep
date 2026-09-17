@@ -16,6 +16,7 @@ CORE_PORT="${CORE_PORT:-3001}"
 DEFAULT_SERVER_URL="http://core.${APP_HOST}:${CORE_PORT}"
 
 export ORIG_PWD
+export BEEP_BIN_NAME="beep-local"
 exec go -C "$ROOT_DIR/apps/cli" run \
   -exec "sh -c 'cd \"\$ORIG_PWD\" && exec \"\$@\"' --" \
   -ldflags="-s -w \
@@ -23,5 +24,6 @@ exec go -C "$ROOT_DIR/apps/cli" run \
     -X beep/internal/version.GitCommit=${GIT_COMMIT} \
     -X beep/internal/version.BuildDate=${BUILD_DATE} \
     -X beep/internal/config.DefaultWorkspaceName=.beep.local \
+    -X beep/internal/config.DefaultBinaryName=beep-local \
     -X beep/internal/config.DefaultServerURL=${DEFAULT_SERVER_URL}" \
   . "$@"

@@ -47,7 +47,7 @@ func (c *Channel) Token() string {
 func (c *Channel) Run(ctx context.Context) error {
 	token := c.Token()
 	if token == "" {
-		return fmt.Errorf("channel token is not configured (run 'beep channel connect' or configure channel_token in config.json)")
+		return fmt.Errorf("channel token is not configured (run '%s channel connect' or configure channel_token in config.json)", config.BinaryName())
 	}
 
 	wsRoot := ""

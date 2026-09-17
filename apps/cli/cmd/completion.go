@@ -7,17 +7,19 @@ import (
 	"runtime"
 	"strings"
 
+	"beep/internal/config"
 	"beep/internal/ui"
 
 	"github.com/spf13/cobra"
 )
 
-const completionHelpText = `Generate shell completion scripts for Beep CLI commands.
+func getCompletionHelpText(binName string) string {
+	return fmt.Sprintf(`Generate shell completion scripts for %s CLI commands.
 
-When installing Beep CLI, you can install shell completion automatically
+When installing %s CLI, you can install shell completion automatically
 with:
 
-  beep completion install
+  %s completion install
 
 The generated completions automatically support both 'beep' and 'beep-local'.
 
@@ -28,47 +30,44 @@ If you prefer to configure it manually, follow the instructions below:
 First, ensure that you have bash-completion installed.
 Then add this to your ~/.bashrc (or ~/.bash_profile on macOS):
 
-  eval "$(beep completion bash)"
-  # or if running beep-local during development:
-  eval "$(beep-local completion bash)"
+  eval "$(%s completion bash)"
 
 ### zsh
 
 Add this to your ~/.zshrc:
 
-  eval "$(beep completion zsh)"
-  # or if running beep-local during development:
-  eval "$(beep-local completion zsh)"
+  eval "$(%s completion zsh)"
 
-Or generate a _beep completion script in your $fpath:
+Or generate a _%s completion script in your $fpath:
 
-  beep completion zsh > /usr/local/share/zsh/site-functions/_beep
+  %s completion zsh > /usr/local/share/zsh/site-functions/_%s
 
 ### fish
 
 Add this to your ~/.config/fish/config.fish:
 
-  beep completion fish | source
-  # or if running beep-local during development:
-  beep-local completion fish | source
+  %s completion fish | source
 
 Or save the completion script directly:
 
-  beep completion fish > ~/.config/fish/completions/beep.fish
+  %s completion fish > ~/.config/fish/completions/%s.fish
 
 ### PowerShell
 
 Open your profile script and add:
 
-  Invoke-Expression -Command $(beep completion powershell | Out-String)`
+  Invoke-Expression -Command $(%s completion powershell | Out-String)`,
+		binName, binName, binName, binName, binName, binName, binName, binName, binName, binName, binName, binName)
+}
 
 func initCompletionCmd() {
+	binName := config.BinaryName()
 	RootCmd.InitDefaultCompletionCmd()
 	for _, c := range RootCmd.Commands() {
 		if c.Name() == "completion" {
 			c.GroupID = "additional"
 			c.Short = "Generate shell completion scripts or install completion to your shell"
-			c.Long = completionHelpText
+			c.Long = getCompletionHelpText(binName)
 			c.AddCommand(newCmdCompletionInstall())
 			wrapShellCompletions(c)
 			break
@@ -87,14 +86,21 @@ func wrapShellCompletions(completionCmd *cobra.Command) {
 						return err
 					}
 				}
+				binName := config.BinaryName()
+				otherBin := "beep-local"
+				if binName == "beep-local" {
+					otherBin = "beep"
+				}
+				fnName := "__start_" + binName
 				w := cmd.OutOrStdout()
-				fmt.Fprintln(w, `
-# Register completion for beep-local
+				fmt.Fprintf(w, `
+# Register completion for %s
 if [[ $(type -t compopt) = "builtin" ]]; then
-    complete -o default -F __start_beep beep-local 2>/dev/null || true
+    complete -o default -F %s %s 2>/dev/null || true
 else
-    complete -o default -o nospace -F __start_beep beep-local 2>/dev/null || true
-fi`)
+    complete -o default -o nospace -F %s %s 2>/dev/null || true
+fi
+`, otherBin, fnName, otherBin, fnName, otherBin)
 				return nil
 			}
 		case "zsh":
@@ -105,10 +111,17 @@ fi`)
 						return err
 					}
 				}
+				binName := config.BinaryName()
+				otherBin := "beep-local"
+				if binName == "beep-local" {
+					otherBin = "beep"
+				}
+				fnName := "_" + binName
 				w := cmd.OutOrStdout()
-				fmt.Fprintln(w, `
-# Register completion for beep-local
-compdef _beep beep-local 2>/dev/null || true`)
+				fmt.Fprintf(w, `
+# Register completion for %s
+compdef %s %s 2>/dev/null || true
+`, otherBin, fnName, otherBin)
 				return nil
 			}
 		case "fish":
@@ -119,13 +132,20 @@ compdef _beep beep-local 2>/dev/null || true`)
 						return err
 					}
 				}
+				binName := config.BinaryName()
+				otherBin := "beep-local"
+				if binName == "beep-local" {
+					otherBin = "beep"
+				}
+				sanitized := strings.ReplaceAll(binName, "-", "_")
 				w := cmd.OutOrStdout()
-				fmt.Fprintln(w, `
-# Register completion for beep-local
-complete -c beep-local -e 2>/dev/null || true
-complete -c beep-local -n '__beep_clear_perform_completion_once_result' 2>/dev/null || true
-complete -c beep-local -n 'not __beep_requires_order_preservation && __beep_prepare_completions' -f -a '$__beep_comp_results' 2>/dev/null || true
-complete -k -c beep-local -n '__beep_requires_order_preservation && __beep_prepare_completions' -f -a '$__beep_comp_results' 2>/dev/null || true`)
+				fmt.Fprintf(w, `
+# Register completion for %s
+complete -c %s -e 2>/dev/null || true
+complete -c %s -n '__%s_clear_perform_completion_once_result' 2>/dev/null || true
+complete -c %s -n 'not __%s_requires_order_preservation && __%s_prepare_completions' -f -a '$__%s_comp_results' 2>/dev/null || true
+complete -k -c %s -n '__%s_requires_order_preservation && __%s_prepare_completions' -f -a '$__%s_comp_results' 2>/dev/null || true
+`, otherBin, otherBin, otherBin, sanitized, otherBin, sanitized, sanitized, sanitized, otherBin, sanitized, sanitized, sanitized)
 				return nil
 			}
 		case "powershell":
@@ -136,10 +156,16 @@ complete -k -c beep-local -n '__beep_requires_order_preservation && __beep_prepa
 						return err
 					}
 				}
+				binName := config.BinaryName()
+				otherBin := "beep-local"
+				if binName == "beep-local" {
+					otherBin = "beep"
+				}
 				w := cmd.OutOrStdout()
-				fmt.Fprintln(w, `
-# Register completion for beep-local
-Register-ArgumentCompleter -Native -CommandName 'beep-local' -ScriptBlock $scriptblock -ErrorAction SilentlyContinue`)
+				fmt.Fprintf(w, `
+# Register completion for %s
+Register-ArgumentCompleter -Native -CommandName '%s' -ScriptBlock $scriptblock -ErrorAction SilentlyContinue
+`, otherBin, otherBin)
 				return nil
 			}
 		}
@@ -149,21 +175,22 @@ Register-ArgumentCompleter -Native -CommandName 'beep-local' -ScriptBlock $scrip
 func newCmdCompletionInstall() *cobra.Command {
 	var flagYes bool
 	var flagShell string
+	binName := config.BinaryName()
 
 	cmd := &cobra.Command{
 		Use:   "install [shell]",
 		Short: "Install shell completion to your shell configuration file",
-		Long: ui.Bold(ui.Cyan("Install Shell Completion")) + ` - Automatically configure autocompletion in your shell configuration file.
+		Long: ui.Bold(ui.Cyan("Install Shell Completion")) + fmt.Sprintf(` - Automatically configure autocompletion in your shell configuration file.
 
 Supported shells: bash, zsh, fish.
 If no shell is specified, the current shell is detected from $SHELL.
-The installed completion supports both 'beep' and 'beep-local'.`,
-		Example: `  # Automatically detect shell and install
-  $ beep completion install
+The installed completion automatically supports '%s'.`, binName),
+		Example: fmt.Sprintf(`  # Automatically detect shell and install
+  $ %s completion install
 
   # Install for a specific shell
-  $ beep completion install zsh
-  $ beep completion install bash -y`,
+  $ %s completion install zsh
+  $ %s completion install bash -y`, binName, binName, binName),
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shell := flagShell
@@ -204,6 +231,8 @@ func resolveShellTarget(shellName string) (*shellTarget, error) {
 		return nil, fmt.Errorf("could not determine user home directory: %w", err)
 	}
 
+	binName := config.BinaryName()
+
 	switch shellName {
 	case "zsh":
 		target := filepath.Join(home, ".zshrc")
@@ -211,12 +240,7 @@ func resolveShellTarget(shellName string) (*shellTarget, error) {
 			Shell:       "zsh",
 			FilePath:    target,
 			DisplayPath: "~/.zshrc",
-			Snippet: `# Beep CLI shell completion (supports beep and beep-local)
-if command -v beep >/dev/null 2>&1; then
-  eval "$(beep completion zsh)"
-elif command -v beep-local >/dev/null 2>&1; then
-  eval "$(beep-local completion zsh)"
-fi`,
+			Snippet:     fmt.Sprintf("# Beep CLI shell completion\neval \"$(%s completion zsh)\"", binName),
 		}, nil
 	case "bash":
 		target := filepath.Join(home, ".bashrc")
@@ -232,12 +256,7 @@ fi`,
 			Shell:       "bash",
 			FilePath:    target,
 			DisplayPath: display,
-			Snippet: `# Beep CLI shell completion (supports beep and beep-local)
-if command -v beep >/dev/null 2>&1; then
-  eval "$(beep completion bash)"
-elif command -v beep-local >/dev/null 2>&1; then
-  eval "$(beep-local completion bash)"
-fi`,
+			Snippet:     fmt.Sprintf("# Beep CLI shell completion\neval \"$(%s completion bash)\"", binName),
 		}, nil
 	case "fish":
 		target := filepath.Join(home, ".config", "fish", "config.fish")
@@ -245,12 +264,7 @@ fi`,
 			Shell:       "fish",
 			FilePath:    target,
 			DisplayPath: "~/.config/fish/config.fish",
-			Snippet: `# Beep CLI shell completion (supports beep and beep-local)
-if command -v beep >/dev/null 2>&1
-  beep completion fish | source
-else if command -v beep-local >/dev/null 2>&1
-  beep-local completion fish | source
-end`,
+			Snippet:     fmt.Sprintf("# Beep CLI shell completion\n%s completion fish | source", binName),
 		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported shell %q (supported: bash, zsh, fish)", shellName)
@@ -263,10 +277,12 @@ func runCompletionInstall(shellName string, autoYes bool) error {
 		return err
 	}
 
+	binName := config.BinaryName()
+
 	// Check if already installed
 	if content, err := os.ReadFile(target.FilePath); err == nil {
 		str := string(content)
-		if strings.Contains(str, "beep completion") || strings.Contains(str, "beep-local completion") {
+		if strings.Contains(str, binName+" completion") {
 			fmt.Printf("%s Shell completion is already installed in %s\n", ui.Green("✓"), ui.Bold(target.DisplayPath))
 			return nil
 		}
@@ -289,7 +305,7 @@ func runCompletionInstall(shellName string, autoYes bool) error {
 			return fmt.Errorf("interactive confirmation required; rerun with -y / --yes to confirm automatically")
 		}
 
-		confirm, err := ui.PromptConfirm(fmt.Sprintf("Install Beep completion to %s?", target.DisplayPath), true)
+		confirm, err := ui.PromptConfirm(fmt.Sprintf("Install %s completion to %s?", binName, target.DisplayPath), true)
 		if err != nil {
 			return err
 		}

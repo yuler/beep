@@ -408,7 +408,7 @@ type rawAPIErrorResponse struct {
 func parseAPIError(resp *http.Response) error {
 	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("authentication required or session expired (status 401); please run 'beep auth login' first")
+		return fmt.Errorf("authentication required or session expired (status 401); please run '%s auth login' first", config.BinaryName())
 	}
 	if resp.StatusCode == http.StatusNotFound {
 		return fmt.Errorf("resource not found on server (404)")

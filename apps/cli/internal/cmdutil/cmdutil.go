@@ -91,7 +91,7 @@ func LoadConfig(cmd *cobra.Command) (*config.Config, error) {
 // EnsureLoggedIn checks if the current configuration has an active session.
 func EnsureLoggedIn(ctx context.Context, cfg *config.Config) (*client.MeResponse, error) {
 	if !cfg.IsLoggedIn() {
-		return nil, fmt.Errorf("not logged in. Please run 'beep auth login' first")
+		return nil, fmt.Errorf("not logged in. Please run '%s auth login' first", config.BinaryName())
 	}
 
 	c := client.New(cfg)
@@ -101,7 +101,7 @@ func EnsureLoggedIn(ctx context.Context, cfg *config.Config) (*client.MeResponse
 	me, err := c.GetMe(verifyCtx)
 	if err != nil {
 		if strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "invalid or expired") {
-			return nil, fmt.Errorf("stored login session is invalid or expired. Please run 'beep auth login' first")
+			return nil, fmt.Errorf("stored login session is invalid or expired. Please run '%s auth login' first", config.BinaryName())
 		}
 		// On temporary network errors during pre-flight check, proceed with stored token
 		return nil, nil

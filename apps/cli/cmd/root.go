@@ -68,6 +68,7 @@ var RootCmd = &cobra.Command{
 }
 
 func Execute() {
+	RootCmd.Use = config.BinaryName()
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, ui.Error("%v", err))
 		os.Exit(1)
@@ -75,6 +76,9 @@ func Execute() {
 }
 
 func init() {
+	binName := config.BinaryName()
+	RootCmd.Use = binName
+	RootCmd.Long = ui.Bold(ui.Cyan(fmt.Sprintf("%s CLI", strings.ToUpper(binName[:1])+binName[1:]))) + " - Command-line interface for the Beep platform."
 	SetupHelp(RootCmd)
 
 	cmdutil.WorkspaceHook = func() string {

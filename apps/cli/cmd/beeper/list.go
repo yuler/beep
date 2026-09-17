@@ -48,7 +48,7 @@ func NewCmdList() *cobra.Command {
 				fmt.Printf("%s %s\n\n", ui.Bold(ui.Cyan("Beepers")), ui.Dim(fmt.Sprintf("(account: %s)", accountDisplay)))
 
 				if len(beepers) == 0 {
-					fmt.Println(ui.Dim("  No beepers found. Create one with 'beep beeper create'."))
+					fmt.Println(ui.Dim(fmt.Sprintf("  No beepers found. Create one with '%s beeper create'.", config.BinaryName())))
 					return nil
 				}
 

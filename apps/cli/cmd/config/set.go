@@ -114,10 +114,10 @@ func NewCmdSet() *cobra.Command {
 				} else {
 					fmt.Println(ui.Warn("No configuration options provided."))
 					fmt.Println()
-					fmt.Println(ui.Section("Usage:"))
-					fmt.Printf("  %s\n", ui.Cyan("beep config set --server <url> --token <token>"))
-					fmt.Printf("  %s\n", ui.Cyan("beep config set server <url>"))
-					fmt.Printf("  %s\n", ui.Cyan("beep config set token <token>"))
+					bin := config.BinaryName()
+					fmt.Printf("  %s\n", ui.Cyan(fmt.Sprintf("%s config set --server <url> --token <token>", bin)))
+					fmt.Printf("  %s\n", ui.Cyan(fmt.Sprintf("%s config set server <url>", bin)))
+					fmt.Printf("  %s\n", ui.Cyan(fmt.Sprintf("%s config set token <token>", bin)))
 					return nil
 				}
 			}

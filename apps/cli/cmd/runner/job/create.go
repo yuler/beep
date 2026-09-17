@@ -8,6 +8,7 @@ import (
 
 	"beep/internal/client"
 	"beep/internal/cmdutil"
+	"beep/internal/config"
 	"beep/internal/schedule"
 	"beep/internal/ui"
 	"beep/internal/workspace"
@@ -123,7 +124,7 @@ func NewCmdCreate() *cobra.Command {
 
 			if cfg.ServerURL == "" || cfg.RunnerToken == "" {
 				fmt.Println(ui.Info("Server URL or Runner Token not configured; skipping server sync."))
-				fmt.Printf("  %s %s\n", ui.Dim("Tip: Configure once with"), ui.Cyan("beep runner config set --server <url> --token <token>"))
+				fmt.Printf("  %s %s\n", ui.Dim("Tip: Configure once with"), ui.Cyan(fmt.Sprintf("%s runner config set --server <url> --token <token>", config.BinaryName())))
 				return nil
 			}
 
@@ -156,7 +157,7 @@ func NewCmdCreate() *cobra.Command {
 			fmt.Println()
 			fmt.Println(ui.Section("Next steps:"))
 			fmt.Printf("  1. Edit your script: %s\n", ui.Cyan(filePath))
-			fmt.Printf("  2. Start runner daemon: %s\n", ui.Green("beep runner up"))
+			fmt.Printf("  2. Start runner daemon: %s\n", ui.Green(fmt.Sprintf("%s runner up", config.BinaryName())))
 			return nil
 		},
 	}

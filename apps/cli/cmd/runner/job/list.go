@@ -9,6 +9,7 @@ import (
 
 	"beep/internal/client"
 	"beep/internal/cmdutil"
+	"beep/internal/config"
 	"beep/internal/ui"
 	"beep/internal/workspace"
 
@@ -68,7 +69,7 @@ func NewCmdList() *cobra.Command {
 			if cfg.ServerURL == "" || cfg.RunnerToken == "" || serverErr != nil {
 				fmt.Printf("%s %s\n\n", ui.Bold(ui.Cyan("Local Workspace Jobs")), ui.Dim(fmt.Sprintf("(workspace: %s)", ws.Root)))
 				if len(localJobs) == 0 {
-					fmt.Println(ui.Dim("  No local jobs found. Create one with 'beep runner job create <slug>'."))
+					fmt.Println(ui.Dim(fmt.Sprintf("  No local jobs found. Create one with '%s runner job create <slug>'.", config.BinaryName())))
 					return nil
 				}
 
@@ -104,7 +105,7 @@ func NewCmdList() *cobra.Command {
 			fmt.Printf("%s %s\n\n", ui.Bold(ui.Cyan("Workspace & Server Jobs")), ui.Dim(fmt.Sprintf("(workspace: %s)", ws.Root)))
 
 			if len(items) == 0 {
-				fmt.Println(ui.Dim("  No jobs found locally or on server. Create one with 'beep runner job create <slug>'."))
+				fmt.Println(ui.Dim(fmt.Sprintf("  No jobs found locally or on server. Create one with '%s runner job create <slug>'.", config.BinaryName())))
 				return nil
 			}
 
