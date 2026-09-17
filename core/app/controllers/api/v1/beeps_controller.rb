@@ -13,7 +13,12 @@ class Api::V1::BeepsController < Api::V1::BaseController
         "LOWER(beeps.title) LIKE :q OR LOWER(beeps.body) LIKE :q OR LOWER(beepers.title) LIKE :q",
         q: q_term
       )
-      scope = if Current.account.beeps.where(id: q_clean).exists?
+      has_id_match = valid_uuid_format?(q_clean) && begin
+        Current.account.beeps.where(id: q_clean).exists?
+      rescue ActiveRecord::StatementInvalid
+        false
+      end
+      scope = if has_id_match
         search_scope.where(id: q_clean).or(text_condition)
       else
         text_condition
@@ -75,5 +80,15 @@ class Api::V1::BeepsController < Api::V1::BaseController
 
     def beep_timezone
       IanaTimezone.resolve(Current.user.timezone, params[:timezone])
+    end
+
+    UUID_REGEX = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+    BASE36_UUID_REGEX = /\A[0-9a-z]{25}\z/i
+
+    def valid_uuid_format?(str)
+      return true if str.match?(UUID_REGEX)
+      return true if ActiveRecord::Base.connection.adapter_name.downcase.start_with?("sqlite") && str.match?(BASE36_UUID_REGEX)
+
+      false
     end
 end

@@ -190,6 +190,48 @@ class Beep::ProposalTest < ActiveSupport::TestCase
     assert_nil result.notification_channels
   end
 
+  test "create fallback channel matching supports bare push" do
+    chat = fake_chat({
+      "intent" => "create",
+      "title" => "Push alert",
+      "body" => nil,
+      "run_at" => nil,
+      "notification_channels" => nil
+    }.to_json)
+
+    result = Beep::Proposal.create("Remind me tomorrow, push", chat: chat)
+    assert_equal [ "web_push" ], result.notification_channels
+  end
+
+  test "create fallback channel matching does not false-positive on gmail" do
+    chat = fake_chat({
+      "intent" => "create",
+      "title" => "Check gmail",
+      "body" => nil,
+      "run_at" => nil,
+      "notification_channels" => nil
+    }.to_json)
+
+    result = Beep::Proposal.create("Check gmail inbox tomorrow", chat: chat)
+    assert_nil result.notification_channels
+  end
+
+  test "create fallback channel matching supports bare mail and excludes correctly" do
+    chat = fake_chat({
+      "intent" => "create",
+      "title" => "Send mail",
+      "body" => nil,
+      "run_at" => nil,
+      "notification_channels" => nil
+    }.to_json)
+
+    result = Beep::Proposal.create("Remind me by mail", chat: chat)
+    assert_equal [ "email" ], result.notification_channels
+
+    result_ex = Beep::Proposal.create("Remind me without mail", chat: chat)
+    assert_nil result_ex.notification_channels
+  end
+
   private
     def fake_chat(content)
       chat = Object.new

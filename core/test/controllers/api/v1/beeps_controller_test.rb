@@ -58,6 +58,15 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     ids = response.parsed_body["beeps"].map { |b| b["id"] }
     assert_equal [ other.id ], ids
+
+    # Search by non-UUID text does not crash on UUID column lookups
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { q: "plain-text-not-a-uuid" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal [], response.parsed_body["beeps"]
   end
 
   test "index paginates with geared cursor and sets Link headers" do

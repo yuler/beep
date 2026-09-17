@@ -3,8 +3,8 @@ class Beep::Proposal
   INTENTS = %w[ create other ].freeze
 
   CHANNEL_PATTERNS = {
-    "web_push" => /web\s*push|webpush|浏览器.*?(推送|通知)|网页推送/i,
-    "email" => /mail|邮件|邮箱/i,
+    "web_push" => /\bpush\b|web\s*push|webpush|浏览器.*?(推送|通知)|网页推送/i,
+    "email" => /\bmail\b|email|邮件|邮箱/i,
     "cli" => /\bcli\b|终端|命令行/i
   }.freeze
 

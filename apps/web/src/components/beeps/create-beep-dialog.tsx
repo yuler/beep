@@ -179,7 +179,7 @@ export function CreateBeepDialog({
 
 	async function onSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		if (submitting) return;
+		if (submitting || channels.length === 0) return;
 
 		setError(null);
 		setProposeMessage(null);
@@ -601,9 +601,15 @@ export function CreateBeepDialog({
 										</Label>
 									))}
 								</div>
-								<p className="text-[11px] text-muted-foreground">
-									{m.beepers_notification_channels_hint()}
-								</p>
+								{channels.length === 0 ? (
+									<p className="text-xs text-destructive" role="alert">
+										{m.beeps_channels_required()}
+									</p>
+								) : (
+									<p className="text-[11px] text-muted-foreground">
+										{m.beeps_notification_channels_hint()}
+									</p>
+								)}
 							</div>
 						</div>
 
@@ -630,6 +636,7 @@ export function CreateBeepDialog({
 							disabled={
 								isPending ||
 								title.trim().length === 0 ||
+								channels.length === 0 ||
 								(kind === "once" &&
 									!sendNow &&
 									(runAt.getTime() <= Date.now() + 60 * 1000 ||
