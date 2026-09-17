@@ -26,6 +26,7 @@ class Api::V1::BeepProposalsControllerTest < ActionDispatch::IntegrationTest
       body: nil,
       run_at: @run_at,
       timezone: "UTC",
+      notification_channels: [ "web_push" ],
       errors: {},
       message: nil
     )
@@ -51,6 +52,7 @@ class Api::V1::BeepProposalsControllerTest < ActionDispatch::IntegrationTest
     assert_nil body["body"]
     assert_equal @run_at.iso8601, Time.iso8601(body["run_at"]).iso8601
     assert_equal "UTC", body["timezone"]
+    assert_equal [ "web_push" ], body["notification_channels"]
     assert_equal({}, body["errors"])
     assert body["confirmable"]
     assert_nil body["message"]

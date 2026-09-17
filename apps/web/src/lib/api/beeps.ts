@@ -169,6 +169,7 @@ export type BeepProposal = {
 	run_at: string | null;
 	cron: string | null;
 	timezone: string;
+	notification_channels?: string[] | null;
 	errors: {
 		title?: string;
 		body?: string;

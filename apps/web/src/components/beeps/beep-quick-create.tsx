@@ -13,7 +13,12 @@ import {
 } from "@/components/ui/tooltip";
 import { createBeep, createBeepProposal } from "@/lib/api/beeps";
 import { ApiError } from "@/lib/api/client";
-import { translateError } from "@/lib/i18n-labels";
+import { channelLabel, translateError } from "@/lib/i18n-labels";
+import {
+	NOTIFICATION_CHANNELS,
+	type NotificationChannel,
+	toggleChannel,
+} from "@/lib/notification-channels";
 import { browserTimezone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 import { m } from "@/locale/paraglide/messages";
@@ -48,9 +53,11 @@ function parseRunAt(value: string | null) {
 export function BeepQuickCreate({
 	slug,
 	onCreated,
+	defaultChannels = [],
 }: {
 	slug: string;
 	onCreated: () => Promise<void> | void;
+	defaultChannels?: NotificationChannel[];
 }) {
 	const [prompt, setPrompt] = useState("");
 	const [kind, setKind] = useState<"once" | "recurring">("once");
@@ -60,6 +67,9 @@ export function BeepQuickCreate({
 	const [preview, setPreview] = useState(false);
 	const [runAt, setRunAt] = useState<Date>(defaultRunAt);
 	const [cron, setCron] = useState("0 9 * * *");
+	const [channels, setChannels] = useState<NotificationChannel[]>(
+		defaultChannels.length > 0 ? defaultChannels : ["email"],
+	);
 	const [fieldErrors, setFieldErrors] = useState<{
 		title?: string;
 		run_at?: string;
@@ -108,6 +118,19 @@ export function BeepQuickCreate({
 				setSendNow(true);
 			}
 
+			if (
+				proposal.notification_channels &&
+				proposal.notification_channels.length > 0
+			) {
+				const validChannels = proposal.notification_channels.filter(
+					(c): c is NotificationChannel =>
+						(NOTIFICATION_CHANNELS as readonly string[]).includes(c),
+				);
+				if (validChannels.length > 0) {
+					setChannels(validChannels);
+				}
+			}
+
 			setFieldErrors({
 				title: proposal.errors.title,
 				cron: proposal.errors.cron,
@@ -143,6 +166,7 @@ export function BeepQuickCreate({
 				run_at: kind === "once" && !sendNow ? runAt.toISOString() : null,
 				cron: kind === "recurring" ? cron.trim() : null,
 				timezone: browserTimezone(),
+				notification_channels: channels,
 			});
 			setPrompt("");
 			setTitle("");
@@ -152,6 +176,7 @@ export function BeepQuickCreate({
 			setSendNow(true);
 			setRunAt(defaultRunAt());
 			setCron("0 9 * * *");
+			setChannels(defaultChannels.length > 0 ? defaultChannels : ["email"]);
 			setFieldErrors({});
 			await onCreated();
 		} catch (err) {
@@ -511,6 +536,35 @@ export function BeepQuickCreate({
 							)}
 						</div>
 					) : null}
+
+					{/* Notification Channels */}
+					<div className="flex flex-col gap-2">
+						<Label>{m.beeps_channels()}</Label>
+						<div className="flex flex-col gap-2 rounded-lg border border-input p-3 dark:bg-input/20">
+							{NOTIFICATION_CHANNELS.map((channel) => (
+								<Label
+									key={channel}
+									className="flex items-center gap-2 font-normal cursor-pointer text-sm"
+								>
+									<input
+										type="checkbox"
+										className="size-4 accent-primary rounded"
+										checked={channels.includes(channel)}
+										disabled={isPending}
+										onChange={(e) =>
+											setChannels((curr) =>
+												toggleChannel(curr, channel, e.target.checked),
+											)
+										}
+									/>
+									{channelLabel(channel)}
+								</Label>
+							))}
+						</div>
+						<p className="text-[11px] text-muted-foreground">
+							{m.beepers_notification_channels_hint()}
+						</p>
+					</div>
 
 					{error ? (
 						<p className="text-sm text-destructive" role="alert">

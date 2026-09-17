@@ -164,9 +164,27 @@ type BeepProposal struct {
 	RunAt       string         `json:"run_at"`
 	Cron        string         `json:"cron"`
 	Timezone    string         `json:"timezone"`
+	Channels    []string       `json:"notification_channels"`
 	Errors      ProposalErrors `json:"errors"`
 	Confirmable bool           `json:"confirmable"`
 	Message     string         `json:"message"`
+}
+
+func (p *BeepProposal) UnmarshalJSON(data []byte) error {
+	type Alias BeepProposal
+	aux := struct {
+		*Alias
+		AltChannels []string `json:"channels"`
+	}{
+		Alias: (*Alias)(p),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if len(p.Channels) == 0 && len(aux.AltChannels) > 0 {
+		p.Channels = aux.AltChannels
+	}
+	return nil
 }
 
 func (p *BeepProposal) HasErrors() bool {

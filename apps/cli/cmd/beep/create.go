@@ -250,6 +250,15 @@ Examples:
 				return nil
 			})
 		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			flagBody = ""
+			flagIn = ""
+			flagAt = ""
+			flagCron = ""
+			flagTimezone = ""
+			flagChannels = ""
+			flagNatural = ""
+		},
 	}
 
 	cmd.Flags().StringVarP(&flagBody, "body", "b", "", "Beep markdown body / message")
@@ -308,13 +317,18 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 		schedVal = proposal.RunAt
 	}
 
+	channels := channelsFlag
+	if channels == "" && len(proposal.Channels) > 0 {
+		channels = strings.Join(proposal.Channels, ",")
+	}
+
 	params := client.CreateBeepParams{
 		Title:        proposal.Title,
 		Body:         body,
 		ScheduleKind: schedKind,
 		ScheduleVal:  schedVal,
 		Timezone:     resolvedTz,
-		Channels:     channelsFlag,
+		Channels:     channels,
 	}
 
 	defaultChannels := client.DefaultNotificationChannels

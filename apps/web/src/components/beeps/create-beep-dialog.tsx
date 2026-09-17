@@ -145,6 +145,19 @@ export function CreateBeepDialog({
 				setSendNow(true);
 			}
 
+			if (
+				proposal.notification_channels &&
+				proposal.notification_channels.length > 0
+			) {
+				const validChannels = proposal.notification_channels.filter(
+					(c): c is NotificationChannel =>
+						(NOTIFICATION_CHANNELS as readonly string[]).includes(c),
+				);
+				if (validChannels.length > 0) {
+					setChannels(validChannels);
+				}
+			}
+
 			setFieldErrors({
 				title: proposal.errors.title,
 				cron: proposal.errors.cron,

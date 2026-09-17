@@ -2,12 +2,18 @@ class Beep::Proposal
   MODEL = "deepseek-chat"
   INTENTS = %w[ create other ].freeze
 
+  CHANNEL_PATTERNS = {
+    "web_push" => /web\s*push|webpush|浏览器.*?(推送|通知)|网页推送/i,
+    "email" => /mail|邮件|邮箱/i,
+    "cli" => /\bcli\b|终端|命令行/i
+  }.freeze
+
   class Error < StandardError; end
 
   class Result
-    attr_reader :intent, :kind, :title, :body, :run_at, :cron, :timezone, :errors, :message
+    attr_reader :intent, :kind, :title, :body, :run_at, :cron, :timezone, :notification_channels, :errors, :message
 
-    def initialize(intent:, kind: "once", title:, body:, run_at:, cron: nil, timezone:, errors:, message:)
+    def initialize(intent:, kind: "once", title:, body:, run_at:, cron: nil, timezone:, notification_channels: nil, errors:, message:)
       @intent = intent
       @kind = kind
       @title = title
@@ -15,6 +21,7 @@ class Beep::Proposal
       @run_at = run_at
       @cron = cron
       @timezone = timezone
+      @notification_channels = notification_channels
       @errors = errors
       @message = message
     end
@@ -107,6 +114,14 @@ class Beep::Proposal
         "Describe what to be reminded of."
       end
 
+      raw_channels = payload["notification_channels"]
+      channels = if raw_channels.is_a?(Array)
+        allowed = raw_channels.map(&:to_s).select { |c| User::NOTIFICATION_CHANNELS.include?(c) }.uniq
+        allowed.presence
+      end
+
+      channels ||= fallback_notification_channels
+
       Result.new(
         intent: intent,
         kind: kind,
@@ -115,6 +130,7 @@ class Beep::Proposal
         run_at: run_at,
         cron: cron,
         timezone: @timezone,
+        notification_channels: channels,
         errors: errors,
         message: message
       )
@@ -126,6 +142,23 @@ class Beep::Proposal
       else
         "other"
       end
+    end
+
+    def fallback_notification_channels
+      text = @prompt.downcase
+      mentioned = CHANNEL_PATTERNS.select do |_channel, pattern|
+        text.match?(pattern)
+      end.keys
+
+      return nil if mentioned.empty?
+
+      excluded = CHANNEL_PATTERNS.select do |_channel, pattern|
+        exclusion_pattern = /(?:(?:不要|别|不用|无需|不需要|不发|不能|排除|免于|\b(?:no|without|dont|don't|skip)\b)\s*(?:通过|使用|用|发|走|给)?\s*[^，,。.!?\n]{0,10}?(?:#{pattern})|(?:#{pattern})\s*(?:除外|就?不要|就?不用|就?不需要|别发))/i
+        text.match?(exclusion_pattern)
+      end.keys
+
+      channels = (mentioned - excluded) & User::NOTIFICATION_CHANNELS
+      channels.presence
     end
 
     def parse_run_at(value)
@@ -159,13 +192,21 @@ class Beep::Proposal
         You extract a reminder from the user message.
         Timezone is #{@timezone}. Current datetime is #{now.iso8601}.
         Reply with JSON only:
-        {"intent":"create"|"other","kind":"once"|"recurring","title":string|null,"body":string|null,"run_at":string|null,"cron":string|null}
+        {"intent":"create"|"other","kind":"once"|"recurring","title":string|null,"body":string|null,"run_at":string|null,"cron":string|null,"notification_channels":string[]|null}
         intent is "create" when the user wants a reminder or alert, otherwise "other".
         kind: "recurring" when the reminder repeats on a schedule or interval, otherwise "once".
         title: short title, max #{Beep::TITLE_MAX_LENGTH} characters.
         body: optional extra detail as markdown, max #{Beep::BODY_MAX_LENGTH} characters.
         run_at: future datetime as UTC ISO8601 if kind is "once" and a specific time is mentioned, otherwise null. Convert relative times using the timezone.
         cron: 5-part standard cron string ("min hour day month weekday") if kind is "recurring" (e.g., "*/5 14-20 * * *" for every 5 min from 14:00 to 20:59, "0 9 * * *" for daily 9am, "0 9 * * 1-5" for weekdays 9am), otherwise null.
+        notification_channels: array of channel names or null if not mentioned. Allowed channels: email, web_push, cli.
+        Channel mapping:
+        - "email": email / e-mail / 邮件 / 邮箱
+        - "web_push": web push / webpush / 浏览器推送 / 网页推送 / push
+        - "cli": cli / 终端 / 命令行
+        If specific channels are requested (e.g., "只/仅/only ..."), return only the requested channels.
+        If user specifies not to use certain channels (e.g., "不要/别/no/without ..."), exclude them.
+        If no channel is mentioned, set notification_channels to null. Only use allowed channels ("email", "web_push", "cli"); ignore unknown channels.
         Do not invent a reminder when the message is not a create request.
         Only one reminder.
       PROMPT

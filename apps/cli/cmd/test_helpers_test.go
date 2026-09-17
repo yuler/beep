@@ -46,6 +46,9 @@ func setupCLITestEnv(t *testing.T, handler http.HandlerFunc) (string, func()) {
 	flagAccount = ""
 	flagJSON = false
 
+	t.Setenv("BEEP_WORKSPACE", tmpDir)
+	t.Setenv("BEEP_SERVER", server.URL)
+
 	cleanup := func() {
 		server.Close()
 		flagWorkspace = oldWs

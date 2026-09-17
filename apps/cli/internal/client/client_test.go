@@ -376,3 +376,45 @@ func TestProposalErrorsUnmarshal(t *testing.T) {
 		})
 	}
 }
+
+func TestBeepProposalChannelsUnmarshal(t *testing.T) {
+	tests := []struct {
+		name     string
+		jsonStr  string
+		expected []string
+	}{
+		{
+			name:     "notification_channels field",
+			jsonStr:  `{"intent": "create", "notification_channels": ["web_push"]}`,
+			expected: []string{"web_push"},
+		},
+		{
+			name:     "channels fallback alias",
+			jsonStr:  `{"intent": "create", "channels": ["email", "cli"]}`,
+			expected: []string{"email", "cli"},
+		},
+		{
+			name:     "null notification_channels",
+			jsonStr:  `{"intent": "create", "notification_channels": null}`,
+			expected: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var p BeepProposal
+			if err := json.Unmarshal([]byte(tc.jsonStr), &p); err != nil {
+				t.Fatalf("failed to unmarshal: %v", err)
+			}
+			if len(p.Channels) != len(tc.expected) {
+				t.Fatalf("expected %d channels, got %d (%v)", len(tc.expected), len(p.Channels), p.Channels)
+			}
+			for i, exp := range tc.expected {
+				if p.Channels[i] != exp {
+					t.Errorf("expected channel %q, got %q", exp, p.Channels[i])
+				}
+			}
+		})
+	}
+}
+
