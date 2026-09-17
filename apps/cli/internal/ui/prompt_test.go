@@ -152,6 +152,21 @@ func TestDetectBeeperFailedFields(t *testing.T) {
 	}
 }
 
+func TestRequireNotificationChannels(t *testing.T) {
+	if err := requireNotificationChannels(nil); err == nil {
+		t.Fatal("expected error for nil selection")
+	}
+	if err := requireNotificationChannels([]string{}); err == nil {
+		t.Fatal("expected error for empty selection")
+	}
+	if err := requireNotificationChannels([]string{"  ", ""}); err == nil {
+		t.Fatal("expected error for blank-only selection")
+	}
+	if err := requireNotificationChannels([]string{"cli"}); err != nil {
+		t.Fatalf("expected cli selection to be valid, got %v", err)
+	}
+}
+
 func TestCommonIANATimezonesAreValid(t *testing.T) {
 	zones := CommonIANATimezones()
 	if len(zones) == 0 {

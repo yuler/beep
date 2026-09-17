@@ -264,7 +264,7 @@ func PromptBeeperCreate(initial client.CreateBeeperParams, apps []*client.Beeper
 		res.Timezone = tz
 	}
 
-	// 7. Notification Channels (optional, multi-select with account defaults)
+	// 7. Notification Channels (multi-select, at least one required)
 	if strings.TrimSpace(res.Channels) == "" {
 		channels, err := PromptNotificationChannels(defaultChannels)
 		if err != nil {
