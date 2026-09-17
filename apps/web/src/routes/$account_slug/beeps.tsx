@@ -1,12 +1,17 @@
 import {
 	createFileRoute,
 	getRouteApi,
+	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 
-import { BeepList } from "@/components/beeps/beep-list";
+import {
+	BeepList,
+	type FilterStatus,
+	getFilterOptions,
+} from "@/components/beeps/beep-list";
 import { CreateBeepDialog } from "@/components/beeps/create-beep-dialog";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Button } from "@/components/ui/button";
@@ -17,11 +22,42 @@ import { m } from "@/locale/paraglide/messages";
 
 const accountRoute = getRouteApi("/$account_slug");
 
+type BeepsSearch = {
+	tab?: FilterStatus;
+	q?: string;
+};
+
 export const Route = createFileRoute("/$account_slug/beeps")({
-	loader: withAuthRedirects(async ({ params }) => {
+	validateSearch: (search: Record<string, unknown>): BeepsSearch => {
+		const validTabs: FilterStatus[] = [
+			"active",
+			"firing",
+			"recurring",
+			"completed",
+			"all",
+		];
+		const tab =
+			typeof search.tab === "string" &&
+			validTabs.includes(search.tab as FilterStatus)
+				? (search.tab as FilterStatus)
+				: "active";
+		const q =
+			typeof search.q === "string" && search.q.trim().length > 0
+				? search.q.trim()
+				: undefined;
+		return { tab, q };
+	},
+	loaderDeps: ({ search }) => ({ tab: search.tab, q: search.q }),
+	loader: withAuthRedirects(async ({ params, deps, abortController }) => {
 		const slug = params?.account_slug ?? "";
+		const beepsDeps = deps as BeepsSearch;
+		const statusFilter = beepsDeps?.tab ?? "active";
 		const [beepsRes, statsRes, settingsRes] = await Promise.all([
-			fetchBeeps(slug, { status: "active" }),
+			fetchBeeps(slug, {
+				...getFilterOptions(statusFilter),
+				q: beepsDeps?.q,
+				signal: abortController?.signal,
+			}),
 			fetchBeepStats(slug),
 			fetchSettings(slug).catch(() => null),
 		]);
@@ -30,6 +66,8 @@ export const Route = createFileRoute("/$account_slug/beeps")({
 			pagination: beepsRes.pagination,
 			stats: statsRes.stats,
 			settings: settingsRes,
+			currentTab: statusFilter,
+			searchQuery: beepsDeps?.q ?? "",
 		};
 	}),
 	component: BeepsPage,
@@ -38,11 +76,32 @@ export const Route = createFileRoute("/$account_slug/beeps")({
 function BeepsPage() {
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
-	const { beeps, pagination, stats, settings } = Route.useLoaderData();
+	const navigate = useNavigate({ from: Route.fullPath });
+	const { beeps, pagination, stats, settings, currentTab, searchQuery } =
+		Route.useLoaderData();
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 
 	async function handleCreated() {
 		await router.invalidate();
+	}
+
+	function handleTabChange(nextTab: FilterStatus) {
+		void navigate({
+			search: (prev) => ({
+				...prev,
+				tab: nextTab === "active" ? undefined : nextTab,
+			}),
+		});
+	}
+
+	function handleSearchChange(nextQ: string) {
+		void navigate({
+			search: (prev) => ({
+				...prev,
+				q: nextQ.trim() ? nextQ.trim() : undefined,
+			}),
+			replace: true,
+		});
 	}
 
 	return (
@@ -84,6 +143,10 @@ function BeepsPage() {
 					slug={slug}
 					variant="full"
 					onCreateClick={() => setIsCreateOpen(true)}
+					currentTab={currentTab}
+					onTabChange={handleTabChange}
+					searchQuery={searchQuery}
+					onSearchChange={handleSearchChange}
 				/>
 
 				<CreateBeepDialog

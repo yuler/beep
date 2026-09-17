@@ -107,9 +107,11 @@ export function requireStaff(me: {
 	}
 }
 
-type LoaderContext = {
+type LoaderContext<TDeps = unknown> = {
 	location: { pathname: string; searchStr: string };
 	params?: { account_slug?: string; [key: string]: string | undefined };
+	deps?: TDeps;
+	abortController?: AbortController;
 };
 
 /**
@@ -117,9 +119,10 @@ type LoaderContext = {
  * redirects like the removed `useAdminResource` hook did, instead of dumping a
  * raw error page through the default error boundary.
  */
-export function withAuthRedirects<C extends LoaderContext, R>(
-	load: (ctx: C) => Promise<R>,
-) {
+export function withAuthRedirects<
+	C extends LoaderContext = LoaderContext,
+	R = unknown,
+>(load: (ctx: C) => Promise<R>) {
 	return async (ctx: C): Promise<R> => {
 		try {
 			return await load(ctx);

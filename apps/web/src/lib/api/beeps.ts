@@ -70,15 +70,19 @@ export function fetchBeeps(
 		page?: string | null;
 		status?: string | null;
 		kind?: string | null;
+		q?: string | null;
+		signal?: AbortSignal;
 	},
 ) {
 	const params = new URLSearchParams();
 	if (options?.page) params.set("page", options.page);
 	if (options?.status) params.set("status", options.status);
 	if (options?.kind) params.set("kind", options.kind);
+	if (options?.q) params.set("q", options.q);
 	const query = params.toString() ? `?${params.toString()}` : "";
 	return apiFetch<BeepsResponse>(`/api/v1/${slug}/beeps${query}`, {
 		method: "GET",
+		signal: options?.signal,
 	});
 }
 

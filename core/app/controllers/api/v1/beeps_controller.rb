@@ -4,6 +4,22 @@ class Api::V1::BeepsController < Api::V1::BaseController
     scope = scope.where(status: params[:status]) if params[:status].present? && Beep.statuses.key?(params[:status])
     scope = scope.where(kind: params[:kind]) if params[:kind].present? && Beep.kinds.key?(params[:kind])
 
+    search_term = params[:q].presence || params[:search].presence
+    if search_term.present?
+      q_clean = search_term.strip
+      q_term = "%#{ActiveRecord::Base.sanitize_sql_like(q_clean.downcase)}%"
+      search_scope = scope.left_outer_joins(:beeper)
+      text_condition = search_scope.where(
+        "LOWER(beeps.title) LIKE :q OR LOWER(beeps.body) LIKE :q OR LOWER(beepers.title) LIKE :q",
+        q: q_term
+      )
+      scope = if Current.account.beeps.where(id: q_clean).exists?
+        search_scope.where(id: q_clean).or(text_condition)
+      else
+        text_condition
+      end
+    end
+
     @beeps = set_page_and_extract_portion_from scope,
                                                ordered_by: { created_at: :desc, id: :desc }
     @run_stats = Beep::Run.stats_by_beep(@beeps.map(&:id))
