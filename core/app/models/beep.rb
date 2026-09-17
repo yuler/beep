@@ -52,14 +52,30 @@ class Beep < ApplicationRecord
 
     def stats_for(account, now = Time.current)
       scope = account.beeps
-      due_today_count = scope.where(status: %w[active firing])
+      counts = scope.where(status: %w[active firing completed]).group(:status).count
+      active_count = counts["active"] || 0
+      firing_count = counts["firing"] || 0
+
+      candidate_scope = scope.where(status: %w[active firing])
                              .where("next_run_at IS NOT NULL OR run_at IS NOT NULL")
-                             .find_each.count { |beep| beep.due_today?(now) }
+      timezones = candidate_scope.distinct.pluck(:timezone)
+
+      due_today_count = timezones.sum do |tz_name|
+        tz = Time.find_zone(tz_name) || Time.zone
+        local_now = now.in_time_zone(tz)
+        candidate_scope.where(timezone: tz_name)
+                       .where("COALESCE(next_run_at, run_at) >= ? AND COALESCE(next_run_at, run_at) <= ?",
+                              local_now.beginning_of_day.utc, local_now.end_of_day.utc)
+                       .count
+      end
 
       {
-        active: scope.active.count,
+        active: active_count,
         due_today: due_today_count,
-        firing: scope.firing.count
+        firing: firing_count,
+        recurring: scope.recurring.count,
+        completed: counts["completed"] || 0,
+        all: scope.count
       }
     end
   end

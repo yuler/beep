@@ -26,6 +26,9 @@ class Api::V1::Beeps::StatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, stats["active"]
     assert_equal 1, stats["due_today"]
     assert_equal 0, stats["firing"]
+    assert_equal 0, stats["recurring"]
+    assert_equal 0, stats["completed"]
+    assert_equal 3, stats["all"]
   end
 
   test "show requires authentication" do

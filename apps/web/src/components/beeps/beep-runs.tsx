@@ -41,6 +41,7 @@ export function BeepRuns({
 		initialPagination,
 	);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const isLoadingMoreRef = useRef(false);
 	const [isOpen, setIsOpen] = useState(true);
 	const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -51,7 +52,7 @@ export function BeepRuns({
 
 	const loadMore = useCallback(async () => {
 		if (
-			isLoadingMore ||
+			isLoadingMoreRef.current ||
 			!pagination?.has_more ||
 			!pagination.next_page ||
 			!slug ||
@@ -60,6 +61,7 @@ export function BeepRuns({
 			return;
 		}
 
+		isLoadingMoreRef.current = true;
 		setIsLoadingMore(true);
 		try {
 			const res = await fetchBeepRuns(slug, beepId, {
@@ -74,9 +76,10 @@ export function BeepRuns({
 		} catch (err) {
 			console.error("Failed to load more beep runs", err);
 		} finally {
+			isLoadingMoreRef.current = false;
 			setIsLoadingMore(false);
 		}
-	}, [isLoadingMore, pagination, slug, beepId]);
+	}, [pagination, slug, beepId]);
 
 	useEffect(() => {
 		if (!isOpen || !pagination?.has_more) return;

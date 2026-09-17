@@ -120,6 +120,7 @@ function BeeperDetailPage() {
 	const [runs, setRuns] = useState<BeeperRun[]>(initialRuns);
 	const [pagination, setPagination] = useState(initialPagination);
 	const [isLoadingMoreRuns, setIsLoadingMoreRuns] = useState(false);
+	const isLoadingMoreRunsRef = useRef(false);
 	const [isRunsOpen, setIsRunsOpen] = useState(true);
 	const runsSentinelRef = useRef<HTMLDivElement | null>(null);
 	const [deleting, setDeleting] = useState(false);
@@ -135,8 +136,14 @@ function BeeperDetailPage() {
 	}, [initialRuns, initialPagination]);
 
 	const loadMoreRuns = useCallback(async () => {
-		if (isLoadingMoreRuns || !pagination?.has_more || !pagination.next_page)
+		if (
+			isLoadingMoreRunsRef.current ||
+			!pagination?.has_more ||
+			!pagination.next_page
+		) {
 			return;
+		}
+		isLoadingMoreRunsRef.current = true;
 		setIsLoadingMoreRuns(true);
 		try {
 			const res = await fetchBeeperRuns(slug, beeper.id, {
@@ -151,9 +158,10 @@ function BeeperDetailPage() {
 		} catch (err) {
 			console.error("Failed to load more runs", err);
 		} finally {
+			isLoadingMoreRunsRef.current = false;
 			setIsLoadingMoreRuns(false);
 		}
-	}, [isLoadingMoreRuns, pagination, slug, beeper.id]);
+	}, [pagination, slug, beeper.id]);
 
 	useEffect(() => {
 		if (!isRunsOpen || !pagination?.has_more) return;

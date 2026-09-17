@@ -1,4 +1,5 @@
 # Development-only CORS for apps/web calling /api/v1 from the canonical web host.
+# In production, web and core share the same origin or are routed behind the reverse proxy.
 if Rails.env.development?
   class DevelopmentCors
     API_PREFIX = "/api/v1"

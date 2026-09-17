@@ -32,6 +32,10 @@ export type Beep = {
 		name: string;
 	} | null;
 	created_at: string;
+	run_stats?: {
+		total: number;
+		succeeded: number;
+	};
 	runs: BeepRun[];
 };
 
@@ -51,16 +55,28 @@ export type BeepStatsData = {
 	active: number;
 	due_today: number;
 	firing: number;
+	recurring?: number;
+	completed?: number;
+	all?: number;
 };
 
 export type BeepStatsResponse = {
 	stats: BeepStatsData;
 };
 
-export function fetchBeeps(slug: string, options?: { page?: string | null }) {
-	const query = options?.page
-		? `?page=${encodeURIComponent(options.page)}`
-		: "";
+export function fetchBeeps(
+	slug: string,
+	options?: {
+		page?: string | null;
+		status?: string | null;
+		kind?: string | null;
+	},
+) {
+	const params = new URLSearchParams();
+	if (options?.page) params.set("page", options.page);
+	if (options?.status) params.set("status", options.status);
+	if (options?.kind) params.set("kind", options.kind);
+	const query = params.toString() ? `?${params.toString()}` : "";
 	return apiFetch<BeepsResponse>(`/api/v1/${slug}/beeps${query}`, {
 		method: "GET",
 	});

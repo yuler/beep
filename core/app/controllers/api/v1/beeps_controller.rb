@@ -1,12 +1,18 @@
 class Api::V1::BeepsController < Api::V1::BaseController
   def index
-    @beeps = set_page_and_extract_portion_from Current.account.beeps.includes(:runs, beeper: :beeper_app),
+    scope = Current.account.beeps.includes(beeper: :beeper_app)
+    scope = scope.where(status: params[:status]) if params[:status].present? && Beep.statuses.key?(params[:status])
+    scope = scope.where(kind: params[:kind]) if params[:kind].present? && Beep.kinds.key?(params[:kind])
+
+    @beeps = set_page_and_extract_portion_from scope,
                                                ordered_by: { created_at: :desc, id: :desc }
+    @run_stats = Beep::Run.stats_by_beep(@beeps.map(&:id))
+    @recent_runs = Beep::Run.recent_by_beep(@beeps.map(&:id))
     render :index
   end
 
   def show
-    @beep = Current.account.beeps.includes(:runs, beeper: :beeper_app).find(params[:id])
+    @beep = Current.account.beeps.includes(beeper: :beeper_app).find(params[:id])
     render :show
   end
 

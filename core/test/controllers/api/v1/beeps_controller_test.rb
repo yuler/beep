@@ -373,4 +373,35 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "UTC", response.parsed_body["timezone"]
     assert_equal "UTC", beep.reload.timezone
   end
+
+  test "index filters by status" do
+    active_beep = @account.beeps.create!(kind: :once, title: "Active Beep", run_at: @run_at)
+    firing_beep = @account.beeps.create!(kind: :once, title: "Firing Beep", run_at: @run_at)
+    firing_beep.update_columns(status: "firing")
+
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { status: "firing" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    beeps = response.parsed_body["beeps"]
+    assert_equal 1, beeps.size
+    assert_equal firing_beep.id, beeps.first["id"]
+  end
+
+  test "index filters by kind" do
+    once_beep = @account.beeps.create!(kind: :once, title: "Once Beep", run_at: @run_at)
+    recurring_beep = @account.beeps.create!(kind: :recurring, title: "Recurring Beep", cron: "0 9 * * *")
+
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { kind: "recurring" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    beeps = response.parsed_body["beeps"]
+    assert_equal 1, beeps.size
+    assert_equal recurring_beep.id, beeps.first["id"]
+  end
 end

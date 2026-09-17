@@ -67,6 +67,7 @@ function BeepsPage() {
 				<BeepList
 					beeps={beeps}
 					initialPagination={pagination}
+					stats={stats}
 					slug={slug}
 					variant="full"
 				/>

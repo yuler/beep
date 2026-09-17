@@ -18,12 +18,16 @@ import {
 	SortableHeader,
 } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
-import { ProgressBar, StatusPill } from "@/components/ui/status-pill";
-import { type Beep, fetchBeeps, type PaginationMeta } from "@/lib/api/beeps";
+import {
+	type Beep,
+	type BeepStatsData,
+	fetchBeeps,
+	type PaginationMeta,
+} from "@/lib/api/beeps";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import { beepRunAt } from "@/lib/beep-stats";
 import { beepRunStatusLabel, beepStatusLabel } from "@/lib/i18n-labels";
-import { runSuccessRate } from "@/lib/run-success-rate";
+import { beepRunCount, beepRunSuccessRate } from "@/lib/run-success-rate";
 import { shortId } from "@/lib/short-id";
 import { cn } from "@/lib/utils";
 import { m } from "@/locale/paraglide/messages";
@@ -58,27 +62,27 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 		const fullColumns =
 			variant === "full"
 				? [
-						columnHelper.accessor((row) => runSuccessRate(row.runs), {
+						columnHelper.accessor((row) => beepRunSuccessRate(row), {
 							id: "run_success",
 							header: ({ column }) => (
 								<SortableHeader column={column} label={m.beeps_run_success()} />
 							),
 							cell: ({ row }) => (
-								<ProgressBar value={runSuccessRate(row.original.runs)} />
+								<ProgressBar value={beepRunSuccessRate(row.original)} />
 							),
 						}),
-						columnHelper.accessor((row) => row.runs.length, {
+						columnHelper.accessor((row) => beepRunCount(row), {
 							id: "runs",
 							header: ({ column }) => (
 								<SortableHeader column={column} label={m.beeps_runs()} />
 							),
 							cell: ({ row }) => {
 								const beep = row.original;
-								const lastRun = beep.runs[beep.runs.length - 1];
+								const lastRun = beep.runs?.[0];
 								return (
 									<div className="flex flex-col gap-0.5 text-sm">
 										<span className="tabular-nums text-foreground">
-											{beep.runs.length}
+											{beepRunCount(beep)}
 										</span>
 										{lastRun ? (
 											<span className="text-[11px] text-muted-foreground capitalize">
@@ -205,14 +209,22 @@ const FILTER_TABS: {
 	{ id: "completed", label: m.beeps_filter_completed },
 ];
 
+function getFilterOptions(filter: FilterStatus) {
+	if (filter === "recurring") return { kind: "recurring" };
+	if (filter !== "all") return { status: filter };
+	return {};
+}
+
 export function BeepList({
 	beeps: initialBeeps,
 	initialPagination,
+	stats,
 	slug,
 	variant = "full",
 }: {
 	beeps: Beep[];
 	initialPagination?: PaginationMeta;
+	stats?: BeepStatsData;
 	slug: string;
 	variant?: "compact" | "full";
 }) {
@@ -222,18 +234,64 @@ export function BeepList({
 		initialPagination,
 	);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const [isFiltering, setIsFiltering] = useState(false);
+	const isLoadingMoreRef = useRef(false);
+	const filterRequestRef = useRef(0);
 	const sentinelRef = useRef<HTMLDivElement | null>(null);
+	const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
 
 	useEffect(() => {
-		setItems(initialBeeps);
-		setPagination(initialPagination);
-	}, [initialBeeps, initialPagination]);
+		if (statusFilter === "all") {
+			setItems(initialBeeps);
+			setPagination(initialPagination);
+		}
+	}, [initialBeeps, initialPagination, statusFilter]);
+
+	const handleStatusFilterChange = useCallback(
+		(nextFilter: FilterStatus) => {
+			setStatusFilter(nextFilter);
+			if (nextFilter === "all") {
+				setItems(initialBeeps);
+				setPagination(initialPagination);
+				return;
+			}
+
+			const requestId = ++filterRequestRef.current;
+			setIsFiltering(true);
+			fetchBeeps(slug, getFilterOptions(nextFilter))
+				.then((res) => {
+					if (filterRequestRef.current === requestId) {
+						setItems(res.beeps);
+						setPagination(res.pagination);
+					}
+				})
+				.catch((err) => {
+					console.error("Failed to filter beeps", err);
+				})
+				.finally(() => {
+					if (filterRequestRef.current === requestId) {
+						setIsFiltering(false);
+					}
+				});
+		},
+		[slug, initialBeeps, initialPagination],
+	);
 
 	const loadMore = useCallback(async () => {
-		if (isLoadingMore || !pagination?.has_more || !pagination.next_page) return;
+		if (
+			isLoadingMoreRef.current ||
+			!pagination?.has_more ||
+			!pagination.next_page
+		) {
+			return;
+		}
+		isLoadingMoreRef.current = true;
 		setIsLoadingMore(true);
 		try {
-			const res = await fetchBeeps(slug, { page: pagination.next_page });
+			const res = await fetchBeeps(slug, {
+				page: pagination.next_page,
+				...getFilterOptions(statusFilter),
+			});
 			setItems((prev) => {
 				const existingIds = new Set(prev.map((b) => b.id));
 				const newUnique = res.beeps.filter((b) => !existingIds.has(b.id));
@@ -243,9 +301,10 @@ export function BeepList({
 		} catch (err) {
 			console.error("Failed to load more beeps", err);
 		} finally {
+			isLoadingMoreRef.current = false;
 			setIsLoadingMore(false);
 		}
-	}, [isLoadingMore, pagination, slug]);
+	}, [pagination, slug, statusFilter]);
 
 	useEffect(() => {
 		if (!pagination?.has_more) return;
@@ -266,7 +325,6 @@ export function BeepList({
 	}, [pagination?.has_more, loadMore]);
 
 	const [search, setSearch] = useState("");
-	const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
 	const columns = useBeepColumns(slug, variant);
 
 	const filteredBeeps = useMemo(() => {
@@ -292,15 +350,30 @@ export function BeepList({
 
 	const counts = useMemo(() => {
 		return {
-			all: items.length,
-			active: items.filter((b) => b.status === "active").length,
-			firing: items.filter((b) => b.status === "firing").length,
-			recurring: items.filter((b) => b.kind === "recurring").length,
-			completed: items.filter((b) => b.status === "completed").length,
+			all:
+				stats?.all ??
+				(statusFilter === "all" ? pagination?.total_count : undefined) ??
+				items.length,
+			active:
+				stats?.active ??
+				(statusFilter === "active" ? pagination?.total_count : undefined) ??
+				items.filter((b) => b.status === "active").length,
+			firing:
+				stats?.firing ??
+				(statusFilter === "firing" ? pagination?.total_count : undefined) ??
+				items.filter((b) => b.status === "firing").length,
+			recurring:
+				stats?.recurring ??
+				(statusFilter === "recurring" ? pagination?.total_count : undefined) ??
+				items.filter((b) => b.kind === "recurring").length,
+			completed:
+				stats?.completed ??
+				(statusFilter === "completed" ? pagination?.total_count : undefined) ??
+				items.filter((b) => b.status === "completed").length,
 		};
-	}, [items]);
+	}, [stats, pagination, items, statusFilter]);
 
-	if (items.length === 0) {
+	if (items.length === 0 && !isFiltering && statusFilter === "all") {
 		return (
 			<Card className="flex flex-col items-center justify-center p-8 text-center">
 				<div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -333,7 +406,7 @@ export function BeepList({
 										? "bg-background text-foreground shadow-sm dark:bg-card dark:text-foreground"
 										: "text-muted-foreground hover:text-foreground",
 								)}
-								onClick={() => setStatusFilter(tab.id)}
+								onClick={() => handleStatusFilterChange(tab.id)}
 							>
 								{tab.label()}
 								<span
@@ -362,7 +435,11 @@ export function BeepList({
 				</div>
 			) : null}
 
-			{filteredBeeps.length === 0 ? (
+			{isFiltering ? (
+				<div className="flex items-center justify-center py-12">
+					<Loader2 className="size-6 animate-spin text-muted-foreground" />
+				</div>
+			) : filteredBeeps.length === 0 ? (
 				<Card className="flex flex-col items-center justify-center p-8 text-center">
 					<p className="text-sm font-medium text-muted-foreground">
 						{m.beeps_filter_no_match()}
@@ -373,7 +450,7 @@ export function BeepList({
 						size="sm"
 						className="mt-2"
 						onClick={() => {
-							setStatusFilter("all");
+							handleStatusFilterChange("all");
 							setSearch("");
 						}}
 					>
@@ -385,8 +462,9 @@ export function BeepList({
 					{/* Mobile Card List View (< md) */}
 					<div className="flex flex-col gap-3 md:hidden">
 						{filteredBeeps.map((beep) => {
-							const successRate = runSuccessRate(beep.runs);
-							const lastRun = beep.runs[beep.runs.length - 1];
+							const successRate = beepRunSuccessRate(beep);
+							const totalRuns = beepRunCount(beep);
+							const lastRun = beep.runs?.[0];
 
 							return (
 								<div
@@ -458,7 +536,7 @@ export function BeepList({
 												</div>
 												<div>
 													<span className="block text-[11px] text-muted-foreground/80">
-														{m.beeps_runs()} ({beep.runs.length})
+														{m.beeps_runs()} ({totalRuns})
 													</span>
 													<span className="text-[11px] capitalize text-foreground">
 														{lastRun

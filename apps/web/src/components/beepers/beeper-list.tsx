@@ -266,6 +266,7 @@ export function BeeperList({
 		initialPagination,
 	);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const isLoadingMoreRef = useRef(false);
 	const sentinelRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
@@ -274,7 +275,14 @@ export function BeeperList({
 	}, [initialBeepers, initialPagination]);
 
 	const loadMore = useCallback(async () => {
-		if (isLoadingMore || !pagination?.has_more || !pagination.next_page) return;
+		if (
+			isLoadingMoreRef.current ||
+			!pagination?.has_more ||
+			!pagination.next_page
+		) {
+			return;
+		}
+		isLoadingMoreRef.current = true;
 		setIsLoadingMore(true);
 		try {
 			const res = await fetchBeepers(slug, { page: pagination.next_page });
@@ -287,9 +295,10 @@ export function BeeperList({
 		} catch (err) {
 			console.error("Failed to load more beepers", err);
 		} finally {
+			isLoadingMoreRef.current = false;
 			setIsLoadingMore(false);
 		}
-	}, [isLoadingMore, pagination, slug]);
+	}, [pagination, slug]);
 
 	useEffect(() => {
 		if (!pagination?.has_more) return;

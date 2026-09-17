@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Export production SQLite database as SQL statements and import into local development.
 #
+# IMPORTANT / SECURITY NOTICE:
+# Dump files contain production data (including potentially PII/secrets).
+# Dumps MUST stay local under core/storage/ (gitignored) and must NEVER be committed.
+#
 # Connects to the Dokploy server over SSH, finds the running core container by
 # its <project>-<service> names, dumps SQLite SQL from production, saves it locally,
 # and imports it into core/storage/development.sqlite3.
@@ -190,6 +194,7 @@ if [ "$IMPORT_ONLY" = false ]; then
   mv "$TEMP_DUMP_FILE" "$DUMP_FILE"
   ln -sfn "$(basename "$DUMP_FILE")" "$LATEST_SYMLINK"
   ok "Saved production SQL to $DUMP_FILE ($(du -h "$DUMP_FILE" | cut -f1))"
+  warn "Dump contains production data. Keep local under core/storage/ and NEVER commit to git!"
   log "Updated symlink: $LATEST_SYMLINK -> $(basename "$DUMP_FILE")"
 else
   if [ ! -f "$DUMP_FILE" ]; then
