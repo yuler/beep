@@ -23,7 +23,7 @@ Use runner job create / push / pull to manage local check scripts.`,
 
 	cmd.AddCommand(NewCmdConnect())
 	cmd.AddCommand(NewCmdDisconnect())
-	cmd.AddCommand(NewCmdUp())
+	cmd.AddCommand(NewCmdStart())
 	cmd.AddCommand(NewCmdStop())
 	cmd.AddCommand(NewCmdStatus())
 	cmd.AddCommand(cmdconfig.NewCmdConfig())

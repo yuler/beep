@@ -52,10 +52,10 @@ func TestGhHelpFormatting(t *testing.T) {
 		"resume:",
 		"run, trigger:",
 		"show, view, info:",
-		"beeper, beepers:",
-		"channel, channels:",
+		"beeper:",
+		"channel:",
 		"runner:",
-		"service, services:",
+		"service:",
 		"auth:",
 		"config:",
 		"upgrade, update:",
@@ -65,6 +65,12 @@ func TestGhHelpFormatting(t *testing.T) {
 		if !strings.Contains(out, c) {
 			t.Errorf("expected command %q in help output", c)
 		}
+	}
+
+	serviceIdx := strings.Index(out, "service:")
+	channelIdx := strings.Index(out, "channel:")
+	if serviceIdx == -1 || channelIdx == -1 || serviceIdx > channelIdx {
+		t.Errorf("expected 'service:' before 'channel:' in LOCAL SERVICE COMMANDS, got serviceIdx=%d, channelIdx=%d", serviceIdx, channelIdx)
 	}
 
 	// Check learn more section
@@ -92,8 +98,8 @@ func TestSubcommandHelpFormatting(t *testing.T) {
 	if !strings.Contains(out, "USAGE") || !strings.Contains(out, "  beep beeper <command> [flags]") {
 		t.Errorf("expected USAGE for beeper command")
 	}
-	if !strings.Contains(out, "ALIASES") || !strings.Contains(out, "  beepers") {
-		t.Errorf("expected ALIASES for beeper command")
+	if strings.Contains(out, "ALIASES") {
+		t.Errorf("expected no ALIASES for beeper command, got:\n%s", out)
 	}
 	if !strings.Contains(out, "COMMANDS") {
 		t.Errorf("expected COMMANDS section for beeper")

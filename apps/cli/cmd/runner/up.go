@@ -11,8 +11,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewCmdUp creates the 'runner up' subcommand.
-func NewCmdUp() *cobra.Command {
+// NewCmdStart creates the 'runner start' subcommand.
+func NewCmdStart() *cobra.Command {
 	var (
 		concurrency  int
 		pollInterval time.Duration
@@ -20,8 +20,8 @@ func NewCmdUp() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "up",
-		Aliases: []string{"run"},
+		Use:     "start",
+		Aliases: []string{"up"},
 		Short:   "Start runner daemon to execute scheduled jobs",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := cmdutil.LoadConfig(cmd)
@@ -45,4 +45,9 @@ func NewCmdUp() *cobra.Command {
 	cmd.Flags().DurationVarP(&pollInterval, "poll-interval", "i", 0, "Poll interval (default 3s)")
 	cmd.Flags().BoolVarP(&daemonMode, "daemon", "d", false, "Run runner in background")
 	return cmd
+}
+
+// NewCmdUp provides backward compatibility for 'runner up'.
+func NewCmdUp() *cobra.Command {
+	return NewCmdStart()
 }

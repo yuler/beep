@@ -184,6 +184,14 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 					return false
 				}
 			}
+			if id == "service" {
+				if commands[i].Name() == "service" {
+					return true
+				}
+				if commands[j].Name() == "service" {
+					return false
+				}
+			}
 			return commands[i].Name() < commands[j].Name()
 		})
 

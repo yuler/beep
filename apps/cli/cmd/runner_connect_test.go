@@ -16,14 +16,17 @@ import (
 )
 
 func TestRunnerCommandsRegistration(t *testing.T) {
-	for _, sub := range []string{"connect", "disconnect", "up", "run", "stop", "status"} {
+	for _, sub := range []string{"connect", "disconnect", "start", "up", "stop", "down", "status"} {
 		cmd, _, err := RootCmd.Find([]string{"runner", sub})
 		if err != nil {
 			t.Fatalf("failed to find 'runner %s': %v", sub, err)
 		}
 		expectedName := sub
-		if sub == "run" {
-			expectedName = "up"
+		if sub == "up" {
+			expectedName = "start"
+		}
+		if sub == "down" {
+			expectedName = "stop"
 		}
 		if cmd.Name() != expectedName {
 			t.Errorf("expected command name %q, got %q", expectedName, cmd.Name())

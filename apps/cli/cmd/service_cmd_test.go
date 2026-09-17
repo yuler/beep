@@ -87,21 +87,21 @@ func TestBuildChildDaemonArgs(t *testing.T) {
 }
 
 func TestUpCommandRegistration(t *testing.T) {
-	cmd, _, err := RootCmd.Find([]string{"runner", "up"})
+	cmd, _, err := RootCmd.Find([]string{"runner", "start"})
+	if err != nil {
+		t.Fatalf("failed to find 'runner start' command: %v", err)
+	}
+	if cmd.Name() != "start" {
+		t.Errorf("expected command name 'start', got %s", cmd.Name())
+	}
+
+	// 'up' alias should also resolve to 'start'
+	aliasCmd, _, err := RootCmd.Find([]string{"runner", "up"})
 	if err != nil {
 		t.Fatalf("failed to find 'runner up' command: %v", err)
 	}
-	if cmd.Name() != "up" {
-		t.Errorf("expected command name 'up', got %s", cmd.Name())
-	}
-
-	// 'run' alias should also resolve to 'up'
-	aliasCmd, _, err := RootCmd.Find([]string{"runner", "run"})
-	if err != nil {
-		t.Fatalf("failed to find 'runner run' command: %v", err)
-	}
-	if aliasCmd.Name() != "up" {
-		t.Errorf("expected alias command name 'up', got %s", aliasCmd.Name())
+	if aliasCmd.Name() != "start" {
+		t.Errorf("expected alias command name 'start', got %s", aliasCmd.Name())
 	}
 }
 
@@ -120,6 +120,14 @@ func TestStatusAndStopCommandRegistration(t *testing.T) {
 	}
 	if stopCmd.Name() != "stop" {
 		t.Errorf("expected command name 'stop', got %s", stopCmd.Name())
+	}
+
+	downCmd, _, err := RootCmd.Find([]string{"runner", "down"})
+	if err != nil {
+		t.Fatalf("failed to find 'runner down' command: %v", err)
+	}
+	if downCmd.Name() != "stop" {
+		t.Errorf("expected alias command name 'stop', got %s", downCmd.Name())
 	}
 }
 

@@ -18,8 +18,9 @@ func NewCmdStop() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "stop",
-		Short: "Stop the running runner daemon",
+		Use:     "stop",
+		Aliases: []string{"down"},
+		Short:   "Stop the running runner daemon",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := cmdutil.LoadConfig(cmd)
 			if err != nil {

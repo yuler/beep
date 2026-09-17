@@ -508,22 +508,13 @@ func TestNoConflictWithRunnerAndOtherCommands(t *testing.T) {
 		t.Errorf("expected 'run' to have GroupID 'beeps', got %q", runCmd.GroupID)
 	}
 
-	// 'runner up' alias 'run' resolves to runner up
-	runnerRunCmd, _, err := RootCmd.Find([]string{"runner", "run"})
-	if err != nil {
-		t.Fatalf("failed to find 'runner run': %v", err)
-	}
-	if runnerRunCmd.Name() != "up" {
-		t.Errorf("expected 'runner run' to resolve to 'up', got %q", runnerRunCmd.Name())
-	}
-
-	// 'runner up' resolves to up
+	// 'runner up' resolves to start
 	runnerUpCmd, _, err := RootCmd.Find([]string{"runner", "up"})
 	if err != nil {
 		t.Fatalf("failed to find 'runner up': %v", err)
 	}
-	if runnerUpCmd.Name() != "up" {
-		t.Errorf("expected 'runner up' to resolve to 'up', got %q", runnerUpCmd.Name())
+	if runnerUpCmd.Name() != "start" {
+		t.Errorf("expected 'runner up' to resolve to 'start', got %q", runnerUpCmd.Name())
 	}
 
 	// Regression checks for secondary namespaces and subcommands

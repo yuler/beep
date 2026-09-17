@@ -9,9 +9,8 @@ import (
 // NewCmdChannel creates and returns the parent 'channel' command.
 func NewCmdChannel() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "channel",
-		Aliases: []string{"channels"},
-		Short:   "Connect this CLI as a notification channel",
+		Use:   "channel",
+		Short: "Connect this CLI as a notification channel",
 		Long:    ui.Bold(ui.Cyan("Notification Channel Management")) + ` - Connect, run, and manage CLI notification channels.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
@@ -20,7 +19,7 @@ func NewCmdChannel() *cobra.Command {
 
 	cmd.AddCommand(NewCmdConnect())
 	cmd.AddCommand(NewCmdDisconnect())
-	cmd.AddCommand(NewCmdUp())
+	cmd.AddCommand(NewCmdStart())
 	cmd.AddCommand(NewCmdStop())
 	cmd.AddCommand(NewCmdStatus())
 
