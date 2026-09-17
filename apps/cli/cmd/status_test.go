@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"beep/cmd/service"
 	"beep/internal/config"
 	"beep/internal/ui"
 )
@@ -47,7 +48,7 @@ func TestStatusAuthDisplay(t *testing.T) {
 		flagWorkspace = tmpDir
 		defer func() { flagWorkspace = "" }()
 
-		cmd := newStatusCmd()
+		cmd := service.NewCmdStatus()
 		out := captureOutput(func() {
 			_ = cmd.RunE(cmd, nil)
 		})
@@ -82,7 +83,7 @@ func TestStatusAuthDisplay(t *testing.T) {
 		flagWorkspace = tmpDir
 		defer func() { flagWorkspace = "" }()
 
-		cmd := newStatusCmd()
+		cmd := service.NewCmdStatus()
 		out := captureOutput(func() {
 			_ = cmd.RunE(cmd, nil)
 		})
@@ -133,7 +134,7 @@ func TestStatusAuthDisplay(t *testing.T) {
 		flagWorkspace = tmpDir
 		defer func() { flagWorkspace = "" }()
 
-		cmd := newStatusCmd()
+		cmd := service.NewCmdStatus()
 		out := captureOutput(func() {
 			_ = cmd.RunE(cmd, nil)
 		})

@@ -55,9 +55,7 @@ func TestGhHelpFormatting(t *testing.T) {
 		"beeper:",
 		"channel:",
 		"runner:",
-		"status:",
-		"stop:",
-		"up:",
+		"service:",
 		"auth:",
 		"config:",
 		"upgrade:",
@@ -72,6 +70,9 @@ func TestGhHelpFormatting(t *testing.T) {
 	// Check learn more section
 	if !strings.Contains(out, "Use 'beep <command> --help' for more information about a command.") {
 		t.Errorf("expected LEARN MORE tip in help output")
+	}
+	if !strings.Contains(out, "Install shell completion with 'beep completion install'") {
+		t.Errorf("expected completion install tip in root help output")
 	}
 }
 
@@ -99,5 +100,8 @@ func TestSubcommandHelpFormatting(t *testing.T) {
 	}
 	if !strings.Contains(out, "apps:") || !strings.Contains(out, "create:") {
 		t.Errorf("expected subcommands with colon for beeper")
+	}
+	if strings.Contains(out, "Install shell completion with 'beep completion install'") {
+		t.Errorf("subcommand help should not contain root completion install tip")
 	}
 }

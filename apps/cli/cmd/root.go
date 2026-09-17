@@ -7,6 +7,7 @@ import (
 
 	"beep/cmd/beep"
 	"beep/cmd/beeper"
+	"beep/cmd/service"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/ui"
@@ -128,18 +129,12 @@ func init() {
 	// 3. Local service commands
 	channelCmd.GroupID = "service"
 	runnerCmd.GroupID = "service"
-	upCmd := newUpCmd()
-	upCmd.GroupID = "service"
-	stopCmd := newStopCmd()
-	stopCmd.GroupID = "service"
-	statusCmd := newStatusCmd()
-	statusCmd.GroupID = "service"
+	serviceCmd := service.NewCmdService()
+	serviceCmd.GroupID = "service"
 
 	RootCmd.AddCommand(channelCmd)
 	RootCmd.AddCommand(runnerCmd)
-	RootCmd.AddCommand(statusCmd)
-	RootCmd.AddCommand(stopCmd)
-	RootCmd.AddCommand(upCmd)
+	RootCmd.AddCommand(serviceCmd)
 
 	// 4. Additional commands
 	upgradeCmd.GroupID = "additional"
@@ -148,10 +143,5 @@ func init() {
 	RootCmd.AddCommand(upgradeCmd)
 	RootCmd.AddCommand(versionCmd)
 
-	RootCmd.InitDefaultCompletionCmd()
-	for _, c := range RootCmd.Commands() {
-		if c.Name() == "completion" {
-			c.GroupID = "additional"
-		}
-	}
+	initCompletionCmd()
 }

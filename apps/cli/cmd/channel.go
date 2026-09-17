@@ -2,7 +2,6 @@ package cmd
 
 import (
 	cmdchannel "beep/cmd/channel"
-	"beep/internal/cliservice"
 	"beep/internal/cmdutil"
 
 	"github.com/spf13/cobra"
@@ -17,11 +16,6 @@ var (
 			if flagWorkspace != "" {
 				cmdutil.SetOverrideWorkspace(flagWorkspace)
 				defer cmdutil.SetOverrideWorkspace("")
-			}
-			if startServiceDaemonFn != nil {
-				orig := cliservice.StartServiceDaemonFn
-				cliservice.StartServiceDaemonFn = startServiceDaemonFn
-				defer func() { cliservice.StartServiceDaemonFn = orig }()
 			}
 			return cmdchannel.NewCmdConnect().RunE(cmd, args)
 		},

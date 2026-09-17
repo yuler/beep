@@ -1,9 +1,12 @@
-package cmd
+package service
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"beep/internal/cliservice"
+	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/daemon"
 	"beep/internal/ui"
@@ -11,108 +14,38 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newStatusCmd() *cobra.Command {
+// NewCmdStatus creates the 'service status' subcommand.
+func NewCmdStatus() *cobra.Command {
 	return &cobra.Command{
-		Use:   "status",
+		Use:   "status [runner|channel]",
 		Short: "Check running status and information of Beep services",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStatus(cmd, args)
+			cfg, err := cmdutil.LoadConfig(cmd)
+			if err != nil {
+				return err
+			}
+
+			target := ""
+			if len(args) > 0 {
+				target = strings.ToLower(args[0])
+			}
+
+			switch target {
+			case "runner":
+				return cliservice.ShowSingleServiceStatus(daemon.ServiceRunner, cfg)
+			case "channel":
+				return cliservice.ShowSingleServiceStatus(daemon.ServiceChannel, cfg)
+			case "":
+				return runStatusAll(cfg)
+			default:
+				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+			}
 		},
 	}
 }
 
-var statusCmd = newStatusCmd()
-
-func showSingleServiceStatus(service string, cfg *config.Config) error {
-	status, err := daemon.GetDaemonStatus(cfg.Workspace, service)
-	if err != nil {
-		return fmt.Errorf("failed to query %s daemon status: %w", service, err)
-	}
-
-	today := time.Now().Format("2006-01-02")
-	logFile := daemon.DailyLogPath(cfg.Workspace, service, today)
-	socketFile := daemon.SocketPath(cfg.Workspace, service)
-
-	title := fmt.Sprintf("Beep %s Daemon Status:", service)
-	if service == daemon.ServiceRunner {
-		title = "Beep Runner Daemon Status:"
-	} else if service == daemon.ServiceChannel {
-		title = "Beep Channel Daemon Status:"
-	}
-	fmt.Println(ui.Bold(ui.Cyan(title)))
-
-	if status != nil && status.PID > 0 {
-		uptime := ""
-		if t, err := time.Parse(time.RFC3339, status.StartTime); err == nil {
-			uptime = time.Since(t).Round(time.Second).String()
-		}
-
-		fmt.Println(ui.KeyValue("Status", ui.Green("running")+" "+ui.Green("●")))
-		fmt.Println(ui.KeyValue("PID", ui.Cyan(fmt.Sprintf("%d", status.PID))))
-		if status.Version != "" {
-			fmt.Println(ui.KeyValue("Version", ui.Bold(status.Version)))
-		}
-		if uptime != "" {
-			fmt.Println(ui.KeyValue("Uptime", ui.Dim(uptime)))
-		}
-		fmt.Println(ui.KeyValue("Workspace", ui.Dim(cfg.Workspace)))
-		fmt.Println(ui.KeyValue("Socket", ui.Dim(socketFile)))
-		fmt.Println(ui.KeyValue("Logs", ui.Dim(logFile)))
-		if cfg.ServerURL != "" {
-			fmt.Println(ui.KeyValue("Server", ui.Bold(cfg.ServerURL)))
-		}
-		if service == daemon.ServiceRunner && cfg.RunnerToken != "" {
-			fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(config.MaskToken(cfg.RunnerToken))))
-		}
-		if service == daemon.ServiceChannel {
-			chToken := cfg.ChannelToken
-			if chToken == "" {
-				chToken = cfg.CliToken
-			}
-			if chToken == "" {
-				chToken = cfg.DeviceToken
-			}
-			if chToken != "" {
-				fmt.Println(ui.KeyValue("Channel Token", ui.Yellow(config.MaskToken(chToken))))
-			}
-		}
-	} else {
-		fmt.Println(ui.KeyValue("Status", ui.Dim("stopped")+" "+ui.Dim("○")))
-		fmt.Println(ui.KeyValue("Workspace", ui.Dim(cfg.Workspace)))
-		fmt.Println(ui.KeyValue("Socket", ui.Dim(socketFile)))
-		fmt.Println(ui.KeyValue("Logs", ui.Dim(logFile)))
-		if cfg.ServerURL != "" {
-			fmt.Println(ui.KeyValue("Server", ui.Bold(cfg.ServerURL)))
-		}
-		if service == daemon.ServiceRunner && cfg.RunnerToken != "" {
-			fmt.Println(ui.KeyValue("Runner Token", ui.Yellow(config.MaskToken(cfg.RunnerToken))))
-		}
-		if service == daemon.ServiceChannel {
-			chToken := cfg.ChannelToken
-			if chToken == "" {
-				chToken = cfg.CliToken
-			}
-			if chToken == "" {
-				chToken = cfg.DeviceToken
-			}
-			if chToken != "" {
-				fmt.Println(ui.KeyValue("Channel Token", ui.Yellow(config.MaskToken(chToken))))
-			}
-		}
-		fmt.Println()
-		fmt.Println(ui.Section("Start commands:"))
-		fmt.Printf("  Foreground: %s\n", ui.Green(fmt.Sprintf("beep %s up", service)))
-		fmt.Printf("  Background: %s\n", ui.Cyan(fmt.Sprintf("beep %s up -d", service)))
-	}
-	return nil
-}
-
-func runStatus(cmd *cobra.Command, args []string) error {
-	cfg, err := loadConfig()
-	if err != nil {
-		return err
-	}
-
+func runStatusAll(cfg *config.Config) error {
 	today := time.Now().Format("2006-01-02")
 
 	runnerStatus, err := daemon.GetDaemonStatus(cfg.Workspace, daemon.ServiceRunner)
@@ -182,9 +115,9 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	if (runnerStatus == nil || runnerStatus.PID <= 0) && (channelStatus == nil || channelStatus.PID <= 0) {
 		fmt.Println()
 		fmt.Println(ui.Section("Start commands:"))
-		fmt.Printf("  All services:  %s  (background: %s)\n", ui.Green("beep up"), ui.Cyan("beep up -d"))
-		fmt.Printf("  Runner only:   %s  (background: %s)\n", ui.Green("beep runner up"), ui.Cyan("beep runner up -d"))
-		fmt.Printf("  Channel only:  %s  (background: %s)\n", ui.Green("beep channel up"), ui.Cyan("beep channel up -d"))
+		fmt.Printf("  All services:  %s  (background: %s)\n", ui.Green("beep service start"), ui.Cyan("beep service start -d"))
+		fmt.Printf("  Runner only:   %s  (background: %s)\n", ui.Green("beep service start runner"), ui.Cyan("beep service start runner -d"))
+		fmt.Printf("  Channel only:  %s  (background: %s)\n", ui.Green("beep service start channel"), ui.Cyan("beep service start channel -d"))
 	}
 
 	return nil

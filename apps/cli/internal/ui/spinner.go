@@ -34,6 +34,8 @@ func IsSpinnerEnabled() bool {
 
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
+const minSpinnerDuration = 250 * time.Millisecond
+
 // WithSpinner executes fn while displaying a gh-style Braille loading spinner on os.Stderr.
 // If the terminal is non-interactive, disabled, or redirected, fn is executed directly.
 func WithSpinner(msg string, fn func() error) error {
@@ -41,6 +43,7 @@ func WithSpinner(msg string, fn func() error) error {
 		return fn()
 	}
 
+	start := time.Now()
 	stopCh := make(chan struct{})
 	doneCh := make(chan struct{})
 
@@ -50,6 +53,10 @@ func WithSpinner(msg string, fn func() error) error {
 		defer ticker.Stop()
 
 		i := 0
+		// Render initial frame immediately
+		fmt.Fprintf(os.Stderr, "\r\033[K%s %s", Cyan(spinnerFrames[0]), Dim(msg))
+		i++
+
 		for {
 			select {
 			case <-stopCh:
@@ -65,6 +72,10 @@ func WithSpinner(msg string, fn func() error) error {
 
 	err := fn()
 
+	if elapsed := time.Since(start); elapsed < minSpinnerDuration {
+		time.Sleep(minSpinnerDuration - elapsed)
+	}
+
 	close(stopCh)
 	<-doneCh
 
@@ -77,6 +88,7 @@ func WithSpinnerResult[T any](msg string, fn func() (T, error)) (T, error) {
 		return fn()
 	}
 
+	start := time.Now()
 	stopCh := make(chan struct{})
 	doneCh := make(chan struct{})
 
@@ -86,6 +98,10 @@ func WithSpinnerResult[T any](msg string, fn func() (T, error)) (T, error) {
 		defer ticker.Stop()
 
 		i := 0
+		// Render initial frame immediately
+		fmt.Fprintf(os.Stderr, "\r\033[K%s %s", Cyan(spinnerFrames[0]), Dim(msg))
+		i++
+
 		for {
 			select {
 			case <-stopCh:
@@ -100,6 +116,10 @@ func WithSpinnerResult[T any](msg string, fn func() (T, error)) (T, error) {
 	}()
 
 	res, err := fn()
+
+	if elapsed := time.Since(start); elapsed < minSpinnerDuration {
+		time.Sleep(minSpinnerDuration - elapsed)
+	}
 
 	close(stopCh)
 	<-doneCh

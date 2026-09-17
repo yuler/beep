@@ -100,6 +100,9 @@ func RenderGhHelp(w io.Writer, cmd *cobra.Command) error {
 			fmt.Fprintf(w, "  Use '%s <command> --help' for more information about a command.\n", cmd.CommandPath())
 		}
 	}
+	if cmd.Parent() == nil {
+		fmt.Fprintln(w, "  Install shell completion with 'beep completion install' (or 'beep completion --help')")
+	}
 	fmt.Fprintln(w, "  Read the documentation at https://github.com/yuler/beep")
 
 	return nil
@@ -162,6 +165,14 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 			return
 		}
 		sort.Slice(commands, func(i, j int) bool {
+			if cmd.Name() == "completion" {
+				if commands[i].Name() == "install" {
+					return true
+				}
+				if commands[j].Name() == "install" {
+					return false
+				}
+			}
 			return commands[i].Name() < commands[j].Name()
 		})
 

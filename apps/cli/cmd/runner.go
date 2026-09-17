@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	cmdrunner "beep/cmd/runner"
-	"beep/internal/cliservice"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
 
@@ -26,11 +25,6 @@ func newRunnerConnectCmd() *cobra.Command {
 		if flagWorkspace != "" {
 			cmdutil.SetOverrideWorkspace(flagWorkspace)
 			defer cmdutil.SetOverrideWorkspace("")
-		}
-		if startServiceDaemonFn != nil {
-			orig := cliservice.StartServiceDaemonFn
-			cliservice.StartServiceDaemonFn = startServiceDaemonFn
-			defer func() { cliservice.StartServiceDaemonFn = orig }()
 		}
 		return origRunE(c, args)
 	}

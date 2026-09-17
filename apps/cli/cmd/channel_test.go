@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"beep/internal/client"
+	"beep/internal/cliservice"
 	"beep/internal/config"
 )
 
@@ -235,12 +236,12 @@ func TestChannelConnectAutomaticallyStartsDaemon(t *testing.T) {
 	flagWorkspace = tmpDir
 	defer func() { flagWorkspace = "" }()
 
-	origStart := startServiceDaemonFn
-	defer func() { startServiceDaemonFn = origStart }()
+	origStart := cliservice.StartServiceDaemonFn
+	defer func() { cliservice.StartServiceDaemonFn = origStart }()
 
 	var startedService string
 	var startedRawArgs []string
-	startServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	cliservice.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
 		startedService = service
 		startedRawArgs = rawArgs
 		return nil

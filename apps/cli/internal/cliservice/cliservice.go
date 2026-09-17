@@ -216,8 +216,8 @@ func ShowSingleServiceStatus(service string, cfg *config.Config) error {
 		}
 		fmt.Println()
 		fmt.Println(ui.Section("Start commands:"))
-		fmt.Printf("  Foreground: %s\n", ui.Green(fmt.Sprintf("beep %s up", service)))
-		fmt.Printf("  Background: %s\n", ui.Cyan(fmt.Sprintf("beep %s up -d", service)))
+		fmt.Printf("  Foreground: %s\n", ui.Green(fmt.Sprintf("beep service start %s", service)))
+		fmt.Printf("  Background: %s\n", ui.Cyan(fmt.Sprintf("beep service start %s -d", service)))
 	}
 	return nil
 }
