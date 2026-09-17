@@ -12,13 +12,13 @@ import (
 )
 
 func TestBeepCommandsRegistration(t *testing.T) {
-	// 1. Legacy namespace 'beep' must be registered and hidden
+	// 1. Root 'beep' command is in core group
 	legacyBeep, _, err := RootCmd.Find([]string{"beep"})
 	if err != nil {
-		t.Fatalf("failed to find 'beep' legacy command: %v", err)
+		t.Fatalf("failed to find 'beep' command: %v", err)
 	}
-	if !legacyBeep.Hidden {
-		t.Errorf("expected legacy 'beep' command to be hidden, got Hidden = false")
+	if legacyBeep.GroupID != "core" {
+		t.Errorf("expected 'beep' command to have GroupID 'core', got %q", legacyBeep.GroupID)
 	}
 
 	for _, sub := range []string{"list", "show", "create", "delete", "pause", "resume", "run"} {
@@ -508,22 +508,13 @@ func TestNoConflictWithRunnerAndOtherCommands(t *testing.T) {
 		t.Errorf("expected 'run' to have GroupID 'beeps', got %q", runCmd.GroupID)
 	}
 
-	// 'runner up' alias 'run' resolves to runner up
-	runnerRunCmd, _, err := RootCmd.Find([]string{"runner", "run"})
-	if err != nil {
-		t.Fatalf("failed to find 'runner run': %v", err)
-	}
-	if runnerRunCmd.Name() != "up" {
-		t.Errorf("expected 'runner run' to resolve to 'up', got %q", runnerRunCmd.Name())
-	}
-
-	// 'runner up' resolves to up
+	// 'runner up' resolves to start
 	runnerUpCmd, _, err := RootCmd.Find([]string{"runner", "up"})
 	if err != nil {
 		t.Fatalf("failed to find 'runner up': %v", err)
 	}
-	if runnerUpCmd.Name() != "up" {
-		t.Errorf("expected 'runner up' to resolve to 'up', got %q", runnerUpCmd.Name())
+	if runnerUpCmd.Name() != "start" {
+		t.Errorf("expected 'runner up' to resolve to 'start', got %q", runnerUpCmd.Name())
 	}
 
 	// Regression checks for secondary namespaces and subcommands

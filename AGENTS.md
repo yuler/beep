@@ -28,6 +28,14 @@ mise dev
 
 Local CORS for web → core `/api/v1` is development-only: [`core/config/initializers/development_cors.rb`](core/config/initializers/development_cors.rb). Details: [`docs/core/DEVELOP.md`](docs/core/DEVELOP.md#local-cors-development-only).
 
+### CLI (`beep-local`)
+
+`beep-local` 是本地开发使用的，通过 mise 配置加载，直接运行当前 Go 代码：
+
+```bash
+beep-local --help
+```
+
 ## Rules
 
 - Git commit title format: `emoji [scope] The main change` — example: `✨ [core] Adopt shared account slug tenancy for personal and team`

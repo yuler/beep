@@ -68,7 +68,7 @@ compose.yml
 
 # Binaries
 bin/beep
-bin/beep-local
+!bin/beep-local
 
 # Runner
 .beep

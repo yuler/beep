@@ -26,7 +26,12 @@ func NewCmdPause() *cobra.Command {
 					return err
 				}
 
-				b, err := c.PauseBeep(ctx, id)
+				var b *client.Beep
+				err = ui.WithSpinner("Pausing beep...", func() error {
+					var pauseErr error
+					b, pauseErr = c.PauseBeep(ctx, id)
+					return pauseErr
+				})
 				if err != nil {
 					return err
 				}

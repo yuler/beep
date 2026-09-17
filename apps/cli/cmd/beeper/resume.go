@@ -26,7 +26,12 @@ func NewCmdResume() *cobra.Command {
 					return err
 				}
 
-				b, err := c.ResumeBeeper(ctx, id)
+				var b *client.Beeper
+				err = ui.WithSpinner("Resuming beeper...", func() error {
+					var resumeErr error
+					b, resumeErr = c.ResumeBeeper(ctx, id)
+					return resumeErr
+				})
 				if err != nil {
 					return err
 				}

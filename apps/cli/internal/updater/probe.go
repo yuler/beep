@@ -112,13 +112,14 @@ func CheckNotice(workspaceDir string) string {
 		return ""
 	}
 
+	binName := config.BinaryName()
 	notice := fmt.Sprintf(
 		"\n%s %s %s → %s\n  Run %s to update.\n",
 		ui.Yellow("!"),
-		ui.Bold("A new release of beep is available:"),
+		ui.Bold(fmt.Sprintf("A new release of %s is available:", binName)),
 		ui.Dim(version.Version),
 		ui.Bold(ui.Green(state.LatestVersion)),
-		ui.Cyan("beep upgrade"),
+		ui.Cyan(fmt.Sprintf("%s upgrade", binName)),
 	)
 	return notice
 }
@@ -179,7 +180,8 @@ func RunDaemonUpdateProbe(ctx context.Context, ws string, logFn func(format stri
 
 		if CompareVersions(rel.Tag, version.Version) > 0 && st.NotifiedVersion != rel.Tag {
 			if logFn != nil {
-				logFn("[beep] A new version of beep is available: %s -> %s (run 'beep upgrade' to update)", version.Version, rel.Tag)
+				binName := config.BinaryName()
+				logFn("[%s] A new version of %s is available: %s -> %s (run '%s upgrade' to update)", binName, binName, version.Version, rel.Tag, binName)
 			}
 			st.NotifiedVersion = rel.Tag
 		}

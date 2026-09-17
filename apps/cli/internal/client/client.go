@@ -330,13 +330,7 @@ func (c *Client) setRunnerHeaders(req *http.Request) {
 
 func (c *Client) setChannelHeaders(req *http.Request) {
 	c.setBaseHeaders(req)
-	token := c.cfg.ChannelToken
-	if token == "" {
-		token = c.cfg.CliToken
-	}
-	if token == "" {
-		token = c.cfg.DeviceToken
-	}
+	token := c.cfg.ChannelAuthToken()
 	if token != "" {
 		req.Header.Set("X-Channel-Token", token)
 		req.Header.Set("X-CLI-Token", token)
@@ -408,7 +402,7 @@ type rawAPIErrorResponse struct {
 func parseAPIError(resp *http.Response) error {
 	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("authentication required or session expired (status 401); please run 'beep auth login' first")
+		return fmt.Errorf("authentication required or session expired (status 401); please run '%s auth login' first", config.BinaryName())
 	}
 	if resp.StatusCode == http.StatusNotFound {
 		return fmt.Errorf("resource not found on server (404)")
@@ -579,13 +573,7 @@ type CliInboxResponse struct {
 type DeviceInboxResponse = CliInboxResponse
 
 func (c *Client) FetchCliInbox(ctx context.Context) ([]CliDelivery, error) {
-	token := c.cfg.ChannelToken
-	if token == "" {
-		token = c.cfg.CliToken
-	}
-	if token == "" {
-		token = c.cfg.DeviceToken
-	}
+	token := c.cfg.ChannelAuthToken()
 	if token == "" {
 		return nil, nil
 	}
@@ -619,13 +607,7 @@ func (c *Client) FetchDeviceInbox(ctx context.Context) ([]CliDelivery, error) {
 }
 
 func (c *Client) AckCliDelivery(ctx context.Context, deliveryID string, status string, errorMsg string) error {
-	token := c.cfg.ChannelToken
-	if token == "" {
-		token = c.cfg.CliToken
-	}
-	if token == "" {
-		token = c.cfg.DeviceToken
-	}
+	token := c.cfg.ChannelAuthToken()
 	if token == "" {
 		return fmt.Errorf("missing channel token")
 	}
@@ -666,13 +648,7 @@ func (c *Client) AckDeviceDelivery(ctx context.Context, deliveryID string, statu
 }
 
 func (c *Client) DisconnectChannel(ctx context.Context) error {
-	token := c.cfg.ChannelToken
-	if token == "" {
-		token = c.cfg.CliToken
-	}
-	if token == "" {
-		token = c.cfg.DeviceToken
-	}
+	token := c.cfg.ChannelAuthToken()
 	if token == "" {
 		return fmt.Errorf("missing channel token")
 	}

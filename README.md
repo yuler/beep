@@ -39,14 +39,23 @@ mise dev
 
 `mise dev` prints local subdomain URLs on start, then runs [`Procfile.dev`](Procfile.dev) via overmind (`*.localhost` resolves to `127.0.0.1` — no `/etc/hosts` needed):
 
-| App  | Canonical URL                      |
-| ---- | ---------------------------------- |
-| web  | http://web.${APP_HOST}:${WEB_PORT} |
+| App  | Canonical URL                        |
+| ---- | ------------------------------------ |
+| web  | http://web.${APP_HOST}:${WEB_PORT}   |
 | core | http://core.${APP_HOST}:${CORE_PORT} |
 
 Hosts come from root `.env` (`APP_HOST`, `CORE_PORT`, `WEB_PORT`). Development is locked to the canonical host only — Vite accepts `web.${APP_HOST}`, Rails accepts `core.${APP_HOST}`. A wrong host or plain `localhost` fails fast with a page telling you the canonical URL, instead of serving this app.
 
 Login: `john@example.com`
+
+### CLI (`beep-local`)
+
+`beep-local` 是本地开发使用的，通过 mise 配置加载，直接运行当前 Go 代码：
+
+```bash
+beep-local --help
+```
+
 
 ## Docker Compose (local quick start)
 

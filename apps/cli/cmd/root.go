@@ -7,6 +7,8 @@ import (
 
 	"beep/cmd/beep"
 	"beep/cmd/beeper"
+	"beep/cmd/service"
+	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/ui"
 	"beep/internal/updater"
@@ -41,12 +43,13 @@ func skipUpdateHooks(cmd *cobra.Command) bool {
 var RootCmd = &cobra.Command{
 	Use:   "beep",
 	Short: "Beep command-line interface",
-	Long: ui.Bold(ui.Cyan("Beep CLI")) + ` - Command-line interface for the Beep platform.
-
-Execute 'beep <command> --help' for detailed usage of a specific command.`,
+	Long:  ui.Bold(ui.Cyan("Beep CLI")) + " - Command-line interface for the Beep platform.",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if flagNoColor {
 			ui.SetEnabled(false)
+		}
+		if flagNoInteractive || flagJSON || flagNoColor {
+			ui.SetSpinnerEnabled(false)
 		}
 		if !skipUpdateHooks(cmd) {
 			updater.TriggerBackgroundCheck(flagWorkspace)
@@ -65,6 +68,7 @@ Execute 'beep <command> --help' for detailed usage of a specific command.`,
 }
 
 func Execute() {
+	RootCmd.Use = config.BinaryName()
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, ui.Error("%v", err))
 		os.Exit(1)
@@ -72,6 +76,15 @@ func Execute() {
 }
 
 func init() {
+	binName := config.BinaryName()
+	RootCmd.Use = binName
+	RootCmd.Long = ui.Bold(ui.Cyan(fmt.Sprintf("%s CLI", strings.ToUpper(binName[:1])+binName[1:]))) + " - Command-line interface for the Beep platform."
+	SetupHelp(RootCmd)
+
+	cmdutil.WorkspaceHook = func() string {
+		return flagWorkspace
+	}
+
 	RootCmd.PersistentFlags().BoolVar(&flagNoColor, "no-color", false, "Disable colored output")
 	RootCmd.PersistentFlags().BoolVar(&flagNoInteractive, "no-interactive", false, "Disable interactive prompts")
 	RootCmd.PersistentFlags().StringVarP(&flagWorkspace, "workspace", "w", "", fmt.Sprintf("Local job workspace directory (default %s, env: BEEP_WORKSPACE)", config.DefaultWorkspaceDisplay()))
@@ -82,44 +95,57 @@ func init() {
 
 	// Command groups
 	RootCmd.AddGroup(
-		&cobra.Group{ID: "beeps", Title: "Beep Commands:"},
+		&cobra.Group{ID: "core", Title: "Core Commands"},
+		&cobra.Group{ID: "beeps", Title: "Beep Commands (Default Scope)"},
+		&cobra.Group{ID: "service", Title: "Local Service Commands"},
+		&cobra.Group{ID: "additional", Title: "Additional Commands"},
 	)
 
-	// Flattened beep commands (canonical)
+	// 1. Core commands (auth, beep, beeper, config)
+	authCmd.GroupID = "core"
+	configCmd.GroupID = "core"
+	beeperCmd := beeper.NewCmdBeeper()
+	beeperCmd.GroupID = "core"
+	legacyBeepCmd := beep.NewCmdBeep()
+	legacyBeepCmd.GroupID = "core"
+	legacyBeepCmd.Hidden = false
+
+	RootCmd.AddCommand(authCmd)
+	RootCmd.AddCommand(legacyBeepCmd)
+	RootCmd.AddCommand(beeperCmd)
+	RootCmd.AddCommand(configCmd)
+
+	// 2. Beep subcommands (default scope - can be used directly without 'beep beep')
 	beepCommands := []*cobra.Command{
-		beep.NewCmdList(),
-		beep.NewCmdShow(),
 		beep.NewCmdCreate(),
 		beep.NewCmdDelete(),
+		beep.NewCmdList(),
 		beep.NewCmdPause(),
 		beep.NewCmdResume(),
 		beep.NewCmdRun(),
+		beep.NewCmdShow(),
 	}
 	for _, cmd := range beepCommands {
 		cmd.GroupID = "beeps"
 		RootCmd.AddCommand(cmd)
 	}
 
-	// Legacy beep namespace (hidden compatibility alias)
-	legacyBeepCmd := beep.NewCmdBeep()
-	legacyBeepCmd.Hidden = true
-	RootCmd.AddCommand(legacyBeepCmd)
+	// 3. Local service commands
+	channelCmd.GroupID = "service"
+	runnerCmd.GroupID = "service"
+	serviceCmd := service.NewCmdService()
+	serviceCmd.GroupID = "service"
 
-	// Beeper commands
-	RootCmd.AddCommand(beeper.NewCmdBeeper())
-
-	// Daemon commands
-	RootCmd.AddCommand(newUpCmd())
-	RootCmd.AddCommand(newStopCmd())
-	RootCmd.AddCommand(newStatusCmd())
-
-	// System / management subcommands
-	RootCmd.AddCommand(authCmd)
-	RootCmd.AddCommand(runnerCmd)
 	RootCmd.AddCommand(channelCmd)
-	RootCmd.AddCommand(configCmd)
-	RootCmd.AddCommand(versionCmd)
-	RootCmd.AddCommand(upgradeCmd)
+	RootCmd.AddCommand(runnerCmd)
+	RootCmd.AddCommand(serviceCmd)
 
-	RootCmd.InitDefaultCompletionCmd()
+	// 4. Additional commands
+	upgradeCmd.GroupID = "additional"
+	versionCmd.GroupID = "additional"
+
+	RootCmd.AddCommand(upgradeCmd)
+	RootCmd.AddCommand(versionCmd)
+
+	initCompletionCmd()
 }

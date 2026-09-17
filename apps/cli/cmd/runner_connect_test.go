@@ -9,20 +9,24 @@ import (
 	"testing"
 
 	"beep/internal/client"
+	"beep/internal/cliservice"
 	"beep/internal/config"
 
 	"github.com/spf13/cobra"
 )
 
 func TestRunnerCommandsRegistration(t *testing.T) {
-	for _, sub := range []string{"connect", "disconnect", "up", "run", "stop", "status"} {
+	for _, sub := range []string{"connect", "disconnect", "start", "up", "stop", "down", "status"} {
 		cmd, _, err := RootCmd.Find([]string{"runner", sub})
 		if err != nil {
 			t.Fatalf("failed to find 'runner %s': %v", sub, err)
 		}
 		expectedName := sub
-		if sub == "run" {
-			expectedName = "up"
+		if sub == "up" {
+			expectedName = "start"
+		}
+		if sub == "down" {
+			expectedName = "stop"
 		}
 		if cmd.Name() != expectedName {
 			t.Errorf("expected command name %q, got %q", expectedName, cmd.Name())
@@ -219,12 +223,12 @@ func TestRunnerConnectAutomaticallyStartsDaemon(t *testing.T) {
 	flagWorkspace = tmpDir
 	defer func() { flagWorkspace = "" }()
 
-	origStart := startServiceDaemonFn
-	defer func() { startServiceDaemonFn = origStart }()
+	origStart := cliservice.StartServiceDaemonFn
+	defer func() { cliservice.StartServiceDaemonFn = origStart }()
 
 	var startedService string
 	var startedRawArgs []string
-	startServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	cliservice.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
 		startedService = service
 		startedRawArgs = rawArgs
 		return nil

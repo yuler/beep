@@ -230,6 +230,9 @@ rm -f "$LOCAL_DB" "${LOCAL_DB}-wal" "${LOCAL_DB}-shm"
 sqlite3 "$LOCAL_DB" < "$DUMP_FILE"
 ok "Imported SQL into $LOCAL_DB"
 
+step "Rewriting ar_internal_metadata environment to development..."
+sqlite3 "$LOCAL_DB" "UPDATE ar_internal_metadata SET value='development' WHERE key='environment';"
+
 step "Preparing local Rails database (schemas & secondary DBs)..."
 (cd "$RAILS_DIR" && bin/rails db:prepare)
 ok "Database sync complete!"

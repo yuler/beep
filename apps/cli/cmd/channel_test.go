@@ -9,18 +9,22 @@ import (
 	"testing"
 
 	"beep/internal/client"
+	"beep/internal/cliservice"
 	"beep/internal/config"
 )
 
 func TestChannelCommandsRegistration(t *testing.T) {
-	for _, sub := range []string{"connect", "disconnect", "up", "run", "stop", "status"} {
+	for _, sub := range []string{"connect", "disconnect", "start", "up", "stop", "down", "status"} {
 		cmd, _, err := RootCmd.Find([]string{"channel", sub})
 		if err != nil {
 			t.Fatalf("failed to find 'channel %s': %v", sub, err)
 		}
 		expectedName := sub
-		if sub == "run" {
-			expectedName = "up"
+		if sub == "up" {
+			expectedName = "start"
+		}
+		if sub == "down" {
+			expectedName = "stop"
 		}
 		if cmd.Name() != expectedName {
 			t.Errorf("expected command name %q, got %q", expectedName, cmd.Name())
@@ -56,7 +60,8 @@ func TestDisconnectCommandClearsToken(t *testing.T) {
 	flagWorkspace = tmpDir
 	defer func() { flagWorkspace = "" }()
 
-	err := channelDisconnectCmd.RunE(channelDisconnectCmd, nil)
+	cmd := mustFindCmd(t, "channel", "disconnect")
+	err := cmd.RunE(cmd, nil)
 	if err != nil {
 		t.Fatalf("channel disconnect failed: %v", err)
 	}
@@ -101,7 +106,8 @@ func TestDisconnectCommandClearsTokenWhenServerGone(t *testing.T) {
 	flagWorkspace = tmpDir
 	defer func() { flagWorkspace = "" }()
 
-	if err := channelDisconnectCmd.RunE(channelDisconnectCmd, nil); err != nil {
+	cmd := mustFindCmd(t, "channel", "disconnect")
+	if err := cmd.RunE(cmd, nil); err != nil {
 		t.Fatalf("channel disconnect failed: %v", err)
 	}
 
@@ -235,19 +241,20 @@ func TestChannelConnectAutomaticallyStartsDaemon(t *testing.T) {
 	flagWorkspace = tmpDir
 	defer func() { flagWorkspace = "" }()
 
-	origStart := startServiceDaemonFn
-	defer func() { startServiceDaemonFn = origStart }()
+	origStart := cliservice.StartServiceDaemonFn
+	defer func() { cliservice.StartServiceDaemonFn = origStart }()
 
 	var startedService string
 	var startedRawArgs []string
-	startServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	cliservice.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
 		startedService = service
 		startedRawArgs = rawArgs
 		return nil
 	}
 
-	if err := channelConnectCmd.RunE(channelConnectCmd, nil); err != nil {
-		t.Fatalf("channelConnectCmd failed: %v", err)
+	cmd := mustFindCmd(t, "channel", "connect")
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Fatalf("channel connect failed: %v", err)
 	}
 
 	if startedService != "channel" {

@@ -8,6 +8,7 @@ import (
 
 	"beep/internal/client"
 	"beep/internal/cmdutil"
+	"beep/internal/config"
 	"beep/internal/ui"
 
 	"github.com/charmbracelet/huh"
@@ -17,10 +18,9 @@ import (
 // NewCmdBeeper creates and returns the parent 'beeper' command.
 func NewCmdBeeper() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "beeper",
-		Aliases: []string{"beepers"},
-		Short:   "Manage monitor probe beepers",
-		Long:    ui.Bold(ui.Cyan("Beeper Management")) + ` - Manage monitoring probes, view catalog apps, and check probe runs.`,
+		Use:   "beeper",
+		Short: "Manage monitor probe beepers",
+		Long:  ui.Bold(ui.Cyan("Beeper Management")) + ` - Manage monitoring probes, view catalog apps, and check probe runs.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
@@ -46,7 +46,7 @@ func ResolveBeeperID(ctx context.Context, c *client.Client, cmd *cobra.Command, 
 	}
 
 	if !cmdutil.IsInteractive(cmd) {
-		return "", fmt.Errorf("beeper ID is required (e.g. beep beeper %s <id>)", action)
+		return "", fmt.Errorf("beeper ID is required (e.g. %s beeper %s <id>)", config.BinaryName(), action)
 	}
 
 	beepers, err := c.ListBeepers(ctx)

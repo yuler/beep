@@ -156,3 +156,19 @@ func TestGetConfigPath(t *testing.T) {
 		t.Errorf("GetConfigPath(~otheruser) = %s, want %s", gotOther, wantOther)
 	}
 }
+
+func TestChannelAuthTokenFallback(t *testing.T) {
+	if got := (&Config{ChannelToken: "ct"}).ChannelAuthToken(); got != "ct" {
+		t.Errorf("ChannelToken preferred, got %q", got)
+	}
+	if got := (&Config{CliToken: "cli"}).ChannelAuthToken(); got != "cli" {
+		t.Errorf("CliToken fallback, got %q", got)
+	}
+	if got := (&Config{DeviceToken: "dev"}).ChannelAuthToken(); got != "dev" {
+		t.Errorf("DeviceToken fallback, got %q", got)
+	}
+	cfg := &Config{}
+	if cfg.HasChannelService() || cfg.HasRunnerService() {
+		t.Errorf("empty config should not report configured services")
+	}
+}

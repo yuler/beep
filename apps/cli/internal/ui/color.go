@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"os"
-	"strings"
 )
 
 var enabled = true
@@ -44,7 +43,6 @@ const (
 	blueCode    = "\033[34m"
 	magentaCode = "\033[35m"
 	cyanCode    = "\033[36m"
-	whiteCode   = "\033[37m"
 	grayCode    = "\033[90m"
 )
 
@@ -64,7 +62,6 @@ func Yellow(s string) string  { return colorize(yellowCode, s) }
 func Blue(s string) string    { return colorize(blueCode, s) }
 func Magenta(s string) string { return colorize(magentaCode, s) }
 func Cyan(s string) string    { return colorize(cyanCode, s) }
-func White(s string) string   { return colorize(whiteCode, s) }
 func Gray(s string) string    { return colorize(grayCode, s) }
 
 // High-level UI helpers
@@ -98,19 +95,6 @@ func Section(title string) string {
 
 func KeyValue(key, val string) string {
 	return fmt.Sprintf("  %-16s %s", Cyan(key+":"), val)
-}
-
-func StatusBadge(status string) string {
-	switch strings.ToLower(status) {
-	case "active", "online", "ok", "healthy", "succeeded":
-		return Green(fmt.Sprintf("[%s]", status))
-	case "paused", "firing", "running", "pending":
-		return Yellow(fmt.Sprintf("[%s]", status))
-	case "offline", "error", "failed", "alerting":
-		return Red(fmt.Sprintf("[%s]", status))
-	default:
-		return Gray(fmt.Sprintf("[%s]", status))
-	}
 }
 
 // PrintErrorList prints an error header followed by bullet-pointed error items.

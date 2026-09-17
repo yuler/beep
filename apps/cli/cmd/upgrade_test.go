@@ -173,8 +173,9 @@ func TestSkipUpdateHooks(t *testing.T) {
 		{[]string{"completion", "zsh"}, true},
 		{[]string{"completion", "fish"}, true},
 		{[]string{"help"}, true},
-		{[]string{"status"}, false},
-		{[]string{"up"}, false},
+		{[]string{"service", "status"}, false},
+		{[]string{"service", "start"}, false},
+		{[]string{"list"}, false},
 	}
 	for _, tc := range findCases {
 		cmd, _, err := RootCmd.Find(tc.args)

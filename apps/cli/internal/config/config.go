@@ -44,12 +44,47 @@ type Config struct {
 	ConfigFile   string
 }
 
+// ChannelAuthToken returns the channel token, falling back to CLI then device tokens.
+func (c *Config) ChannelAuthToken() string {
+	if c.ChannelToken != "" {
+		return c.ChannelToken
+	}
+	if c.CliToken != "" {
+		return c.CliToken
+	}
+	return c.DeviceToken
+}
+
+// HasChannelService reports whether a channel daemon can be started with the current config.
+func (c *Config) HasChannelService() bool {
+	return c.ChannelAuthToken() != ""
+}
+
+// HasRunnerService reports whether a runner daemon can be started with the current config.
+func (c *Config) HasRunnerService() bool {
+	return c.RunnerToken != ""
+}
+
 var (
 	// DefaultServerURL is injected at build time using -ldflags.
 	DefaultServerURL = ""
 	// DefaultWorkspaceName is injected at build time using -ldflags (e.g. ".beep" or ".beep.local").
 	DefaultWorkspaceName = ".beep"
+	// DefaultBinaryName is injected at build time using -ldflags (e.g. "beep" or "beep-local").
+	DefaultBinaryName = "beep"
 )
+
+// BinaryName returns the CLI command name (e.g. "beep" or "beep-local").
+// It reads from the BEEP_BIN_NAME environment variable, falling back to DefaultBinaryName ("beep").
+func BinaryName() string {
+	if name := strings.TrimSpace(os.Getenv("BEEP_BIN_NAME")); name != "" {
+		return name
+	}
+	if DefaultBinaryName != "" {
+		return DefaultBinaryName
+	}
+	return "beep"
+}
 
 func DefaultWorkspace() string {
 	home, err := os.UserHomeDir()
@@ -206,11 +241,12 @@ func LoadFromEnv() (*Config, error) {
 }
 
 func (c *Config) Validate() error {
+	bin := BinaryName()
 	if c.ServerURL == "" {
-		return fmt.Errorf("server URL is required (set via 'beep config set server <url>' or --server or BEEP_SERVER)")
+		return fmt.Errorf("server URL is required (set via '%s config set server <url>' or --server or BEEP_SERVER)", bin)
 	}
 	if c.RunnerToken == "" && c.ChannelToken == "" {
-		return fmt.Errorf("runner token or channel token is required (connect via 'beep channel connect' or configure runner token via 'beep config set token <token>')")
+		return fmt.Errorf("runner token or channel token is required (connect via '%s channel connect' or configure runner token via '%s config set token <token>')", bin, bin)
 	}
 	if c.Concurrency <= 0 {
 		c.Concurrency = 5

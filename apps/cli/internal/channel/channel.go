@@ -33,21 +33,14 @@ func New(cfg *config.Config, ws *workspace.Workspace) *Channel {
 
 // Token returns the active channel token (channel, cli, or device token).
 func (c *Channel) Token() string {
-	token := c.cfg.ChannelToken
-	if token == "" {
-		token = c.cfg.CliToken
-	}
-	if token == "" {
-		token = c.cfg.DeviceToken
-	}
-	return token
+	return c.cfg.ChannelAuthToken()
 }
 
 // Run starts listening for notifications until ctx is canceled.
 func (c *Channel) Run(ctx context.Context) error {
 	token := c.Token()
 	if token == "" {
-		return fmt.Errorf("channel token is not configured (run 'beep channel connect' or configure channel_token in config.json)")
+		return fmt.Errorf("channel token is not configured (run '%s channel connect' or configure channel_token in config.json)", config.BinaryName())
 	}
 
 	wsRoot := ""

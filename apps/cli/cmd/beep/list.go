@@ -22,7 +22,12 @@ func NewCmdList() *cobra.Command {
 		Short:   "List beeps",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {
-				beeps, err := c.ListBeeps(ctx)
+				var beeps []*client.Beep
+				err := ui.WithSpinner("Fetching beeps...", func() error {
+					var listErr error
+					beeps, listErr = c.ListBeeps(ctx)
+					return listErr
+				})
 				if err != nil {
 					return err
 				}
@@ -43,31 +48,24 @@ func NewCmdList() *cobra.Command {
 				fmt.Printf("%s %s\n\n", ui.Bold(ui.Cyan("Beeps")), ui.Dim(fmt.Sprintf("(account: %s)", accountDisplay)))
 
 				if len(beeps) == 0 {
-					fmt.Println(ui.Dim("  No beeps found. Create one with 'beep create'."))
+					fmt.Println(ui.Dim(fmt.Sprintf("  No beeps found. Create one with '%s create'.", config.BinaryName())))
 					return nil
 				}
 
-				// Print table header
-				fmt.Printf("  %-10s  %-24s  %-10s  %-9s  %-22s  %s\n",
-					ui.Dim("ID"),
-					ui.Dim("TITLE"),
-					ui.Dim("STATUS"),
-					ui.Dim("KIND"),
-					ui.Dim("SCHEDULE"),
-					ui.Dim("CHANNELS"),
-				)
+				tbl := ui.NewTable("ID", "TITLE", "STATUS", "KIND", "SCHEDULE", "CHANNELS")
+				tbl.SetIndent("  ")
 
 				for _, b := range beeps {
 					statusStr := FormatBeepStatus(b.Status)
 					scheduleStr := FormatBeepSchedule(b)
-					title := ui.Truncate(b.Title, 24)
+					title := ui.Truncate(b.Title, 28)
 
 					chans := "-"
 					if len(b.NotificationChannels) > 0 {
 						chans = strings.Join(b.NotificationChannels, ", ")
 					}
 
-					fmt.Printf("  %-10s  %-24s  %-10s  %-9s  %-22s  %s\n",
+					tbl.AddRow(
 						b.ID,
 						title,
 						statusStr,
@@ -75,6 +73,10 @@ func NewCmdList() *cobra.Command {
 						scheduleStr,
 						chans,
 					)
+				}
+
+				if err := tbl.Print(); err != nil {
+					return err
 				}
 				fmt.Println()
 				return nil
