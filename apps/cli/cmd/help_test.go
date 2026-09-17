@@ -27,7 +27,7 @@ func TestGhHelpFormatting(t *testing.T) {
 	// Check group titles
 	expectedSections := []string{
 		"CORE COMMANDS",
-		"MONITOR COMMANDS",
+		"BEEP COMMANDS (DEFAULT SCOPE)",
 		"LOCAL SERVICE COMMANDS",
 		"ADDITIONAL COMMANDS",
 		"FLAGS",
@@ -37,6 +37,10 @@ func TestGhHelpFormatting(t *testing.T) {
 		if !strings.Contains(out, sec) {
 			t.Errorf("expected output to contain section %q", sec)
 		}
+	}
+
+	if !strings.Contains(out, "Subcommands can be run directly") {
+		t.Errorf("expected output to contain note about subcommands being runnable directly")
 	}
 
 	// Check colon format on command names

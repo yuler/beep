@@ -91,12 +91,26 @@ func init() {
 	// Command groups
 	RootCmd.AddGroup(
 		&cobra.Group{ID: "core", Title: "Core Commands"},
-		&cobra.Group{ID: "monitor", Title: "Monitor Commands"},
+		&cobra.Group{ID: "beeps", Title: "Beep Commands (Default Scope)"},
 		&cobra.Group{ID: "service", Title: "Local Service Commands"},
 		&cobra.Group{ID: "additional", Title: "Additional Commands"},
 	)
 
-	// 1. Core commands (canonical beep default scope)
+	// 1. Core commands (auth, beep, beeper, config)
+	authCmd.GroupID = "core"
+	configCmd.GroupID = "core"
+	beeperCmd := beeper.NewCmdBeeper()
+	beeperCmd.GroupID = "core"
+	legacyBeepCmd := beep.NewCmdBeep()
+	legacyBeepCmd.GroupID = "core"
+	legacyBeepCmd.Hidden = false
+
+	RootCmd.AddCommand(authCmd)
+	RootCmd.AddCommand(legacyBeepCmd)
+	RootCmd.AddCommand(beeperCmd)
+	RootCmd.AddCommand(configCmd)
+
+	// 2. Beep subcommands (default scope - can be used directly without 'beep beep')
 	beepCommands := []*cobra.Command{
 		beep.NewCmdCreate(),
 		beep.NewCmdDelete(),
@@ -107,19 +121,9 @@ func init() {
 		beep.NewCmdShow(),
 	}
 	for _, cmd := range beepCommands {
-		cmd.GroupID = "core"
+		cmd.GroupID = "beeps"
 		RootCmd.AddCommand(cmd)
 	}
-
-	// Legacy beep namespace (hidden compatibility alias)
-	legacyBeepCmd := beep.NewCmdBeep()
-	legacyBeepCmd.Hidden = true
-	RootCmd.AddCommand(legacyBeepCmd)
-
-	// 2. Monitor commands
-	beeperCmd := beeper.NewCmdBeeper()
-	beeperCmd.GroupID = "monitor"
-	RootCmd.AddCommand(beeperCmd)
 
 	// 3. Local service commands
 	channelCmd.GroupID = "service"
@@ -138,13 +142,9 @@ func init() {
 	RootCmd.AddCommand(upCmd)
 
 	// 4. Additional commands
-	authCmd.GroupID = "additional"
-	configCmd.GroupID = "additional"
 	upgradeCmd.GroupID = "additional"
 	versionCmd.GroupID = "additional"
 
-	RootCmd.AddCommand(authCmd)
-	RootCmd.AddCommand(configCmd)
 	RootCmd.AddCommand(upgradeCmd)
 	RootCmd.AddCommand(versionCmd)
 

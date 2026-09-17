@@ -153,7 +153,11 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 		maxNameWidth = 12
 	}
 
-	printGroup := func(title string, commands []*cobra.Command) {
+var groupDescriptions = map[string]string{
+	"beeps": "Subcommands can be run directly (e.g. 'beep list') without repeating 'beep beep'",
+}
+
+	printGroup := func(id, title string, commands []*cobra.Command) {
 		if len(commands) == 0 {
 			return
 		}
@@ -162,6 +166,9 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 		})
 
 		fmt.Fprintln(w, ui.Bold(strings.ToUpper(title)))
+		if desc, ok := groupDescriptions[id]; ok && desc != "" {
+			fmt.Fprintf(w, "  %s\n", ui.Dim(desc))
+		}
 		for _, c := range commands {
 			nameWithColon := c.Name() + ":"
 			pad := maxNameWidth - len(nameWithColon)
@@ -174,7 +181,7 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 	}
 
 	for _, g := range orderedGroups {
-		printGroup(g.title, g.commands)
+		printGroup(g.id, g.title, g.commands)
 	}
 
 	if len(ungrouped) > 0 {
@@ -182,6 +189,6 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 		if len(orderedGroups) > 0 {
 			title = "ADDITIONAL COMMANDS"
 		}
-		printGroup(title, ungrouped)
+		printGroup("", title, ungrouped)
 	}
 }
