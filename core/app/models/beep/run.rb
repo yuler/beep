@@ -8,6 +8,25 @@ class Beep::Run < ApplicationRecord
 
   enum :status, %w[ pending running succeeded failed skipped expired ].index_by(&:itself)
 
+  RECENT_LIMIT = 5
+
+  # { beep_id => { total:, succeeded: } } for the given beeps, in one grouped query.
+  def self.stats_by_beep(beep_ids)
+    where(beep_id: beep_ids)
+      .group(:beep_id)
+      .pluck(:beep_id, Arel.sql("COUNT(*)"), Arel.sql("SUM(CASE WHEN status = 'succeeded' THEN 1 ELSE 0 END)"))
+      .to_h { |beep_id, total, succeeded| [ beep_id, { total: total, succeeded: succeeded || 0 } ] }
+  end
+
+  # { beep_id => [newest-first runs] } capped at RECENT_LIMIT runs per beep, in one windowed query.
+  def self.recent_by_beep(beep_ids, limit: RECENT_LIMIT)
+    ranked = where(beep_id: beep_ids)
+      .select("beep_runs.*, ROW_NUMBER() OVER (PARTITION BY beep_id ORDER BY scheduled_for DESC) AS run_rank")
+    from(ranked, :beep_runs)
+      .where(run_rank: 1..limit)
+      .group_by(&:beep_id)
+  end
+
   def deliver_later
     DeliverBeepRunJob.perform_later(self)
   end

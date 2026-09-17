@@ -1,11 +1,25 @@
 import { Activity, Calendar, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import type { Beep } from "@/lib/api/beeps";
+import type { Beep, BeepStatsData } from "@/lib/api/beeps";
 import { beepStats } from "@/lib/beep-stats";
 import { m } from "@/locale/paraglide/messages";
 
-export function BeepStats({ beeps }: { beeps: Beep[] }) {
-	const stats = beepStats(beeps);
+export function BeepStats({
+	beeps,
+	stats: externalStats,
+}: {
+	beeps?: Beep[];
+	stats?: BeepStatsData;
+}) {
+	const stats = externalStats
+		? {
+				active: externalStats.active,
+				dueToday: externalStats.due_today,
+				firing: externalStats.firing,
+			}
+		: beeps
+			? beepStats(beeps)
+			: { active: 0, dueToday: 0, firing: 0 };
 
 	return (
 		<div className="grid grid-cols-3 gap-3">

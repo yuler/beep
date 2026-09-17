@@ -7,6 +7,7 @@ class Api::V1::BaseController < ActionController::API
   include Authorization
   include CurrentRequest
   include Api::V1::Responses
+  include GearedPagination::Controller
 
   rescue_from ActiveRecord::RecordNotFound do |exception|
     render json: { error: exception.message }, status: :not_found

@@ -1,4 +1,5 @@
 # Development-only CORS for apps/web calling /api/v1 from the canonical web host.
+# In production, web and core share the same origin or are routed behind the reverse proxy.
 if Rails.env.development?
   class DevelopmentCors
     API_PREFIX = "/api/v1"
@@ -45,7 +46,7 @@ if Rails.env.development?
           cors_headers({
             "Access-Control-Allow-Methods" => "GET, POST, PUT, PATCH, DELETE, OPTIONS",
             "Access-Control-Allow-Headers" => "Authorization, Content-Type, X-Account-Slug, X-Requested-With",
-            "Access-Control-Expose-Headers" => "X-Magic-Link-Code",
+            "Access-Control-Expose-Headers" => "X-Magic-Link-Code, Link, X-Total-Count",
             "Access-Control-Max-Age" => "86400"
           }, origin),
           []
@@ -59,7 +60,9 @@ if Rails.env.development?
           headers["Access-Control-Allow-Credentials"] = "true"
           headers["Access-Control-Expose-Headers"] = [
             headers["Access-Control-Expose-Headers"],
-            "X-Magic-Link-Code"
+            "X-Magic-Link-Code",
+            "Link",
+            "X-Total-Count"
           ].compact.join(", ")
           headers["Vary"] = [ headers["Vary"], "Origin" ].compact.join(", ")
         end

@@ -2,4 +2,6 @@
 # CVEs that are not relevant to the application can be enumerated on the ignore list below.
 
 ignore:
-  - CVE-THAT-DOES-NOT-APPLY
+  # ruby_llm ReDoS vulnerability fixed in >= 2.0.0.rc1; ignored until stable 2.0 release.
+  - CVE-2026-67991
+  - GHSA-42r3-x6vx-x49x

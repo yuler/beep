@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	deleteBeep,
 	fetchBeep,
+	fetchBeepRuns,
 	pauseBeep,
 	resumeBeep,
 	triggerBeepRun,
@@ -32,8 +33,18 @@ const accountRoute = getRouteApi("/$account_slug");
 
 export const Route = createFileRoute("/$account_slug/beeps_/$beepId")({
 	loader: withAuthRedirects(async ({ params }) => {
+		const slug = params?.account_slug ?? "";
+		const beepId = params?.beepId ?? "";
 		try {
-			return await fetchBeep(params?.account_slug ?? "", params?.beepId ?? "");
+			const [beep, runsRes] = await Promise.all([
+				fetchBeep(slug, beepId),
+				fetchBeepRuns(slug, beepId),
+			]);
+			return {
+				beep,
+				runs: runsRes.runs,
+				runsPagination: runsRes.pagination,
+			};
 		} catch (err) {
 			if (err instanceof ApiError && err.status === 404) {
 				throw notFound();
@@ -47,7 +58,7 @@ export const Route = createFileRoute("/$account_slug/beeps_/$beepId")({
 function BeepDetailPage() {
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
-	const beep = Route.useLoaderData();
+	const { beep, runs, runsPagination } = Route.useLoaderData();
 	const [deleting, setDeleting] = useState(false);
 	const [triggering, setTriggering] = useState(false);
 	const [togglingStatus, setTogglingStatus] = useState(false);
@@ -298,7 +309,13 @@ function BeepDetailPage() {
 				</Card>
 
 				<div className="max-w-lg">
-					<BeepRuns runs={beep.runs} timezone={beep.timezone} />
+					<BeepRuns
+						runs={runs}
+						initialPagination={runsPagination}
+						slug={slug}
+						beepId={beep.id}
+						timezone={beep.timezone}
+					/>
 				</div>
 			</div>
 		</>

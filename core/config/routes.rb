@@ -108,8 +108,11 @@ Rails.application.routes.draw do
       resources :beep_proposals, only: :create
       resources :beeps, only: %i[ index show create update destroy ] do
         scope module: :beeps do
+          collection do
+            resource :stats, only: :show, as: :beeps_stats
+          end
           resource :pause, only: %i[ create destroy ]
-          resources :runs, only: :create
+          resources :runs, only: %i[ index create ]
         end
       end
 

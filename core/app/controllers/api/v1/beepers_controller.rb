@@ -1,8 +1,9 @@
 class Api::V1::BeepersController < Api::V1::BaseController
   def index
-    @beepers = Current.account.beepers.includes(:beeper_app).order(created_at: :desc)
-    @run_stats = BeeperRun.stats_by_beeper(@beepers.ids)
-    @recent_runs = BeeperRun.recent_by_beeper(@beepers.ids)
+    @beepers = set_page_and_extract_portion_from Current.account.beepers.includes(:beeper_app),
+                                                 ordered_by: { created_at: :desc, id: :desc }
+    @run_stats = BeeperRun.stats_by_beeper(@beepers.map(&:id))
+    @recent_runs = BeeperRun.recent_by_beeper(@beepers.map(&:id))
     render :index
   end
 

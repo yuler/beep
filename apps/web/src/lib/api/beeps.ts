@@ -32,15 +32,58 @@ export type Beep = {
 		name: string;
 	} | null;
 	created_at: string;
+	run_stats?: {
+		total: number;
+		succeeded: number;
+	};
 	runs: BeepRun[];
+};
+
+export type PaginationMeta = {
+	page: number;
+	next_page: string | null;
+	has_more: boolean;
+	total_count?: number;
 };
 
 export type BeepsResponse = {
 	beeps: Beep[];
+	pagination?: PaginationMeta;
 };
 
-export function fetchBeeps(slug: string) {
-	return apiFetch<BeepsResponse>(`/api/v1/${slug}/beeps`, {
+export type BeepStatsData = {
+	active: number;
+	due_today: number;
+	firing: number;
+	recurring?: number;
+	completed?: number;
+	all?: number;
+};
+
+export type BeepStatsResponse = {
+	stats: BeepStatsData;
+};
+
+export function fetchBeeps(
+	slug: string,
+	options?: {
+		page?: string | null;
+		status?: string | null;
+		kind?: string | null;
+	},
+) {
+	const params = new URLSearchParams();
+	if (options?.page) params.set("page", options.page);
+	if (options?.status) params.set("status", options.status);
+	if (options?.kind) params.set("kind", options.kind);
+	const query = params.toString() ? `?${params.toString()}` : "";
+	return apiFetch<BeepsResponse>(`/api/v1/${slug}/beeps${query}`, {
+		method: "GET",
+	});
+}
+
+export function fetchBeepStats(slug: string) {
+	return apiFetch<BeepStatsResponse>(`/api/v1/${slug}/beeps/stats`, {
 		method: "GET",
 	});
 }
@@ -49,6 +92,27 @@ export function fetchBeep(slug: string, beepId: string) {
 	return apiFetch<Beep>(`/api/v1/${slug}/beeps/${beepId}`, {
 		method: "GET",
 	});
+}
+
+export type BeepRunsResponse = {
+	runs: BeepRun[];
+	pagination?: PaginationMeta;
+};
+
+export function fetchBeepRuns(
+	slug: string,
+	beepId: string,
+	options?: { page?: string | null },
+) {
+	const query = options?.page
+		? `?page=${encodeURIComponent(options.page)}`
+		: "";
+	return apiFetch<BeepRunsResponse>(
+		`/api/v1/${slug}/beeps/${beepId}/runs${query}`,
+		{
+			method: "GET",
+		},
+	);
 }
 
 export function createBeep(

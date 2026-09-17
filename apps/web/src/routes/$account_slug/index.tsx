@@ -9,7 +9,7 @@ import { BeepList } from "@/components/beeps/beep-list";
 import { BeepQuickCreate } from "@/components/beeps/beep-quick-create";
 import { BeepStats } from "@/components/beeps/beep-stats";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { fetchBeeps } from "@/lib/api/beeps";
+import { fetchBeepStats, fetchBeeps } from "@/lib/api/beeps";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { upcomingBeeps } from "@/lib/beep-stats";
 import { m } from "@/locale/paraglide/messages";
@@ -17,16 +17,25 @@ import { m } from "@/locale/paraglide/messages";
 const accountRoute = getRouteApi("/$account_slug");
 
 export const Route = createFileRoute("/$account_slug/")({
-	loader: withAuthRedirects(({ params }) =>
-		fetchBeeps(params?.account_slug ?? ""),
-	),
+	loader: withAuthRedirects(async ({ params }) => {
+		const slug = params?.account_slug ?? "";
+		const [beepsRes, statsRes] = await Promise.all([
+			fetchBeeps(slug),
+			fetchBeepStats(slug),
+		]);
+		return {
+			beeps: beepsRes.beeps,
+			pagination: beepsRes.pagination,
+			stats: statsRes.stats,
+		};
+	}),
 	component: AccountHomePage,
 });
 
 function AccountHomePage() {
 	const { me } = accountRoute.useRouteContext();
 	const { account_slug: slug } = accountRoute.useParams();
-	const { beeps } = Route.useLoaderData();
+	const { beeps, stats } = Route.useLoaderData();
 	const router = useRouter();
 	const account = me.accounts.find((item) => item.slug === slug);
 	const upcoming = upcomingBeeps(beeps);
@@ -52,7 +61,7 @@ function AccountHomePage() {
 				</div>
 
 				<BeepQuickCreate slug={slug} onCreated={handleCreated} />
-				<BeepStats beeps={beeps} />
+				<BeepStats stats={stats} beeps={beeps} />
 
 				<div className="flex flex-col gap-3">
 					<div className="flex items-center justify-between gap-3">

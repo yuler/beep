@@ -49,6 +49,45 @@ class Beep < ApplicationRecord
     def reclaim_stale_firing
       firing.where(updated_at: ..STALE_FIRING_AFTER.ago).find_each(&:reclaim_stale)
     end
+
+    def stats_for(account, now = Time.current)
+      scope = account.beeps
+      counts = scope.where(status: %w[active firing completed]).group(:status).count
+      active_count = counts["active"] || 0
+      firing_count = counts["firing"] || 0
+
+      candidate_scope = scope.where(status: %w[active firing])
+                             .where("next_run_at IS NOT NULL OR run_at IS NOT NULL")
+      timezones = candidate_scope.distinct.pluck(:timezone)
+
+      due_today_count = timezones.sum do |tz_name|
+        tz = Time.find_zone(tz_name) || Time.zone
+        local_now = now.in_time_zone(tz)
+        candidate_scope.where(timezone: tz_name)
+                       .where("COALESCE(next_run_at, run_at) >= ? AND COALESCE(next_run_at, run_at) <= ?",
+                              local_now.beginning_of_day.utc, local_now.end_of_day.utc)
+                       .count
+      end
+
+      {
+        active: active_count,
+        due_today: due_today_count,
+        firing: firing_count,
+        recurring: scope.recurring.count,
+        completed: counts["completed"] || 0,
+        all: scope.count
+      }
+    end
+  end
+
+  def due_today?(now = Time.current)
+    return false unless active? || firing?
+
+    run_time = next_run_at || run_at
+    return false unless run_time
+
+    tz = Time.find_zone(timezone) || Time.zone
+    run_time.in_time_zone(tz).to_date == now.in_time_zone(tz).to_date
   end
 
   def trigger_run!

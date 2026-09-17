@@ -7,6 +7,7 @@ cd "$ROOT_DIR/core"
 
 OPTIONS=(
   "db:reset + db:seed"
+  "db:pull:production (prod -> local)"
   "log:clear + tmp:clear"
   "create-vapid-key"
 )
@@ -30,6 +31,9 @@ while IFS= read -r line; do
       # db:reset loads checked-in schemas (primary + queue + cable); do not use db:migrate here —
       # it dumps schemas and can overwrite queue/cable/cache_schema.rb when those DBs are empty.
       ruby "$RAILS_BIN" db:reset
+      ;;
+    "db:pull:production (prod -> local)")
+      bash "$ROOT_DIR/scripts/db-pull-production.sh"
       ;;
     "log:clear + tmp:clear")
       ruby "$RAILS_BIN" log:clear

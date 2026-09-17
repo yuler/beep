@@ -54,11 +54,15 @@ const accountRoute = getRouteApi("/$account_slug");
 export const Route = createFileRoute("/$account_slug/beepers")({
 	loader: withAuthRedirects(async ({ params }) => {
 		const slug = params?.account_slug ?? "";
-		const [{ beeper_apps: beeperApps }, { beepers }] = await Promise.all([
+		const [{ beeper_apps: beeperApps }, beepersRes] = await Promise.all([
 			fetchBeeperApps(),
 			fetchBeepers(slug),
 		]);
-		return { beeperApps, beepers };
+		return {
+			beeperApps,
+			beepers: beepersRes.beepers,
+			pagination: beepersRes.pagination,
+		};
 	}),
 	component: BeepersPage,
 });
@@ -199,7 +203,7 @@ function BeeperAppCard({
 function BeepersPage() {
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
-	const { beeperApps, beepers } = Route.useLoaderData();
+	const { beeperApps, beepers, pagination } = Route.useLoaderData();
 	const [selectedBeeperApp, setSelectedBeeperApp] = useState<BeeperApp | null>(
 		null,
 	);
@@ -301,7 +305,11 @@ function BeepersPage() {
 						<h2 className="font-heading text-lg font-semibold">
 							{m.beepers_your_beepers()}
 						</h2>
-						<BeeperList beepers={beepers} slug={slug} />
+						<BeeperList
+							beepers={beepers}
+							initialPagination={pagination}
+							slug={slug}
+						/>
 					</div>
 				) : null}
 
