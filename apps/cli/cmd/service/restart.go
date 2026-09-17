@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"beep/internal/daemon"
 	"beep/internal/ui"
 
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +29,12 @@ func NewCmdRestart() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "restart [runner|channel]",
 		Short: "Restart Beep daemon services (stops and relaunches in background)",
-		Args:  cobra.MaximumNArgs(1),
+		Long: `Restart Beep daemon services (stops and relaunches in background).
+
+When run without arguments in an interactive terminal, prompts to select which
+services to restart. In non-interactive environments (e.g. CI or scripts),
+restarts all configured services.`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := ""
 			if len(args) > 0 {
@@ -57,6 +64,9 @@ func NewCmdRestart() *cobra.Command {
 			case "channel":
 				return restartService(daemon.ServiceChannel, cfg, timeout, force)
 			default:
+				if cmdutil.IsInteractive(cmd) {
+					return restartInteractive(cfg, timeout, force)
+				}
 				return restartAll(cfg, timeout, force)
 			}
 		},
@@ -120,6 +130,87 @@ func restartAll(cfg *config.Config, timeout time.Duration, force bool) error {
 
 	if hasChannel {
 		if err := restartService(daemon.ServiceChannel, cfg, timeout, force); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+var promptRestartServicesFn = promptRestartServices
+
+func promptRestartServices(options []huh.Option[string], defaultSelected []string) ([]string, error) {
+	selected := defaultSelected
+	err := huh.NewMultiSelect[string]().
+		Title("Select services to restart").
+		Description("Use Space to toggle, Enter to confirm").
+		Options(options...).
+		Value(&selected).
+		Run()
+	if err != nil {
+		return nil, err
+	}
+	return selected, nil
+}
+
+func restartInteractive(cfg *config.Config, timeout time.Duration, force bool) error {
+	hasRunner := cfg.RunnerToken != ""
+	hasChannel := cfg.ChannelToken != "" || cfg.CliToken != "" || cfg.DeviceToken != ""
+
+	if !hasRunner && !hasChannel {
+		return fmt.Errorf("no services configured. To configure:\n  Runner:  set BEEP_RUNNER_TOKEN or configure config.json\n  Channel: run '%s channel connect'", config.BinaryName())
+	}
+
+	var options []huh.Option[string]
+	var defaultSelected []string
+	var runningCount int
+
+	if hasRunner {
+		running, pid, _ := daemon.CheckRunning(cfg.Workspace, daemon.ServiceRunner)
+		label := "runner (stopped)"
+		if running && pid > 0 {
+			label = fmt.Sprintf("runner (running, PID %d)", pid)
+			defaultSelected = append(defaultSelected, daemon.ServiceRunner)
+			runningCount++
+		}
+		options = append(options, huh.NewOption(label, daemon.ServiceRunner))
+	}
+
+	if hasChannel {
+		running, pid, _ := daemon.CheckRunning(cfg.Workspace, daemon.ServiceChannel)
+		label := "channel (stopped)"
+		if running && pid > 0 {
+			label = fmt.Sprintf("channel (running, PID %d)", pid)
+			defaultSelected = append(defaultSelected, daemon.ServiceChannel)
+			runningCount++
+		}
+		options = append(options, huh.NewOption(label, daemon.ServiceChannel))
+	}
+
+	if runningCount == 0 {
+		if hasRunner {
+			defaultSelected = append(defaultSelected, daemon.ServiceRunner)
+		}
+		if hasChannel {
+			defaultSelected = append(defaultSelected, daemon.ServiceChannel)
+		}
+	}
+
+	selected, err := promptRestartServicesFn(options, defaultSelected)
+	if err != nil {
+		if errors.Is(err, huh.ErrUserAborted) {
+			return nil
+		}
+		return err
+	}
+
+	if len(selected) == 0 {
+		fmt.Println("No services selected to restart.")
+		return nil
+	}
+
+	for _, service := range selected {
+		if err := restartService(service, cfg, timeout, force); err != nil {
 			return err
 		}
 	}
