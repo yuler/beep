@@ -18,6 +18,7 @@ import {
 	SortableHeader,
 } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
+import { ProgressBar, StatusPill } from "@/components/ui/status-pill";
 import {
 	type Beep,
 	type BeepStatsData,
