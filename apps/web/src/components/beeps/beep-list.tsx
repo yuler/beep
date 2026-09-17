@@ -4,6 +4,7 @@ import {
 	Activity,
 	Clock,
 	Loader2,
+	Plus,
 	Repeat,
 	Search,
 	Sparkles,
@@ -203,11 +204,11 @@ const FILTER_TABS: {
 	id: FilterStatus;
 	label: () => string;
 }[] = [
-	{ id: "all", label: m.beeps_filter_all },
 	{ id: "active", label: m.beeps_filter_active },
 	{ id: "firing", label: m.beeps_filter_firing },
 	{ id: "recurring", label: m.beeps_filter_recurring },
 	{ id: "completed", label: m.beeps_filter_completed },
+	{ id: "all", label: m.beeps_filter_all },
 ];
 
 function getFilterOptions(filter: FilterStatus) {
@@ -222,12 +223,14 @@ export function BeepList({
 	stats,
 	slug,
 	variant = "full",
+	onCreateClick,
 }: {
 	beeps: Beep[];
 	initialPagination?: PaginationMeta;
 	stats?: BeepStatsData;
 	slug: string;
 	variant?: "compact" | "full";
+	onCreateClick?: () => void;
 }) {
 	const navigate = useNavigate();
 	const [items, setItems] = useState<Beep[]>(initialBeeps);
@@ -239,10 +242,10 @@ export function BeepList({
 	const isLoadingMoreRef = useRef(false);
 	const filterRequestRef = useRef(0);
 	const sentinelRef = useRef<HTMLDivElement | null>(null);
-	const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
+	const [statusFilter, setStatusFilter] = useState<FilterStatus>("active");
 
 	useEffect(() => {
-		if (statusFilter === "all") {
+		if (statusFilter === "active") {
 			setItems(initialBeeps);
 			setPagination(initialPagination);
 		}
@@ -251,11 +254,6 @@ export function BeepList({
 	const handleStatusFilterChange = useCallback(
 		(nextFilter: FilterStatus) => {
 			setStatusFilter(nextFilter);
-			if (nextFilter === "all") {
-				setItems(initialBeeps);
-				setPagination(initialPagination);
-				return;
-			}
 
 			const requestId = ++filterRequestRef.current;
 			setIsFiltering(true);
@@ -275,7 +273,7 @@ export function BeepList({
 					}
 				});
 		},
-		[slug, initialBeeps, initialPagination],
+		[slug],
 	);
 
 	const loadMore = useCallback(async () => {
@@ -330,12 +328,14 @@ export function BeepList({
 
 	const filteredBeeps = useMemo(() => {
 		return items.filter((beep) => {
-			if (statusFilter === "active" && beep.status !== "active") return false;
-			if (statusFilter === "firing" && beep.status !== "firing") return false;
-			if (statusFilter === "completed" && beep.status !== "completed")
-				return false;
-			if (statusFilter === "recurring" && beep.kind !== "recurring")
-				return false;
+			if (variant === "full") {
+				if (statusFilter === "active" && beep.status !== "active") return false;
+				if (statusFilter === "firing" && beep.status !== "firing") return false;
+				if (statusFilter === "completed" && beep.status !== "completed")
+					return false;
+				if (statusFilter === "recurring" && beep.kind !== "recurring")
+					return false;
+			}
 
 			if (search.trim()) {
 				const query = search.toLowerCase();
@@ -347,7 +347,7 @@ export function BeepList({
 
 			return true;
 		});
-	}, [items, statusFilter, search]);
+	}, [items, statusFilter, search, variant]);
 
 	const counts = useMemo(() => {
 		return {
@@ -374,7 +374,12 @@ export function BeepList({
 		};
 	}, [stats, pagination, items, statusFilter]);
 
-	if (items.length === 0 && !isFiltering && statusFilter === "all") {
+	const totalCount =
+		stats?.all ??
+		(statusFilter === "all" ? pagination?.total_count : undefined) ??
+		items.length;
+
+	if (totalCount === 0 && !isFiltering) {
 		return (
 			<Card className="flex flex-col items-center justify-center p-8 text-center">
 				<div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -386,6 +391,17 @@ export function BeepList({
 				<p className="mt-1 max-w-sm text-sm text-muted-foreground">
 					{m.beeps_empty_create_hint()}
 				</p>
+				{onCreateClick ? (
+					<Button
+						type="button"
+						size="sm"
+						className="mt-4 gap-2"
+						onClick={onCreateClick}
+					>
+						<Plus className="size-4" />
+						{m.beeps_create_beep()}
+					</Button>
+				) : null}
 			</Card>
 		);
 	}
