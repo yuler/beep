@@ -1,95 +1,99 @@
-# Postmortem: 生产 `Push::Subscription` 404（2026-09-17）
+# Postmortem: Production `Push::Subscription` 404 (2026-09-17)
 
-| 项目       | 内容                                                                                        |
-|------------|---------------------------------------------------------------------------------------------|
-| 现象       | `DELETE /api/v1/:slug/push_subscriptions/:id` 与 `POST .../:id/test` 报 404                  |
-| 报错原文   | `Couldn't find Push::Subscription with 'id'="2q1tne…" [WHERE "channels"."kind" = ? AND "channels"."user_id" = ?]` |
-| 上报人     | qichenwx（生产站 beep.yuler.cc，个人账号 `qichenwx9620`）                                    |
-| 根本原因   | 回填迁移用原生 SQL 写入了带横杠 UUID **TEXT** 主键，绕过了 app 的 base36/BLOB(16) UUID codec |
-| 影响面     | 迁移建的所有 `channels` 行：全部 email channel + 回填的 web_push 行；相关 find-by-id 接口全挂 |
-| 数据修复   | 迁移 `20260917140205_fix_channels_text_uuid_ids.rb`（随部署自动执行）                        |
-| 状态       | 待合入部署后关闭                                                                            |
+| Field        | Detail                                                                                            |
+|--------------|---------------------------------------------------------------------------------------------------|
+| Symptom      | `DELETE /api/v1/:slug/push_subscriptions/:id` and `POST .../:id/test` return 404                   |
+| Error        | `Couldn't find Push::Subscription with 'id'="2q1tne…" [WHERE "channels"."kind" = ? AND "channels"."user_id" = ?]` |
+| Reporter     | qichenwx (production, beep.yuler.cc, personal account `qichenwx9620`)                              |
+| Root cause   | Backfill migration wrote dashed-UUID **TEXT** primary keys via raw SQL, bypassing the app's base36/BLOB(16) UUID codec |
+| Blast radius | Every migration-created `channels` row: all email channels + backfilled web_push rows; all find-by-id endpoints on them |
+| Data fix     | Migration `20260917140205_fix_channels_text_uuid_ids.rb` (runs automatically on deploy)            |
+| Status       | Pending: close after merge + deploy                                                                |
 
-## 1. 时间线
+## 1. Timeline
 
-| 时间                | 事件                                                                              |
-|---------------------|-----------------------------------------------------------------------------------|
-| 2026-08-17          | #4 上线 web push，独立 `push_subscriptions` 表（UUID 主键，Rails 生成）             |
-| 2026-08-20          | 出问题的订阅行在老表里创建（endpoint 为 FCM，Chrome/Linux）                        |
-| 2026-09-11          | 迁移 `20260911110000_backfill_email_and_web_push_channels.rb` 随 #47 合入          |
-| 2026-09-15          | #47 上线：web push 并入 `channels` 表，老行被 backfill（换新 id，保留 created_at） |
-| 2026-09-17 上午     | 用户在设置页点删除/测试，稳定复现 404，上报                                        |
-| 2026-09-17 下午     | 定位根因；本地库手工验证修复 SQL；改由正式 migration 修复                         |
+| Time              | Event                                                                                   |
+|-------------------|-----------------------------------------------------------------------------------------|
+| 2026-08-17        | #4 ships web push with a standalone `push_subscriptions` table (UUID PKs, Rails-made)   |
+| 2026-08-20        | The failing subscription row is created in the old table (FCM endpoint, Chrome/Linux)   |
+| 2026-09-11        | Migration `20260911110000_backfill_email_and_web_push_channels.rb` merges with #47      |
+| 2026-09-15        | #47 ships: web push moves into the `channels` table; old rows are backfilled (new ids, `created_at` preserved) |
+| 2026-09-17 morning | User clicks delete/test on the settings page, 404 reproduces consistently, reported     |
+| 2026-09-17 afternoon | Root cause found; fix SQL verified by hand on a local copy; converted to a proper migration |
 
-## 2. 根因
+## 2. Root cause
 
-App 的 UUID 策略（抄 basecamp/fizzy，两处配合）：
+The app's UUID strategy (borrowed from basecamp/fizzy, two pieces working together):
 
-- `core/lib/rails_ext/active_record_type_uuid.rb` —— Ruby 侧 id 是 **base36、25 位、时序**串
-  （`Type::Uuid.generate` 用 `SecureRandom.uuid_v7` 转码，如 `03gvtja60ojxfq685e7rk3xug`），
-  SQLite 里存 **16 字节 BLOB**，`serialize`/`deserialize` 负责互转。
-- `core/config/initializers/uuid_primary_keys.rb` —— 建表时 uuid 列映射为 `blob(16)`。
+- `core/lib/rails_ext/active_record_type_uuid.rb` — Ruby-side ids are **base36, 25-char, time-ordered**
+  strings (`Type::Uuid.generate` transcodes `SecureRandom.uuid_v7`, e.g. `03gvtja60ojxfq685e7rk3xug`),
+  stored in SQLite as **16-byte BLOBs**, converted by `serialize`/`deserialize`.
+- `core/config/initializers/uuid_primary_keys.rb` — maps uuid columns to `blob(16)` at table creation.
 
-回填迁移用原生 SQL `lower(hex(randomblob(…)))` 直接写了**带横杠 UUID TEXT** 做 `channels.id`，
-绕过了 codec。后果（SQLite 动态类型，`BLOB ≠ TEXT`）：
+The backfill migration wrote `channels.id` as dashed-UUID **TEXT** via raw SQL
+(`lower(hex(randomblob(…)))`), bypassing the codec. Consequences (SQLite is dynamically
+typed, `BLOB ≠ TEXT`):
 
-| 操作                  | 结果                                                  |
-|-----------------------|-------------------------------------------------------|
-| `index`（无 id 条件） | 正常（这就是列表页一直能看到这行的原因）              |
-| `user_id` scope       | 正常（`account_id`/`user_id` 是从 users 表原样拷的 BLOB） |
-| 读 `id`               | `deserialize` 把 36 个 ASCII 当二进制 hex 化 → 稳定的 **56 位串**（API/报错里看到的就是它，库里实际存的是标准 UUID） |
-| `find(id)`            | 绑定 blob 永远 ≠ 存着的 TEXT → `RecordNotFound`，404   |
+| Operation              | Result                                                                                            |
+|------------------------|---------------------------------------------------------------------------------------------------|
+| `index` (no id filter) | Fine (this is why the row always showed up in list pages)                                         |
+| `user_id` scope        | Fine (`account_id`/`user_id` were copied verbatim as BLOBs from users)                            |
+| Reading `id`           | `deserialize` hex-encodes the 36 ASCII chars as if they were binary → a stable **56-char** string (what the API and the error show; the stored value is a plain UUID) |
+| `find(id)`             | Bound blob never equals the stored TEXT → `RecordNotFound`, 404                                   |
 
-一句话：**行在库里，但 Rails 永远 find 不到它**。跟"web push 放到 account/user 下"的 scope
-设计无关——`kind + user_id` 两个条件都是对的。
+In one line: **the row is in the database, but Rails can never find it by id**. This has nothing
+to do with the "web push scoped under account/user" design — the `kind + user_id` conditions are
+both correct.
 
-## 3. 排除过的假设（避免后人重走）
+## 3. Ruled-out hypotheses (so nobody re-walks them)
 
-| 怀疑方向                              | 结论                                        |
-|---------------------------------------|---------------------------------------------|
-| 服务端吊销/过期 token                 | 无。PAT 与 channel token 均无过期机制       |
-| `channel disconnect`/`logout`/`unset` | 代码审计：所有 `SaveFile` 调用都保留其他字段 |
-| 多账号切错 / 身份错位                | `/me` 只有一个个人账号；同 cookie 下 PAT 与 session 看到同一行 |
-| 迁移丢数据                            | 否。出事的 id 在 `channels` 里存在，`user_id` 也保留了 |
-| 生产存的 id 不是 UUID（排查中途误判） | **已纠正**：存储层是标准 36 位 UUID TEXT；56 位只是 codec 误解码的读假象 |
+| Suspect                                     | Verdict                                                        |
+|---------------------------------------------|----------------------------------------------------------------|
+| Server-side token revocation/expiry         | None. Neither PATs nor channel tokens expire                   |
+| `channel disconnect` / `logout` / `unset`   | Code audit: every `SaveFile` call preserves the other fields   |
+| Wrong account / identity mismatch           | `/me` shows a single personal account; PAT and session see the same row under the same cookie |
+| Migration lost data                         | No. The failing id exists in `channels`, `user_id` preserved   |
+| "Production ids are not UUIDs" (mid-debug misread) | **Corrected**: storage holds plain 36-char UUID TEXT; the 56-char form is a read-side mis-decode |
 
-## 4. 影响面
+## 4. Blast radius
 
-- 所有迁移建的 `channels` 行：每个用户的 email channel + 从老表 backfill 的 web_push 行。
-- 命中的接口：`push_subscriptions` 的 destroy/test、`channels` 的 show/destroy/test。
-- 不受影响：Rails 建的行（cli 等，BLOB id）；列表/轮询/投递（不按 id 查）。
-- 前端 `disableWebPush` 已吞掉 destroy 的 404，用户侧感知有限。
+- Every migration-created `channels` row: each user's email channel + web_push rows backfilled from the old table.
+- Hit endpoints: `push_subscriptions` destroy/test, `channels` show/destroy/test.
+- Unaffected: Rails-created rows (cli etc., BLOB ids); listing/polling/delivery (never look up by id).
+- Frontend `disableWebPush` already swallows destroy 404s, so user-facing impact is limited.
 
-## 5. 修复
+## 5. Fix
 
-数据修复收敛为正式 migration（随部署自动跑，无需手跑 SQL）：
+Data fix converged into a regular migration (runs automatically on deploy, no manual SQL):
 
 `core/db/migrate/20260917140205_fix_channels_text_uuid_ids.rb`
 
-- `UPDATE channels SET id = x'…'`：把 TEXT 还原为 codec 认的 16 字节
-  （`36^25 > 2^128`，base36↔int↔hex 双射，无损）。
-- 顺带把 `channel_deliveries` / `channel_authorizations` 里存成
-  `serialize(misdecoded_id)` 垃圾 blob 的外键重指回新 id（按 codec 逆运算确定性重算；
-  两种 blob 长度都匹配，防 Binary 截断；对不上的一律不动并告警）。
-- 已是 BLOB(16) 的行是 no-op；`down` 为空（同 20260911110000 的不可逆先例）。
-- 本地已用生产导入数据手工验证过等价 SQL：`find`、scoped find、delivery 关联全恢复。
+- `UPDATE channels SET id = x'…'`: restores TEXT to the 16 bytes the codec expects
+  (`36^25 > 2^128`, so the base36↔int↔hex round-trip is lossless).
+- Also re-points `channel_deliveries` / `channel_authorizations` FKs stored as
+  `serialize(misdecoded_id)` garbage blobs back to the new ids (deterministically recomputed
+  via the inverse codec; both blob lengths are matched against Binary truncation; anything
+  unmatched is left alone with a warning).
+- Rows already stored as BLOB(16) are a no-op; `down` is empty (same irreversible precedent as 20260911110000).
+- Verified by hand on production-imported data locally with the equivalent SQL: `find`, scoped find,
+  and delivery associations all recovered.
 
-## 6. 后续 Action Items
+## 6. Follow-up action items
 
-| # | 事项                                                                   | 状态    |
-|---|------------------------------------------------------------------------|---------|
-| 1 | 合入本 PR 并部署，线上点 test 按钮闭环                                  | 待执行  |
-| 2 | 约束：原生 SQL 迁移凡涉及 uuid 主键必须写 `BLOB(16)`（`unhex` 或 Ruby 生成） | 待立规  |
-| 3 | 回归测试：跑完迁移 SQL 后用 model `find` 一遍回填行                     | 待补    |
-| 4 | 老 `push_subscriptions` 表已无人读，另起迁移删除                        | 待排期  |
+| # | Item                                                                                            | Status   |
+|---|-------------------------------------------------------------------------------------------------|----------|
+| 1 | Merge this PR, deploy, close the loop by clicking test on a web push subscription               | Pending  |
+| 2 | Rule: raw-SQL migrations touching uuid PKs must write `BLOB(16)` (`unhex` or Ruby-generated)    | To adopt |
+| 3 | Regression test: `find` backfilled rows via models after running migration SQL                  | To add   |
+| 4 | Old `push_subscriptions` table is unread by anyone; drop it in a separate migration             | Backlog  |
 
-## 附录：关键证据
+## Appendix: key evidence
 
-- 线上同 cookie 复现：`GET index` 返回 1 行，`POST .../test` 同 id 报 404。
-- 本地复现：`Channel.find` 对迁移行 404（修前）/ OK（修后）。
-- 本地存储实测：`channels.id` 迁移行 `text/36`，Rails 建行 `blob/16`；`users.id` 全 `blob`。
-- 关键文件：`core/lib/rails_ext/active_record_type_uuid.rb`、
-  `core/config/initializers/uuid_primary_keys.rb`、
-  `core/db/migrate/20260911110000_backfill_email_and_web_push_channels.rb`、
-  `core/app/controllers/api/v1/push_subscriptions_controller.rb`、
-  `core/app/controllers/api/v1/push_subscriptions/tests_controller.rb`。
+- Production repro under one cookie: `GET index` returns 1 row, `POST .../test` with the same id 404s.
+- Local repro: `Channel.find` on a migrated row 404s (before fix) / works (after fix).
+- Local storage measurements: migrated `channels.id` rows are `text/36`, Rails-made rows `blob/16`; `users.id` all `blob`.
+- Key files: `core/lib/rails_ext/active_record_type_uuid.rb`,
+  `core/config/initializers/uuid_primary_keys.rb`,
+  `core/db/migrate/20260911110000_backfill_email_and_web_push_channels.rb`,
+  `core/app/controllers/api/v1/push_subscriptions_controller.rb`,
+  `core/app/controllers/api/v1/push_subscriptions/tests_controller.rb`.
