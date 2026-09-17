@@ -13,12 +13,7 @@ class Api::V1::BeepsController < Api::V1::BaseController
         "LOWER(beeps.title) LIKE :q OR LOWER(beeps.body) LIKE :q OR LOWER(beepers.title) LIKE :q",
         q: q_term
       )
-      has_id_match = valid_uuid_format?(q_clean) && begin
-        Current.account.beeps.where(id: q_clean).exists?
-      rescue ActiveRecord::StatementInvalid
-        false
-      end
-      scope = if has_id_match
+      scope = if valid_uuid_format?(q_clean)
         search_scope.where(id: q_clean).or(text_condition)
       else
         text_condition

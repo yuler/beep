@@ -321,6 +321,7 @@ export function BeepList({
 
 	const inputRef = useRef<HTMLInputElement>(null);
 	const lastDispatchedRef = useRef(searchQuery);
+	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [searchInput, setSearchInput] = useState(searchQuery);
 
 	useEffect(() => {
@@ -341,40 +342,49 @@ export function BeepList({
 		setPagination(initialPagination);
 	}, [initialBeeps, initialPagination]);
 
+	const dispatchSearch = useCallback(
+		(trimmed: string) => {
+			lastDispatchedRef.current = trimmed;
+			if (onSearchChange) {
+				onSearchChange(trimmed);
+				return;
+			}
+
+			const requestId = ++filterRequestRef.current;
+			setIsFiltering(true);
+			fetchBeeps(slug, {
+				...getFilterOptions(statusFilter),
+				q: trimmed || undefined,
+			})
+				.then((res) => {
+					if (filterRequestRef.current === requestId) {
+						setItems(res.beeps);
+						setPagination(res.pagination);
+					}
+				})
+				.catch((err) => {
+					console.error("Failed to search beeps", err);
+				})
+				.finally(() => {
+					if (filterRequestRef.current === requestId) {
+						setIsFiltering(false);
+					}
+				});
+		},
+		[onSearchChange, slug, statusFilter],
+	);
+
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			const trimmed = searchInput.trim();
 			if (trimmed !== lastDispatchedRef.current) {
-				lastDispatchedRef.current = trimmed;
-				if (onSearchChange) {
-					onSearchChange(trimmed);
-				} else {
-					const requestId = ++filterRequestRef.current;
-					setIsFiltering(true);
-					fetchBeeps(slug, {
-						...getFilterOptions(statusFilter),
-						q: trimmed || undefined,
-					})
-						.then((res) => {
-							if (filterRequestRef.current === requestId) {
-								setItems(res.beeps);
-								setPagination(res.pagination);
-							}
-						})
-						.catch((err) => {
-							console.error("Failed to search beeps", err);
-						})
-						.finally(() => {
-							if (filterRequestRef.current === requestId) {
-								setIsFiltering(false);
-							}
-						});
-				}
+				dispatchSearch(trimmed);
 			}
 		}, 300);
+		debounceTimerRef.current = timer;
 
 		return () => clearTimeout(timer);
-	}, [searchInput, onSearchChange, slug, statusFilter]);
+	}, [searchInput, dispatchSearch]);
 
 	const handleStatusFilterChange = useCallback(
 		(nextFilter: FilterStatus) => {
@@ -388,7 +398,7 @@ export function BeepList({
 			setIsFiltering(true);
 			fetchBeeps(slug, {
 				...getFilterOptions(nextFilter),
-				q: searchInput.trim() || undefined,
+				q: lastDispatchedRef.current.trim() || undefined,
 			})
 				.then((res) => {
 					if (filterRequestRef.current === requestId) {
@@ -405,7 +415,7 @@ export function BeepList({
 					}
 				});
 		},
-		[slug, onTabChange, searchInput],
+		[slug, onTabChange],
 	);
 
 	const loadMore = useCallback(async () => {
@@ -422,7 +432,7 @@ export function BeepList({
 			const res = await fetchBeeps(slug, {
 				page: pagination.next_page,
 				...getFilterOptions(statusFilter),
-				q: (onSearchChange ? searchQuery : searchInput).trim() || undefined,
+				q: lastDispatchedRef.current.trim() || undefined,
 			});
 			setItems((prev) => {
 				const existingIds = new Set(prev.map((b) => b.id));
@@ -436,14 +446,7 @@ export function BeepList({
 			isLoadingMoreRef.current = false;
 			setIsLoadingMore(false);
 		}
-	}, [
-		pagination,
-		slug,
-		statusFilter,
-		searchQuery,
-		searchInput,
-		onSearchChange,
-	]);
+	}, [pagination, slug, statusFilter]);
 
 	useEffect(() => {
 		if (!pagination?.has_more) return;
@@ -467,7 +470,7 @@ export function BeepList({
 	const filteredBeeps = items;
 
 	const counts = useMemo(() => {
-		return {
+		const next = {
 			all:
 				stats?.all ??
 				(statusFilter === "all" ? pagination?.total_count : undefined) ??
@@ -489,7 +492,11 @@ export function BeepList({
 				(statusFilter === "completed" ? pagination?.total_count : undefined) ??
 				items.filter((b) => b.status === "completed").length,
 		};
-	}, [stats, pagination, items, statusFilter]);
+		if (searchQuery.trim() && pagination?.total_count != null) {
+			next[statusFilter] = pagination.total_count;
+		}
+		return next;
+	}, [stats, pagination, items, statusFilter, searchQuery]);
 
 	const totalCount =
 		stats?.all ??
@@ -566,12 +573,13 @@ export function BeepList({
 							onKeyDown={(event) => {
 								if (event.key === "Enter") {
 									event.preventDefault();
+									if (debounceTimerRef.current) {
+										clearTimeout(debounceTimerRef.current);
+										debounceTimerRef.current = null;
+									}
 									const trimmed = searchInput.trim();
 									if (trimmed !== lastDispatchedRef.current) {
-										lastDispatchedRef.current = trimmed;
-										if (onSearchChange) {
-											onSearchChange(trimmed);
-										}
+										dispatchSearch(trimmed);
 									}
 								}
 							}}
@@ -600,10 +608,10 @@ export function BeepList({
 						size="sm"
 						className="mt-2"
 						onClick={() => {
-							handleStatusFilterChange("active");
 							setSearchInput("");
 							lastDispatchedRef.current = "";
 							if (onSearchChange) onSearchChange("");
+							handleStatusFilterChange("all");
 						}}
 					>
 						{m.beeps_clear_filters()}
@@ -632,7 +640,7 @@ export function BeepList({
 									<div className="relative z-10 flex items-start justify-between gap-3 pointer-events-none">
 										<div className="flex min-w-0 flex-col gap-0.5">
 											<span
-												className="font-mono text-[11px] text-muted-foreground select-all break-all"
+												className="pointer-events-auto font-mono text-[11px] text-muted-foreground select-all break-all"
 												title={beep.id}
 											>
 												{beep.id}

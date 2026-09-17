@@ -2,12 +2,6 @@ class Beep::Proposal
   MODEL = "deepseek-chat"
   INTENTS = %w[ create other ].freeze
 
-  CHANNEL_PATTERNS = {
-    "web_push" => /\bpush\b|web\s*push|webpush|浏览器.*?(推送|通知)|网页推送/i,
-    "email" => /\bmail\b|email|邮件|邮箱/i,
-    "cli" => /\bcli\b|终端|命令行/i
-  }.freeze
-
   class Error < StandardError; end
 
   class Result
@@ -120,8 +114,6 @@ class Beep::Proposal
         allowed.presence
       end
 
-      channels ||= fallback_notification_channels
-
       Result.new(
         intent: intent,
         kind: kind,
@@ -142,23 +134,6 @@ class Beep::Proposal
       else
         "other"
       end
-    end
-
-    def fallback_notification_channels
-      text = @prompt.downcase
-      mentioned = CHANNEL_PATTERNS.select do |_channel, pattern|
-        text.match?(pattern)
-      end.keys
-
-      return nil if mentioned.empty?
-
-      excluded = CHANNEL_PATTERNS.select do |_channel, pattern|
-        exclusion_pattern = /(?:(?:不要|别|不用|无需|不需要|不发|不能|排除|免于|\b(?:no|without|dont|don't|skip)\b)\s*(?:通过|使用|用|发|走|给)?\s*[^，,。.!?\n]{0,10}?(?:#{pattern})|(?:#{pattern})\s*(?:除外|就?不要|就?不用|就?不需要|别发))/i
-        text.match?(exclusion_pattern)
-      end.keys
-
-      channels = (mentioned - excluded) & User::NOTIFICATION_CHANNELS
-      channels.presence
     end
 
     def parse_run_at(value)

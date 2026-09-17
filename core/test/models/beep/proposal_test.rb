@@ -125,7 +125,7 @@ class Beep::ProposalTest < ActiveSupport::TestCase
     assert_equal [ "web_push" ], result.notification_channels
   end
 
-  test "create falls back to keyword matching for channels: 只通知给 web push 其他不需要" do
+  test "create keeps notification_channels nil when the model returns null" do
     chat = fake_chat({
       "intent" => "create",
       "title" => "测试通知",
@@ -135,20 +135,20 @@ class Beep::ProposalTest < ActiveSupport::TestCase
     }.to_json)
 
     result = Beep::Proposal.create("创建一个测试通知, 只通知给 web push 其他不需要", chat: chat)
-    assert_equal [ "web_push" ], result.notification_channels
+    assert_nil result.notification_channels
   end
 
-  test "create falls back to keyword matching for channels: 只发邮件" do
+  test "create does not infer channels from prompt verbs like git push" do
     chat = fake_chat({
       "intent" => "create",
-      "title" => "开会提醒",
+      "title" => "Push code",
       "body" => nil,
       "run_at" => nil,
       "notification_channels" => nil
     }.to_json)
 
-    result = Beep::Proposal.create("提醒我开会，只发邮件", chat: chat)
-    assert_equal [ "email" ], result.notification_channels
+    result = Beep::Proposal.create("提醒我下午三点 push 代码到 GitHub", chat: chat)
+    assert_nil result.notification_channels
   end
 
   test "create sets notification_channels to nil when not mentioned" do
@@ -164,19 +164,6 @@ class Beep::ProposalTest < ActiveSupport::TestCase
     assert_nil result.notification_channels
   end
 
-  test "create falls back to keyword matching for channels: only web push" do
-    chat = fake_chat({
-      "intent" => "create",
-      "title" => "Deploy check",
-      "body" => nil,
-      "run_at" => nil,
-      "notification_channels" => nil
-    }.to_json)
-
-    result = Beep::Proposal.create("deploy check in 10 mins, only web push", chat: chat)
-    assert_equal [ "web_push" ], result.notification_channels
-  end
-
   test "create filters out unknown channels from model" do
     chat = fake_chat({
       "intent" => "create",
@@ -188,48 +175,6 @@ class Beep::ProposalTest < ActiveSupport::TestCase
 
     result = Beep::Proposal.create("Slack alert", chat: chat)
     assert_nil result.notification_channels
-  end
-
-  test "create fallback channel matching supports bare push" do
-    chat = fake_chat({
-      "intent" => "create",
-      "title" => "Push alert",
-      "body" => nil,
-      "run_at" => nil,
-      "notification_channels" => nil
-    }.to_json)
-
-    result = Beep::Proposal.create("Remind me tomorrow, push", chat: chat)
-    assert_equal [ "web_push" ], result.notification_channels
-  end
-
-  test "create fallback channel matching does not false-positive on gmail" do
-    chat = fake_chat({
-      "intent" => "create",
-      "title" => "Check gmail",
-      "body" => nil,
-      "run_at" => nil,
-      "notification_channels" => nil
-    }.to_json)
-
-    result = Beep::Proposal.create("Check gmail inbox tomorrow", chat: chat)
-    assert_nil result.notification_channels
-  end
-
-  test "create fallback channel matching supports bare mail and excludes correctly" do
-    chat = fake_chat({
-      "intent" => "create",
-      "title" => "Send mail",
-      "body" => nil,
-      "run_at" => nil,
-      "notification_channels" => nil
-    }.to_json)
-
-    result = Beep::Proposal.create("Remind me by mail", chat: chat)
-    assert_equal [ "email" ], result.notification_channels
-
-    result_ex = Beep::Proposal.create("Remind me without mail", chat: chat)
-    assert_nil result_ex.notification_channels
   end
 
   private
