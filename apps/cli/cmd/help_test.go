@@ -43,22 +43,22 @@ func TestGhHelpFormatting(t *testing.T) {
 		t.Errorf("expected output to contain note about subcommands being runnable directly")
 	}
 
-	// Check colon format on command names
+	// Check colon format on command names (including aliases)
 	expectedCommandsWithColon := []string{
 		"create:",
-		"delete:",
-		"list:",
+		"delete, rm:",
+		"list, ls:",
 		"pause:",
 		"resume:",
-		"run:",
-		"show:",
-		"beeper:",
-		"channel:",
+		"run, trigger:",
+		"show, view, info:",
+		"beeper, beepers:",
+		"channel, channels:",
 		"runner:",
-		"service:",
+		"service, services:",
 		"auth:",
 		"config:",
-		"upgrade:",
+		"upgrade, update:",
 		"version:",
 	}
 	for _, c := range expectedCommandsWithColon {
@@ -98,7 +98,7 @@ func TestSubcommandHelpFormatting(t *testing.T) {
 	if !strings.Contains(out, "COMMANDS") {
 		t.Errorf("expected COMMANDS section for beeper")
 	}
-	if !strings.Contains(out, "apps:") || !strings.Contains(out, "create:") {
+	if !strings.Contains(out, "apps, templates, catalog:") || !strings.Contains(out, "create:") {
 		t.Errorf("expected subcommands with colon for beeper")
 	}
 	if strings.Contains(out, "Install shell completion with 'beep completion install'") {

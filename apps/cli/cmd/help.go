@@ -143,15 +143,23 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 		}
 	}
 
+	commandLabel := func(c *cobra.Command) string {
+		names := []string{c.Name()}
+		if len(c.Aliases) > 0 {
+			names = append(names, c.Aliases...)
+		}
+		return strings.Join(names, ", ") + ":"
+	}
+
 	// Calculate maximum command name width across all available commands for clean alignment
 	maxNameWidth := 0
 	for _, child := range cmd.Commands() {
 		if !child.IsAvailableCommand() || child.Name() == "help" {
 			continue
 		}
-		nameWithColon := child.Name() + ":"
-		if len(nameWithColon) > maxNameWidth {
-			maxNameWidth = len(nameWithColon)
+		label := commandLabel(child)
+		if len(label) > maxNameWidth {
+			maxNameWidth = len(label)
 		}
 	}
 	if maxNameWidth < 12 {
@@ -184,12 +192,12 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 			fmt.Fprintf(w, "  %s\n", ui.Dim(desc))
 		}
 		for _, c := range commands {
-			nameWithColon := c.Name() + ":"
-			pad := maxNameWidth - len(nameWithColon)
+			label := commandLabel(c)
+			pad := maxNameWidth - len(label)
 			if pad < 0 {
 				pad = 0
 			}
-			fmt.Fprintf(w, "  %s%s  %s\n", ui.Bold(nameWithColon), strings.Repeat(" ", pad), c.Short)
+			fmt.Fprintf(w, "  %s%s  %s\n", ui.Bold(label), strings.Repeat(" ", pad), c.Short)
 		}
 		fmt.Fprintln(w)
 	}
