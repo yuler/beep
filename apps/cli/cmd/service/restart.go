@@ -29,6 +29,14 @@ func NewCmdRestart() *cobra.Command {
 		Short: "Restart Beep daemon services (stops and relaunches in background)",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			target := ""
+			if len(args) > 0 {
+				target = strings.ToLower(args[0])
+			}
+			if target != "" && target != "runner" && target != "channel" {
+				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+			}
+
 			cfg, err := cmdutil.LoadConfig(cmd)
 			if err != nil {
 				return err
@@ -43,20 +51,13 @@ func NewCmdRestart() *cobra.Command {
 				return fmt.Errorf("configuration error: %w", err)
 			}
 
-			target := ""
-			if len(args) > 0 {
-				target = strings.ToLower(args[0])
-			}
-
 			switch target {
 			case "runner":
 				return restartService(daemon.ServiceRunner, cfg, timeout, force)
 			case "channel":
 				return restartService(daemon.ServiceChannel, cfg, timeout, force)
-			case "":
-				return restartAll(cfg, timeout, force)
 			default:
-				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+				return restartAll(cfg, timeout, force)
 			}
 		},
 	}

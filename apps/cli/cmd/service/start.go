@@ -38,6 +38,14 @@ func NewCmdStart() *cobra.Command {
 		Short:   "Start daemon services to listen for notifications and execute tasks",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			target := ""
+			if len(args) > 0 {
+				target = strings.ToLower(args[0])
+			}
+			if target != "" && target != "runner" && target != "channel" {
+				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+			}
+
 			cfg, err := cmdutil.LoadConfig(cmd)
 			if err != nil {
 				return err
@@ -52,20 +60,13 @@ func NewCmdStart() *cobra.Command {
 				return fmt.Errorf("configuration error: %w", err)
 			}
 
-			target := ""
-			if len(args) > 0 {
-				target = strings.ToLower(args[0])
-			}
-
 			switch target {
 			case "runner":
 				return cliservice.RunRunnerService(cfg, daemonMode, os.Args[1:])
 			case "channel":
 				return cliservice.RunChannelService(cfg, daemonMode, os.Args[1:])
-			case "":
-				return runStartAll(cfg, daemonMode)
 			default:
-				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+				return runStartAll(cfg, daemonMode)
 			}
 		},
 	}

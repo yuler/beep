@@ -21,14 +21,17 @@ func NewCmdStatus() *cobra.Command {
 		Short: "Check running status and information of Beep services",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := cmdutil.LoadConfig(cmd)
-			if err != nil {
-				return err
-			}
-
 			target := ""
 			if len(args) > 0 {
 				target = strings.ToLower(args[0])
+			}
+			if target != "" && target != "runner" && target != "channel" {
+				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+			}
+
+			cfg, err := cmdutil.LoadConfig(cmd)
+			if err != nil {
+				return err
 			}
 
 			switch target {
@@ -36,10 +39,8 @@ func NewCmdStatus() *cobra.Command {
 				return cliservice.ShowSingleServiceStatus(daemon.ServiceRunner, cfg)
 			case "channel":
 				return cliservice.ShowSingleServiceStatus(daemon.ServiceChannel, cfg)
-			case "":
-				return runStatusAll(cfg)
 			default:
-				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+				return runStatusAll(cfg)
 			}
 		},
 	}

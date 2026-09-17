@@ -26,14 +26,17 @@ func NewCmdStop() *cobra.Command {
 		Short:   "Stop running Beep daemon services (runner and channel)",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := cmdutil.LoadConfig(cmd)
-			if err != nil {
-				return err
-			}
-
 			target := ""
 			if len(args) > 0 {
 				target = strings.ToLower(args[0])
+			}
+			if target != "" && target != "runner" && target != "channel" {
+				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+			}
+
+			cfg, err := cmdutil.LoadConfig(cmd)
+			if err != nil {
+				return err
 			}
 
 			switch target {
@@ -41,10 +44,8 @@ func NewCmdStop() *cobra.Command {
 				return cliservice.StopSingleService(daemon.ServiceRunner, cfg.Workspace, timeout, force)
 			case "channel":
 				return cliservice.StopSingleService(daemon.ServiceChannel, cfg.Workspace, timeout, force)
-			case "":
-				return runStopAll(cfg.Workspace, timeout, force)
 			default:
-				return fmt.Errorf("unknown service %q (expected 'runner' or 'channel')", target)
+				return runStopAll(cfg.Workspace, timeout, force)
 			}
 		},
 	}
