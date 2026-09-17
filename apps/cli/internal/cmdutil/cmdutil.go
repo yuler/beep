@@ -178,4 +178,3 @@ func ResolveAccountSlug(me *client.MeResponse, explicitAccount string, cfgAccoun
 	}
 	return "", fmt.Errorf("account slug is required (set via --account <slug> or BEEP_ACCOUNT)")
 }
-

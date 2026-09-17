@@ -12,6 +12,7 @@ tmux = "3.7b"
 _.file = [".env", ".env.local"]
 # Overmind Overload()'s `.env` and would wipe `.env.local` (empty VITE_CORE_URL=).
 OVERMIND_SKIP_ENV = "1"
+_.path = ["./bin"]
 
 [tasks.setup]
 description = "Set up the development environment (gems, deps, db)"
@@ -66,18 +67,6 @@ go build -ldflags="-s -w \
   -o ../../bin/beep .
 """
 
-[tasks."cli:build:local"]
-description = "Build the Go beep CLI binary for local development"
-dir = "apps/cli"
-run = """
-go build -ldflags="-s -w \
-  -X beep/internal/version.Version=$(cat ../../VERSION) \
-  -X beep/internal/version.GitCommit=$(git rev-parse --short HEAD) \
-  -X beep/internal/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
-  -X beep/internal/config.DefaultWorkspaceName=.beep.local \
-  -X beep/internal/config.DefaultServerURL=http://core.${APP_HOST:-beep.localhost}:${CORE_PORT:-3001}" \
-  -o ../../bin/beep-local .
-"""
 
 [tasks."cli:test"]
 description = "Run Go CLI unit tests"

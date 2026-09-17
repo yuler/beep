@@ -40,4 +40,3 @@ func newChannelStopCmd() *cobra.Command {
 func newChannelStatusCmd() *cobra.Command {
 	return cmdchannel.NewCmdStatus()
 }
-

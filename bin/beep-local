@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Development launcher for the Beep CLI (runs `apps/cli` on the fly via `go run`).
+# Retains the caller's working directory and injects local development defaults.
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ORIG_PWD="$PWD"
+
+VERSION="$(cat "$ROOT_DIR/VERSION" 2>/dev/null || echo "dev")"
+GIT_COMMIT="$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+APP_HOST="${APP_HOST:-beep.localhost}"
+CORE_PORT="${CORE_PORT:-3001}"
+DEFAULT_SERVER_URL="http://core.${APP_HOST}:${CORE_PORT}"
+
+export ORIG_PWD
+exec go -C "$ROOT_DIR/apps/cli" run \
+  -exec "sh -c 'cd \"\$ORIG_PWD\" && exec \"\$@\"' --" \
+  -ldflags="-s -w \
+    -X beep/internal/version.Version=${VERSION} \
+    -X beep/internal/version.GitCommit=${GIT_COMMIT} \
+    -X beep/internal/version.BuildDate=${BUILD_DATE} \
+    -X beep/internal/config.DefaultWorkspaceName=.beep.local \
+    -X beep/internal/config.DefaultServerURL=${DEFAULT_SERVER_URL}" \
+  . "$@"

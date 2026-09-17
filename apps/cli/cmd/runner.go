@@ -62,7 +62,6 @@ func newRunnerStatusCmd() *cobra.Command {
 	return cmdrunner.NewCmdStatus()
 }
 
-
 func loadConfig() (*config.Config, error) {
 	workspace := flagWorkspace
 	if workspace == "" {

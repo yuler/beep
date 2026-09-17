@@ -153,9 +153,9 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 		maxNameWidth = 12
 	}
 
-var groupDescriptions = map[string]string{
-	"beeps": "Subcommands can be run directly (e.g. 'beep list') without repeating 'beep beep'",
-}
+	var groupDescriptions = map[string]string{
+		"beeps": "Subcommands can be run directly (e.g. 'beep list') without repeating 'beep beep'",
+	}
 
 	printGroup := func(id, title string, commands []*cobra.Command) {
 		if len(commands) == 0 {
