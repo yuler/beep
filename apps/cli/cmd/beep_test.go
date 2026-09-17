@@ -642,4 +642,3 @@ func TestNaturalCreateChannelsPriority(t *testing.T) {
 		t.Errorf("expected empty channels, got %v", lastCreatedChannels)
 	}
 }
-

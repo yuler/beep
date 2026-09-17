@@ -417,4 +417,3 @@ func TestBeepProposalChannelsUnmarshal(t *testing.T) {
 		})
 	}
 }
-
