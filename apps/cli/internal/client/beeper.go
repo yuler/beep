@@ -13,6 +13,7 @@ import (
 
 type BeeperAppInput struct {
 	Name        string `json:"name"`
+	Label       string `json:"label,omitempty"`
 	Type        string `json:"type"`
 	Required    bool   `json:"required"`
 	Description string `json:"description"`

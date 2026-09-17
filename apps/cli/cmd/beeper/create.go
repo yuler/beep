@@ -110,6 +110,7 @@ Examples:
 						if err != nil {
 							errList := client.ExtractErrorList(err)
 							ui.PrintErrorList("Invalid input", errList)
+							ui.PrintBeeperCreateSummary(params, apps, errList)
 							retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
 							if promptErr != nil || !retry {
 								return err
@@ -132,6 +133,7 @@ Examples:
 
 						errList := client.ExtractErrorList(err)
 						ui.PrintErrorList("Creation failed", errList)
+						ui.PrintBeeperCreateSummary(params, apps, errList)
 						retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs and retry?", true)
 						if promptErr != nil || !retry {
 							return err

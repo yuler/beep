@@ -455,3 +455,61 @@ func PromptBeeperAdjust(initial client.CreateBeeperParams, apps []*client.Beeper
 
 	return &res, nil
 }
+
+// BeeperCreateSummary returns the current beeper form values, marking fields
+// that failed validation so the user can see what to edit.
+func BeeperCreateSummary(params client.CreateBeeperParams, apps []*client.BeeperApp, errList []string) []CreateSummaryItem {
+	var app *client.BeeperApp
+	for _, a := range apps {
+		if a.Slug == params.AppSlug {
+			app = a
+			break
+		}
+	}
+	failed := DetectBeeperFailedFields(errList, app)
+	items := []CreateSummaryItem{
+		{Key: "App", Value: params.AppSlug, Failed: failed.App},
+		{Key: "Title", Value: params.Title, Failed: failed.Title},
+		{Key: "Body", Value: params.Body, Failed: failed.Body},
+		{Key: "Cron", Value: params.Cron, Failed: failed.Cron},
+	}
+	if app != nil {
+		for _, input := range app.Inputs {
+			val := ""
+			if current, exists := params.Config[input.Name]; exists && current != nil {
+				val = fmt.Sprintf("%v", current)
+			}
+			label := strings.TrimSpace(input.Label)
+			if label == "" {
+				label = input.Name
+			}
+			items = append(items, CreateSummaryItem{
+				Key:    label,
+				Value:  val,
+				Failed: failed.Configs[input.Name] || failed.Configs["*"],
+			})
+		}
+	} else {
+		for key, current := range params.Config {
+			val := ""
+			if current != nil {
+				val = fmt.Sprintf("%v", current)
+			}
+			items = append(items, CreateSummaryItem{
+				Key:    key,
+				Value:  val,
+				Failed: failed.Configs[key] || failed.Configs["*"],
+			})
+		}
+	}
+	items = append(items,
+		CreateSummaryItem{Key: "Timezone", Value: params.Timezone, Failed: failed.Timezone},
+		CreateSummaryItem{Key: "Channels", Value: params.Channels, Failed: failed.Channels},
+	)
+	return items
+}
+
+// PrintBeeperCreateSummary prints the current beeper form values after a failure.
+func PrintBeeperCreateSummary(params client.CreateBeeperParams, apps []*client.BeeperApp, errList []string) {
+	printCreateSummary("Current values:", BeeperCreateSummary(params, apps, errList))
+}

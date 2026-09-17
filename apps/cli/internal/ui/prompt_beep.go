@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -95,10 +96,19 @@ func promptBeepSelectFieldToAdjust() BeepFailedFields {
 // defaultChannels carries the channels selected in account settings and
 // pre-selects them in the channels multi-select.
 func PromptBeepCreate(initial client.CreateBeepParams, defaultChannels []string) (*client.CreateBeepParams, error) {
+	return promptBeepForm(initial, defaultChannels, false)
+}
+
+// PromptBeepReview shows the full create form with current values pre-filled so
+// the user can edit and confirm before submit (e.g. after AI proposal fallback).
+func PromptBeepReview(initial client.CreateBeepParams, defaultChannels []string) (*client.CreateBeepParams, error) {
+	return promptBeepForm(initial, defaultChannels, true)
+}
+
+func promptBeepForm(initial client.CreateBeepParams, defaultChannels []string, reviewAll bool) (*client.CreateBeepParams, error) {
 	res := initial
 
-	// 1. Title (required)
-	if strings.TrimSpace(res.Title) == "" {
+	if reviewAll || strings.TrimSpace(res.Title) == "" {
 		err := huh.NewInput().
 			Title("Beep Title").
 			Description("Name of this beep, shown when it fires").
@@ -117,8 +127,7 @@ func PromptBeepCreate(initial client.CreateBeepParams, defaultChannels []string)
 	}
 	res.Title = strings.TrimSpace(res.Title)
 
-	// 2. Message Body (optional)
-	if strings.TrimSpace(res.Body) == "" {
+	if reviewAll || strings.TrimSpace(res.Body) == "" {
 		err := huh.NewInput().
 			Title("Message Body (optional)").
 			Description("Optional details or markdown body (press Enter to skip)").
@@ -130,16 +139,16 @@ func PromptBeepCreate(initial client.CreateBeepParams, defaultChannels []string)
 	}
 	res.Body = strings.TrimSpace(res.Body)
 
-	// 3. Schedule Type & Value
-	if res.ScheduleKind == "" {
-		res.ScheduleKind = "instant"
+	if reviewAll || res.ScheduleKind == "" {
+		if res.ScheduleKind == "" {
+			res.ScheduleKind = "instant"
+		}
 		if err := promptBeepSchedule(&res); err != nil {
 			return nil, err
 		}
 	}
 
-	// 4. Timezone (selectable list)
-	if strings.TrimSpace(res.Timezone) == "" {
+	if reviewAll || strings.TrimSpace(res.Timezone) == "" {
 		tz, err := PromptTimezone(res.Timezone)
 		if err != nil {
 			return nil, err
@@ -147,9 +156,12 @@ func PromptBeepCreate(initial client.CreateBeepParams, defaultChannels []string)
 		res.Timezone = tz
 	}
 
-	// 5. Notification Channels (optional, multi-select with account defaults)
-	if strings.TrimSpace(res.Channels) == "" {
-		channels, err := PromptNotificationChannels(defaultChannels)
+	if reviewAll || strings.TrimSpace(res.Channels) == "" {
+		chDefaults := defaultChannels
+		if strings.TrimSpace(res.Channels) != "" {
+			chDefaults = strings.Split(res.Channels, ",")
+		}
+		channels, err := PromptNotificationChannels(chDefaults)
 		if err != nil {
 			return nil, err
 		}
@@ -235,6 +247,60 @@ func PromptBeepAdjust(initial client.CreateBeepParams, defaultChannels []string,
 	}
 
 	return &res, nil
+}
+
+// CreateSummaryItem is one row in the printed create-form snapshot.
+type CreateSummaryItem struct {
+	Key    string
+	Value  string
+	Failed bool
+}
+
+// BeepCreateSummary returns the current beep form values, marking fields that
+// failed validation so the user can see what to edit.
+func BeepCreateSummary(params client.CreateBeepParams, errList []string) []CreateSummaryItem {
+	failed := DetectBeepFailedFields(errList)
+	kind := params.ScheduleKind
+	if kind == "" {
+		kind = "instant"
+	}
+	items := []CreateSummaryItem{
+		{Key: "Title", Value: params.Title, Failed: failed.Title},
+		{Key: "Body", Value: params.Body, Failed: failed.Body},
+		{Key: "Schedule", Value: kind, Failed: failed.Schedule},
+	}
+	if params.ScheduleKind != "" && params.ScheduleKind != "instant" {
+		items = append(items, CreateSummaryItem{Key: "When", Value: params.ScheduleVal, Failed: failed.Schedule})
+	}
+	items = append(items,
+		CreateSummaryItem{Key: "Timezone", Value: params.Timezone, Failed: failed.Timezone},
+		CreateSummaryItem{Key: "Channels", Value: params.Channels, Failed: failed.Channels},
+	)
+	return items
+}
+
+// PrintBeepCreateSummary prints the current beep form values after a failure.
+func PrintBeepCreateSummary(params client.CreateBeepParams, errList []string) {
+	printCreateSummary("Current values:", BeepCreateSummary(params, errList))
+}
+
+func printCreateSummary(header string, items []CreateSummaryItem) {
+	fmt.Println()
+	fmt.Println(Bold(Cyan("  " + header)))
+	for _, item := range items {
+		printCreateValue(item.Key, item.Value, item.Failed)
+	}
+}
+
+func printCreateValue(key, val string, failed bool) {
+	if strings.TrimSpace(val) == "" {
+		val = Dim("(empty)")
+	}
+	if failed {
+		fmt.Println(KeyValue(key, Red(val)+" "+Yellow("(needs update)")))
+		return
+	}
+	fmt.Println(KeyValue(key, val))
 }
 
 func promptBeepSchedule(res *client.CreateBeepParams) error {

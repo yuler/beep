@@ -113,6 +113,7 @@ Examples:
 				}
 
 				var b *client.Beep
+				aiFallback := false
 				if cmdutil.IsInteractive(cmd) {
 					// Default channel selection comes from account settings.
 					defaultChannels := client.DefaultNotificationChannels
@@ -152,12 +153,19 @@ Examples:
 							// If AI proposal failed (e.g. offline/unconfigured), warn and fall back to manual form
 							fmt.Println(ui.Warn("AI proposal unavailable (%v), falling back to form...", err))
 							params.Title = prompt
+							aiFallback = true
+							ui.PrintBeepCreateSummary(params, nil)
 						}
 					}
 
-					isMissingInfo := params.Title == "" || (params.ScheduleKind == "" && len(args) == 0)
-					if isMissingInfo {
-						prompted, err := ui.PromptBeepCreate(params, defaultChannels)
+					if shouldPromptBeepCreateForm(params.Title, params.ScheduleKind, len(args), aiFallback) {
+						var prompted *client.CreateBeepParams
+						var err error
+						if aiFallback {
+							prompted, err = ui.PromptBeepReview(params, defaultChannels)
+						} else {
+							prompted, err = ui.PromptBeepCreate(params, defaultChannels)
+						}
 						if err != nil {
 							return err
 						}
@@ -172,6 +180,7 @@ Examples:
 						if err != nil {
 							errList := client.ExtractErrorList(err)
 							ui.PrintErrorList("Invalid input", errList)
+							ui.PrintBeepCreateSummary(params, errList)
 							retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
 							if promptErr != nil || !retry {
 								return err
@@ -194,6 +203,7 @@ Examples:
 
 						errList := client.ExtractErrorList(err)
 						ui.PrintErrorList("Creation failed", errList)
+						ui.PrintBeepCreateSummary(params, errList)
 						retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs and retry?", true)
 						if promptErr != nil || !retry {
 							return err
@@ -271,6 +281,13 @@ Examples:
 	cmd.MarkFlagsMutuallyExclusive("cron", "in", "at", "natural")
 
 	return cmd
+}
+
+func shouldPromptBeepCreateForm(title, scheduleKind string, argCount int, aiFallback bool) bool {
+	if aiFallback {
+		return true
+	}
+	return strings.TrimSpace(title) == "" || (scheduleKind == "" && argCount == 0)
 }
 
 func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Command, prompt, bodyFlag, channelsFlag, tz string) error {
@@ -424,6 +441,7 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 			}
 			errList := client.ExtractErrorList(err)
 			ui.PrintErrorList("Invalid input", errList)
+			ui.PrintBeepCreateSummary(params, errList)
 			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
 			if promptErr != nil || !retry {
 				return err
@@ -446,6 +464,7 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 			}
 			errList := client.ExtractErrorList(err)
 			ui.PrintErrorList("Creation failed", errList)
+			ui.PrintBeepCreateSummary(params, errList)
 			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs and retry?", true)
 			if promptErr != nil || !retry {
 				return err

@@ -72,6 +72,28 @@ func TestDetectBeepFailedFields(t *testing.T) {
 	}
 }
 
+func TestBeepCreateSummaryMarksFailedSchedule(t *testing.T) {
+	params := client.CreateBeepParams{
+		Title:        "哈哈",
+		Body:         "喝水",
+		ScheduleKind: "cron",
+		ScheduleVal:  "not-a-cron",
+		Timezone:     "Asia/Shanghai",
+		Channels:     "cli",
+	}
+	items := BeepCreateSummary(params, []string{"Cron is not a valid cron expression"})
+	got := map[string]CreateSummaryItem{}
+	for _, item := range items {
+		got[item.Key] = item
+	}
+	if got["Title"].Value != "哈哈" || got["Title"].Failed {
+		t.Fatalf("Title = %+v, want value 哈哈 and not failed", got["Title"])
+	}
+	if !got["Schedule"].Failed || got["When"].Value != "not-a-cron" || !got["When"].Failed {
+		t.Fatalf("schedule summary = Schedule%+v When%+v, want both failed with cron value", got["Schedule"], got["When"])
+	}
+}
+
 func TestDetectBeeperFailedFields(t *testing.T) {
 	app := &client.BeeperApp{
 		Slug: "http",
