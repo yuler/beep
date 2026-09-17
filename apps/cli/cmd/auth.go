@@ -1,12 +1,8 @@
 package cmd
 
 import (
-	"context"
-
 	cmdauth "beep/cmd/auth"
-	"beep/internal/client"
 	"beep/internal/cmdutil"
-	"beep/internal/config"
 
 	"github.com/spf13/cobra"
 )
@@ -25,11 +21,3 @@ var (
 		},
 	}
 )
-
-func ensureLoggedIn(ctx context.Context, cfg *config.Config) (*client.MeResponse, error) {
-	return cmdutil.EnsureLoggedIn(ctx, cfg)
-}
-
-func resolveAccountSlug(me *client.MeResponse, explicitAccount string, cfgAccount string) (string, error) {
-	return cmdutil.ResolveAccountSlug(me, explicitAccount, cfgAccount)
-}

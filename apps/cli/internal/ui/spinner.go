@@ -22,8 +22,8 @@ func SetSpinnerEnabled(v bool) {
 	spinnerEnabled = v
 }
 
-// IsSpinnerEnabled returns whether the spinner TUI animation is enabled.
-func IsSpinnerEnabled() bool {
+// isSpinnerEnabled returns whether the spinner TUI animation is enabled.
+func isSpinnerEnabled() bool {
 	spinnerMu.Lock()
 	defer spinnerMu.Unlock()
 	if !spinnerEnabled || !enabled {
@@ -47,7 +47,7 @@ func WithSpinner(msg string, fn func() error) error {
 
 // WithSpinnerResult executes fn while displaying a loading spinner and returns its result.
 func WithSpinnerResult[T any](msg string, fn func() (T, error)) (T, error) {
-	if !IsSpinnerEnabled() {
+	if !isSpinnerEnabled() {
 		return fn()
 	}
 

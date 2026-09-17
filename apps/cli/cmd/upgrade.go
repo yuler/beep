@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/daemon"
 	"beep/internal/ui"
@@ -128,7 +129,7 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load config to check daemon and workspace
-	cfg, _ := loadConfig()
+	cfg, _ := loadUpgradeConfig()
 	ws := ""
 	if cfg != nil {
 		ws = cfg.Workspace
@@ -180,4 +181,29 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// loadUpgradeConfig loads config for the upgrade pre-check only (daemon/workspace).
+func loadUpgradeConfig() (*config.Config, error) {
+	workspace := flagWorkspace
+	if workspace == "" {
+		workspace = cmdutil.GetWorkspace(nil)
+	}
+	cfg, err := config.Load(workspace)
+	if err != nil {
+		return nil, err
+	}
+	if flagServer != "" {
+		cfg.ServerURL = flagServer
+	}
+	if flagToken != "" {
+		cfg.RunnerToken = flagToken
+	}
+	if flagWorkspace != "" {
+		cfg.Workspace = flagWorkspace
+	}
+	if flagAccount != "" {
+		cfg.AccountSlug = strings.TrimSpace(flagAccount)
+	}
+	return cfg, nil
 }

@@ -47,15 +47,6 @@ func (t *Table) SetIndent(indent string) *Table {
 	return t
 }
 
-// SetPadding sets the number of spaces between columns.
-func (t *Table) SetPadding(padding int) *Table {
-	if padding < 1 {
-		padding = 1
-	}
-	t.padding = padding
-	return t
-}
-
 // AddRow adds a row of cell values to the table.
 func (t *Table) AddRow(cells ...string) *Table {
 	t.rows = append(t.rows, cells)

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"beep/internal/client"
+	"beep/internal/cmdutil"
 	"beep/internal/config"
 )
 
@@ -225,13 +226,13 @@ func TestRunnerConnectSucceedsPastLoginWhenLoggedIn(t *testing.T) {
 
 func TestResolveAccountSlug(t *testing.T) {
 	// 1. Explicit flag/env takes priority
-	slug, err := resolveAccountSlug(nil, "my-explicit-slug", "")
+	slug, err := cmdutil.ResolveAccountSlug(nil, "my-explicit-slug", "")
 	if err != nil || slug != "my-explicit-slug" {
 		t.Errorf("expected my-explicit-slug, got %s (err: %v)", slug, err)
 	}
 
 	// 2. Configured account takes precedence when no explicit flag
-	slug, err = resolveAccountSlug(nil, "", "my-cfg-slug")
+	slug, err = cmdutil.ResolveAccountSlug(nil, "", "my-cfg-slug")
 	if err != nil || slug != "my-cfg-slug" {
 		t.Errorf("expected my-cfg-slug, got %s (err: %v)", slug, err)
 	}
@@ -242,7 +243,7 @@ func TestResolveAccountSlug(t *testing.T) {
 			{ID: "1", Name: "Personal", Slug: "personal-slug", Personal: true},
 		},
 	}
-	slug, err = resolveAccountSlug(singleMe, "", "")
+	slug, err = cmdutil.ResolveAccountSlug(singleMe, "", "")
 	if err != nil || slug != "personal-slug" {
 		t.Errorf("expected auto-selected personal-slug, got %s (err: %v)", slug, err)
 	}
@@ -254,7 +255,7 @@ func TestResolveAccountSlug(t *testing.T) {
 			{ID: "2", Name: "Team", Slug: "team-slug", Personal: false},
 		},
 	}
-	_, err = resolveAccountSlug(multiMe, "", "")
+	_, err = cmdutil.ResolveAccountSlug(multiMe, "", "")
 	if err == nil {
 		t.Fatal("expected error in non-interactive mode with multiple accounts, got nil")
 	}
