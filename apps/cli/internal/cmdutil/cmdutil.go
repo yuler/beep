@@ -15,12 +15,58 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	overrideWorkspace string
+	WorkspaceHook     func() string
+)
+
+// SetOverrideWorkspace sets an explicit workspace override (useful for tests).
+func SetOverrideWorkspace(w string) {
+	overrideWorkspace = w
+}
+
+// GetWorkspace gets the active workspace from flags, override, or environment.
+func GetWorkspace(cmd *cobra.Command) string {
+	if overrideWorkspace != "" {
+		return overrideWorkspace
+	}
+	if WorkspaceHook != nil {
+		if w := WorkspaceHook(); w != "" {
+			return w
+		}
+	}
+	if cmd != nil {
+		if f := cmd.Flag("workspace"); f != nil && f.Value.String() != "" {
+			return f.Value.String()
+		}
+		if cmd.Root() != nil && cmd.Root().PersistentFlags().Lookup("workspace") != nil {
+			val, _ := cmd.Root().PersistentFlags().GetString("workspace")
+			if val != "" {
+				return val
+			}
+		}
+	}
+	if env := os.Getenv("BEEP_WORKSPACE"); env != "" {
+		return env
+	}
+	return ""
+}
+
 // LoadConfig loads the client configuration taking global persistent flags into account.
 func LoadConfig(cmd *cobra.Command) (*config.Config, error) {
-	workspace, _ := cmd.Root().PersistentFlags().GetString("workspace")
-	server, _ := cmd.Root().PersistentFlags().GetString("server")
-	token, _ := cmd.Root().PersistentFlags().GetString("token")
-	account, _ := cmd.Root().PersistentFlags().GetString("account")
+	workspace := GetWorkspace(cmd)
+	var server, token, account string
+	if cmd != nil && cmd.Root() != nil {
+		if cmd.Root().PersistentFlags().Lookup("server") != nil {
+			server, _ = cmd.Root().PersistentFlags().GetString("server")
+		}
+		if cmd.Root().PersistentFlags().Lookup("token") != nil {
+			token, _ = cmd.Root().PersistentFlags().GetString("token")
+		}
+		if cmd.Root().PersistentFlags().Lookup("account") != nil {
+			account, _ = cmd.Root().PersistentFlags().GetString("account")
+		}
+	}
 
 	cfg, err := config.Load(workspace)
 	if err != nil {
@@ -98,3 +144,38 @@ func IsInteractive(cmd *cobra.Command) bool {
 	}
 	return ui.IsInteractive()
 }
+
+// IsHeadless checks if the current shell environment is headless (SSH or no DISPLAY).
+func IsHeadless() bool {
+	if os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_CLIENT") != "" || os.Getenv("SSH_TTY") != "" {
+		return true
+	}
+	if os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "" {
+		return true
+	}
+	return false
+}
+
+// ResolveAccountSlug resolves the target account slug from flags, config, or user selection.
+func ResolveAccountSlug(me *client.MeResponse, explicitAccount string, cfgAccount string) (string, error) {
+	if explicit := strings.TrimSpace(explicitAccount); explicit != "" {
+		return explicit, nil
+	}
+	if cfgAccount != "" {
+		return cfgAccount, nil
+	}
+	if me != nil && len(me.Accounts) > 0 {
+		if len(me.Accounts) == 1 {
+			return me.Accounts[0].Slug, nil
+		}
+		if ui.IsInteractive() {
+			return ui.PromptAccountSelect(me.Accounts, me.LastAccountSlug)
+		}
+		return "", fmt.Errorf("account slug is required (set via --account <slug> or BEEP_ACCOUNT)")
+	}
+	if ui.IsInteractive() {
+		return ui.PromptAccountSlug()
+	}
+	return "", fmt.Errorf("account slug is required (set via --account <slug> or BEEP_ACCOUNT)")
+}
+

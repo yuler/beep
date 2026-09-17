@@ -37,7 +37,10 @@ func NewCmdDelete() *cobra.Command {
 					}
 				}
 
-				if err := c.DeleteBeeper(ctx, id); err != nil {
+				err = ui.WithSpinner("Deleting beeper...", func() error {
+					return c.DeleteBeeper(ctx, id)
+				})
+				if err != nil {
 					return err
 				}
 

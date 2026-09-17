@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"beep/internal/channel"
+	"beep/internal/cliservice"
 	"beep/internal/config"
 	"beep/internal/daemon"
 	"beep/internal/proc"
@@ -280,6 +281,15 @@ func runChannelService(cfg *config.Config, daemonMode bool) error {
 }
 
 var startServiceDaemonFn = startServiceBackgroundDaemon
+
+func init() {
+	cliservice.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, cfg *config.Config) error {
+		if startServiceDaemonFn != nil {
+			return startServiceDaemonFn(service, childSubcommand, rawArgs, cfg)
+		}
+		return cliservice.StartServiceBackgroundDaemon(service, childSubcommand, rawArgs, cfg)
+	}
+}
 
 func autoStartServiceDaemon(service string, cfg *config.Config) error {
 	running, pid, _ := daemon.CheckRunning(cfg.Workspace, service)

@@ -7,6 +7,7 @@ import (
 
 	"beep/cmd/beep"
 	"beep/cmd/beeper"
+	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/ui"
 	"beep/internal/updater"
@@ -41,12 +42,13 @@ func skipUpdateHooks(cmd *cobra.Command) bool {
 var RootCmd = &cobra.Command{
 	Use:   "beep",
 	Short: "Beep command-line interface",
-	Long: ui.Bold(ui.Cyan("Beep CLI")) + ` - Command-line interface for the Beep platform.
-
-Execute 'beep <command> --help' for detailed usage of a specific command.`,
+	Long:  ui.Bold(ui.Cyan("Beep CLI")) + " - Command-line interface for the Beep platform.",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if flagNoColor {
 			ui.SetEnabled(false)
+		}
+		if flagNoInteractive || flagJSON || flagNoColor {
+			ui.SetSpinnerEnabled(false)
 		}
 		if !skipUpdateHooks(cmd) {
 			updater.TriggerBackgroundCheck(flagWorkspace)
@@ -72,6 +74,12 @@ func Execute() {
 }
 
 func init() {
+	SetupHelp(RootCmd)
+
+	cmdutil.WorkspaceHook = func() string {
+		return flagWorkspace
+	}
+
 	RootCmd.PersistentFlags().BoolVar(&flagNoColor, "no-color", false, "Disable colored output")
 	RootCmd.PersistentFlags().BoolVar(&flagNoInteractive, "no-interactive", false, "Disable interactive prompts")
 	RootCmd.PersistentFlags().StringVarP(&flagWorkspace, "workspace", "w", "", fmt.Sprintf("Local job workspace directory (default %s, env: BEEP_WORKSPACE)", config.DefaultWorkspaceDisplay()))
@@ -82,21 +90,24 @@ func init() {
 
 	// Command groups
 	RootCmd.AddGroup(
-		&cobra.Group{ID: "beeps", Title: "Beep Commands:"},
+		&cobra.Group{ID: "core", Title: "Core Commands"},
+		&cobra.Group{ID: "monitor", Title: "Monitor Commands"},
+		&cobra.Group{ID: "service", Title: "Local Service Commands"},
+		&cobra.Group{ID: "additional", Title: "Additional Commands"},
 	)
 
-	// Flattened beep commands (canonical)
+	// 1. Core commands (canonical beep default scope)
 	beepCommands := []*cobra.Command{
-		beep.NewCmdList(),
-		beep.NewCmdShow(),
 		beep.NewCmdCreate(),
 		beep.NewCmdDelete(),
+		beep.NewCmdList(),
 		beep.NewCmdPause(),
 		beep.NewCmdResume(),
 		beep.NewCmdRun(),
+		beep.NewCmdShow(),
 	}
 	for _, cmd := range beepCommands {
-		cmd.GroupID = "beeps"
+		cmd.GroupID = "core"
 		RootCmd.AddCommand(cmd)
 	}
 
@@ -105,21 +116,42 @@ func init() {
 	legacyBeepCmd.Hidden = true
 	RootCmd.AddCommand(legacyBeepCmd)
 
-	// Beeper commands
-	RootCmd.AddCommand(beeper.NewCmdBeeper())
+	// 2. Monitor commands
+	beeperCmd := beeper.NewCmdBeeper()
+	beeperCmd.GroupID = "monitor"
+	RootCmd.AddCommand(beeperCmd)
 
-	// Daemon commands
-	RootCmd.AddCommand(newUpCmd())
-	RootCmd.AddCommand(newStopCmd())
-	RootCmd.AddCommand(newStatusCmd())
+	// 3. Local service commands
+	channelCmd.GroupID = "service"
+	runnerCmd.GroupID = "service"
+	upCmd := newUpCmd()
+	upCmd.GroupID = "service"
+	stopCmd := newStopCmd()
+	stopCmd.GroupID = "service"
+	statusCmd := newStatusCmd()
+	statusCmd.GroupID = "service"
 
-	// System / management subcommands
-	RootCmd.AddCommand(authCmd)
-	RootCmd.AddCommand(runnerCmd)
 	RootCmd.AddCommand(channelCmd)
+	RootCmd.AddCommand(runnerCmd)
+	RootCmd.AddCommand(statusCmd)
+	RootCmd.AddCommand(stopCmd)
+	RootCmd.AddCommand(upCmd)
+
+	// 4. Additional commands
+	authCmd.GroupID = "additional"
+	configCmd.GroupID = "additional"
+	upgradeCmd.GroupID = "additional"
+	versionCmd.GroupID = "additional"
+
+	RootCmd.AddCommand(authCmd)
 	RootCmd.AddCommand(configCmd)
-	RootCmd.AddCommand(versionCmd)
 	RootCmd.AddCommand(upgradeCmd)
+	RootCmd.AddCommand(versionCmd)
 
 	RootCmd.InitDefaultCompletionCmd()
+	for _, c := range RootCmd.Commands() {
+		if c.Name() == "completion" {
+			c.GroupID = "additional"
+		}
+	}
 }

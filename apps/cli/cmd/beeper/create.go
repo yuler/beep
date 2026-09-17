@@ -122,7 +122,10 @@ Examples:
 							continue
 						}
 
-						b, err = c.CreateBeeper(ctx, req)
+						_ = ui.WithSpinner("Creating beeper...", func() error {
+							b, err = c.CreateBeeper(ctx, req)
+							return err
+						})
 						if err == nil {
 							break
 						}
@@ -167,7 +170,11 @@ Examples:
 					}
 
 					var errCreate error
-					b, errCreate = c.CreateBeeper(ctx, req)
+					errCreate = ui.WithSpinner("Creating beeper...", func() error {
+						var createErr error
+						b, createErr = c.CreateBeeper(ctx, req)
+						return createErr
+					})
 					if errCreate != nil {
 						return errCreate
 					}

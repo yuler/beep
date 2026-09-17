@@ -182,7 +182,10 @@ Examples:
 							continue
 						}
 
-						b, err = c.CreateBeep(ctx, req)
+						_ = ui.WithSpinner("Creating beep...", func() error {
+							b, err = c.CreateBeep(ctx, req)
+							return err
+						})
 						if err == nil {
 							break
 						}
@@ -260,7 +263,12 @@ Examples:
 }
 
 func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Command, prompt, bodyFlag, channelsFlag, tz string) error {
-	proposal, err := c.ProposeBeep(ctx, prompt, tz)
+	var proposal *client.BeepProposal
+	err := ui.WithSpinner("Analyzing natural language prompt with AI...", func() error {
+		var pErr error
+		proposal, pErr = c.ProposeBeep(ctx, prompt, tz)
+		return pErr
+	})
 	if err != nil {
 		return fmt.Errorf("natural language parse failed: %w", err)
 	}
@@ -412,7 +420,10 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 			continue
 		}
 
-		b, err = c.CreateBeep(ctx, req)
+		_ = ui.WithSpinner("Creating beep...", func() error {
+			b, err = c.CreateBeep(ctx, req)
+			return err
+		})
 		if err != nil {
 			if !cmdutil.IsInteractive(cmd) {
 				return err

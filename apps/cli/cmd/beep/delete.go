@@ -37,7 +37,10 @@ func NewCmdDelete() *cobra.Command {
 					}
 				}
 
-				if err := c.DeleteBeep(ctx, id); err != nil {
+				err = ui.WithSpinner("Deleting beep...", func() error {
+					return c.DeleteBeep(ctx, id)
+				})
+				if err != nil {
 					return err
 				}
 

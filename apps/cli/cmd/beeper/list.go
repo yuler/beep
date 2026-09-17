@@ -21,7 +21,12 @@ func NewCmdList() *cobra.Command {
 		Short:   "List monitor beepers",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {
-				beepers, err := c.ListBeepers(ctx)
+				var beepers []*client.Beeper
+				err := ui.WithSpinner("Fetching beepers...", func() error {
+					var listErr error
+					beepers, listErr = c.ListBeepers(ctx)
+					return listErr
+				})
 				if err != nil {
 					return err
 				}
@@ -47,16 +52,8 @@ func NewCmdList() *cobra.Command {
 					return nil
 				}
 
-				// Print table header
-				fmt.Printf("  %-10s  %-24s  %-12s  %-10s  %-10s  %-14s  %s\n",
-					ui.Dim("ID"),
-					ui.Dim("TITLE"),
-					ui.Dim("APP"),
-					ui.Dim("STATUS"),
-					ui.Dim("ALERT"),
-					ui.Dim("SCHEDULE"),
-					ui.Dim("LAST PING/RUN"),
-				)
+				tbl := ui.NewTable("ID", "TITLE", "APP", "STATUS", "ALERT", "SCHEDULE", "LAST PING/RUN")
+				tbl.SetIndent("  ")
 
 				for _, b := range beepers {
 					appSlug := "-"
@@ -73,9 +70,9 @@ func NewCmdList() *cobra.Command {
 						lastRun = b.LastRunAt
 					}
 
-					title := ui.Truncate(b.Title, 24)
+					title := ui.Truncate(b.Title, 28)
 
-					fmt.Printf("  %-10s  %-24s  %-12s  %-10s  %-10s  %-14s  %s\n",
+					tbl.AddRow(
 						b.ID,
 						title,
 						appSlug,
@@ -84,6 +81,10 @@ func NewCmdList() *cobra.Command {
 						scheduleStr,
 						lastRun,
 					)
+				}
+
+				if err := tbl.Print(); err != nil {
+					return err
 				}
 				fmt.Println()
 				return nil

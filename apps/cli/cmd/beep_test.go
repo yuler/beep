@@ -30,8 +30,8 @@ func TestBeepCommandsRegistration(t *testing.T) {
 		if topCmd.Name() != sub {
 			t.Errorf("expected top-level command name %q, got %q", sub, topCmd.Name())
 		}
-		if topCmd.GroupID != "beeps" {
-			t.Errorf("expected command %q to have GroupID 'beeps', got %q", sub, topCmd.GroupID)
+		if topCmd.GroupID != "core" {
+			t.Errorf("expected command %q to have GroupID 'core', got %q", sub, topCmd.GroupID)
 		}
 
 		// Backward-compatible legacy command 'beep <subcommand>'
@@ -504,8 +504,8 @@ func TestNoConflictWithRunnerAndOtherCommands(t *testing.T) {
 	if runCmd.Name() != "run" {
 		t.Errorf("expected 'run' to resolve to command name 'run', got %q", runCmd.Name())
 	}
-	if runCmd.GroupID != "beeps" {
-		t.Errorf("expected 'run' to have GroupID 'beeps', got %q", runCmd.GroupID)
+	if runCmd.GroupID != "core" {
+		t.Errorf("expected 'run' to have GroupID 'core', got %q", runCmd.GroupID)
 	}
 
 	// 'runner up' alias 'run' resolves to runner up

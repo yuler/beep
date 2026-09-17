@@ -31,7 +31,12 @@ func NewCmdShow() *cobra.Command {
 					return err
 				}
 
-				b, err := c.GetBeeper(ctx, id)
+				var b *client.Beeper
+				err = ui.WithSpinner("Fetching beeper details...", func() error {
+					var getErr error
+					b, getErr = c.GetBeeper(ctx, id)
+					return getErr
+				})
 				if err != nil {
 					return err
 				}
@@ -105,24 +110,21 @@ func NewCmdShow() *cobra.Command {
 				if len(b.Runs) > 0 {
 					fmt.Println()
 					fmt.Println(ui.Section("  Recent Runs:"))
-					fmt.Printf("    %-10s  %-24s  %-10s  %s\n",
-						ui.Dim("RUN ID"),
-						ui.Dim("SCHEDULED FOR"),
-						ui.Dim("STATUS"),
-						ui.Dim("SIGNAL STATUS"),
-					)
+					tbl := ui.NewTable("RUN ID", "SCHEDULED FOR", "STATUS", "SIGNAL STATUS")
+					tbl.SetIndent("    ")
 					for _, r := range b.Runs {
 						sigStatus := "-"
 						if r.SignalStatus != "" {
 							sigStatus = r.SignalStatus
 						}
-						fmt.Printf("    %-10s  %-24s  %-10s  %s\n",
+						tbl.AddRow(
 							r.ID,
 							r.ScheduledFor,
 							FormatRunStatus(r.Status),
 							sigStatus,
 						)
 					}
+					_ = tbl.Print()
 				}
 				fmt.Println()
 				return nil

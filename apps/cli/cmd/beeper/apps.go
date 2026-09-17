@@ -21,7 +21,12 @@ func NewCmdApps() *cobra.Command {
 		Short:   "List available beeper probe app templates",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {
-				apps, err := c.ListBeeperApps(ctx)
+				var apps []*client.BeeperApp
+				err := ui.WithSpinner("Fetching app templates...", func() error {
+					var listErr error
+					apps, listErr = c.ListBeeperApps(ctx)
+					return listErr
+				})
 				if err != nil {
 					return err
 				}
@@ -42,22 +47,22 @@ func NewCmdApps() *cobra.Command {
 					return nil
 				}
 
-				fmt.Printf("  %-16s  %-24s  %-16s  %s\n",
-					ui.Dim("SLUG"),
-					ui.Dim("NAME"),
-					ui.Dim("DEFAULT CRON"),
-					ui.Dim("DESCRIPTION"),
-				)
+				tbl := ui.NewTable("SLUG", "NAME", "DEFAULT CRON", "DESCRIPTION")
+				tbl.SetIndent("  ")
 
 				for _, a := range apps {
-					name := ui.Truncate(a.Name, 24)
-					desc := ui.Truncate(a.Description, 40)
-					fmt.Printf("  %-16s  %-24s  %-16s  %s\n",
-						a.Slug,
+					name := ui.Truncate(a.Name, 28)
+					desc := ui.Truncate(a.Description, 50)
+					tbl.AddRow(
+						ui.Cyan(a.Slug),
 						name,
 						a.DefaultCron,
 						ui.Dim(desc),
 					)
+				}
+
+				if err := tbl.Print(); err != nil {
+					return err
 				}
 				fmt.Println()
 				return nil

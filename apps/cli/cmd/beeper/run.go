@@ -27,7 +27,12 @@ func NewCmdRun() *cobra.Command {
 					return err
 				}
 
-				run, err := c.RunBeeper(ctx, id)
+				var run *client.BeeperRun
+				err = ui.WithSpinner("Triggering beeper...", func() error {
+					var runErr error
+					run, runErr = c.RunBeeper(ctx, id)
+					return runErr
+				})
 				if err != nil {
 					return err
 				}
