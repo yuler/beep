@@ -48,20 +48,13 @@ Hosts come from root `.env` (`APP_HOST`, `CORE_PORT`, `WEB_PORT`). Development i
 
 Login: `john@example.com`
 
-### CLI Development (`beep-local`)
+### CLI (`beep-local`)
 
-Use `bin/beep-local` (or `beep-local` when `mise` has `./bin` in `PATH`):
+`beep-local` 是本地开发使用的，通过 mise 配置加载，直接运行当前 Go 代码：
 
 ```bash
 beep-local --help
-beep-local service status
-beep-local service restart
 ```
-
-`bin/beep-local` runs `apps/cli` on the fly via `go run` with local defaults:
-- **Server:** points to local Core (`http://core.${APP_HOST}:${CORE_PORT}`)
-- **Workspace:** isolated at `~/.beep.local` (default production workspace is `~/.beep`)
-- **Binary Name:** displays `beep-local` across help, prompts, and status
 
 
 ## Docker Compose (local quick start)

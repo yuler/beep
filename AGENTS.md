@@ -28,24 +28,12 @@ mise dev
 
 Local CORS for web → core `/api/v1` is development-only: [`core/config/initializers/development_cors.rb`](core/config/initializers/development_cors.rb). Details: [`docs/core/DEVELOP.md`](docs/core/DEVELOP.md#local-cors-development-only).
 
-### CLI Development (`beep-local`)
+### CLI (`beep-local`)
 
-In local development, use `bin/beep-local` (or `beep-local` directly if `bin/` is in `PATH` via `mise`):
+`beep-local` 是本地开发使用的，通过 mise 配置加载，直接运行当前 Go 代码：
 
 ```bash
-bin/beep-local --help
-bin/beep-local service status
-bin/beep-local service restart
-```
-
-`bin/beep-local` runs `apps/cli` on the fly via `go run`, retaining the caller's working directory and automatically configuring:
-- Server URL: points to local Core (`http://core.${APP_HOST}:${CORE_PORT}`)
-- Workspace: isolated to `~/.beep.local` (default production is `~/.beep`)
-- Binary name: displayed as `beep-local` (via `BEEP_BIN_NAME`)
-
-To build the production binary:
-```bash
-mise run cli:build  # outputs to bin/beep
+beep-local --help
 ```
 
 ## Rules
