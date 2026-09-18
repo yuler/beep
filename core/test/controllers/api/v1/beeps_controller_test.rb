@@ -33,6 +33,71 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2", response.headers["X-Total-Count"]
   end
 
+  test "index sorts by title and created_at" do
+    older = @account.beeps.create!(kind: :once, title: "Bravo", run_at: @run_at)
+    newer = @account.beeps.create!(kind: :once, title: "Alpha", run_at: @run_at + 1.hour)
+
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { sort: "title", dir: "asc" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal [ "Alpha", "Bravo" ], response.parsed_body["beeps"].map { |beep| beep["title"] }
+
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { sort: "created_at", dir: "asc" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal [ older.id, newer.id ], response.parsed_body["beeps"].map { |beep| beep["id"] }
+
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { sort: "not_a_column", dir: "asc" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal [ newer.id, older.id ], response.parsed_body["beeps"].map { |beep| beep["id"] }
+  end
+
+  test "index filters by search query q across title, body, and id" do
+    match_title = @account.beeps.create!(kind: :once, title: "Special Invoice reminder", run_at: @run_at)
+    match_body = @account.beeps.create!(kind: :once, title: "Meeting", body: "Check invoice details", run_at: @run_at)
+    other = @account.beeps.create!(kind: :once, title: "Workout", body: "Gym session", run_at: @run_at)
+
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { q: "invoice" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    ids = response.parsed_body["beeps"].map { |b| b["id"] }
+    assert_includes ids, match_title.id
+    assert_includes ids, match_body.id
+    assert_not_includes ids, other.id
+
+    # Search by ID
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { q: other.id },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    ids = response.parsed_body["beeps"].map { |b| b["id"] }
+    assert_equal [ other.id ], ids
+
+    # Search by non-UUID text does not crash on UUID column lookups
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { q: "plain-text-not-a-uuid" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal [], response.parsed_body["beeps"]
+  end
+
   test "index paginates with geared cursor and sets Link headers" do
     18.times do |i|
       @account.beeps.create!(kind: :once, title: "Beep #{i}", run_at: @run_at + i.minutes)

@@ -303,7 +303,7 @@ function BeepDetailPage() {
 						/>
 						<DetailRow
 							label={m.common_created()}
-							value={new Date(beep.created_at).toLocaleString()}
+							value={formatBeepScheduleTime(beep.created_at, beep.timezone)}
 						/>
 					</CardContent>
 				</Card>

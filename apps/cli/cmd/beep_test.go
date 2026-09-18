@@ -9,7 +9,15 @@ import (
 	"beep/internal/client"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
+
+func resetCmdFlags(cmd *cobra.Command) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		f.Changed = false
+		_ = f.Value.Set(f.DefValue)
+	})
+}
 
 func TestBeepCommandsRegistration(t *testing.T) {
 	// 1. Root 'beep' command is in core group
@@ -294,6 +302,8 @@ func TestBeepCreateCommand(t *testing.T) {
 }
 
 func TestBeepCreateMutuallyExclusiveFlags(t *testing.T) {
+	defer resetCmdFlags(findBeepCmd(t, "create"))
+
 	for _, args := range [][]string{
 		{"beep", "create", "Conflict Test", "--cron", "0 * * * *", "--in", "10m"},
 		{"create", "Conflict Test", "--cron", "0 * * * *", "--in", "10m"},
@@ -540,5 +550,95 @@ func TestNoConflictWithRunnerAndOtherCommands(t *testing.T) {
 	}
 	if runnerJobListCmd.Name() != "list" {
 		t.Errorf("expected 'runner job list' name to be 'list', got %q", runnerJobListCmd.Name())
+	}
+}
+
+func TestNaturalCreateChannelsPriority(t *testing.T) {
+	var (
+		lastProposalChannels []string
+		lastCreatedChannels  []string
+	)
+
+	_, cleanup := setupBeepTestEnv(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/me" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"identity": map[string]any{"id": "id_1", "email": "test@example.com"},
+			})
+			return
+		}
+		if r.URL.Path == "/api/v1/beep_proposals" && r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"intent":                "create",
+				"title":                 "Test Beep",
+				"notification_channels": lastProposalChannels,
+				"confirmable":           true,
+			})
+			return
+		}
+		if r.URL.Path == "/api/v1/beeps" && r.Method == http.MethodPost {
+			var req client.CreateBeepRequest
+			_ = json.NewDecoder(r.Body).Decode(&req)
+			lastCreatedChannels = req.NotificationChannels
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode(&client.Beep{
+				ID:                   "beep_new",
+				Title:                req.Title,
+				NotificationChannels: req.NotificationChannels,
+			})
+			return
+		}
+		http.NotFound(w, r)
+	})
+	defer cleanup()
+
+	flagNoInteractive = true
+	flagJSON = true
+	createCmd := findBeepCmd(t, "create")
+	defer func() {
+		flagNoInteractive = false
+		flagJSON = false
+		resetCmdFlags(createCmd)
+	}()
+
+	runCreate := func(args ...string) error {
+		resetCmdFlags(createCmd)
+		if err := createCmd.ParseFlags(args); err != nil {
+			return err
+		}
+		_, err := captureStdout(func() error {
+			return createCmd.RunE(createCmd, createCmd.Flags().Args())
+		})
+		return err
+	}
+
+	// 1. Natural create uses proposal channels when no --channels flag
+	lastProposalChannels = []string{"web_push"}
+	lastCreatedChannels = nil
+	if err := runCreate("-n", "只通知给 web push 其他不需要"); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+	if len(lastCreatedChannels) != 1 || lastCreatedChannels[0] != "web_push" {
+		t.Errorf("expected [web_push], got %v", lastCreatedChannels)
+	}
+
+	// 2. --channels flag overrides proposal channels
+	lastProposalChannels = []string{"web_push"}
+	lastCreatedChannels = nil
+	if err := runCreate("-n", "只通知给 web push", "--channels", "email"); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+	if len(lastCreatedChannels) != 1 || lastCreatedChannels[0] != "email" {
+		t.Errorf("expected [email], got %v", lastCreatedChannels)
+	}
+
+	// 3. When proposal has no channels and no flag, channels remain empty in non-interactive mode
+	lastProposalChannels = nil
+	lastCreatedChannels = nil
+	if err := runCreate("-n", "明天打电话给妈"); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+	if len(lastCreatedChannels) != 0 {
+		t.Errorf("expected empty channels, got %v", lastCreatedChannels)
 	}
 }

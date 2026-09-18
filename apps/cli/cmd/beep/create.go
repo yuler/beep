@@ -82,7 +82,11 @@ Examples:
 
 				// 1. Natural language creation via -n / --natural flag
 				if flagNatural != "" {
-					return handleNaturalCreate(ctx, c, cmd, flagNatural, flagBody, flagChannels, tz)
+					err := handleNaturalCreate(ctx, c, cmd, flagNatural, flagBody, flagChannels, tz)
+					if isUserAbort(ctx, err) {
+						return nil
+					}
+					return err
 				}
 
 				var argText string
@@ -113,6 +117,7 @@ Examples:
 				}
 
 				var b *client.Beep
+				aiFallback := false
 				if cmdutil.IsInteractive(cmd) {
 					// Default channel selection comes from account settings.
 					defaultChannels := client.DefaultNotificationChannels
@@ -128,12 +133,18 @@ Examples:
 						if prompt == "" {
 							mode, modeErr := ui.PromptBeepCreateMode()
 							if modeErr != nil {
+								if isUserAbort(ctx, modeErr) {
+									return nil
+								}
 								return modeErr
 							}
 							if mode == "natural" {
 								var pErr error
 								prompt, pErr = ui.PromptBeepNaturalPrompt()
 								if pErr != nil {
+									if isUserAbort(ctx, pErr) {
+										return nil
+									}
 									return pErr
 								}
 							}
@@ -144,21 +155,34 @@ Examples:
 							if err == nil {
 								return nil
 							}
-							if errors.Is(err, huh.ErrUserAborted) || errors.Is(err, context.Canceled) ||
-								strings.Contains(strings.ToLower(err.Error()), "user aborted") ||
-								strings.Contains(strings.ToLower(err.Error()), "cancelled") {
+							if isUserAbort(ctx, err) {
 								return nil
 							}
-							// If AI proposal failed (e.g. offline/unconfigured), warn and fall back to manual form
-							fmt.Println(ui.Warn("AI proposal unavailable (%v), falling back to form...", err))
-							params.Title = prompt
+							var proposalErr *aiProposalError
+							if errors.As(err, &proposalErr) {
+								// If AI proposal failed (e.g. offline/unconfigured), warn and fall back to manual form
+								fmt.Println(ui.Warn("AI proposal unavailable (%v), falling back to form...", proposalErr.err))
+								params.Title = prompt
+								aiFallback = true
+								ui.PrintBeepCreateSummary(params, nil)
+							} else {
+								return err
+							}
 						}
 					}
 
-					isMissingInfo := params.Title == "" || (params.ScheduleKind == "" && len(args) == 0)
-					if isMissingInfo {
-						prompted, err := ui.PromptBeepCreate(params, defaultChannels)
+					if shouldPromptBeepCreateForm(params.Title, params.ScheduleKind, len(args), aiFallback) {
+						var prompted *client.CreateBeepParams
+						var err error
+						if aiFallback {
+							prompted, err = ui.PromptBeepReview(params, defaultChannels)
+						} else {
+							prompted, err = ui.PromptBeepCreate(params, defaultChannels)
+						}
 						if err != nil {
+							if isUserAbort(ctx, err) {
+								return nil
+							}
 							return err
 						}
 						params = *prompted
@@ -172,12 +196,22 @@ Examples:
 						if err != nil {
 							errList := client.ExtractErrorList(err)
 							ui.PrintErrorList("Invalid input", errList)
+							ui.PrintBeepCreateSummary(params, errList)
 							retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
-							if promptErr != nil || !retry {
+							if promptErr != nil {
+								if isUserAbort(ctx, promptErr) {
+									return nil
+								}
+								return promptErr
+							}
+							if !retry {
 								return err
 							}
 							prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels, errList)
 							if pErr != nil {
+								if isUserAbort(ctx, pErr) {
+									return nil
+								}
 								return pErr
 							}
 							params = *prompted
@@ -191,11 +225,21 @@ Examples:
 						if err == nil {
 							break
 						}
+						if isUserAbort(ctx, err) {
+							return nil
+						}
 
 						errList := client.ExtractErrorList(err)
 						ui.PrintErrorList("Creation failed", errList)
+						ui.PrintBeepCreateSummary(params, errList)
 						retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs and retry?", true)
-						if promptErr != nil || !retry {
+						if promptErr != nil {
+							if isUserAbort(ctx, promptErr) {
+								return nil
+							}
+							return promptErr
+						}
+						if !retry {
 							return err
 						}
 						prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels, errList)
@@ -250,6 +294,15 @@ Examples:
 				return nil
 			})
 		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			flagBody = ""
+			flagIn = ""
+			flagAt = ""
+			flagCron = ""
+			flagTimezone = ""
+			flagChannels = ""
+			flagNatural = ""
+		},
 	}
 
 	cmd.Flags().StringVarP(&flagBody, "body", "b", "", "Beep markdown body / message")
@@ -264,6 +317,42 @@ Examples:
 	return cmd
 }
 
+type aiProposalError struct {
+	err error
+}
+
+func (e *aiProposalError) Error() string {
+	return e.err.Error()
+}
+
+func (e *aiProposalError) Unwrap() error {
+	return e.err
+}
+
+func isUserAbort(ctx context.Context, err error) bool {
+	if ctx != nil && ctx.Err() != nil {
+		return true
+	}
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, huh.ErrUserAborted) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "user aborted") ||
+		strings.Contains(msg, "context canceled") ||
+		strings.Contains(msg, "canceled") ||
+		strings.Contains(msg, "cancelled")
+}
+
+func shouldPromptBeepCreateForm(title, scheduleKind string, argCount int, aiFallback bool) bool {
+	if aiFallback {
+		return true
+	}
+	return strings.TrimSpace(title) == "" || (scheduleKind == "" && argCount == 0)
+}
+
 func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Command, prompt, bodyFlag, channelsFlag, tz string) error {
 	var proposal *client.BeepProposal
 	err := ui.WithSpinner("Analyzing natural language prompt with AI...", func() error {
@@ -272,17 +361,20 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 		return pErr
 	})
 	if err != nil {
-		return fmt.Errorf("natural language parse failed: %w", err)
+		if isUserAbort(ctx, err) {
+			return err
+		}
+		return &aiProposalError{err: fmt.Errorf("natural language parse failed: %w", err)}
 	}
 
 	if proposal.HasErrors() {
-		return fmt.Errorf("could not understand beep: %s", strings.Join(proposal.Errors, ", "))
+		return &aiProposalError{err: fmt.Errorf("could not understand beep: %s", strings.Join(proposal.Errors, ", "))}
 	}
 	if proposal.Title == "" {
 		if proposal.Message != "" {
-			return fmt.Errorf("could not understand beep: %s", proposal.Message)
+			return &aiProposalError{err: fmt.Errorf("could not understand beep: %s", proposal.Message)}
 		}
-		return fmt.Errorf("could not understand beep from prompt")
+		return &aiProposalError{err: fmt.Errorf("could not understand beep from prompt")}
 	}
 
 	body := proposal.Body
@@ -308,13 +400,18 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 		schedVal = proposal.RunAt
 	}
 
+	channels := channelsFlag
+	if channels == "" && len(proposal.Channels) > 0 {
+		channels = strings.Join(proposal.Channels, ",")
+	}
+
 	params := client.CreateBeepParams{
 		Title:        proposal.Title,
 		Body:         body,
 		ScheduleKind: schedKind,
 		ScheduleVal:  schedVal,
 		Timezone:     resolvedTz,
-		Channels:     channelsFlag,
+		Channels:     channels,
 	}
 
 	defaultChannels := client.DefaultNotificationChannels
@@ -410,8 +507,12 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 			}
 			errList := client.ExtractErrorList(err)
 			ui.PrintErrorList("Invalid input", errList)
+			ui.PrintBeepCreateSummary(params, errList)
 			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
-			if promptErr != nil || !retry {
+			if promptErr != nil {
+				return promptErr
+			}
+			if !retry {
 				return err
 			}
 			prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels, errList)
@@ -427,13 +528,20 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 			return err
 		})
 		if err != nil {
+			if isUserAbort(ctx, err) {
+				return err
+			}
 			if !cmdutil.IsInteractive(cmd) {
 				return err
 			}
 			errList := client.ExtractErrorList(err)
 			ui.PrintErrorList("Creation failed", errList)
+			ui.PrintBeepCreateSummary(params, errList)
 			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs and retry?", true)
-			if promptErr != nil || !retry {
+			if promptErr != nil {
+				return promptErr
+			}
+			if !retry {
 				return err
 			}
 			prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels, errList)

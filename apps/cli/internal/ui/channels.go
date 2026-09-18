@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"strings"
 
 	"beep/internal/client"
@@ -18,17 +19,27 @@ func NotificationChannelOptions() []huh.Option[string] {
 	}
 }
 
+func requireNotificationChannels(selected []string) error {
+	for _, s := range selected {
+		if strings.TrimSpace(s) != "" {
+			return nil
+		}
+	}
+	return errors.New("select at least one notification channel")
+}
+
 // PromptNotificationChannels shows a multi-select over the existing channel
 // kinds. Selected values default to the channels chosen in account settings.
-// An empty selection means "use account default" and returns "".
+// At least one channel is required.
 func PromptNotificationChannels(defaultChannels []string) (string, error) {
 	selected := client.SanitizeChannelDefaults(defaultChannels)
 
 	err := huh.NewMultiSelect[string]().
 		Title("Notification Channels").
-		Description("Select where this fires (Space to toggle, Enter to confirm; empty = account default)").
+		Description("Select where this fires (Space to toggle, Enter to confirm; at least one required)").
 		Options(NotificationChannelOptions()...).
 		Value(&selected).
+		Validate(requireNotificationChannels).
 		Run()
 	if err != nil {
 		return "", err

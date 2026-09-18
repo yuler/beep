@@ -5,6 +5,7 @@ json.body @proposal.body
 json.run_at @proposal.run_at&.iso8601
 json.cron @proposal.cron
 json.timezone @proposal.timezone
+json.notification_channels @proposal.notification_channels
 json.errors @proposal.errors
 json.confirmable @proposal.confirmable?
 json.message @proposal.message

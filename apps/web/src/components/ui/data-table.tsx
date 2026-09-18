@@ -2,6 +2,7 @@ import {
 	type Column,
 	type createColumnHelper,
 	createSortedRowModel,
+	type OnChangeFn,
 	type RowData,
 	type RowSelectionState,
 	rowSelectionFeature,
@@ -67,6 +68,14 @@ export function makeSelectColumn<TData extends RowData>(
 	});
 }
 
+export type DataTableColumnMeta = {
+	className?: string;
+};
+
+function columnMetaClassName(meta: unknown) {
+	return (meta as DataTableColumnMeta | undefined)?.className;
+}
+
 export function SortableHeader<TData extends RowData, TValue>({
 	column,
 	label,
@@ -102,6 +111,9 @@ type DataTableProps<TData extends RowData> = {
 	className?: string;
 	emptyMessage?: string;
 	onRowClick?: (row: TData) => void;
+	sorting?: SortingState;
+	onSortingChange?: OnChangeFn<SortingState>;
+	manualSorting?: boolean;
 };
 
 export function DataTable<TData extends RowData>({
@@ -111,17 +123,22 @@ export function DataTable<TData extends RowData>({
 	className,
 	emptyMessage = "No rows to display.",
 	onRowClick,
+	sorting: sortingProp,
+	onSortingChange,
+	manualSorting = false,
 }: DataTableProps<TData>) {
-	const [sorting, setSorting] = useState<SortingState>([]);
+	const [internalSorting, setInternalSorting] = useState<SortingState>([]);
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+	const sorting = sortingProp ?? internalSorting;
 
 	const table = useTable<typeof dataTableFeatures, TData>({
 		features: dataTableFeatures,
 		data,
 		columns,
 		getRowId,
+		manualSorting,
 		state: { sorting, rowSelection },
-		onSortingChange: setSorting,
+		onSortingChange: onSortingChange ?? setInternalSorting,
 		onRowSelectionChange: setRowSelection,
 	});
 
@@ -145,7 +162,10 @@ export function DataTable<TData extends RowData>({
 							{headerGroup.headers.map((header) => (
 								<TableHead
 									key={header.id}
-									className="h-10 px-3 text-xs font-medium text-muted-foreground"
+									className={cn(
+										"h-10 px-3 text-xs font-medium text-muted-foreground",
+										columnMetaClassName(header.column.columnDef.meta),
+									)}
 								>
 									{header.isPlaceholder ? null : (
 										<table.FlexRender header={header} />
@@ -206,7 +226,10 @@ export function DataTable<TData extends RowData>({
 								{row.getAllCells().map((cell) => (
 									<TableCell
 										key={cell.id}
-										className="min-w-0 px-3 py-3 align-middle"
+										className={cn(
+											"min-w-0 px-3 py-3 align-middle",
+											columnMetaClassName(cell.column.columnDef.meta),
+										)}
 									>
 										<table.FlexRender cell={cell} />
 									</TableCell>

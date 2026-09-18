@@ -71,6 +71,9 @@ async function request(
 			body: body === undefined ? undefined : JSON.stringify(body),
 		});
 	} catch (error) {
+		if (error instanceof Error && error.name === "AbortError") {
+			throw error;
+		}
 		throw new ApiError(
 			503,
 			error instanceof Error ? error.message : "Network error",

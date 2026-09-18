@@ -112,6 +112,71 @@ class Beep::ProposalTest < ActiveSupport::TestCase
     assert_equal "America/New_York", result.timezone
   end
 
+  test "create extracts channels from model response" do
+    chat = fake_chat({
+      "intent" => "create",
+      "title" => "测试通知",
+      "body" => nil,
+      "run_at" => nil,
+      "notification_channels" => [ "web_push" ]
+    }.to_json)
+
+    result = Beep::Proposal.create("创建一个测试通知, 只通知给 web push 其他的不需要", chat: chat)
+    assert_equal [ "web_push" ], result.notification_channels
+  end
+
+  test "create keeps notification_channels nil when the model returns null" do
+    chat = fake_chat({
+      "intent" => "create",
+      "title" => "测试通知",
+      "body" => nil,
+      "run_at" => nil,
+      "notification_channels" => nil
+    }.to_json)
+
+    result = Beep::Proposal.create("创建一个测试通知, 只通知给 web push 其他不需要", chat: chat)
+    assert_nil result.notification_channels
+  end
+
+  test "create does not infer channels from prompt verbs like git push" do
+    chat = fake_chat({
+      "intent" => "create",
+      "title" => "Push code",
+      "body" => nil,
+      "run_at" => nil,
+      "notification_channels" => nil
+    }.to_json)
+
+    result = Beep::Proposal.create("提醒我下午三点 push 代码到 GitHub", chat: chat)
+    assert_nil result.notification_channels
+  end
+
+  test "create sets notification_channels to nil when not mentioned" do
+    chat = fake_chat({
+      "intent" => "create",
+      "title" => "开会提醒",
+      "body" => nil,
+      "run_at" => nil,
+      "notification_channels" => nil
+    }.to_json)
+
+    result = Beep::Proposal.create("明天九点开会", chat: chat)
+    assert_nil result.notification_channels
+  end
+
+  test "create filters out unknown channels from model" do
+    chat = fake_chat({
+      "intent" => "create",
+      "title" => "Slack alert",
+      "body" => nil,
+      "run_at" => nil,
+      "notification_channels" => [ "slack", "discord" ]
+    }.to_json)
+
+    result = Beep::Proposal.create("Slack alert", chat: chat)
+    assert_nil result.notification_channels
+  end
+
   private
     def fake_chat(content)
       chat = Object.new

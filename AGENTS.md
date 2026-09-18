@@ -39,6 +39,7 @@ beep-local --help
 ## Rules
 
 - Git commit title format: `emoji [scope] The main change` — example: `✨ [core] Adopt shared account slug tenancy for personal and team`
+- Do not run `git commit` / `git push` unless explicitly requested.
 - Do not add agent trailers to commits (`Made-with:`, `Co-Authored-By: Claude`, Cursor, etc.). Message body only when it adds real context.
 - PR title follows the same format as the git commit title.
 - All version strings must come from the [`VERSION`](VERSION) file at the repo root (`APP_VERSION` build arg in Docker/CI overrides it).

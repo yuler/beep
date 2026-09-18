@@ -1,14 +1,20 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { createColumnHelper } from "@tanstack/react-table";
+import {
+	createColumnHelper,
+	type OnChangeFn,
+	type SortingState,
+} from "@tanstack/react-table";
 import {
 	Activity,
 	Clock,
 	Loader2,
+	Plus,
 	Repeat,
 	Search,
 	Sparkles,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -21,19 +27,30 @@ import { Input } from "@/components/ui/input";
 import { ProgressBar, StatusPill } from "@/components/ui/status-pill";
 import {
 	type Beep,
+	type BeepSortDir,
+	type BeepSortField,
 	type BeepStatsData,
+	beepSortQuery,
 	fetchBeeps,
+	isBeepSortField,
 	type PaginationMeta,
 } from "@/lib/api/beeps";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
-import { beepRunAt } from "@/lib/beep-stats";
-import { beepRunStatusLabel, beepStatusLabel } from "@/lib/i18n-labels";
+import {
+	beepRunStatusLabel,
+	beepStatusLabel,
+	channelLabel,
+} from "@/lib/i18n-labels";
 import { beepRunCount, beepRunSuccessRate } from "@/lib/run-success-rate";
-import { shortId } from "@/lib/short-id";
 import { cn } from "@/lib/utils";
 import { m } from "@/locale/paraglide/messages";
 
-type FilterStatus = "all" | "active" | "firing" | "recurring" | "completed";
+export type FilterStatus =
+	| "all"
+	| "active"
+	| "firing"
+	| "recurring"
+	| "completed";
 
 const columnHelper = createColumnHelper<typeof dataTableFeatures, Beep>();
 
@@ -50,53 +67,102 @@ function beepStatusTone(status: Beep["status"]) {
 	}
 }
 
-function formatScheduleLabel(beep: Beep) {
-	if (beep.status === "completed") return m.beeps_schedule_completed();
-	if (beep.kind === "recurring") return beep.cron ?? m.beeps_schedule();
-	const nextRun = beepRunAt(beep);
-	if (!nextRun) return m.common_em_dash();
-	return formatBeepScheduleTime(nextRun, beep.timezone, "short");
+function formatLastRunAt(beep: Beep) {
+	if (!beep.last_run_at) return null;
+	return formatBeepScheduleTime(beep.last_run_at, beep.timezone, "short");
+}
+
+function LastRunCaption({ beep }: { beep: Beep }) {
+	const lastRun = beep.runs?.[0];
+	const lastAt = formatLastRunAt(beep);
+	if (!lastRun && !lastAt) return m.common_em_dash();
+
+	return (
+		<>
+			{m.beeps_last_run_at()}:{" "}
+			<span className="tabular-nums">{lastAt ?? m.common_em_dash()}</span>
+			{lastRun ? (
+				<span className="capitalize">
+					{" "}
+					· {beepRunStatusLabel(lastRun.status)}
+				</span>
+			) : null}
+		</>
+	);
+}
+
+function formatChannel(channel: string) {
+	if (channel === "email" || channel === "web_push" || channel === "cli") {
+		return channelLabel(channel);
+	}
+	return channel;
+}
+
+function BeepIdText({ id, className }: { id: string; className?: string }) {
+	return (
+		<span
+			className={cn(
+				"font-mono text-[11px] text-muted-foreground select-all whitespace-nowrap",
+				className,
+			)}
+			title={id}
+		>
+			#{id}
+		</span>
+	);
 }
 
 function useBeepColumns(slug: string, variant: "compact" | "full") {
 	return useMemo(() => {
+		const sortable = variant === "full";
 		const fullColumns =
 			variant === "full"
 				? [
-						columnHelper.accessor((row) => beepRunSuccessRate(row), {
-							id: "run_success",
-							header: ({ column }) => (
-								<SortableHeader column={column} label={m.beeps_run_success()} />
-							),
-							cell: ({ row }) => (
-								<ProgressBar value={beepRunSuccessRate(row.original)} />
-							),
-						}),
-						columnHelper.accessor((row) => beepRunCount(row), {
-							id: "runs",
-							header: ({ column }) => (
-								<SortableHeader column={column} label={m.beeps_runs()} />
-							),
+						columnHelper.accessor((row) => row.notification_channels, {
+							id: "channels",
+							enableSorting: false,
+							header: m.beeps_channels(),
 							cell: ({ row }) => {
-								const beep = row.original;
-								const lastRun = beep.runs?.[0];
-								return (
-									<div className="flex flex-col gap-0.5 text-sm">
-										<span className="tabular-nums text-foreground">
-											{beepRunCount(beep)}
+								const channels = row.original.notification_channels ?? [];
+								if (channels.length === 0) {
+									return (
+										<span className="text-xs text-muted-foreground">
+											{m.beeps_channels_none()}
 										</span>
-										{lastRun ? (
-											<span className="text-[11px] text-muted-foreground capitalize">
-												{m.beeps_last()}: {beepRunStatusLabel(lastRun.status)}
-											</span>
-										) : (
-											<span className="text-[11px] text-muted-foreground">
-												{m.common_em_dash()}
-											</span>
-										)}
+									);
+								}
+								return (
+									<div className="flex flex-wrap items-center gap-1">
+										{channels.map((channel) => (
+											<Badge
+												key={channel}
+												variant="outline"
+												className="px-1.5 py-0 text-[10px] font-normal"
+											>
+												{formatChannel(channel)}
+											</Badge>
+										))}
 									</div>
 								);
 							},
+						}),
+						columnHelper.accessor((row) => beepRunCount(row), {
+							id: "runs",
+							enableSorting: false,
+							header: m.beeps_runs(),
+							cell: ({ row }) => (
+								<div className="flex min-w-44 flex-col gap-1">
+									<div className="flex items-center gap-2">
+										<span className="text-sm tabular-nums text-foreground">
+											{beepRunCount(row.original)}
+										</span>
+										<ProgressBar value={beepRunSuccessRate(row.original)} />
+									</div>
+									<span className="text-[11px] text-muted-foreground">
+										<LastRunCaption beep={row.original} />
+									</span>
+								</div>
+							),
 						}),
 					]
 				: [];
@@ -105,16 +171,21 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			makeSelectColumn(columnHelper),
 			columnHelper.accessor("title", {
 				id: "title",
-				header: ({ column }) => (
-					<SortableHeader column={column} label={m.term_beep_capitalized()} />
-				),
+				enableSorting: sortable,
+				meta: { className: "w-52 min-w-52 max-w-52" },
+				header: sortable
+					? ({ column }) => (
+							<SortableHeader
+								column={column}
+								label={m.term_beep_capitalized()}
+							/>
+						)
+					: m.term_beep_capitalized(),
 				cell: ({ row }) => {
 					const beep = row.original;
 					return (
-						<div className="flex min-w-0 max-w-md flex-col gap-0.5">
-							<span className="font-mono text-[11px] text-muted-foreground">
-								#{shortId(beep.id)}
-							</span>
+						<div className="flex min-w-0 flex-col gap-0.5">
+							<BeepIdText id={beep.id} />
 							<Link
 								to="/$account_slug/beeps/$beepId"
 								params={{
@@ -133,14 +204,16 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			}),
 			columnHelper.accessor((row) => row.beeper?.name ?? row.kind, {
 				id: "source",
+				enableSorting: false,
+				meta: { className: "min-w-56" },
 				header: m.beeps_source(),
 				cell: ({ row }) => {
 					const beep = row.original;
 					if (beep.beeper) {
 						return (
-							<span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-								<Activity className="size-3.5 text-primary" />
-								{beep.beeper.name}
+							<span className="inline-flex max-w-full items-center gap-1.5 text-sm text-muted-foreground">
+								<Activity className="size-3.5 shrink-0 text-primary" />
+								<span className="truncate">{beep.beeper.name}</span>
 							</span>
 						);
 					}
@@ -163,9 +236,12 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			}),
 			columnHelper.accessor("status", {
 				id: "status",
-				header: ({ column }) => (
-					<SortableHeader column={column} label={m.common_status()} />
-				),
+				enableSorting: sortable,
+				header: sortable
+					? ({ column }) => (
+							<SortableHeader column={column} label={m.common_status()} />
+						)
+					: m.common_status(),
 				cell: ({ row }) => (
 					<StatusPill
 						label={beepStatusLabel(row.original.status)}
@@ -173,28 +249,25 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 					/>
 				),
 			}),
-			columnHelper.accessor((row) => beepRunAt(row)?.toString() ?? "", {
-				id: "schedule",
-				header: ({ column }) => (
-					<SortableHeader column={column} label={m.beeps_schedule()} />
-				),
+			...fullColumns,
+			columnHelper.accessor("created_at", {
+				id: "created_at",
+				enableSorting: sortable,
+				meta: { className: "min-w-36 whitespace-nowrap" },
+				header: sortable
+					? ({ column }) => (
+							<SortableHeader column={column} label={m.common_created()} />
+						)
+					: m.common_created(),
 				cell: ({ row }) => {
 					const beep = row.original;
 					return (
-						<div className="flex flex-col gap-0.5 text-sm">
-							<span className="tabular-nums text-foreground">
-								{formatScheduleLabel(beep)}
-							</span>
-							{variant === "full" ? (
-								<span className="text-[11px] text-muted-foreground">
-									{beep.timezone}
-								</span>
-							) : null}
-						</div>
+						<span className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+							{formatBeepScheduleTime(beep.created_at, beep.timezone, "short")}
+						</span>
 					);
 				},
 			}),
-			...fullColumns,
 		]);
 	}, [slug, variant]);
 }
@@ -203,14 +276,14 @@ const FILTER_TABS: {
 	id: FilterStatus;
 	label: () => string;
 }[] = [
-	{ id: "all", label: m.beeps_filter_all },
 	{ id: "active", label: m.beeps_filter_active },
 	{ id: "firing", label: m.beeps_filter_firing },
 	{ id: "recurring", label: m.beeps_filter_recurring },
 	{ id: "completed", label: m.beeps_filter_completed },
+	{ id: "all", label: m.beeps_filter_all },
 ];
 
-function getFilterOptions(filter: FilterStatus) {
+export function getFilterOptions(filter: FilterStatus) {
 	if (filter === "recurring") return { kind: "recurring" };
 	if (filter !== "all") return { status: filter };
 	return {};
@@ -222,12 +295,28 @@ export function BeepList({
 	stats,
 	slug,
 	variant = "full",
+	onCreateClick,
+	currentTab,
+	onTabChange,
+	searchQuery = "",
+	onSearchChange,
+	sort: sortField = "created_at",
+	dir: sortDir = "desc",
+	onSortChange,
 }: {
 	beeps: Beep[];
 	initialPagination?: PaginationMeta;
 	stats?: BeepStatsData;
 	slug: string;
 	variant?: "compact" | "full";
+	onCreateClick?: () => void;
+	currentTab?: FilterStatus;
+	onTabChange?: (tab: FilterStatus) => void;
+	searchQuery?: string;
+	onSearchChange?: (q: string) => void;
+	sort?: BeepSortField;
+	dir?: BeepSortDir;
+	onSortChange?: (sort: BeepSortField, dir: BeepSortDir) => void;
 }) {
 	const navigate = useNavigate();
 	const [items, setItems] = useState<Beep[]>(initialBeeps);
@@ -239,27 +328,102 @@ export function BeepList({
 	const isLoadingMoreRef = useRef(false);
 	const filterRequestRef = useRef(0);
 	const sentinelRef = useRef<HTMLDivElement | null>(null);
-	const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
+
+	const [internalStatusFilter, setInternalStatusFilter] =
+		useState<FilterStatus>("active");
+	const statusFilter = currentTab ?? internalStatusFilter;
+	const sortQuery = useMemo(
+		() => beepSortQuery(sortField, sortDir),
+		[sortField, sortDir],
+	);
+	const sorting: SortingState = useMemo(
+		() => [{ id: sortField, desc: sortDir === "desc" }],
+		[sortField, sortDir],
+	);
+
+	const inputRef = useRef<HTMLInputElement>(null);
+	const lastDispatchedRef = useRef(searchQuery);
+	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const [searchInput, setSearchInput] = useState(searchQuery);
 
 	useEffect(() => {
-		if (statusFilter === "all") {
-			setItems(initialBeeps);
-			setPagination(initialPagination);
+		// If searchQuery matches what we just dispatched, don't overwrite current input
+		if (searchQuery === lastDispatchedRef.current) {
+			return;
 		}
-	}, [initialBeeps, initialPagination, statusFilter]);
+		// If the user is currently typing/focusing in the input, don't overwrite with stale server echo
+		if (document.activeElement === inputRef.current && searchQuery !== "") {
+			return;
+		}
+		setSearchInput(searchQuery);
+		lastDispatchedRef.current = searchQuery;
+	}, [searchQuery]);
 
-	const handleStatusFilterChange = useCallback(
-		(nextFilter: FilterStatus) => {
-			setStatusFilter(nextFilter);
-			if (nextFilter === "all") {
-				setItems(initialBeeps);
-				setPagination(initialPagination);
+	useEffect(() => {
+		setItems(initialBeeps);
+		setPagination(initialPagination);
+	}, [initialBeeps, initialPagination]);
+
+	const dispatchSearch = useCallback(
+		(trimmed: string) => {
+			lastDispatchedRef.current = trimmed;
+			if (onSearchChange) {
+				onSearchChange(trimmed);
 				return;
 			}
 
 			const requestId = ++filterRequestRef.current;
 			setIsFiltering(true);
-			fetchBeeps(slug, getFilterOptions(nextFilter))
+			fetchBeeps(slug, {
+				...getFilterOptions(statusFilter),
+				q: trimmed || undefined,
+				...sortQuery,
+			})
+				.then((res) => {
+					if (filterRequestRef.current === requestId) {
+						setItems(res.beeps);
+						setPagination(res.pagination);
+					}
+				})
+				.catch((err) => {
+					console.error("Failed to search beeps", err);
+				})
+				.finally(() => {
+					if (filterRequestRef.current === requestId) {
+						setIsFiltering(false);
+					}
+				});
+		},
+		[onSearchChange, slug, statusFilter, sortQuery],
+	);
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			const trimmed = searchInput.trim();
+			if (trimmed !== lastDispatchedRef.current) {
+				dispatchSearch(trimmed);
+			}
+		}, 300);
+		debounceTimerRef.current = timer;
+
+		return () => clearTimeout(timer);
+	}, [searchInput, dispatchSearch]);
+
+	const handleStatusFilterChange = useCallback(
+		(nextFilter: FilterStatus) => {
+			if (onTabChange) {
+				onTabChange(nextFilter);
+				return;
+			}
+			setInternalStatusFilter(nextFilter);
+
+			const requestId = ++filterRequestRef.current;
+			setIsFiltering(true);
+			fetchBeeps(slug, {
+				...getFilterOptions(nextFilter),
+				q: lastDispatchedRef.current.trim() || undefined,
+				...sortQuery,
+			})
 				.then((res) => {
 					if (filterRequestRef.current === requestId) {
 						setItems(res.beeps);
@@ -275,7 +439,7 @@ export function BeepList({
 					}
 				});
 		},
-		[slug, initialBeeps, initialPagination],
+		[slug, onTabChange, sortQuery],
 	);
 
 	const loadMore = useCallback(async () => {
@@ -292,6 +456,8 @@ export function BeepList({
 			const res = await fetchBeeps(slug, {
 				page: pagination.next_page,
 				...getFilterOptions(statusFilter),
+				q: lastDispatchedRef.current.trim() || undefined,
+				...sortQuery,
 			});
 			setItems((prev) => {
 				const existingIds = new Set(prev.map((b) => b.id));
@@ -305,7 +471,43 @@ export function BeepList({
 			isLoadingMoreRef.current = false;
 			setIsLoadingMore(false);
 		}
-	}, [pagination, slug, statusFilter]);
+	}, [pagination, slug, statusFilter, sortQuery]);
+
+	const handleSortingChange = useCallback<OnChangeFn<SortingState>>(
+		(updater) => {
+			const next = typeof updater === "function" ? updater(sorting) : updater;
+			const first = next[0];
+			if (!first || !isBeepSortField(first.id)) return;
+			const nextDir: BeepSortDir = first.desc ? "desc" : "asc";
+			if (onSortChange) {
+				onSortChange(first.id, nextDir);
+				return;
+			}
+
+			const requestId = ++filterRequestRef.current;
+			setIsFiltering(true);
+			fetchBeeps(slug, {
+				...getFilterOptions(statusFilter),
+				q: lastDispatchedRef.current.trim() || undefined,
+				...beepSortQuery(first.id, nextDir),
+			})
+				.then((res) => {
+					if (filterRequestRef.current === requestId) {
+						setItems(res.beeps);
+						setPagination(res.pagination);
+					}
+				})
+				.catch((err) => {
+					console.error("Failed to sort beeps", err);
+				})
+				.finally(() => {
+					if (filterRequestRef.current === requestId) {
+						setIsFiltering(false);
+					}
+				});
+		},
+		[sorting, onSortChange, slug, statusFilter],
+	);
 
 	useEffect(() => {
 		if (!pagination?.has_more) return;
@@ -325,32 +527,11 @@ export function BeepList({
 		return () => observer.disconnect();
 	}, [pagination?.has_more, loadMore]);
 
-	const [search, setSearch] = useState("");
 	const columns = useBeepColumns(slug, variant);
-
-	const filteredBeeps = useMemo(() => {
-		return items.filter((beep) => {
-			if (statusFilter === "active" && beep.status !== "active") return false;
-			if (statusFilter === "firing" && beep.status !== "firing") return false;
-			if (statusFilter === "completed" && beep.status !== "completed")
-				return false;
-			if (statusFilter === "recurring" && beep.kind !== "recurring")
-				return false;
-
-			if (search.trim()) {
-				const query = search.toLowerCase();
-				const matchTitle = beep.title.toLowerCase().includes(query);
-				const matchBody = beep.body?.toLowerCase().includes(query);
-				const matchBeeper = beep.beeper?.name.toLowerCase().includes(query);
-				if (!matchTitle && !matchBody && !matchBeeper) return false;
-			}
-
-			return true;
-		});
-	}, [items, statusFilter, search]);
+	const filteredBeeps = items;
 
 	const counts = useMemo(() => {
-		return {
+		const next = {
 			all:
 				stats?.all ??
 				(statusFilter === "all" ? pagination?.total_count : undefined) ??
@@ -372,9 +553,18 @@ export function BeepList({
 				(statusFilter === "completed" ? pagination?.total_count : undefined) ??
 				items.filter((b) => b.status === "completed").length,
 		};
-	}, [stats, pagination, items, statusFilter]);
+		if (searchQuery.trim() && pagination?.total_count != null) {
+			next[statusFilter] = pagination.total_count;
+		}
+		return next;
+	}, [stats, pagination, items, statusFilter, searchQuery]);
 
-	if (items.length === 0 && !isFiltering && statusFilter === "all") {
+	const totalCount =
+		stats?.all ??
+		(statusFilter === "all" ? pagination?.total_count : undefined) ??
+		items.length;
+
+	if (totalCount === 0 && !isFiltering) {
 		return (
 			<Card className="flex flex-col items-center justify-center p-8 text-center">
 				<div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -386,6 +576,17 @@ export function BeepList({
 				<p className="mt-1 max-w-sm text-sm text-muted-foreground">
 					{m.beeps_empty_create_hint()}
 				</p>
+				{onCreateClick ? (
+					<Button
+						type="button"
+						size="sm"
+						className="mt-4 gap-2"
+						onClick={onCreateClick}
+					>
+						<Plus className="size-4" />
+						{m.beeps_create_beep()}
+					</Button>
+				) : null}
 			</Card>
 		);
 	}
@@ -427,11 +628,28 @@ export function BeepList({
 					<div className="relative w-full sm:w-64">
 						<Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
-							value={search}
-							onChange={(event) => setSearch(event.target.value)}
+							ref={inputRef}
+							value={searchInput}
+							onChange={(event) => setSearchInput(event.target.value)}
+							onKeyDown={(event) => {
+								if (event.key === "Enter") {
+									event.preventDefault();
+									if (debounceTimerRef.current) {
+										clearTimeout(debounceTimerRef.current);
+										debounceTimerRef.current = null;
+									}
+									const trimmed = searchInput.trim();
+									if (trimmed !== lastDispatchedRef.current) {
+										dispatchSearch(trimmed);
+									}
+								}
+							}}
 							placeholder={m.beeps_search_placeholder()}
-							className="h-8.5 pl-8 text-xs"
+							className="h-8.5 pl-8 pr-8 text-xs"
 						/>
+						{isFiltering || searchInput.trim() !== searchQuery ? (
+							<Loader2 className="absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+						) : null}
 					</div>
 				</div>
 			) : null}
@@ -451,8 +669,10 @@ export function BeepList({
 						size="sm"
 						className="mt-2"
 						onClick={() => {
+							setSearchInput("");
+							lastDispatchedRef.current = "";
+							if (onSearchChange) onSearchChange("");
 							handleStatusFilterChange("all");
-							setSearch("");
 						}}
 					>
 						{m.beeps_clear_filters()}
@@ -465,7 +685,6 @@ export function BeepList({
 						{filteredBeeps.map((beep) => {
 							const successRate = beepRunSuccessRate(beep);
 							const totalRuns = beepRunCount(beep);
-							const lastRun = beep.runs?.[0];
 
 							return (
 								<div
@@ -480,9 +699,10 @@ export function BeepList({
 									/>
 									<div className="relative z-10 flex items-start justify-between gap-3 pointer-events-none">
 										<div className="flex min-w-0 flex-col gap-0.5">
-											<span className="font-mono text-[11px] text-muted-foreground">
-												#{shortId(beep.id)}
-											</span>
+											<BeepIdText
+												id={beep.id}
+												className="pointer-events-auto"
+											/>
 											<span className="truncate text-base font-semibold text-foreground">
 												{beep.title}
 											</span>
@@ -517,32 +737,49 @@ export function BeepList({
 												)}
 											</span>
 										</div>
-										<div>
-											<span className="block text-[11px] text-muted-foreground/80">
-												{m.beeps_schedule()}
-											</span>
-											<span className="mt-0.5 block font-medium text-foreground">
-												{formatScheduleLabel(beep)}
-											</span>
-										</div>
 										{variant === "full" ? (
 											<>
 												<div>
 													<span className="block text-[11px] text-muted-foreground/80">
-														{m.beeps_run_success()}
+														{m.beeps_channels()}
 													</span>
-													<div className="mt-1">
-														<ProgressBar value={successRate} />
+													<div className="mt-0.5 flex flex-wrap gap-1">
+														{beep.notification_channels?.length > 0 ? (
+															beep.notification_channels.map((ch) => (
+																<Badge
+																	key={ch}
+																	variant="outline"
+																	className="px-1 py-0 text-[10px]"
+																>
+																	{formatChannel(ch)}
+																</Badge>
+															))
+														) : (
+															<span>{m.beeps_channels_none()}</span>
+														)}
 													</div>
 												</div>
 												<div>
 													<span className="block text-[11px] text-muted-foreground/80">
 														{m.beeps_runs()} ({totalRuns})
 													</span>
-													<span className="text-[11px] capitalize text-foreground">
-														{lastRun
-															? `${m.beeps_last()}: ${beepRunStatusLabel(lastRun.status)}`
-															: m.common_em_dash()}
+													<div className="mt-1">
+														<ProgressBar value={successRate} />
+													</div>
+													<span className="mt-0.5 block text-[11px] text-foreground">
+														<LastRunCaption beep={beep} />
+													</span>
+												</div>
+												<div>
+													<span className="block text-[11px] text-muted-foreground/80">
+														{m.common_created()}
+													</span>
+													<span className="mt-0.5 block font-medium text-foreground">
+														{formatBeepScheduleTime(
+															beep.created_at,
+															beep.timezone,
+															"short",
+														)}
 													</span>
 												</div>
 											</>
@@ -554,12 +791,15 @@ export function BeepList({
 					</div>
 
 					{/* Desktop Table View (>= md) */}
-					<div className="hidden md:block">
+					<div className="hidden min-w-0 md:block">
 						<DataTable
 							data={filteredBeeps}
 							columns={columns}
 							getRowId={(beep) => beep.id}
 							emptyMessage={m.beeps_filter_no_match()}
+							manualSorting={variant === "full"}
+							sorting={sorting}
+							onSortingChange={handleSortingChange}
 							onRowClick={(beep) =>
 								navigate({
 									to: "/$account_slug/beeps/$beepId",
