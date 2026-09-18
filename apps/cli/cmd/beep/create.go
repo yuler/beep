@@ -39,8 +39,8 @@ func NewCmdCreate() *cobra.Command {
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if flagMetadata != "" {
 				var tmp map[string]any
-				if err := json.Unmarshal([]byte(flagMetadata), &tmp); err != nil {
-					return fmt.Errorf("invalid --metadata: must be a valid JSON object: %w", err)
+				if err := json.Unmarshal([]byte(flagMetadata), &tmp); err != nil || tmp == nil {
+					return fmt.Errorf("invalid --metadata: must be a valid JSON object")
 				}
 			}
 			return nil

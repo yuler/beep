@@ -80,22 +80,18 @@ Examples:
 				return err
 			}
 
-			// If AccessToken is empty but RunnerToken is present, reuse it for auth
-			if cfg.AccessToken == "" && cfg.RunnerToken != "" {
-				cfg.AccessToken = cfg.RunnerToken
+			if strings.HasPrefix(pathArg, "http://") || strings.HasPrefix(pathArg, "https://") {
+				return fmt.Errorf("absolute URLs are not allowed; please provide a relative path (e.g. /api/v1/beeps)")
 			}
 
-			targetURL := pathArg
-			if !strings.HasPrefix(targetURL, "http://") && !strings.HasPrefix(targetURL, "https://") {
-				serverURL := strings.TrimRight(cfg.ServerURL, "/")
-				if serverURL == "" {
-					return fmt.Errorf("server URL is not configured. Please run '%s auth login' or specify --server", config.BinaryName())
-				}
-				if !strings.HasPrefix(targetURL, "/") {
-					targetURL = "/" + targetURL
-				}
-				targetURL = serverURL + targetURL
+			serverURL := strings.TrimRight(cfg.ServerURL, "/")
+			if serverURL == "" {
+				return fmt.Errorf("server URL is not configured. Please run '%s auth login' or specify --server", config.BinaryName())
 			}
+			if !strings.HasPrefix(pathArg, "/") {
+				pathArg = "/" + pathArg
+			}
+			targetURL := serverURL + pathArg
 
 			// Determine HTTP method
 			method := strings.ToUpper(strings.TrimSpace(flagMethod))

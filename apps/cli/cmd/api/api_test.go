@@ -263,3 +263,52 @@ func TestAPIErrorStatusCode(t *testing.T) {
 		t.Errorf("expected error body in stdout, got: %s", out.String())
 	}
 }
+
+func TestAPIAbsoluteURLRejected(t *testing.T) {
+	setupTestWorkspace(t, "http://127.0.0.1:3000", "token", "slug")
+
+	for _, url := range []string{"https://evil.com/api", "http://evil.com/api"} {
+		cmd := NewCmdAPI()
+		cmd.SetArgs([]string{url})
+		err := cmd.Execute()
+		if err == nil {
+			t.Fatalf("expected error for absolute URL %q, got nil", url)
+		}
+		if !strings.Contains(err.Error(), "absolute URLs are not allowed") {
+			t.Errorf("expected 'absolute URLs are not allowed' in error, got: %v", err)
+		}
+	}
+}
+
+func TestAPINoRunnerTokenReuse(t *testing.T) {
+	var receivedAuth string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	// Configure workspace with runner_token ONLY (no access_token)
+	dir := t.TempDir()
+	cfg := map[string]any{
+		"server_url":   server.URL,
+		"runner_token": "runner-secret-token",
+		"account_slug": "slug",
+	}
+	data, _ := json.Marshal(cfg)
+	_ = os.WriteFile(filepath.Join(dir, "config.json"), data, 0o600)
+	cmdutil.SetOverrideWorkspace(dir)
+	defer cmdutil.SetOverrideWorkspace("")
+
+	cmd := NewCmdAPI()
+	cmd.SetArgs([]string{"/api/v1/test"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+
+	if receivedAuth != "" {
+		t.Errorf("expected Authorization header to be empty when only runner_token exists, got %q", receivedAuth)
+	}
+}

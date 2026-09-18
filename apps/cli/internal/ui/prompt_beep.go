@@ -185,7 +185,7 @@ func promptBeepForm(initial client.CreateBeepParams, defaultChannels []string, r
 					return nil
 				}
 				var m map[string]any
-				if err := json.Unmarshal([]byte(s), &m); err != nil {
+				if err := json.Unmarshal([]byte(s), &m); err != nil || m == nil {
 					return errors.New("must be a valid JSON object or empty")
 				}
 				return nil
@@ -198,7 +198,7 @@ func promptBeepForm(initial client.CreateBeepParams, defaultChannels []string, r
 	metadataStr = strings.TrimSpace(metadataStr)
 	if metadataStr != "" {
 		var m map[string]any
-		if err := json.Unmarshal([]byte(metadataStr), &m); err == nil {
+		if err := json.Unmarshal([]byte(metadataStr), &m); err == nil && m != nil {
 			res.Metadata = m
 		}
 	} else {
@@ -313,7 +313,7 @@ func PromptBeepAdjust(initial client.CreateBeepParams, defaultChannels []string,
 					return nil
 				}
 				var m map[string]any
-				if err := json.Unmarshal([]byte(s), &m); err != nil {
+				if err := json.Unmarshal([]byte(s), &m); err != nil || m == nil {
 					return errors.New("must be a valid JSON object or empty")
 				}
 				return nil
@@ -325,7 +325,7 @@ func PromptBeepAdjust(initial client.CreateBeepParams, defaultChannels []string,
 		metadataStr = strings.TrimSpace(metadataStr)
 		if metadataStr != "" {
 			var m map[string]any
-			if err := json.Unmarshal([]byte(metadataStr), &m); err == nil {
+			if err := json.Unmarshal([]byte(metadataStr), &m); err == nil && m != nil {
 				res.Metadata = m
 			}
 		} else {

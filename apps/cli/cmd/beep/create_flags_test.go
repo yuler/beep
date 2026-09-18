@@ -123,18 +123,29 @@ func TestNewCmdCreate_FlagsAndAliases(t *testing.T) {
 }
 
 func TestNewCmdCreate_InvalidMetadata(t *testing.T) {
-	cmd := NewCmdCreate()
-	cmd.SetArgs([]string{
-		"Invalid Metadata Beep",
-		"--metadata", "not-a-valid-json",
-	})
-
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatalf("expected error for invalid metadata JSON, got nil")
+	invalidCases := []string{
+		"not-a-valid-json",
+		"null",
+		"[1, 2, 3]",
+		"123",
+		"\"just-a-string\"",
+		"true",
 	}
-	if !strings.Contains(err.Error(), "invalid --metadata") {
-		t.Errorf("expected 'invalid --metadata' in error, got: %v", err)
+
+	for _, tc := range invalidCases {
+		cmd := NewCmdCreate()
+		cmd.SetArgs([]string{
+			"Invalid Metadata Beep",
+			"--metadata", tc,
+		})
+
+		err := cmd.Execute()
+		if err == nil {
+			t.Fatalf("expected error for invalid metadata %q, got nil", tc)
+		}
+		if !strings.Contains(err.Error(), "invalid --metadata") {
+			t.Errorf("expected 'invalid --metadata' in error for %q, got: %v", tc, err)
+		}
 	}
 }
 

@@ -601,3 +601,5 @@ export function CreateBeepDialog({
 		</ResponsiveDialog>
 	);
 }
+
+export { CreateBeepDialog as CreateBeepForm };
