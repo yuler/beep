@@ -164,7 +164,7 @@ Command flags for `beep runner stop`:
 - `-f, --force`: Forcibly kill (SIGKILL) if graceful shutdown times out.
 - `--timeout`: Timeout duration waiting for shutdown (default `10s`).
 
-Global flags: `--workspace` / `-w`, `--server`, `--token`, `--no-color`, `--no-interactive`.
+Global flags: `--workspace` / `-w`, `--server`, `--no-color`, `--no-interactive`.
 
 Injected env at exec time:
 - Base environment from host `os.Environ()` (excluding blocked sensitive keys like `BEEP_RUNNER_TOKEN`).

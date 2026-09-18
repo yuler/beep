@@ -90,7 +90,6 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&flagNoInteractive, "no-interactive", false, "Disable interactive prompts")
 	RootCmd.PersistentFlags().StringVarP(&flagWorkspace, "workspace", "w", "", fmt.Sprintf("Local job workspace directory (default %s, env: BEEP_WORKSPACE)", config.DefaultWorkspaceDisplay()))
 	RootCmd.PersistentFlags().StringVarP(&flagServer, "server", "s", "", "Beep server URL (env: BEEP_SERVER)")
-	RootCmd.PersistentFlags().StringVarP(&flagToken, "token", "t", "", "Runner authentication token (env: BEEP_RUNNER_TOKEN)")
 	RootCmd.PersistentFlags().StringVarP(&flagAccount, "account", "a", "", "Account slug to operate on (defaults to config account_slug or personal account; env: BEEP_ACCOUNT)")
 	RootCmd.PersistentFlags().BoolVar(&flagJSON, "json", false, "Output results in JSON format")
 

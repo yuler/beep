@@ -73,7 +73,7 @@ func promptBeepSelectFieldToAdjust() BeepFailedFields {
 		Options(
 			huh.NewOption("All fields", "all"),
 			huh.NewOption("Title", "title"),
-			huh.NewOption("Message Body", "body"),
+			huh.NewOption("Body", "body"),
 			huh.NewOption("Intent", "intent"),
 			huh.NewOption("Metadata", "metadata"),
 			huh.NewOption("Schedule", "schedule"),
@@ -144,7 +144,7 @@ func promptBeepForm(initial client.CreateBeepParams, defaultChannels []string, r
 
 	if reviewAll || strings.TrimSpace(res.Body) == "" {
 		err := huh.NewInput().
-			Title("Message Body (optional)").
+			Title("Body (optional)").
 			Description("Optional details or markdown body (press Enter to skip)").
 			Value(&res.Body).
 			Run()
@@ -267,10 +267,10 @@ func PromptBeepAdjust(initial client.CreateBeepParams, defaultChannels []string,
 		res.Title = strings.TrimSpace(res.Title)
 	}
 
-	// 2. Message Body
+	// 2. Body
 	if failed.Body {
 		err := huh.NewInput().
-			Title("Message Body (optional)").
+			Title("Body (optional)").
 			Description("Optional details or markdown body (press Enter to skip)").
 			Value(&res.Body).
 			Run()
