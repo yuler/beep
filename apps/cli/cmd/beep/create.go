@@ -436,6 +436,16 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 		channels = strings.Join(proposal.Channels, ",")
 	}
 
+	intent := intentFlag
+	if intent == "" && proposal.Intent != "" {
+		intent = proposal.Intent
+	}
+
+	metadataVal := metadata
+	if metadataVal == nil && proposal.Metadata != nil {
+		metadataVal = proposal.Metadata
+	}
+
 	params := client.CreateBeepParams{
 		Title:        proposal.Title,
 		Body:         body,
@@ -443,8 +453,8 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 		ScheduleVal:  schedVal,
 		Timezone:     resolvedTz,
 		Channels:     channels,
-		Intent:       intentFlag,
-		Metadata:     metadata,
+		Intent:       intent,
+		Metadata:     metadataVal,
 	}
 
 	defaultChannels := client.DefaultNotificationChannels
@@ -471,7 +481,7 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 			fmt.Println()
 			fmt.Println(ui.Bold(ui.Cyan("  Proposed Beep:")))
 			fmt.Println(ui.KeyValue("Title", params.Title))
-			if params.Body != "" {
+			if strings.TrimSpace(params.Body) != "" {
 				if strings.Contains(params.Body, "\n") {
 					fmt.Println(ui.KeyValue("Body", ""))
 					for _, line := range strings.Split(params.Body, "\n") {
@@ -480,6 +490,8 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 				} else {
 					fmt.Println(ui.KeyValue("Body", params.Body))
 				}
+			} else {
+				fmt.Println(ui.KeyValue("Body", ui.Dim("(empty)")))
 			}
 
 			intentVal := params.Intent
@@ -611,6 +623,14 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 	}
 
 	fmt.Println(ui.Success("Created beep %s (%s)", ui.Bold(b.Title), ui.Dim(b.ID)))
+	if b.Intent != "" {
+		fmt.Printf("  %s %s\n", ui.Dim("Intent:"), b.Intent)
+	}
+	if len(b.Metadata) > 0 {
+		if metaBytes, err := json.Marshal(b.Metadata); err == nil {
+			fmt.Printf("  %s %s\n", ui.Dim("Metadata:"), string(metaBytes))
+		}
+	}
 	fmt.Printf("  %s %s\n", ui.Dim("Schedule:"), FormatBeepSchedule(b))
 	if b.Timezone != "" {
 		fmt.Printf("  %s %s\n", ui.Dim("Timezone:"), b.Timezone)

@@ -40,6 +40,8 @@ export function CreateBeepForm({
 }) {
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
+	const [intent, setIntent] = useState("");
+	const [metadata, setMetadata] = useState("");
 	const [preview, setPreview] = useState(false);
 	const [kind, setKind] = useState<"once" | "recurring">("once");
 	const [sendNow, setSendNow] = useState(true);
@@ -47,12 +49,35 @@ export function CreateBeepForm({
 	const [runAt, setRunAt] = useState(defaultRunAt);
 	const [fieldErrors, setFieldErrors] = useState<{
 		run_at?: string;
+		metadata?: string;
 	}>({});
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
 
 	async function onSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
+
+		let parsedMetadata: Record<string, unknown> | null = null;
+		if (metadata.trim()) {
+			try {
+				const parsed = JSON.parse(metadata.trim());
+				if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+					setFieldErrors((curr) => ({
+						...curr,
+						metadata: m.beeps_metadata_invalid_json(),
+					}));
+					return;
+				}
+				parsedMetadata = parsed as Record<string, unknown>;
+			} catch {
+				setFieldErrors((curr) => ({
+					...curr,
+					metadata: m.beeps_metadata_invalid_json(),
+				}));
+				return;
+			}
+		}
+
 		setError(null);
 		setPending(true);
 
@@ -60,6 +85,8 @@ export function CreateBeepForm({
 			await createBeep(slug, {
 				title: title.trim(),
 				body: body.trim() || null,
+				intent: intent.trim() || null,
+				metadata: parsedMetadata,
 				kind,
 				run_at: kind === "once" && !sendNow ? runAt.toISOString() : null,
 				cron: kind === "recurring" ? cron.trim() : null,
@@ -67,6 +94,8 @@ export function CreateBeepForm({
 			});
 			setTitle("");
 			setBody("");
+			setIntent("");
+			setMetadata("");
 			setPreview(false);
 			setKind("once");
 			setSendNow(true);
@@ -186,6 +215,62 @@ export function CreateBeepForm({
 							"w-full min-w-0 min-h-32 resize-none overflow-hidden rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30",
 						)}
 					/>
+				)}
+			</div>
+
+			<div className="flex flex-col gap-2">
+				<div className="flex items-center justify-between gap-2">
+					<Label htmlFor="beep-intent">{m.beeps_intent()}</Label>
+					<span className="text-[11px] text-muted-foreground">
+						{m.common_optional()}
+					</span>
+				</div>
+				<Input
+					id="beep-intent"
+					name="intent"
+					value={intent}
+					onChange={(event) => setIntent(event.target.value)}
+					placeholder={m.beeps_intent_placeholder()}
+					disabled={pending}
+					className="font-mono text-sm"
+				/>
+				<p className="text-[11px] text-muted-foreground">
+					{m.beeps_intent_hint()}
+				</p>
+			</div>
+
+			<div className="flex flex-col gap-2">
+				<div className="flex items-center justify-between gap-2">
+					<Label htmlFor="beep-metadata">{m.beeps_metadata()}</Label>
+					<span className="text-[11px] text-muted-foreground">
+						{m.common_optional()}
+					</span>
+				</div>
+				<textarea
+					id="beep-metadata"
+					name="metadata"
+					value={metadata}
+					onChange={(event) => {
+						setMetadata(event.target.value);
+						setFieldErrors((curr) => ({ ...curr, metadata: undefined }));
+					}}
+					placeholder='{"key": "value"}'
+					disabled={pending}
+					rows={2}
+					className={cn(
+						"w-full min-w-0 min-h-16 resize-none font-mono text-sm rounded-lg border border-input bg-transparent px-2.5 py-1.5 transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 dark:bg-input/30",
+						fieldErrors.metadata &&
+							"border-destructive focus-visible:border-destructive",
+					)}
+				/>
+				{fieldErrors.metadata ? (
+					<p className="text-xs text-destructive" role="alert">
+						{fieldErrors.metadata}
+					</p>
+				) : (
+					<p className="text-[11px] text-muted-foreground">
+						{m.beeps_metadata_hint()}
+					</p>
 				)}
 			</div>
 

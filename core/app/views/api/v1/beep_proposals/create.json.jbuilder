@@ -1,4 +1,6 @@
+json.action @proposal.action
 json.intent @proposal.intent
+json.metadata @proposal.metadata
 json.kind @proposal.kind
 json.title @proposal.title
 json.body @proposal.body
@@ -9,3 +11,4 @@ json.notification_channels @proposal.notification_channels
 json.errors @proposal.errors
 json.confirmable @proposal.confirmable?
 json.message @proposal.message
+

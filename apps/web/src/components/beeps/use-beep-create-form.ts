@@ -64,6 +64,8 @@ export function useBeepCreateForm({
 	const [sendNow, setSendNow] = useState(true);
 	const [title, setTitle] = useState("");
 	const [body, setBody] = useState("");
+	const [intent, setIntent] = useState("");
+	const [metadata, setMetadata] = useState("");
 	const [preview, setPreview] = useState(false);
 	const [runAt, setRunAt] = useState<Date>(defaultRunAt);
 	const [cron, setCron] = useState("0 9 * * *");
@@ -74,6 +76,7 @@ export function useBeepCreateForm({
 		title?: string;
 		run_at?: string;
 		cron?: string;
+		metadata?: string;
 	}>({});
 	const [proposeMessage, setProposeMessage] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -86,6 +89,8 @@ export function useBeepCreateForm({
 		setPrompt("");
 		setTitle("");
 		setBody("");
+		setIntent("");
+		setMetadata("");
 		setPreview(false);
 		setKind("once");
 		setSendNow(true);
@@ -114,7 +119,11 @@ export function useBeepCreateForm({
 				prompt.trim(),
 				browserTimezone(),
 			);
-			if (proposal.intent === "other") {
+			if (
+				proposal.action === "other" ||
+				proposal.intent === "other" ||
+				!proposal.confirmable
+			) {
 				setFieldErrors({});
 				setProposeMessage(proposal.message ?? m.beeps_prompt_autofill_failed());
 				return;
@@ -124,6 +133,10 @@ export function useBeepCreateForm({
 			if (proposal.title) setTitle(proposal.title);
 			if (proposal.body !== null && proposal.body !== undefined)
 				setBody(proposal.body);
+			if (proposal.intent) setIntent(proposal.intent);
+			if (proposal.metadata && Object.keys(proposal.metadata).length > 0) {
+				setMetadata(JSON.stringify(proposal.metadata, null, 2));
+			}
 
 			if (proposal.kind === "recurring" || proposal.cron) {
 				setKind("recurring");
@@ -180,6 +193,7 @@ export function useBeepCreateForm({
 		isPending ||
 		title.trim().length === 0 ||
 		channels.length === 0 ||
+		Boolean(fieldErrors.metadata) ||
 		(kind === "once" &&
 			!sendNow &&
 			(runAt.getTime() <= Date.now() + 60 * 1000 ||
@@ -190,6 +204,27 @@ export function useBeepCreateForm({
 		event.preventDefault();
 		if (submitting || channels.length === 0 || submitDisabled) return;
 
+		let parsedMetadata: Record<string, unknown> | null = null;
+		if (metadata.trim()) {
+			try {
+				const parsed = JSON.parse(metadata.trim());
+				if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+					setFieldErrors((curr) => ({
+						...curr,
+						metadata: m.beeps_metadata_invalid_json(),
+					}));
+					return;
+				}
+				parsedMetadata = parsed as Record<string, unknown>;
+			} catch {
+				setFieldErrors((curr) => ({
+					...curr,
+					metadata: m.beeps_metadata_invalid_json(),
+				}));
+				return;
+			}
+		}
+
 		setError(null);
 		setProposeMessage(null);
 		setSubmitting(true);
@@ -198,6 +233,8 @@ export function useBeepCreateForm({
 			await createBeep(slug, {
 				title: title.trim(),
 				body: body.trim() || null,
+				intent: intent.trim() || null,
+				metadata: parsedMetadata,
 				kind,
 				run_at: kind === "once" && !sendNow ? runAt.toISOString() : null,
 				cron: kind === "recurring" ? cron.trim() : null,
@@ -226,6 +263,10 @@ export function useBeepCreateForm({
 		setTitle,
 		body,
 		setBody,
+		intent,
+		setIntent,
+		metadata,
+		setMetadata,
 		preview,
 		setPreview,
 		runAt,

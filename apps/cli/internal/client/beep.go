@@ -158,7 +158,9 @@ func (pe *ProposalErrors) UnmarshalJSON(data []byte) error {
 }
 
 type BeepProposal struct {
-	Intent      string         `json:"intent"`
+	Action      string         `json:"action,omitempty"`
+	Intent      string         `json:"intent,omitempty"`
+	Metadata    map[string]any `json:"metadata,omitempty"`
 	Kind        string         `json:"kind"`
 	Title       string         `json:"title"`
 	Body        string         `json:"body"`
@@ -184,6 +186,10 @@ func (p *BeepProposal) UnmarshalJSON(data []byte) error {
 	}
 	if len(p.Channels) == 0 && len(aux.AltChannels) > 0 {
 		p.Channels = aux.AltChannels
+	}
+	if p.Action == "" && (p.Intent == "create" || p.Intent == "other") {
+		p.Action = p.Intent
+		p.Intent = ""
 	}
 	return nil
 }
