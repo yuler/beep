@@ -74,16 +74,16 @@ func promptBeepSelectFieldToAdjust() BeepFailedFields {
 			huh.NewOption("All fields", "all"),
 			huh.NewOption("Title", "title"),
 			huh.NewOption("Message Body", "body"),
+			huh.NewOption("Intent", "intent"),
+			huh.NewOption("Metadata", "metadata"),
 			huh.NewOption("Schedule", "schedule"),
 			huh.NewOption("Timezone", "timezone"),
 			huh.NewOption("Notification Channels", "channels"),
-			huh.NewOption("Intent", "intent"),
-			huh.NewOption("Metadata", "metadata"),
 		).
 		Value(&choice).
 		Run()
 	if err != nil || choice == "all" || choice == "" {
-		return BeepFailedFields{Title: true, Body: true, Schedule: true, Timezone: true, Channels: true, Intent: true, Metadata: true}
+		return BeepFailedFields{Title: true, Body: true, Intent: true, Metadata: true, Schedule: true, Timezone: true, Channels: true}
 	}
 	var f BeepFailedFields
 	switch choice {
@@ -91,16 +91,16 @@ func promptBeepSelectFieldToAdjust() BeepFailedFields {
 		f.Title = true
 	case "body":
 		f.Body = true
+	case "intent":
+		f.Intent = true
+	case "metadata":
+		f.Metadata = true
 	case "schedule":
 		f.Schedule = true
 	case "timezone":
 		f.Timezone = true
 	case "channels":
 		f.Channels = true
-	case "intent":
-		f.Intent = true
-	case "metadata":
-		f.Metadata = true
 	}
 	return f
 }
@@ -154,36 +154,6 @@ func promptBeepForm(initial client.CreateBeepParams, defaultChannels []string, r
 	}
 	res.Body = strings.TrimSpace(res.Body)
 
-	if reviewAll || res.ScheduleKind == "" {
-		if res.ScheduleKind == "" {
-			res.ScheduleKind = "instant"
-		}
-		if err := promptBeepSchedule(&res); err != nil {
-			return nil, err
-		}
-	}
-
-	if reviewAll || strings.TrimSpace(res.Timezone) == "" {
-		tz, err := PromptTimezone(res.Timezone)
-		if err != nil {
-			return nil, err
-		}
-		res.Timezone = tz
-	}
-
-	if reviewAll || strings.TrimSpace(res.Channels) == "" {
-		chDefaults := defaultChannels
-		if strings.TrimSpace(res.Channels) != "" {
-			chDefaults = strings.Split(res.Channels, ",")
-		}
-		channels, err := PromptNotificationChannels(chDefaults)
-		if err != nil {
-			return nil, err
-		}
-		res.Channels = channels
-	}
-	res.Channels = strings.TrimSpace(res.Channels)
-
 	if reviewAll || strings.TrimSpace(res.Intent) == "" {
 		err := huh.NewInput().
 			Title("Intent Identifier (optional)").
@@ -235,6 +205,36 @@ func promptBeepForm(initial client.CreateBeepParams, defaultChannels []string, r
 		res.Metadata = nil
 	}
 
+	if reviewAll || res.ScheduleKind == "" {
+		if res.ScheduleKind == "" {
+			res.ScheduleKind = "instant"
+		}
+		if err := promptBeepSchedule(&res); err != nil {
+			return nil, err
+		}
+	}
+
+	if reviewAll || strings.TrimSpace(res.Timezone) == "" {
+		tz, err := PromptTimezone(res.Timezone)
+		if err != nil {
+			return nil, err
+		}
+		res.Timezone = tz
+	}
+
+	if reviewAll || strings.TrimSpace(res.Channels) == "" {
+		chDefaults := defaultChannels
+		if strings.TrimSpace(res.Channels) != "" {
+			chDefaults = strings.Split(res.Channels, ",")
+		}
+		channels, err := PromptNotificationChannels(chDefaults)
+		if err != nil {
+			return nil, err
+		}
+		res.Channels = channels
+	}
+	res.Channels = strings.TrimSpace(res.Channels)
+
 	return &res, nil
 }
 
@@ -280,39 +280,7 @@ func PromptBeepAdjust(initial client.CreateBeepParams, defaultChannels []string,
 		res.Body = strings.TrimSpace(res.Body)
 	}
 
-	// 3. Schedule
-	if failed.Schedule {
-		if res.ScheduleKind == "" {
-			res.ScheduleKind = "instant"
-		}
-		if err := promptBeepSchedule(&res); err != nil {
-			return nil, err
-		}
-	}
-
-	// 4. Timezone (selectable list)
-	if failed.Timezone {
-		tz, err := PromptTimezone(res.Timezone)
-		if err != nil {
-			return nil, err
-		}
-		res.Timezone = tz
-	}
-
-	// 5. Notification Channels
-	if failed.Channels {
-		chDefaults := defaultChannels
-		if strings.TrimSpace(res.Channels) != "" {
-			chDefaults = strings.Split(res.Channels, ",")
-		}
-		channels, err := PromptNotificationChannels(chDefaults)
-		if err != nil {
-			return nil, err
-		}
-		res.Channels = strings.TrimSpace(channels)
-	}
-
-	// 6. Intent
+	// 3. Intent
 	if failed.Intent {
 		err := huh.NewInput().
 			Title("Intent Identifier (optional)").
@@ -326,7 +294,7 @@ func PromptBeepAdjust(initial client.CreateBeepParams, defaultChannels []string,
 		res.Intent = strings.TrimSpace(res.Intent)
 	}
 
-	// 7. Metadata
+	// 4. Metadata
 	if failed.Metadata {
 		var metadataStr string
 		if res.Metadata != nil {
@@ -365,6 +333,38 @@ func PromptBeepAdjust(initial client.CreateBeepParams, defaultChannels []string,
 		}
 	}
 
+	// 5. Schedule
+	if failed.Schedule {
+		if res.ScheduleKind == "" {
+			res.ScheduleKind = "instant"
+		}
+		if err := promptBeepSchedule(&res); err != nil {
+			return nil, err
+		}
+	}
+
+	// 6. Timezone (selectable list)
+	if failed.Timezone {
+		tz, err := PromptTimezone(res.Timezone)
+		if err != nil {
+			return nil, err
+		}
+		res.Timezone = tz
+	}
+
+	// 7. Notification Channels
+	if failed.Channels {
+		chDefaults := defaultChannels
+		if strings.TrimSpace(res.Channels) != "" {
+			chDefaults = strings.Split(res.Channels, ",")
+		}
+		channels, err := PromptNotificationChannels(chDefaults)
+		if err != nil {
+			return nil, err
+		}
+		res.Channels = strings.TrimSpace(channels)
+	}
+
 	return &res, nil
 }
 
@@ -383,9 +383,17 @@ func BeepCreateSummary(params client.CreateBeepParams, errList []string) []Creat
 	if kind == "" {
 		kind = "instant"
 	}
+	metaStr := ""
+	if params.Metadata != nil && len(params.Metadata) > 0 {
+		if metaBytes, err := json.Marshal(params.Metadata); err == nil {
+			metaStr = string(metaBytes)
+		}
+	}
 	items := []CreateSummaryItem{
 		{Key: "Title", Value: params.Title, Failed: failed.Title},
 		{Key: "Body", Value: params.Body, Failed: failed.Body},
+		{Key: "Intent", Value: params.Intent, Failed: failed.Intent},
+		{Key: "Metadata", Value: metaStr, Failed: failed.Metadata},
 		{Key: "Schedule", Value: kind, Failed: failed.Schedule},
 	}
 	if params.ScheduleKind != "" && params.ScheduleKind != "instant" {
@@ -395,14 +403,6 @@ func BeepCreateSummary(params client.CreateBeepParams, errList []string) []Creat
 		CreateSummaryItem{Key: "Timezone", Value: params.Timezone, Failed: failed.Timezone},
 		CreateSummaryItem{Key: "Channels", Value: params.Channels, Failed: failed.Channels},
 	)
-	if params.Intent != "" {
-		items = append(items, CreateSummaryItem{Key: "Intent", Value: params.Intent, Failed: failed.Intent})
-	}
-	if params.Metadata != nil {
-		if metaBytes, err := json.Marshal(params.Metadata); err == nil {
-			items = append(items, CreateSummaryItem{Key: "Metadata", Value: string(metaBytes), Failed: failed.Metadata})
-		}
-	}
 	return items
 }
 

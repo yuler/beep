@@ -296,6 +296,14 @@ Examples:
 
 				scheduleInfo := FormatBeepSchedule(b)
 				fmt.Println(ui.Success("Created beep %s (%s)", ui.Bold(b.Title), ui.Dim(b.ID)))
+				if b.Intent != "" {
+					fmt.Printf("  %s %s\n", ui.Dim("Intent:"), b.Intent)
+				}
+				if len(b.Metadata) > 0 {
+					if metaBytes, err := json.Marshal(b.Metadata); err == nil {
+						fmt.Printf("  %s %s\n", ui.Dim("Metadata:"), string(metaBytes))
+					}
+				}
 				fmt.Printf("  %s %s\n", ui.Dim("Schedule:"), scheduleInfo)
 				if b.Timezone != "" {
 					fmt.Printf("  %s %s\n", ui.Dim("Timezone:"), b.Timezone)
@@ -474,6 +482,20 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 				}
 			}
 
+			intentVal := params.Intent
+			if strings.TrimSpace(intentVal) == "" {
+				intentVal = ui.Dim("(empty)")
+			}
+			fmt.Println(ui.KeyValue("Intent", intentVal))
+
+			metaVal := ui.Dim("(empty)")
+			if params.Metadata != nil && len(params.Metadata) > 0 {
+				if metaBytes, err := json.Marshal(params.Metadata); err == nil {
+					metaVal = string(metaBytes)
+				}
+			}
+			fmt.Println(ui.KeyValue("Metadata", metaVal))
+
 			kind := "once"
 			if params.ScheduleKind == "cron" {
 				kind = "recurring"
@@ -496,14 +518,6 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 			}
 			if len(displayChannels) > 0 {
 				fmt.Println(ui.KeyValue("Channels", strings.Join(displayChannels, ", ")))
-			}
-			if params.Intent != "" {
-				fmt.Println(ui.KeyValue("Intent", params.Intent))
-			}
-			if params.Metadata != nil {
-				if metaBytes, err := json.Marshal(params.Metadata); err == nil {
-					fmt.Println(ui.KeyValue("Metadata", string(metaBytes)))
-				}
 			}
 			fmt.Println()
 
