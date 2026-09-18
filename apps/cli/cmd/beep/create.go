@@ -23,15 +23,28 @@ func NewCmdCreate() *cobra.Command {
 		flagBody     string
 		flagIn       string
 		flagAt       string
+		flagRunAt    string
 		flagCron     string
 		flagTimezone string
 		flagChannels string
+		flagChannel  string
 		flagNatural  string
+		flagIntent   string
+		flagMetadata string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "create [title]",
 		Short: "Create a beep",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if flagMetadata != "" {
+				var tmp map[string]any
+				if err := json.Unmarshal([]byte(flagMetadata), &tmp); err != nil || tmp == nil {
+					return fmt.Errorf("invalid --metadata: must be a valid JSON object")
+				}
+			}
+			return nil
+		},
 		Long: fmt.Sprintf(`Create a beep.
 
 Scheduling modes (mutually exclusive):
@@ -80,9 +93,29 @@ Examples:
 					}
 				}
 
+				if flagChannel != "" {
+					if flagChannels != "" && flagChannels != flagChannel {
+						return fmt.Errorf("cannot specify both --channel and --channels")
+					}
+					flagChannels = flagChannel
+				}
+
+				if flagRunAt != "" {
+					if flagAt != "" && flagAt != flagRunAt {
+						return fmt.Errorf("cannot specify both --at and --run-at")
+					}
+					flagAt = flagRunAt
+				}
+
+				var metadataMap map[string]any
+				if flagMetadata != "" {
+					// Already validated in PreRunE; unmarshal here for use.
+					_ = json.Unmarshal([]byte(flagMetadata), &metadataMap)
+				}
+
 				// 1. Natural language creation via -n / --natural flag
 				if flagNatural != "" {
-					err := handleNaturalCreate(ctx, c, cmd, flagNatural, flagBody, flagChannels, tz)
+					err := handleNaturalCreate(ctx, c, cmd, flagNatural, flagBody, flagChannels, tz, flagIntent, metadataMap)
 					if isUserAbort(ctx, err) {
 						return nil
 					}
@@ -114,6 +147,8 @@ Examples:
 					ScheduleVal:  schedVal,
 					Timezone:     tz,
 					Channels:     flagChannels,
+					Intent:       flagIntent,
+					Metadata:     metadataMap,
 				}
 
 				var b *client.Beep
@@ -125,49 +160,26 @@ Examples:
 						defaultChannels = client.SanitizeChannelDefaults(s.NotificationChannels)
 					}
 
-					// When no explicit schedule flags are given in interactive mode, default to AI proposal:
-					// 1. If args were provided (e.g. `beep create xxx`), directly pass them to AI proposal
-					// 2. If no args were provided, prompt user to choose between natural language or form
-					if schedKind == "" {
-						prompt := argText
-						if prompt == "" {
-							mode, modeErr := ui.PromptBeepCreateMode()
-							if modeErr != nil {
-								if isUserAbort(ctx, modeErr) {
-									return nil
-								}
-								return modeErr
-							}
-							if mode == "natural" {
-								var pErr error
-								prompt, pErr = ui.PromptBeepNaturalPrompt()
-								if pErr != nil {
-									if isUserAbort(ctx, pErr) {
-										return nil
-									}
-									return pErr
-								}
-							}
+					// When no explicit schedule flags are given in interactive mode:
+					// 1. If args were provided (e.g. `beep create "natural text"`), default to AI proposal
+					// 2. If no args were provided (e.g. `beep create`), directly proceed to interactive form
+					if schedKind == "" && argText != "" {
+						err := handleNaturalCreate(ctx, c, cmd, argText, flagBody, flagChannels, tz, flagIntent, metadataMap)
+						if err == nil {
+							return nil
 						}
-
-						if prompt != "" {
-							err := handleNaturalCreate(ctx, c, cmd, prompt, flagBody, flagChannels, tz)
-							if err == nil {
-								return nil
-							}
-							if isUserAbort(ctx, err) {
-								return nil
-							}
-							var proposalErr *aiProposalError
-							if errors.As(err, &proposalErr) {
-								// If AI proposal failed (e.g. offline/unconfigured), warn and fall back to manual form
-								fmt.Println(ui.Warn("AI proposal unavailable (%v), falling back to form...", proposalErr.err))
-								params.Title = prompt
-								aiFallback = true
-								ui.PrintBeepCreateSummary(params, nil)
-							} else {
-								return err
-							}
+						if isUserAbort(ctx, err) {
+							return nil
+						}
+						var proposalErr *aiProposalError
+						if errors.As(err, &proposalErr) {
+							// If AI proposal failed (e.g. offline/unconfigured), warn and fall back to manual form
+							fmt.Println(ui.Warn("AI proposal unavailable (%v), falling back to form...", proposalErr.err))
+							params.Title = argText
+							aiFallback = true
+							ui.PrintBeepCreateSummary(params, nil)
+						} else {
+							return err
 						}
 					}
 
@@ -284,6 +296,14 @@ Examples:
 
 				scheduleInfo := FormatBeepSchedule(b)
 				fmt.Println(ui.Success("Created beep %s (%s)", ui.Bold(b.Title), ui.Dim(b.ID)))
+				if b.Intent != "" {
+					fmt.Printf("  %s %s\n", ui.Dim("Intent:"), b.Intent)
+				}
+				if len(b.Metadata) > 0 {
+					if metaBytes, err := json.Marshal(b.Metadata); err == nil {
+						fmt.Printf("  %s %s\n", ui.Dim("Metadata:"), string(metaBytes))
+					}
+				}
 				fmt.Printf("  %s %s\n", ui.Dim("Schedule:"), scheduleInfo)
 				if b.Timezone != "" {
 					fmt.Printf("  %s %s\n", ui.Dim("Timezone:"), b.Timezone)
@@ -298,21 +318,32 @@ Examples:
 			flagBody = ""
 			flagIn = ""
 			flagAt = ""
+			flagRunAt = ""
 			flagCron = ""
 			flagTimezone = ""
 			flagChannels = ""
+			flagChannel = ""
 			flagNatural = ""
+			flagIntent = ""
+			flagMetadata = ""
 		},
 	}
 
 	cmd.Flags().StringVarP(&flagBody, "body", "b", "", "Beep markdown body / message")
 	cmd.Flags().StringVar(&flagIn, "in", "", "Delay duration before firing (e.g. 15m, 2h, 1d)")
 	cmd.Flags().StringVar(&flagAt, "at", "", "Specific time to fire (e.g. 16:30, 2026-10-01 10:00)")
+	cmd.Flags().StringVar(&flagRunAt, "run-at", "", "Alias for --at: specific time to fire")
 	cmd.Flags().StringVarP(&flagCron, "cron", "c", "", "Recurring cron schedule (e.g. '0 9 * * *')")
 	cmd.Flags().StringVarP(&flagTimezone, "timezone", "z", "", "Timezone (defaults to local timezone)")
 	cmd.Flags().StringVar(&flagChannels, "channels", "", "Comma-separated notification channel names or IDs")
+	cmd.Flags().StringVar(&flagChannel, "channel", "", "Alias for --channels: notification channel name or ID")
 	cmd.Flags().StringVarP(&flagNatural, "natural", "n", "", "Natural language beep prompt parsed by AI")
+	cmd.Flags().StringVar(&flagIntent, "intent", "", "Optional intent identifier (e.g. lunch_break)")
+	cmd.Flags().StringVarP(&flagMetadata, "metadata", "m", "", "Optional metadata JSON object")
 	cmd.MarkFlagsMutuallyExclusive("cron", "in", "at", "natural")
+	cmd.MarkFlagsMutuallyExclusive("cron", "in", "run-at", "natural")
+	cmd.MarkFlagsMutuallyExclusive("at", "run-at")
+	cmd.MarkFlagsMutuallyExclusive("channels", "channel")
 
 	return cmd
 }
@@ -353,7 +384,7 @@ func shouldPromptBeepCreateForm(title, scheduleKind string, argCount int, aiFall
 	return strings.TrimSpace(title) == "" || (scheduleKind == "" && argCount == 0)
 }
 
-func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Command, prompt, bodyFlag, channelsFlag, tz string) error {
+func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Command, prompt, bodyFlag, channelsFlag, tz, intentFlag string, metadata map[string]any) error {
 	var proposal *client.BeepProposal
 	err := ui.WithSpinner("Analyzing natural language prompt with AI...", func() error {
 		var pErr error
@@ -405,6 +436,16 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 		channels = strings.Join(proposal.Channels, ",")
 	}
 
+	intent := intentFlag
+	if intent == "" && proposal.Intent != "" {
+		intent = proposal.Intent
+	}
+
+	metadataVal := metadata
+	if metadataVal == nil && proposal.Metadata != nil {
+		metadataVal = proposal.Metadata
+	}
+
 	params := client.CreateBeepParams{
 		Title:        proposal.Title,
 		Body:         body,
@@ -412,6 +453,8 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 		ScheduleVal:  schedVal,
 		Timezone:     resolvedTz,
 		Channels:     channels,
+		Intent:       intent,
+		Metadata:     metadataVal,
 	}
 
 	defaultChannels := client.DefaultNotificationChannels
@@ -438,7 +481,7 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 			fmt.Println()
 			fmt.Println(ui.Bold(ui.Cyan("  Proposed Beep:")))
 			fmt.Println(ui.KeyValue("Title", params.Title))
-			if params.Body != "" {
+			if strings.TrimSpace(params.Body) != "" {
 				if strings.Contains(params.Body, "\n") {
 					fmt.Println(ui.KeyValue("Body", ""))
 					for _, line := range strings.Split(params.Body, "\n") {
@@ -447,7 +490,23 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 				} else {
 					fmt.Println(ui.KeyValue("Body", params.Body))
 				}
+			} else {
+				fmt.Println(ui.KeyValue("Body", ui.Dim("(empty)")))
 			}
+
+			intentVal := params.Intent
+			if strings.TrimSpace(intentVal) == "" {
+				intentVal = ui.Dim("(empty)")
+			}
+			fmt.Println(ui.KeyValue("Intent", intentVal))
+
+			metaVal := ui.Dim("(empty)")
+			if params.Metadata != nil && len(params.Metadata) > 0 {
+				if metaBytes, err := json.Marshal(params.Metadata); err == nil {
+					metaVal = string(metaBytes)
+				}
+			}
+			fmt.Println(ui.KeyValue("Metadata", metaVal))
 
 			kind := "once"
 			if params.ScheduleKind == "cron" {
@@ -564,6 +623,14 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 	}
 
 	fmt.Println(ui.Success("Created beep %s (%s)", ui.Bold(b.Title), ui.Dim(b.ID)))
+	if b.Intent != "" {
+		fmt.Printf("  %s %s\n", ui.Dim("Intent:"), b.Intent)
+	}
+	if len(b.Metadata) > 0 {
+		if metaBytes, err := json.Marshal(b.Metadata); err == nil {
+			fmt.Printf("  %s %s\n", ui.Dim("Metadata:"), string(metaBytes))
+		}
+	}
 	fmt.Printf("  %s %s\n", ui.Dim("Schedule:"), FormatBeepSchedule(b))
 	if b.Timezone != "" {
 		fmt.Printf("  %s %s\n", ui.Dim("Timezone:"), b.Timezone)

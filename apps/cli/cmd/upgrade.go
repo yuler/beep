@@ -196,9 +196,6 @@ func loadUpgradeConfig() (*config.Config, error) {
 	if flagServer != "" {
 		cfg.ServerURL = flagServer
 	}
-	if flagToken != "" {
-		cfg.RunnerToken = flagToken
-	}
 	if flagWorkspace != "" {
 		cfg.Workspace = flagWorkspace
 	}

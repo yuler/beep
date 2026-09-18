@@ -55,13 +55,10 @@ func GetWorkspace(cmd *cobra.Command) string {
 // LoadConfig loads the client configuration taking global persistent flags into account.
 func LoadConfig(cmd *cobra.Command) (*config.Config, error) {
 	workspace := GetWorkspace(cmd)
-	var server, token, account string
+	var server, account string
 	if cmd != nil && cmd.Root() != nil {
 		if cmd.Root().PersistentFlags().Lookup("server") != nil {
 			server, _ = cmd.Root().PersistentFlags().GetString("server")
-		}
-		if cmd.Root().PersistentFlags().Lookup("token") != nil {
-			token, _ = cmd.Root().PersistentFlags().GetString("token")
 		}
 		if cmd.Root().PersistentFlags().Lookup("account") != nil {
 			account, _ = cmd.Root().PersistentFlags().GetString("account")
@@ -74,10 +71,6 @@ func LoadConfig(cmd *cobra.Command) (*config.Config, error) {
 	}
 	if server != "" {
 		cfg.ServerURL = server
-	}
-	if token != "" {
-		cfg.RunnerToken = token
-		fmt.Fprintln(os.Stderr, ui.Warn("passing --token on the command line exposes it in process lists; prefer config.json or BEEP_RUNNER_TOKEN"))
 	}
 	if workspace != "" {
 		cfg.Workspace = workspace

@@ -44,6 +44,16 @@ func TestDetectBeepFailedFields(t *testing.T) {
 			expected: BeepFailedFields{Title: true, Schedule: true},
 		},
 		{
+			name:     "intent only",
+			errList:  []string{"Intent is not valid"},
+			expected: BeepFailedFields{Intent: true},
+		},
+		{
+			name:     "metadata only",
+			errList:  []string{"Metadata must be a hash"},
+			expected: BeepFailedFields{Metadata: true},
+		},
+		{
 			name:     "no matching fields",
 			errList:  []string{"Internal server error occurred"},
 			expected: BeepFailedFields{},
@@ -67,6 +77,12 @@ func TestDetectBeepFailedFields(t *testing.T) {
 			}
 			if got.Channels != tc.expected.Channels {
 				t.Errorf("Channels: expected %v, got %v", tc.expected.Channels, got.Channels)
+			}
+			if got.Intent != tc.expected.Intent {
+				t.Errorf("Intent: expected %v, got %v", tc.expected.Intent, got.Intent)
+			}
+			if got.Metadata != tc.expected.Metadata {
+				t.Errorf("Metadata: expected %v, got %v", tc.expected.Metadata, got.Metadata)
 			}
 		})
 	}
