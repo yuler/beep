@@ -175,15 +175,17 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 		if len(commands) == 0 {
 			return
 		}
-		preferFirst := ""
+		var preferOrder []string
 		switch {
 		case cmd.Name() == "completion":
 			// Parent is `completion`: pin `install` above bash/fish/zsh/powershell.
-			preferFirst = "install"
+			preferOrder = []string{"install"}
 		case id == "service":
-			preferFirst = "service"
+			preferOrder = []string{"service", "channel", "runner", "logs"}
+		case id == "core":
+			preferOrder = []string{"auth", "beep", "beeper", "config", "api"}
 		}
-		sortHelpCommands(commands, preferFirst)
+		sortHelpCommands(commands, preferOrder)
 
 		fmt.Fprintln(w, ui.Bold(strings.ToUpper(title)))
 		if desc, ok := groupDescriptions[id]; ok && desc != "" {
@@ -213,15 +215,19 @@ func renderSubcommands(w io.Writer, cmd *cobra.Command) {
 	}
 }
 
-func sortHelpCommands(commands []*cobra.Command, preferFirst string) {
+func sortHelpCommands(commands []*cobra.Command, preferOrder []string) {
+	rank := func(name string) int {
+		for i, n := range preferOrder {
+			if name == n {
+				return i
+			}
+		}
+		return len(preferOrder)
+	}
 	sort.Slice(commands, func(i, j int) bool {
-		if preferFirst != "" {
-			if commands[i].Name() == preferFirst {
-				return true
-			}
-			if commands[j].Name() == preferFirst {
-				return false
-			}
+		ri, rj := rank(commands[i].Name()), rank(commands[j].Name())
+		if ri != rj {
+			return ri < rj
 		}
 		return commands[i].Name() < commands[j].Name()
 	})
