@@ -36,6 +36,15 @@ func NewCmdCreate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create [title]",
 		Short: "Create a beep",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if flagMetadata != "" {
+				var tmp map[string]any
+				if err := json.Unmarshal([]byte(flagMetadata), &tmp); err != nil {
+					return fmt.Errorf("invalid --metadata: must be a valid JSON object: %w", err)
+				}
+			}
+			return nil
+		},
 		Long: fmt.Sprintf(`Create a beep.
 
 Scheduling modes (mutually exclusive):
@@ -100,9 +109,8 @@ Examples:
 
 				var metadataMap map[string]any
 				if flagMetadata != "" {
-					if err := json.Unmarshal([]byte(flagMetadata), &metadataMap); err != nil {
-						return fmt.Errorf("invalid --metadata: must be a valid JSON object: %w", err)
-					}
+					// Already validated in PreRunE; unmarshal here for use.
+					_ = json.Unmarshal([]byte(flagMetadata), &metadataMap)
 				}
 
 				// 1. Natural language creation via -n / --natural flag
