@@ -47,7 +47,7 @@ func ResolveBeepID(ctx context.Context, c *client.Client, cmd *cobra.Command, ar
 		return "", fmt.Errorf("beep ID is required (e.g. %s %s <id>)", config.BinaryName(), action)
 	}
 
-	beeps, err := c.ListBeeps(ctx)
+	beeps, err := c.ListBeeps(ctx, client.ListBeepsParams{Status: "all"})
 	if err != nil {
 		return "", fmt.Errorf("failed to list beeps: %w", err)
 	}

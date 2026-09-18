@@ -73,6 +73,7 @@ func findBeepCmd(t *testing.T, sub string) *cobra.Command {
 
 func TestBeepListCommand(t *testing.T) {
 	var gotHeaderAccount string
+	var gotListQuery string
 	mockBeeps := []*client.Beep{
 		{
 			ID:                   "beep_123",
@@ -100,6 +101,7 @@ func TestBeepListCommand(t *testing.T) {
 			return
 		}
 		if r.URL.Path == "/api/v1/beeps" {
+			gotListQuery = r.URL.RawQuery
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"beeps": mockBeeps,
 			})
@@ -120,8 +122,14 @@ func TestBeepListCommand(t *testing.T) {
 	if gotHeaderAccount != "" {
 		t.Errorf("expected empty X-Account-Slug header for default personal account, got %q", gotHeaderAccount)
 	}
+	if gotListQuery != "status=active" {
+		t.Errorf("expected default list query status=active, got %q", gotListQuery)
+	}
 	if !strings.Contains(out, "Check Deploy") || !strings.Contains(out, "beep_123") {
 		t.Errorf("expected output to contain beep info, got: %s", out)
+	}
+	if !strings.Contains(out, "status: active") {
+		t.Errorf("expected filter note for active status, got: %s", out)
 	}
 
 	// 2. With --account team-slug
@@ -151,6 +159,46 @@ func TestBeepListCommand(t *testing.T) {
 	if len(parsed) != 2 || parsed[0].ID != "beep_123" || parsed[1].ID != "beep_chinese" {
 		t.Errorf("unexpected parsed JSON: %+v", parsed)
 	}
+	flagJSON = false
+
+	// 4. --status all omits status query (old default behavior)
+	if err := listCmd.Flags().Set("status", "all"); err != nil {
+		t.Fatalf("set --status all: %v", err)
+	}
+	gotListQuery = "unset"
+	_, err = captureStdout(func() error {
+		return listCmd.RunE(listCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("beep list --status all failed: %v", err)
+	}
+	if gotListQuery != "" {
+		t.Errorf("expected empty query for --status all, got %q", gotListQuery)
+	}
+	_ = listCmd.Flags().Set("status", "active")
+
+	// 5. --status paused --kind recurring forwards both filters
+	if err := listCmd.Flags().Set("status", "paused"); err != nil {
+		t.Fatalf("set --status paused: %v", err)
+	}
+	if err := listCmd.Flags().Set("kind", "recurring"); err != nil {
+		t.Fatalf("set --kind recurring: %v", err)
+	}
+	gotListQuery = "unset"
+	_, err = captureStdout(func() error {
+		return listCmd.RunE(listCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("beep list --status paused --kind recurring failed: %v", err)
+	}
+	if !strings.Contains(gotListQuery, "status=paused") || !strings.Contains(gotListQuery, "kind=recurring") {
+		t.Errorf("expected status=paused and kind=recurring in query, got %q", gotListQuery)
+	}
+
+	// Reset flags so later tests that reuse RootCmd list instances stay isolated.
+	resetCmdFlags(listCmd)
+	flagAccount = ""
+	flagJSON = false
 }
 
 func TestBeepShowCommand(t *testing.T) {
