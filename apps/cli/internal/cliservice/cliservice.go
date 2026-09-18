@@ -43,7 +43,7 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 		return fmt.Errorf("%s daemon is already running (PID: %d, socket: %s)", service, pid, daemon.SocketPath(cfg.Workspace, service))
 	}
 
-	exe, err := os.Executable()
+	exe, err := osExecutable()
 	if err != nil {
 		return fmt.Errorf("failed to determine executable path: %w", err)
 	}
@@ -51,14 +51,7 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 	childArgs := BuildServiceChildArgs(service, rawArgs)
 
 	cmd := exec.Command(exe, childArgs...)
-	cmd.Env = append(os.Environ(), "BEEP_DAEMON_CHILD=1")
-	if service == daemon.ServiceChannel {
-		if token := cfg.ChannelAuthToken(); token != "" {
-			cmd.Env = append(cmd.Env, "BEEP_CHANNEL_TOKEN="+token)
-		}
-	} else if service == daemon.ServiceRunner && cfg.RunnerToken != "" {
-		cmd.Env = append(cmd.Env, "BEEP_RUNNER_TOKEN="+cfg.RunnerToken)
-	}
+	cmd.Env = childServiceEnv(service, cfg, true)
 	proc.Detach(cmd)
 
 	if err := cmd.Start(); err != nil {

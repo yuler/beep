@@ -51,6 +51,51 @@ func TestServiceCommandStructure(t *testing.T) {
 	}
 }
 
+func TestStartAllForegroundDelegatesToChildren(t *testing.T) {
+	orig := cliservice.RunForegroundServicesFn
+	t.Cleanup(func() { cliservice.RunForegroundServicesFn = orig })
+
+	var got []string
+	cliservice.RunForegroundServicesFn = func(cfg *config.Config, services []string, rawArgs []string) error {
+		got = append([]string(nil), services...)
+		return nil
+	}
+
+	cfg := &config.Config{
+		Workspace:    t.TempDir(),
+		RunnerToken:  "beep_rt_test",
+		ChannelToken: "beep_ct_test",
+	}
+	if err := runStartAll(cfg, false); err != nil {
+		t.Fatalf("runStartAll: %v", err)
+	}
+	if len(got) != 2 || got[0] != daemon.ServiceRunner || got[1] != daemon.ServiceChannel {
+		t.Fatalf("expected [runner channel], got %v", got)
+	}
+}
+
+func TestStartAllForegroundRunnerOnly(t *testing.T) {
+	orig := cliservice.RunForegroundServicesFn
+	t.Cleanup(func() { cliservice.RunForegroundServicesFn = orig })
+
+	var got []string
+	cliservice.RunForegroundServicesFn = func(cfg *config.Config, services []string, rawArgs []string) error {
+		got = append([]string(nil), services...)
+		return nil
+	}
+
+	cfg := &config.Config{
+		Workspace:   t.TempDir(),
+		RunnerToken: "beep_rt_test",
+	}
+	if err := runStartAll(cfg, false); err != nil {
+		t.Fatalf("runStartAll: %v", err)
+	}
+	if len(got) != 1 || got[0] != daemon.ServiceRunner {
+		t.Fatalf("expected [runner], got %v", got)
+	}
+}
+
 func TestServiceStartUnknownTarget(t *testing.T) {
 	cmd := NewCmdStart()
 	err := cmd.RunE(cmd, []string{"unknown"})

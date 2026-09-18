@@ -56,6 +56,7 @@ func TestGhHelpFormatting(t *testing.T) {
 		"channel:",
 		"runner:",
 		"service:",
+		"logs, log:",
 		"auth:",
 		"config:",
 		"upgrade, update:",

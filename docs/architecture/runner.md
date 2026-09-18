@@ -31,7 +31,7 @@ sequenceDiagram
 
 1. **Pull-only HTTP(S).** The runner opens all connections outbound (GitLab Runner style). No inbound ports.
 2. **Scripts stay on the host.** Core stores `slug`, cron, timezone, timeout, and optional `config`. The runner resolves `slug` to `~/.beep/jobs/<slug>` (extensionless executable; filename is the slug).
-3. **Logs and results are first-class.** Stdout is uploaded while the job runs. The daemon posts those to the task’s log and result URLs. Local execution logs are rotated daily under `logs/YYYY-MM-DD.log`.
+3. **Logs and results are first-class.** Stdout is uploaded while the job runs. The daemon posts those to the task’s log and result URLs. Local daemon logs are rotated daily under `logs/runner-YYYY-MM-DD.log` and `logs/channel-YYYY-MM-DD.log`.
 4. **User-controlled workspace.** Scripts live on the host. Permissions and executable rights are controlled on the machine by the user.
 5. **One runner per workspace**, single instance guaranteed via `.socket`. Concurrent jobs execute via a worker pool. Supports foreground or daemon mode (`-d` / `--daemon`).
 6. **Git-style job sync.** Local scripts are the source of truth for execution; Core holds schedule metadata. Slug is the script filename; `@id` survives renames. `job push` / `job pull` / `job list` compare local vs server (pair by `@id`, then slug).
@@ -59,7 +59,8 @@ Default workspace: `~/.beep` (override with `--workspace` / `-w` or `BEEP_WORKSP
   .env.local          # local overrides (optional; same autoload as .env)
   .socket             # domain socket for single-instance guarantee
   logs/
-    2026-09-04.log    # daily rotated logs (ANSI stripped)
+    runner-2026-09-04.log   # runner daemon, daily rotate (ANSI stripped)
+    channel-2026-09-04.log  # channel daemon, daily rotate (ANSI stripped)
   jobs/
     intranet-http     # no .sh / .py — filename is the slug
     backup-check
