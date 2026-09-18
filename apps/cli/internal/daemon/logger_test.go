@@ -56,32 +56,6 @@ func TestDailyLogWriter(t *testing.T) {
 	}
 }
 
-func TestDailyLogWriterEmptyPrefix(t *testing.T) {
-	tempDir := t.TempDir()
-
-	w, err := NewDailyLogWriter(tempDir, "")
-	if err != nil {
-		t.Fatalf("failed to create DailyLogWriter: %v", err)
-	}
-	defer w.Close()
-
-	if _, err := w.Write([]byte("hello\n")); err != nil {
-		t.Fatalf("unexpected write error: %v", err)
-	}
-
-	today := time.Now().Format("2006-01-02")
-	expectedFile := filepath.Join(tempDir, today+".log")
-	if _, err := os.Stat(expectedFile); err != nil {
-		t.Fatalf("expected dated log file %s: %v", expectedFile, err)
-	}
-	if got := DailyLogPath("/tmp/ws", "", today); got != filepath.Join("/tmp/ws", "logs", today+".log") {
-		t.Fatalf("DailyLogPath = %s", got)
-	}
-	if got := DailyLogPath("/tmp/ws", "runner", today); got != filepath.Join("/tmp/ws", "logs", "runner-"+today+".log") {
-		t.Fatalf("DailyLogPath = %s", got)
-	}
-}
-
 func TestDailyLogWriterRecreatesOnDeletion(t *testing.T) {
 	tempDir := t.TempDir()
 

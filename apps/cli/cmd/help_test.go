@@ -56,8 +56,10 @@ func TestGhHelpFormatting(t *testing.T) {
 		"channel:",
 		"runner:",
 		"service:",
+		"logs, log:",
 		"auth:",
 		"config:",
+		"api:",
 		"upgrade, update:",
 		"version:",
 	}
@@ -67,10 +69,20 @@ func TestGhHelpFormatting(t *testing.T) {
 		}
 	}
 
+	configIdx := strings.Index(out, "config:")
+	apiIdx := strings.Index(out, "api:")
+	if configIdx == -1 || apiIdx == -1 || configIdx > apiIdx {
+		t.Errorf("expected 'config:' before 'api:' in CORE COMMANDS, got config=%d api=%d", configIdx, apiIdx)
+	}
+
 	serviceIdx := strings.Index(out, "service:")
 	channelIdx := strings.Index(out, "channel:")
-	if serviceIdx == -1 || channelIdx == -1 || serviceIdx > channelIdx {
-		t.Errorf("expected 'service:' before 'channel:' in LOCAL SERVICE COMMANDS, got serviceIdx=%d, channelIdx=%d", serviceIdx, channelIdx)
+	runnerIdx := strings.Index(out, "runner:")
+	logsIdx := strings.Index(out, "logs, log:")
+	if serviceIdx == -1 || channelIdx == -1 || runnerIdx == -1 || logsIdx == -1 {
+		t.Errorf("expected service/channel/runner/logs in LOCAL SERVICE COMMANDS")
+	} else if !(serviceIdx < channelIdx && channelIdx < runnerIdx && runnerIdx < logsIdx) {
+		t.Errorf("expected service, channel, runner, then logs in LOCAL SERVICE COMMANDS, got service=%d channel=%d runner=%d logs=%d", serviceIdx, channelIdx, runnerIdx, logsIdx)
 	}
 
 	// Check learn more section

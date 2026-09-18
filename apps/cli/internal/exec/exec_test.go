@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"beep/internal/task"
+	"beep/internal/job"
 )
 
 func TestJobExecutorMissingCommand(t *testing.T) {
 	result := NewJobExecutor().Run(context.Background(), []string{}, nil, time.Second, nil)
-	if result.Status != task.StatusError {
+	if result.Status != job.StatusError {
 		t.Fatalf("expected error, got %s", result.Status)
 	}
 }
@@ -24,7 +24,7 @@ func TestJobExecutorSuccess(t *testing.T) {
 		defer mu.Unlock()
 		logs += line
 	})
-	if result.Status != task.StatusOk {
+	if result.Status != job.StatusOk {
 		t.Fatalf("expected ok, got %s %s", result.Status, result.Message)
 	}
 	mu.Lock()
@@ -43,7 +43,7 @@ func TestJobExecutorCapturesPartialLine(t *testing.T) {
 		defer mu.Unlock()
 		logs += line
 	})
-	if result.Status != task.StatusOk {
+	if result.Status != job.StatusOk {
 		t.Fatalf("expected ok, got %s %s", result.Status, result.Message)
 	}
 	mu.Lock()
@@ -62,7 +62,7 @@ func TestJobExecutorCapturesLargeOutput(t *testing.T) {
 		defer mu.Unlock()
 		lines++
 	})
-	if result.Status != task.StatusOk {
+	if result.Status != job.StatusOk {
 		t.Fatalf("expected ok, got %s %s", result.Status, result.Message)
 	}
 	mu.Lock()
@@ -75,7 +75,7 @@ func TestJobExecutorCapturesLargeOutput(t *testing.T) {
 
 func TestJobExecutorNonZeroExit(t *testing.T) {
 	result := NewJobExecutor().Run(context.Background(), []string{"/bin/sh", "-c", "exit 2"}, nil, 5*time.Second, nil)
-	if result.Status != task.StatusAlerting {
+	if result.Status != job.StatusAlerting {
 		t.Fatalf("expected alerting, got %s", result.Status)
 	}
 	if result.Metrics["exit_code"] != 2 {

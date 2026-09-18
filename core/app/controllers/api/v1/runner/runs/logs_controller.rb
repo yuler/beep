@@ -1,4 +1,4 @@
-class Api::V1::Runner::Tasks::LogsController < Api::V1::Runner::BaseController
+class Api::V1::Runner::Runs::LogsController < Api::V1::Runner::BaseController
   before_action :set_run
 
   MAX_CHUNK_BYTES = 512.kilobytes

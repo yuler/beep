@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"beep/internal/cliservice"
 	"beep/internal/cmdutil"
+	"beep/internal/service"
 
 	"github.com/spf13/cobra"
 )
@@ -33,7 +33,7 @@ func NewCmdStart() *cobra.Command {
 			if err := cfg.Validate(); err != nil {
 				return fmt.Errorf("configuration error: %w", err)
 			}
-			return cliservice.RunChannelService(cfg, daemonMode, os.Args[1:])
+			return service.RunChannelService(cfg, daemonMode, os.Args[1:])
 		},
 	}
 

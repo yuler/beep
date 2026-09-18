@@ -21,7 +21,9 @@ class Api::V1::BeepProposalsControllerTest < ActionDispatch::IntegrationTest
 
   test "create returns a proposal without writing a beep" do
     proposal = Beep::Proposal::Result.new(
-      intent: "create",
+      action: "create",
+      intent: "test_intent",
+      metadata: { "a" => "b" },
       title: "Call mom",
       body: nil,
       run_at: @run_at,
@@ -47,7 +49,9 @@ class Api::V1::BeepProposalsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :created
     body = response.parsed_body
-    assert_equal "create", body["intent"]
+    assert_equal "create", body["action"]
+    assert_equal "test_intent", body["intent"]
+    assert_equal({ "a" => "b" }, body["metadata"])
     assert_equal "Call mom", body["title"]
     assert_nil body["body"]
     assert_equal @run_at.iso8601, Time.iso8601(body["run_at"]).iso8601

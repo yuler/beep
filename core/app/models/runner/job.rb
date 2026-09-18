@@ -122,7 +122,7 @@ class Runner::Job < ApplicationRecord
         run.record_result!(
           status: :error,
           title: "Runner execution timed out",
-          message: "Runner '#{runner.name}' claimed the task but did not report a result within #{timeout_seconds || 60}s",
+          message: "Runner '#{runner.name}' claimed the run but did not report a result within #{timeout_seconds || 60}s",
           run_status: :failed,
           from_statuses: %w[ running ]
         )

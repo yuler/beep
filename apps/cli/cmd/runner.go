@@ -7,7 +7,6 @@ import (
 var (
 	flagWorkspace string
 	flagServer    string
-	flagToken     string
 )
 
 var runnerCmd = cmdrunner.NewCmdRunner()

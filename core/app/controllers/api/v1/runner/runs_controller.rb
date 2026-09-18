@@ -1,4 +1,4 @@
-class Api::V1::Runner::TasksController < Api::V1::Runner::BaseController
+class Api::V1::Runner::RunsController < Api::V1::Runner::BaseController
   def create
     has_running = @current_runner.runs.where(status: "running").exists?
     @current_runner.touch_activity(

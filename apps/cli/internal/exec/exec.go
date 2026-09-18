@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"beep/internal/envx"
+	"beep/internal/job"
 	"beep/internal/proc"
-	"beep/internal/task"
 )
 
 type JobExecutor struct{}
@@ -22,9 +22,9 @@ func NewJobExecutor() *JobExecutor {
 	return &JobExecutor{}
 }
 
-func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, timeout time.Duration, onLog func(string)) *task.Result {
+func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, timeout time.Duration, onLog func(string)) *job.Result {
 	if len(argv) == 0 {
-		return task.Error("Missing command", "workspace resolved an empty command", nil)
+		return job.Error("Missing command", "workspace resolved an empty command", nil)
 	}
 
 	execCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -52,7 +52,7 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 
 	start := time.Now()
 	if err := cmd.Start(); err != nil {
-		return task.Error("Failed to start job", err.Error(), nil)
+		return job.Error("Failed to start job", err.Error(), nil)
 	}
 
 	waitErr := cmd.Wait()
@@ -71,9 +71,9 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 	if execCtx.Err() == context.DeadlineExceeded || ctx.Err() != nil {
 		metrics["timed_out"] = execCtx.Err() == context.DeadlineExceeded
 		if ctx.Err() != nil && execCtx.Err() != context.DeadlineExceeded {
-			return task.Error("Job cancelled", "Runner shut down before the job finished", metrics)
+			return job.Error("Job cancelled", "Runner shut down before the job finished", metrics)
 		}
-		return task.Error(fmt.Sprintf("Job timed out after %s", timeout), "Execution exceeded the deadline", metrics)
+		return job.Error(fmt.Sprintf("Job timed out after %s", timeout), "Execution exceeded the deadline", metrics)
 	}
 
 	// Wait returns ErrWaitDelay when it force-closed the I/O pipes of an
@@ -88,11 +88,11 @@ func (e *JobExecutor) Run(ctx context.Context, argv []string, env []string, time
 			exitCode = exitErr.ExitCode()
 		}
 		metrics["exit_code"] = exitCode
-		return task.Alerting(fmt.Sprintf("Job failed (exit %d)", exitCode), waitErr.Error(), metrics)
+		return job.Alerting(fmt.Sprintf("Job failed (exit %d)", exitCode), waitErr.Error(), metrics)
 	}
 
 	metrics["exit_code"] = 0
-	return task.Ok(fmt.Sprintf("Job succeeded (%dms)", durationMs), "Command exited 0", metrics)
+	return job.Ok(fmt.Sprintf("Job succeeded (%dms)", durationMs), "Command exited 0", metrics)
 }
 
 // lineWriter splits process output into lines and forwards each to onLog.

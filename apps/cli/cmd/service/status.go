@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"beep/internal/autostart"
-	"beep/internal/cliservice"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/daemon"
+	intsvc "beep/internal/service"
 	"beep/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -33,9 +33,9 @@ func NewCmdStatus() *cobra.Command {
 
 			switch target {
 			case "runner":
-				return cliservice.ShowSingleServiceStatus(daemon.ServiceRunner, cfg)
+				return intsvc.ShowSingleServiceStatus(daemon.ServiceRunner, cfg)
 			case "channel":
-				return cliservice.ShowSingleServiceStatus(daemon.ServiceChannel, cfg)
+				return intsvc.ShowSingleServiceStatus(daemon.ServiceChannel, cfg)
 			default:
 				return runStatusAll(cfg)
 			}
@@ -57,8 +57,8 @@ func runStatusAll(cfg *config.Config) error {
 	}
 
 	mgr := autostart.CurrentManager()
-	runnerAutostart := cliservice.FormatAutostartStatus(mgr.GetStatus(daemon.ServiceRunner, config.BinaryName()))
-	channelAutostart := cliservice.FormatAutostartStatus(mgr.GetStatus(daemon.ServiceChannel, config.BinaryName()))
+	runnerAutostart := intsvc.FormatAutostartStatus(mgr.GetStatus(daemon.ServiceRunner, config.BinaryName()))
+	channelAutostart := intsvc.FormatAutostartStatus(mgr.GetStatus(daemon.ServiceChannel, config.BinaryName()))
 
 	// Runner Section
 	fmt.Println(ui.Bold("● Runner Service:"))

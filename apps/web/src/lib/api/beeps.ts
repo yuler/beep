@@ -32,6 +32,8 @@ export type Beep = {
 		name: string;
 	} | null;
 	created_at: string;
+	intent?: string | null;
+	metadata?: Record<string, unknown> | null;
 	run_stats?: {
 		total: number;
 		succeeded: number;
@@ -173,6 +175,8 @@ export function createBeep(
 		cron?: string | null;
 		timezone?: string;
 		notification_channels?: string[];
+		intent?: string | null;
+		metadata?: Record<string, unknown> | null;
 	},
 ) {
 	return apiFetch<Beep>(`/api/v1/${slug}/beeps`, {
@@ -206,7 +210,9 @@ export function deleteBeep(slug: string, beepId: string) {
 }
 
 export type BeepProposal = {
-	intent: "create" | "other";
+	action?: "create" | "other";
+	intent: string | null;
+	metadata?: Record<string, unknown> | null;
 	kind?: "once" | "recurring";
 	title: string | null;
 	body: string | null;

@@ -1,4 +1,4 @@
-package cliservice
+package service
 
 import (
 	"context"
@@ -72,7 +72,7 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 		return fmt.Errorf("system autostart is not supported on this environment (%s): requires systemd (Linux) or LaunchAgent (macOS)\nTo run in foreground, execute without -d", mgr.PlatformName())
 	}
 
-	exe, err := os.Executable()
+	exe, err := osExecutable()
 	if err != nil {
 		return fmt.Errorf("failed to determine executable path: %w", err)
 	}

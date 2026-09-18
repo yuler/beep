@@ -163,8 +163,8 @@ Rails.application.routes.draw do
         namespace :jobs do
           resource :push, only: %i[ create ]
         end
-        resources :tasks, only: %i[ create ] do
-          scope module: :tasks do
+        resources :runs, only: %i[ create ] do
+          scope module: :runs do
             resources :logs, only: %i[ create ]
             resource :result, only: %i[ create ]
           end

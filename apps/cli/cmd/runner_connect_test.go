@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"beep/internal/client"
-	"beep/internal/cliservice"
 	"beep/internal/config"
+	"beep/internal/service"
 
 	"github.com/spf13/cobra"
 )
@@ -50,9 +50,6 @@ func TestAllCommandsFlagsNoConflict(t *testing.T) {
 	}
 	if cmd.Flags().Lookup("tags") == nil {
 		t.Fatal("expected 'tags' flag to be registered on runner connect")
-	}
-	if cmd.Flags().Lookup("token") == nil {
-		t.Fatal("expected inherited 'token' flag to be available on runner connect")
 	}
 }
 
@@ -223,12 +220,12 @@ func TestRunnerConnectAutomaticallyStartsDaemon(t *testing.T) {
 	flagWorkspace = tmpDir
 	defer func() { flagWorkspace = "" }()
 
-	origStart := cliservice.StartServiceDaemonFn
-	defer func() { cliservice.StartServiceDaemonFn = origStart }()
+	origStart := service.StartServiceDaemonFn
+	defer func() { service.StartServiceDaemonFn = origStart }()
 
 	var startedService string
 	var startedRawArgs []string
-	cliservice.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	service.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
 		startedService = service
 		startedRawArgs = rawArgs
 		return nil

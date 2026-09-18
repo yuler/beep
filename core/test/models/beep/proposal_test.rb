@@ -13,7 +13,9 @@ class Beep::ProposalTest < ActiveSupport::TestCase
 
     result = Beep::Proposal.create("明天打电话给妈", chat: chat)
 
-    assert_equal "create", result.intent
+    assert_equal "create", result.action
+    assert_nil result.intent
+    assert_nil result.metadata
     assert_equal "Call mom", result.title
     assert_equal "Bring milk", result.body
     assert_equal run_at, result.run_at
@@ -48,7 +50,7 @@ class Beep::ProposalTest < ActiveSupport::TestCase
 
     result = Beep::Proposal.create("提醒我买菜", chat: chat)
 
-    assert_equal "create", result.intent
+    assert_equal "create", result.action
     assert_equal "once", result.kind
     assert_equal "Buy groceries", result.title
     assert_nil result.run_at
@@ -68,7 +70,7 @@ class Beep::ProposalTest < ActiveSupport::TestCase
 
     result = Beep::Proposal.create("每天下午两点到八点，每 5 分钟提醒我一下，看一下手机是否有电", chat: chat)
 
-    assert_equal "create", result.intent
+    assert_equal "create", result.action
     assert_equal "recurring", result.kind
     assert_equal "看一下手机是否有电", result.title
     assert_nil result.run_at
@@ -87,9 +89,45 @@ class Beep::ProposalTest < ActiveSupport::TestCase
 
     result = Beep::Proposal.create("hello", chat: chat)
 
-    assert_equal "other", result.intent
+    assert_equal "other", result.action
+    assert_nil result.intent
     assert_equal "Describe what to be reminded of.", result.message
     assert_not result.confirmable?
+  end
+
+  test "create extracts business intent and metadata from model response" do
+    chat = fake_chat({
+      "action" => "create",
+      "intent" => "test",
+      "metadata" => { "a" => "b" },
+      "title" => "测试任务",
+      "body" => nil,
+      "run_at" => nil
+    }.to_json)
+
+    result = Beep::Proposal.create('帮我创建一个测试任务, 目的是 用来测试, json 数据"{"a": "b"}""', chat: chat)
+
+    assert_equal "create", result.action
+    assert_equal "test", result.intent
+    assert_equal({ "a" => "b" }, result.metadata)
+    assert_equal "测试任务", result.title
+    assert result.confirmable?
+  end
+
+  test "create parses stringified metadata" do
+    chat = fake_chat({
+      "action" => "create",
+      "intent" => "test_intent",
+      "metadata" => '{"key":"val"}',
+      "title" => "Test",
+      "body" => nil,
+      "run_at" => nil
+    }.to_json)
+
+    result = Beep::Proposal.create("Test", chat: chat)
+
+    assert_equal "test_intent", result.intent
+    assert_equal({ "key" => "val" }, result.metadata)
   end
 
   test "create raises when the model does not return JSON" do

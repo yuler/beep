@@ -1,4 +1,4 @@
-package task
+package job
 
 type ResultStatus string
 
@@ -8,7 +8,7 @@ const (
 	StatusError    ResultStatus = "error"
 )
 
-type Task struct {
+type Job struct {
 	ID             string         `json:"id"`
 	JobID          string         `json:"job_id"`
 	JobSlug        string         `json:"job_slug"`

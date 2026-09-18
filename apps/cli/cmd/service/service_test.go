@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"beep/internal/cliservice"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/daemon"
+	intsvc "beep/internal/service"
 
 	"github.com/charmbracelet/huh"
 )
@@ -48,6 +48,51 @@ func TestServiceCommandStructure(t *testing.T) {
 				t.Errorf("expected subcommand %q to have alias %q, got aliases %v", name, alias, sub.Aliases)
 			}
 		}
+	}
+}
+
+func TestStartAllForegroundDelegatesToChildren(t *testing.T) {
+	orig := intsvc.RunForegroundServicesFn
+	t.Cleanup(func() { intsvc.RunForegroundServicesFn = orig })
+
+	var got []string
+	intsvc.RunForegroundServicesFn = func(cfg *config.Config, services []string, rawArgs []string) error {
+		got = append([]string(nil), services...)
+		return nil
+	}
+
+	cfg := &config.Config{
+		Workspace:    t.TempDir(),
+		RunnerToken:  "beep_rt_test",
+		ChannelToken: "beep_ct_test",
+	}
+	if err := runStartAll(cfg, false); err != nil {
+		t.Fatalf("runStartAll: %v", err)
+	}
+	if len(got) != 2 || got[0] != daemon.ServiceRunner || got[1] != daemon.ServiceChannel {
+		t.Fatalf("expected [runner channel], got %v", got)
+	}
+}
+
+func TestStartAllForegroundRunnerOnly(t *testing.T) {
+	orig := intsvc.RunForegroundServicesFn
+	t.Cleanup(func() { intsvc.RunForegroundServicesFn = orig })
+
+	var got []string
+	intsvc.RunForegroundServicesFn = func(cfg *config.Config, services []string, rawArgs []string) error {
+		got = append([]string(nil), services...)
+		return nil
+	}
+
+	cfg := &config.Config{
+		Workspace:   t.TempDir(),
+		RunnerToken: "beep_rt_test",
+	}
+	if err := runStartAll(cfg, false); err != nil {
+		t.Fatalf("runStartAll: %v", err)
+	}
+	if len(got) != 1 || got[0] != daemon.ServiceRunner {
+		t.Fatalf("expected [runner], got %v", got)
 	}
 }
 
@@ -104,10 +149,10 @@ func TestServiceRestartWithMock(t *testing.T) {
 	}
 
 	var calledServices []string
-	origFn := cliservice.StartServiceDaemonFn
-	defer func() { cliservice.StartServiceDaemonFn = origFn }()
+	origFn := intsvc.StartServiceDaemonFn
+	defer func() { intsvc.StartServiceDaemonFn = origFn }()
 
-	cliservice.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	intsvc.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
 		calledServices = append(calledServices, service)
 		return nil
 	}
@@ -155,10 +200,10 @@ func TestServiceRestartInteractive(t *testing.T) {
 	}
 
 	var calledServices []string
-	origStartFn := cliservice.StartServiceDaemonFn
-	defer func() { cliservice.StartServiceDaemonFn = origStartFn }()
+	origStartFn := intsvc.StartServiceDaemonFn
+	defer func() { intsvc.StartServiceDaemonFn = origStartFn }()
 
-	cliservice.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	intsvc.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
 		calledServices = append(calledServices, service)
 		return nil
 	}
@@ -234,10 +279,10 @@ func TestServiceRestartNonInteractiveFallback(t *testing.T) {
 	}
 
 	var calledServices []string
-	origStartFn := cliservice.StartServiceDaemonFn
-	defer func() { cliservice.StartServiceDaemonFn = origStartFn }()
+	origStartFn := intsvc.StartServiceDaemonFn
+	defer func() { intsvc.StartServiceDaemonFn = origStartFn }()
 
-	cliservice.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	intsvc.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
 		calledServices = append(calledServices, service)
 		return nil
 	}

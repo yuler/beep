@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"beep/internal/config"
-	"beep/internal/task"
+	"beep/internal/job"
 )
 
 func TestClientPing(t *testing.T) {
@@ -42,22 +42,22 @@ func TestClientPollLogAndResult(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
-		case "/api/v1/runner/tasks":
+		case "/api/v1/runner/runs":
 			json.NewEncoder(w).Encode(map[string]any{
-				"task": map[string]any{
-					"id":              "task-1",
+				"run": map[string]any{
+					"id":              "run-1",
 					"job_slug":        "intranet-http",
 					"name":            "Intranet HTTP",
 					"timeout_seconds": 15,
-					"log_url":         tsURL + "/api/v1/runner/tasks/task-1/logs",
-					"result_url":      tsURL + "/api/v1/runner/tasks/task-1/result",
+					"log_url":         tsURL + "/api/v1/runner/runs/run-1/logs",
+					"result_url":      tsURL + "/api/v1/runner/runs/run-1/result",
 					"config":          map[string]any{"target_url": "http://10.0.0.5"},
 				},
 			})
-		case "/api/v1/runner/tasks/task-1/logs":
+		case "/api/v1/runner/runs/run-1/logs":
 			gotLog = true
 			w.WriteHeader(http.StatusNoContent)
-		case "/api/v1/runner/tasks/task-1/result":
+		case "/api/v1/runner/runs/run-1/result":
 			gotResult = true
 			w.WriteHeader(http.StatusNoContent)
 		default:
@@ -68,15 +68,15 @@ func TestClientPollLogAndResult(t *testing.T) {
 	tsURL = ts.URL
 
 	c := New(&config.Config{ServerURL: ts.URL, RunnerToken: "beep_rt_test"})
-	job, err := c.Poll(context.Background())
-	if err != nil || job == nil || job.JobSlug != "intranet-http" {
-		t.Fatalf("poll: %v %#v", err, job)
+	claimed, err := c.Poll(context.Background())
+	if err != nil || claimed == nil || claimed.JobSlug != "intranet-http" {
+		t.Fatalf("poll: %v %#v", err, claimed)
 	}
 
-	if err := c.ReportLog(context.Background(), job.LogURL, "hello\n"); err != nil {
+	if err := c.ReportLog(context.Background(), claimed.LogURL, "hello\n"); err != nil {
 		t.Fatal(err)
 	}
-	if err := c.ReportResult(context.Background(), job.ResultURL, task.Ok("ok", "", nil)); err != nil {
+	if err := c.ReportResult(context.Background(), claimed.ResultURL, job.Ok("ok", "", nil)); err != nil {
 		t.Fatal(err)
 	}
 	if !gotLog || !gotResult {
@@ -86,11 +86,11 @@ func TestClientPollLogAndResult(t *testing.T) {
 
 func TestReportRejectsForeignCallbackURL(t *testing.T) {
 	c := New(&config.Config{ServerURL: "https://core.example.com", RunnerToken: "beep_rt_test"})
-	if err := c.ReportLog(context.Background(), "https://evil.example/api/v1/runner/tasks/x/logs", "leak\n"); err == nil {
+	if err := c.ReportLog(context.Background(), "https://evil.example/api/v1/runner/runs/x/logs", "leak\n"); err == nil {
 		t.Fatal("expected foreign log URL to be rejected")
 	}
-	if err := c.ReportResult(context.Background(), "https://core.example.com/not-a-task", task.Ok("ok", "", nil)); err == nil {
-		t.Fatal("expected non-task path to be rejected")
+	if err := c.ReportResult(context.Background(), "https://core.example.com/not-a-run", job.Ok("ok", "", nil)); err == nil {
+		t.Fatal("expected non-run path to be rejected")
 	}
 }
 
@@ -102,7 +102,7 @@ func TestReportLogRejectsUnprocessableEntity(t *testing.T) {
 	defer ts.Close()
 
 	c := New(&config.Config{ServerURL: ts.URL, RunnerToken: "beep_rt_test"})
-	err := c.ReportLog(context.Background(), ts.URL+"/api/v1/runner/tasks/task-1/logs", "hello\n")
+	err := c.ReportLog(context.Background(), ts.URL+"/api/v1/runner/runs/run-1/logs", "hello\n")
 	if err == nil {
 		t.Fatal("expected 422 log report to fail")
 	}

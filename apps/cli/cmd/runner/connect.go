@@ -11,10 +11,10 @@ import (
 
 	"beep/internal/browser"
 	"beep/internal/client"
-	"beep/internal/cliservice"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/daemon"
+	"beep/internal/service"
 	"beep/internal/ui"
 	"beep/internal/version"
 
@@ -169,7 +169,7 @@ func NewCmdConnect() *cobra.Command {
 						rawArgs = append(rawArgs, "--server", cfg.ServerURL)
 					}
 
-					return cliservice.AutoStartServiceDaemon(daemon.ServiceRunner, cfg, rawArgs)
+					return service.AutoStartServiceDaemon(daemon.ServiceRunner, cfg, rawArgs)
 				}
 
 				var oauthErr *client.OAuthErrorResponse

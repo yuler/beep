@@ -305,6 +305,15 @@ function BeepDetailPage() {
 							label={m.common_created()}
 							value={formatBeepScheduleTime(beep.created_at, beep.timezone)}
 						/>
+						{beep.intent ? (
+							<DetailRow label={m.beeps_intent()} value={beep.intent} />
+						) : null}
+						{beep.metadata && Object.keys(beep.metadata).length > 0 ? (
+							<DetailRow
+								label={m.beeps_metadata()}
+								value={JSON.stringify(beep.metadata)}
+							/>
+						) : null}
 					</CardContent>
 				</Card>
 

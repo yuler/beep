@@ -59,6 +59,10 @@ export function CreateBeepDialog({
 		setTitle,
 		body,
 		setBody,
+		intent,
+		setIntent,
+		metadata,
+		setMetadata,
 		preview,
 		setPreview,
 		runAt,
@@ -326,6 +330,69 @@ export function CreateBeepDialog({
 								)}
 							</div>
 
+							<div className="flex flex-col gap-2">
+								<div className="flex items-center justify-between gap-2">
+									<Label htmlFor={`beep-dialog-intent-${slug}`}>
+										{m.beeps_intent()}
+									</Label>
+									<span className="text-[11px] text-muted-foreground">
+										{m.common_optional()}
+									</span>
+								</div>
+								<Input
+									id={`beep-dialog-intent-${slug}`}
+									name="intent"
+									value={intent}
+									onChange={(event) => setIntent(event.target.value)}
+									placeholder={m.beeps_intent_placeholder()}
+									disabled={isPending}
+									className="font-mono text-sm"
+								/>
+								<p className="text-[11px] text-muted-foreground">
+									{m.beeps_intent_hint()}
+								</p>
+							</div>
+
+							<div className="flex flex-col gap-2">
+								<div className="flex items-center justify-between gap-2">
+									<Label htmlFor={`beep-dialog-metadata-${slug}`}>
+										{m.beeps_metadata()}
+									</Label>
+									<span className="text-[11px] text-muted-foreground">
+										{m.common_optional()}
+									</span>
+								</div>
+								<textarea
+									id={`beep-dialog-metadata-${slug}`}
+									name="metadata"
+									value={metadata}
+									onChange={(event) => {
+										setMetadata(event.target.value);
+										setFieldErrors((curr) => ({
+											...curr,
+											metadata: undefined,
+										}));
+									}}
+									placeholder='{"key": "value"}'
+									disabled={isPending}
+									rows={2}
+									className={cn(
+										"w-full min-w-0 min-h-16 resize-none font-mono text-sm rounded-lg border border-input bg-transparent px-2.5 py-1.5 transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 dark:bg-input/30",
+										fieldErrors.metadata &&
+											"border-destructive focus-visible:border-destructive",
+									)}
+								/>
+								{fieldErrors.metadata ? (
+									<p className="text-xs text-destructive" role="alert">
+										{fieldErrors.metadata}
+									</p>
+								) : (
+									<p className="text-[11px] text-muted-foreground">
+										{m.beeps_metadata_hint()}
+									</p>
+								)}
+							</div>
+
 							{kind === "once" ? (
 								<div className="flex flex-col gap-2">
 									<div className="flex items-center justify-between gap-2">
@@ -534,3 +601,5 @@ export function CreateBeepDialog({
 		</ResponsiveDialog>
 	);
 }
+
+export { CreateBeepDialog as CreateBeepForm };
