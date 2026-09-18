@@ -73,6 +73,7 @@ class Api::V1::BeepsController < Api::V1::BaseController
       "title" => :title,
       "status" => :status,
       "created_at" => :created_at,
+      "next_run_at" => :next_run_at,
       "schedule" => :next_run_at,
       "scheduled_at" => :next_run_at
     }.freeze

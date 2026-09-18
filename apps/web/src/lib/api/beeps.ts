@@ -67,7 +67,7 @@ export type BeepStatsResponse = {
 export const BEEP_SORT_FIELDS = [
 	"title",
 	"status",
-	"schedule",
+	"next_run_at",
 	"created_at",
 ] as const;
 
@@ -88,8 +88,8 @@ export function parseBeepSort(
 	dir?: string,
 ): { sort: BeepSortField; dir: BeepSortDir } {
 	const field =
-		sort === "scheduled_at"
-			? "schedule"
+		sort === "schedule" || sort === "scheduled_at"
+			? "next_run_at"
 			: sort && isBeepSortField(sort)
 				? sort
 				: DEFAULT_BEEP_SORT.sort;

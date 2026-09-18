@@ -36,7 +36,6 @@ import {
 	type PaginationMeta,
 } from "@/lib/api/beeps";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
-import { beepRunAt } from "@/lib/beep-stats";
 import {
 	beepRunStatusLabel,
 	beepStatusLabel,
@@ -68,22 +67,28 @@ function beepStatusTone(status: Beep["status"]) {
 	}
 }
 
-function formatScheduleLabel(beep: Beep) {
-	if (beep.status === "completed") return m.beeps_schedule_completed();
-	if (beep.kind === "recurring") return beep.cron ?? m.beeps_schedule();
-	return m.beeps_kind_once();
-}
-
-function formatNextRunAt(beep: Beep) {
-	if (beep.status === "completed") return null;
-	const nextRun = beepRunAt(beep);
-	if (!nextRun) return null;
-	return formatBeepScheduleTime(nextRun, beep.timezone, "short");
-}
-
 function formatLastRunAt(beep: Beep) {
 	if (!beep.last_run_at) return null;
 	return formatBeepScheduleTime(beep.last_run_at, beep.timezone, "short");
+}
+
+function LastRunCaption({ beep }: { beep: Beep }) {
+	const lastRun = beep.runs?.[0];
+	const lastAt = formatLastRunAt(beep);
+	if (!lastRun && !lastAt) return m.common_em_dash();
+
+	return (
+		<>
+			{m.beeps_last_run_at()}:{" "}
+			<span className="tabular-nums">{lastAt ?? m.common_em_dash()}</span>
+			{lastRun ? (
+				<span className="capitalize">
+					{" "}
+					· {beepRunStatusLabel(lastRun.status)}
+				</span>
+			) : null}
+		</>
+	);
 }
 
 function formatChannel(channel: string) {
@@ -145,36 +150,19 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 							id: "runs",
 							enableSorting: false,
 							header: m.beeps_runs(),
-							cell: ({ row }) => {
-								const beep = row.original;
-								const lastRun = beep.runs?.[0];
-								const lastAt = formatLastRunAt(beep);
-								return (
-									<div className="flex min-w-40 flex-col gap-1">
-										<div className="flex items-center gap-2">
-											<span className="text-sm tabular-nums text-foreground">
-												{beepRunCount(beep)}
-											</span>
-											<ProgressBar value={beepRunSuccessRate(beep)} />
-										</div>
-										<span className="text-[11px] text-muted-foreground">
-											{lastRun ? (
-												<>
-													<span className="capitalize">
-														{m.beeps_last()}:{" "}
-														{beepRunStatusLabel(lastRun.status)}
-													</span>
-													{lastAt ? (
-														<span className="tabular-nums"> · {lastAt}</span>
-													) : null}
-												</>
-											) : (
-												m.common_em_dash()
-											)}
+							cell: ({ row }) => (
+								<div className="flex min-w-44 flex-col gap-1">
+									<div className="flex items-center gap-2">
+										<span className="text-sm tabular-nums text-foreground">
+											{beepRunCount(row.original)}
 										</span>
+										<ProgressBar value={beepRunSuccessRate(row.original)} />
 									</div>
-								);
-							},
+									<span className="text-[11px] text-muted-foreground">
+										<LastRunCaption beep={row.original} />
+									</span>
+								</div>
+							),
 						}),
 					]
 				: [];
@@ -184,7 +172,7 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			columnHelper.accessor("title", {
 				id: "title",
 				enableSorting: sortable,
-				meta: { className: "min-w-72" },
+				meta: { className: "w-52 min-w-52 max-w-52" },
 				header: sortable
 					? ({ column }) => (
 							<SortableHeader
@@ -196,7 +184,7 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 				cell: ({ row }) => {
 					const beep = row.original;
 					return (
-						<div className="flex min-w-72 max-w-md flex-col gap-0.5">
+						<div className="flex min-w-0 flex-col gap-0.5">
 							<BeepIdText id={beep.id} />
 							<Link
 								to="/$account_slug/beeps/$beepId"
@@ -217,14 +205,15 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			columnHelper.accessor((row) => row.beeper?.name ?? row.kind, {
 				id: "source",
 				enableSorting: false,
+				meta: { className: "min-w-56" },
 				header: m.beeps_source(),
 				cell: ({ row }) => {
 					const beep = row.original;
 					if (beep.beeper) {
 						return (
-							<span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-								<Activity className="size-3.5 text-primary" />
-								{beep.beeper.name}
+							<span className="inline-flex max-w-full items-center gap-1.5 text-sm text-muted-foreground">
+								<Activity className="size-3.5 shrink-0 text-primary" />
+								<span className="truncate">{beep.beeper.name}</span>
 							</span>
 						);
 					}
@@ -259,32 +248,6 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 						tone={beepStatusTone(row.original.status)}
 					/>
 				),
-			}),
-			columnHelper.accessor((row) => beepRunAt(row)?.toString() ?? "", {
-				id: "schedule",
-				enableSorting: sortable,
-				meta: { className: "min-w-36" },
-				header: sortable
-					? ({ column }) => (
-							<SortableHeader column={column} label={m.beeps_schedule()} />
-						)
-					: m.beeps_schedule(),
-				cell: ({ row }) => {
-					const beep = row.original;
-					const nextAt = formatNextRunAt(beep);
-					return (
-						<div className="flex flex-col gap-0.5 text-sm">
-							<span className="font-mono text-xs text-muted-foreground">
-								{formatScheduleLabel(beep)}
-							</span>
-							{nextAt ? (
-								<span className="tabular-nums whitespace-nowrap text-foreground">
-									{m.beeps_next()}: {nextAt}
-								</span>
-							) : null}
-						</div>
-					);
-				},
 			}),
 			...fullColumns,
 			columnHelper.accessor("created_at", {
@@ -722,9 +685,6 @@ export function BeepList({
 						{filteredBeeps.map((beep) => {
 							const successRate = beepRunSuccessRate(beep);
 							const totalRuns = beepRunCount(beep);
-							const lastRun = beep.runs?.[0];
-							const nextAt = formatNextRunAt(beep);
-							const lastAt = formatLastRunAt(beep);
 
 							return (
 								<div
@@ -777,19 +737,6 @@ export function BeepList({
 												)}
 											</span>
 										</div>
-										<div>
-											<span className="block text-[11px] text-muted-foreground/80">
-												{m.beeps_schedule()}
-											</span>
-											<span className="mt-0.5 block font-medium text-foreground">
-												{formatScheduleLabel(beep)}
-											</span>
-											{nextAt ? (
-												<span className="mt-0.5 block tabular-nums text-foreground">
-													{m.beeps_next()}: {nextAt}
-												</span>
-											) : null}
-										</div>
 										{variant === "full" ? (
 											<>
 												<div>
@@ -820,22 +767,7 @@ export function BeepList({
 														<ProgressBar value={successRate} />
 													</div>
 													<span className="mt-0.5 block text-[11px] text-foreground">
-														{lastRun ? (
-															<>
-																<span className="capitalize">
-																	{m.beeps_last()}:{" "}
-																	{beepRunStatusLabel(lastRun.status)}
-																</span>
-																{lastAt ? (
-																	<span className="tabular-nums">
-																		{" "}
-																		· {lastAt}
-																	</span>
-																) : null}
-															</>
-														) : (
-															m.common_em_dash()
-														)}
+														<LastRunCaption beep={beep} />
 													</span>
 												</div>
 												<div>

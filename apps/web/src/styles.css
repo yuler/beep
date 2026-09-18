@@ -149,6 +149,22 @@
     @apply bg-sidebar font-sans text-foreground antialiased;
   }
 
+  /* Hide the page-level vertical scrollbar; scrolling still works. */
+  html,
+  body,
+  #app {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  #app::-webkit-scrollbar {
+    width: 0;
+    height: auto;
+    display: none;
+  }
+
   :is([data-slot="button"], .group\/button) {
     cursor: pointer;
     transition:
