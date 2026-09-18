@@ -1,6 +1,6 @@
 require "test_helper"
 
-class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
+class Api::V1::Runner::RunsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @account = accounts(:john_account)
     @runner = @account.runners.create!(name: "Test-Runner")
@@ -37,8 +37,8 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
     assert_equal "linux", @runner.os
   end
 
-  test "create returns 204 when no tasks are due" do
-    post "/api/v1/runner/tasks",
+  test "create returns 204 when no runs are due" do
+    post "/api/v1/runner/runs",
       headers: { "X-Runner-Token" => @runner_token },
       as: :json
 
@@ -49,18 +49,18 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
     run = @job.trigger_run!
     assert run.pending?
 
-    post "/api/v1/runner/tasks",
+    post "/api/v1/runner/runs",
       headers: { "X-Runner-Token" => @runner_token },
       as: :json
 
     assert_response :success
-    task = response.parsed_body["task"]
-    assert_equal run.id, task["id"]
-    assert_equal "intranet-http", task["job_slug"]
-    assert_equal "Intranet HTTP", task["name"]
-    assert_equal "http://192.168.1.10/health", task["config"]["target_url"]
-    assert_includes task["log_url"], "/api/v1/runner/tasks/#{run.id}/logs"
-    assert_includes task["result_url"], "/api/v1/runner/tasks/#{run.id}/result"
+    claimed = response.parsed_body["run"]
+    assert_equal run.id, claimed["id"]
+    assert_equal "intranet-http", claimed["job_slug"]
+    assert_equal "Intranet HTTP", claimed["name"]
+    assert_equal "http://192.168.1.10/health", claimed["config"]["target_url"]
+    assert_includes claimed["log_url"], "/api/v1/runner/runs/#{run.id}/logs"
+    assert_includes claimed["result_url"], "/api/v1/runner/runs/#{run.id}/result"
 
     run.reload
     assert_equal "running", run.status
@@ -71,7 +71,7 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
     run = @job.trigger_run!
     run.claim_for(@runner)
 
-    post "/api/v1/runner/tasks/#{run.id}/logs",
+    post "/api/v1/runner/runs/#{run.id}/logs",
       params: { chunk: "checking health\n" },
       headers: { "X-Runner-Token" => @runner_token },
       as: :json
@@ -80,7 +80,7 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
     run.reload
     assert_equal "checking health\n", run.log
 
-    post "/api/v1/runner/tasks/#{run.id}/result",
+    post "/api/v1/runner/runs/#{run.id}/result",
       params: {
         status: "ok",
         title: "healthy",
@@ -106,13 +106,13 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
     run = @job.trigger_run!
     assert run.pending?
 
-    post "/api/v1/runner/tasks",
+    post "/api/v1/runner/runs",
       headers: { "X-Runner-Token" => @runner_token },
       as: :json
 
     assert_response :success
-    task = response.parsed_body["task"]
-    assert_equal run.id, task["id"]
+    claimed = response.parsed_body["run"]
+    assert_equal run.id, claimed["id"]
   end
 
   test "logs scrubs malformed utf8 on truncation" do
@@ -121,7 +121,7 @@ class Api::V1::Runner::TasksControllerTest < ActionDispatch::IntegrationTest
 
     # Append multibyte characters that exceed 256KB limit
     chunk = "你好世界🌟" * 15_000
-    post "/api/v1/runner/tasks/#{run.id}/logs",
+    post "/api/v1/runner/runs/#{run.id}/logs",
       params: { chunk: chunk },
       headers: { "X-Runner-Token" => @runner_token },
       as: :json

@@ -1,4 +1,4 @@
-package cliservice
+package service
 
 import (
 	"context"

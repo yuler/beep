@@ -31,7 +31,7 @@ class Api::V1::Runner::BaseController < ActionController::API
     end
 
     def set_run
-      @run = @current_runner.runs.find(params[:task_id])
+      @run = @current_runner.runs.find(params[:run_id])
     end
 
     # Prefer id when present so a local filename rename updates the same

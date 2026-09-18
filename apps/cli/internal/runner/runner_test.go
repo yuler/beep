@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"beep/internal/config"
-	"beep/internal/task"
+	"beep/internal/job"
 	"beep/internal/workspace"
 )
 
@@ -24,11 +24,11 @@ func TestJobEnvOmitsRunnerToken(t *testing.T) {
 		ServerURL:   "https://core.example.com",
 		RunnerToken: "beep_rt_secret",
 	}}
-	env, err := r.JobEnv(&task.Task{
+	env, err := r.JobEnv(&job.Job{
 		ID:        "run-1",
 		JobSlug:   "check",
-		LogURL:    "https://core.example.com/api/v1/runner/tasks/run-1/logs",
-		ResultURL: "https://core.example.com/api/v1/runner/tasks/run-1/result",
+		LogURL:    "https://core.example.com/api/v1/runner/runs/run-1/logs",
+		ResultURL: "https://core.example.com/api/v1/runner/runs/run-1/result",
 		Config:    map[string]any{"k": "v"},
 	})
 	if err != nil {
@@ -58,11 +58,11 @@ func TestJobEnvOmitsRunnerTokenFromWorkspace(t *testing.T) {
 		cfg:       &config.Config{ServerURL: "https://core.example.com"},
 		workspace: ws,
 	}
-	env, err := r.JobEnv(&task.Task{
+	env, err := r.JobEnv(&job.Job{
 		ID:        "run-1",
 		JobSlug:   "check",
-		LogURL:    "https://core.example.com/api/v1/runner/tasks/run-1/logs",
-		ResultURL: "https://core.example.com/api/v1/runner/tasks/run-1/result",
+		LogURL:    "https://core.example.com/api/v1/runner/runs/run-1/logs",
+		ResultURL: "https://core.example.com/api/v1/runner/runs/run-1/result",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -104,11 +104,11 @@ func TestJobEnvUnreadableWorkspaceEnv(t *testing.T) {
 		cfg:       &config.Config{ServerURL: "https://core.example.com"},
 		workspace: ws,
 	}
-	env, err := r.JobEnv(&task.Task{
+	env, err := r.JobEnv(&job.Job{
 		ID:        "run-1",
 		JobSlug:   "check",
-		LogURL:    "https://core.example.com/api/v1/runner/tasks/run-1/logs",
-		ResultURL: "https://core.example.com/api/v1/runner/tasks/run-1/result",
+		LogURL:    "https://core.example.com/api/v1/runner/runs/run-1/logs",
+		ResultURL: "https://core.example.com/api/v1/runner/runs/run-1/result",
 	})
 	if err == nil {
 		t.Fatalf("expected error for unreadable workspace .env, got env %v", env)
@@ -152,11 +152,11 @@ OVERRIDDEN_BY_LOCAL=from_local
 		workspace: ws,
 	}
 
-	job := &task.Task{
+	job := &job.Job{
 		ID:        "run-123",
 		JobSlug:   "custom-job",
-		LogURL:    "https://core.example.com/api/v1/runner/tasks/run-123/logs",
-		ResultURL: "https://core.example.com/api/v1/runner/tasks/run-123/result",
+		LogURL:    "https://core.example.com/api/v1/runner/runs/run-123/logs",
+		ResultURL: "https://core.example.com/api/v1/runner/runs/run-123/result",
 		Config: map[string]any{
 			"overridden_by_server": "from_server_config",
 		},
@@ -207,16 +207,16 @@ func TestPollAndExecuteFillsConcurrency(t *testing.T) {
 				"runner_name": "Test Runner",
 				"server_time": "2026-09-01T12:00:00Z",
 			})
-		case r.URL.Path == "/api/v1/runner/tasks":
+		case r.URL.Path == "/api/v1/runner/runs":
 			n := polls.Add(1)
 			json.NewEncoder(w).Encode(map[string]any{
-				"task": map[string]any{
-					"id":              "task-" + strconv.Itoa(int(n)),
+				"run": map[string]any{
+					"id":              "run-" + strconv.Itoa(int(n)),
 					"job_slug":        "hold",
 					"name":            "Hold",
 					"timeout_seconds": 30,
-					"log_url":         tsURL + "/api/v1/runner/tasks/task-" + strconv.Itoa(int(n)) + "/logs",
-					"result_url":      tsURL + "/api/v1/runner/tasks/task-" + strconv.Itoa(int(n)) + "/result",
+					"log_url":         tsURL + "/api/v1/runner/runs/run-" + strconv.Itoa(int(n)) + "/logs",
+					"result_url":      tsURL + "/api/v1/runner/runs/run-" + strconv.Itoa(int(n)) + "/result",
 				},
 			})
 		default:

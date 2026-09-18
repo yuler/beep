@@ -185,7 +185,7 @@ function AccountRunnerDeviceAuthPage() {
 									<code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
 										beep up
 									</code>{" "}
-									to start executing scheduled tasks.
+									to start executing scheduled jobs.
 								</p>
 								<div className="flex justify-center gap-2">
 									<Link
@@ -232,7 +232,7 @@ function AccountRunnerDeviceAuthPage() {
 									Register Self-Hosted Runner
 								</CardTitle>
 								<CardDescription>
-									Authorize your machine as a task runner for this account.
+									Authorize your machine as a runner for this account.
 								</CardDescription>
 							</CardHeader>
 

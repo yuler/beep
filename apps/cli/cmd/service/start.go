@@ -5,10 +5,10 @@ import (
 	"os"
 	"time"
 
-	"beep/internal/cliservice"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/daemon"
+	intsvc "beep/internal/service"
 
 	"github.com/spf13/cobra"
 )
@@ -24,7 +24,7 @@ func NewCmdStart() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "start [runner|channel]",
 		Aliases: []string{"up"},
-		Short:   "Start daemon services to listen for notifications and execute tasks",
+		Short:   "Start daemon services to listen for notifications and execute jobs",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target, err := parseServiceArg(args)
@@ -48,9 +48,9 @@ func NewCmdStart() *cobra.Command {
 
 			switch target {
 			case "runner":
-				return cliservice.RunRunnerService(cfg, daemonMode, os.Args[1:])
+				return intsvc.RunRunnerService(cfg, daemonMode, os.Args[1:])
 			case "channel":
-				return cliservice.RunChannelService(cfg, daemonMode, os.Args[1:])
+				return intsvc.RunChannelService(cfg, daemonMode, os.Args[1:])
 			default:
 				return runStartAll(cfg, daemonMode)
 			}
@@ -74,12 +74,12 @@ func runStartAll(cfg *config.Config, daemonMode bool) error {
 
 	if daemonMode {
 		if hasRunner {
-			if err := cliservice.StartServiceDaemonFn(daemon.ServiceRunner, []string{"runner", "up"}, os.Args[1:], cfg); err != nil {
+			if err := intsvc.StartServiceDaemonFn(daemon.ServiceRunner, []string{"runner", "up"}, os.Args[1:], cfg); err != nil {
 				return err
 			}
 		}
 		if hasChannel {
-			if err := cliservice.StartServiceDaemonFn(daemon.ServiceChannel, []string{"channel", "up"}, os.Args[1:], cfg); err != nil {
+			if err := intsvc.StartServiceDaemonFn(daemon.ServiceChannel, []string{"channel", "up"}, os.Args[1:], cfg); err != nil {
 				return err
 			}
 		}
@@ -93,5 +93,5 @@ func runStartAll(cfg *config.Config, daemonMode bool) error {
 	if hasChannel {
 		services = append(services, daemon.ServiceChannel)
 	}
-	return cliservice.RunForegroundServicesFn(cfg, services, os.Args[1:])
+	return intsvc.RunForegroundServicesFn(cfg, services, os.Args[1:])
 }

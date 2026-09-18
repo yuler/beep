@@ -1,4 +1,4 @@
-package logview
+package logs
 
 import (
 	"bytes"
@@ -23,22 +23,6 @@ func TestParseSinceRelativeAndDate(t *testing.T) {
 		t.Fatalf("2d: got %v", got)
 	}
 
-	got, err = ParseInstant("12h", now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !got.Equal(now.Add(-12 * time.Hour)) {
-		t.Fatalf("12h: got %v", got)
-	}
-
-	got, err = ParseInstant("30m", now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !got.Equal(now.Add(-30 * time.Minute)) {
-		t.Fatalf("30m: got %v", got)
-	}
-
 	got, err = ParseInstant("2026-09-17", now)
 	if err != nil {
 		t.Fatal(err)
@@ -46,6 +30,19 @@ func TestParseSinceRelativeAndDate(t *testing.T) {
 	want := time.Date(2026, 9, 17, 0, 0, 0, 0, now.Location())
 	if !got.Equal(want) {
 		t.Fatalf("date: got %v want %v", got, want)
+	}
+}
+
+func TestParseSinceRejectsHoursAndMinutes(t *testing.T) {
+	now := time.Now()
+	for _, v := range []string{"12h", "30m", "1h", "60m"} {
+		_, err := ParseInstant(v, now)
+		if err == nil {
+			t.Fatalf("expected %q to be rejected", v)
+		}
+		if !strings.Contains(err.Error(), "hours and minutes (h/m) are not supported") {
+			t.Fatalf("expected h/m rejection message, got: %v", err)
+		}
 	}
 }
 
@@ -170,6 +167,77 @@ func TestHistoryFiltersThenTails(t *testing.T) {
 	}
 	if lines[1].Text != "keep four" || lines[1].Source != daemon.ServiceChannel {
 		t.Fatalf("line1: %#v", lines[1])
+	}
+}
+
+func TestHistoryMultiDayReverseTail(t *testing.T) {
+	ws := t.TempDir()
+	day1 := "2026-09-17"
+	day2 := "2026-09-18"
+	if err := os.MkdirAll(filepath.Join(ws, "logs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	d1Runner := daemon.DailyLogPath(ws, daemon.ServiceRunner, day1)
+	d2Runner := daemon.DailyLogPath(ws, daemon.ServiceRunner, day2)
+	d2Channel := daemon.DailyLogPath(ws, daemon.ServiceChannel, day2)
+
+	if err := os.WriteFile(d1Runner, []byte("d1-line1\nd1-line2\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(d2Runner, []byte("d2-runner-1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(d2Channel, []byte("d2-chan-1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Requesting 2 lines should only take from day 2 and keep chronological order
+	lines, err := History(ws, []string{daemon.ServiceRunner, daemon.ServiceChannel}, []string{day1, day2}, nil, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 lines, got %d: %#v", len(lines), lines)
+	}
+	if lines[0].Text != "d2-runner-1" || lines[0].Source != daemon.ServiceRunner {
+		t.Errorf("line0 got %#v", lines[0])
+	}
+	if lines[1].Text != "d2-chan-1" || lines[1].Source != daemon.ServiceChannel {
+		t.Errorf("line1 got %#v", lines[1])
+	}
+
+	// Requesting 3 lines should reach back to day 1 for 1 line
+	lines3, err := History(ws, []string{daemon.ServiceRunner, daemon.ServiceChannel}, []string{day1, day2}, nil, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lines3) != 3 {
+		t.Fatalf("expected 3 lines, got %d: %#v", len(lines3), lines3)
+	}
+	if lines3[0].Text != "d1-line2" || lines3[1].Text != "d2-runner-1" || lines3[2].Text != "d2-chan-1" {
+		t.Errorf("lines3 got %#v", lines3)
+	}
+}
+
+func TestHistoryLongLine(t *testing.T) {
+	ws := t.TempDir()
+	today := "2026-09-18"
+	if err := os.MkdirAll(filepath.Join(ws, "logs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	runner := daemon.DailyLogPath(ws, daemon.ServiceRunner, today)
+	longText := strings.Repeat("x", 128*1024)
+	if err := os.WriteFile(runner, []byte(longText+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	lines, err := History(ws, []string{daemon.ServiceRunner}, []string{today}, nil, 10)
+	if err != nil {
+		t.Fatalf("History failed on 128KiB line: %v", err)
+	}
+	if len(lines) != 1 || lines[0].Text != longText {
+		t.Fatalf("unexpected line content, len=%d", len(lines))
 	}
 }
 

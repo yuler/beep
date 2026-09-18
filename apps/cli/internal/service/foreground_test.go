@@ -1,4 +1,4 @@
-package cliservice
+package service
 
 import (
 	"bytes"
@@ -25,6 +25,19 @@ func TestCopyPrefixedLines(t *testing.T) {
 	want := "runner | hello\nrunner | world\n"
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestCopyPrefixedLinesLongLine(t *testing.T) {
+	ui.SetEnabled(false)
+	longText := strings.Repeat("a", 100*1024)
+	var buf bytes.Buffer
+	if err := CopyPrefixedLines("channel", strings.NewReader(longText+"\n"), &buf); err != nil {
+		t.Fatalf("CopyPrefixedLines on 100KiB line: %v", err)
+	}
+	want := "channel | " + longText + "\n"
+	if buf.String() != want {
+		t.Fatalf("mismatched long line output, len=%d want=%d", buf.Len(), len(want))
 	}
 }
 

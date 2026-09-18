@@ -1,4 +1,4 @@
-package cliservice
+package service
 
 import (
 	"bufio"
@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"sync"
 
 	"beep/internal/config"
@@ -152,13 +153,22 @@ func childServiceEnv(service string, cfg *config.Config, daemonChild bool) []str
 // CopyPrefixedLines copies r to w, prefixing each line with "SOURCE | ".
 func CopyPrefixedLines(source string, r io.Reader, w io.Writer) error {
 	prefix := sourceLabel(source) + " | "
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		if _, err := io.WriteString(w, prefix+scanner.Text()+"\n"); err != nil {
+	reader := bufio.NewReader(r)
+	for {
+		line, err := reader.ReadString('\n')
+		if len(line) > 0 {
+			text := strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
+			if _, werr := io.WriteString(w, prefix+text+"\n"); werr != nil {
+				return werr
+			}
+		}
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
 			return err
 		}
 	}
-	return scanner.Err()
 }
 
 func sourceLabel(source string) string {

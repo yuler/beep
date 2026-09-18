@@ -1,4 +1,4 @@
-package logview
+package logs
 
 import (
 	"bufio"
@@ -15,7 +15,8 @@ import (
 	"beep/internal/ui"
 )
 
-var relativeRe = regexp.MustCompile(`^([0-9]+)([dhm])$`)
+var daysRelativeRe = regexp.MustCompile(`^([0-9]+)d$`)
+var rejectedUnitsRe = regexp.MustCompile(`^([0-9]+)[hm]$`)
 
 // Line is one daemon log line with its file source.
 type Line struct {
@@ -23,7 +24,7 @@ type Line struct {
 	Text   string `json:"text"`
 }
 
-// ParseInstant parses a relative duration (2d, 12h, 30m) or YYYY-MM-DD as the start of that day.
+// ParseInstant parses a relative duration in days (e.g. 2d) or YYYY-MM-DD as the start of that day.
 func ParseInstant(s string, now time.Time) (time.Time, error) {
 	return parseInstant(s, now, false)
 }
@@ -38,25 +39,20 @@ func parseInstant(s string, now time.Time, untilDate bool) (time.Time, error) {
 	if s == "" {
 		return time.Time{}, fmt.Errorf("empty time")
 	}
-	if m := relativeRe.FindStringSubmatch(s); m != nil {
+	if rejectedUnitsRe.MatchString(s) {
+		return time.Time{}, fmt.Errorf("invalid time %q: hours and minutes (h/m) are not supported; use days (e.g. 2d) or YYYY-MM-DD", s)
+	}
+	if m := daysRelativeRe.FindStringSubmatch(s); m != nil {
 		n := 0
 		for _, c := range m[1] {
 			n = n*10 + int(c-'0')
 		}
-		var d time.Duration
-		switch m[2] {
-		case "d":
-			d = time.Duration(n) * 24 * time.Hour
-		case "h":
-			d = time.Duration(n) * time.Hour
-		case "m":
-			d = time.Duration(n) * time.Minute
-		}
+		d := time.Duration(n) * 24 * time.Hour
 		return now.Add(-d), nil
 	}
 	day, err := time.ParseInLocation("2006-01-02", s, now.Location())
 	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid time %q (use 2d, 12h, 30m, or YYYY-MM-DD)", s)
+		return time.Time{}, fmt.Errorf("invalid time %q (use 2d or YYYY-MM-DD)", s)
 	}
 	if untilDate {
 		return time.Date(day.Year(), day.Month(), day.Day(), 23, 59, 59, 1e9-1, day.Location()), nil
@@ -154,46 +150,93 @@ func CollectFiles(workspace string, services, days []string) []string {
 	return files
 }
 
-// History reads matching files in day/service order, greps, then keeps the last n lines.
+// History reads matching lines across the specified days and services.
+// When n > 0, it reads files in reverse order (newest day and service first) and limits
+// per-file line retention, ensuring bounded memory usage (at most n lines) and early
+// termination without reading older day files once n matches are collected.
+// When n <= 0, all matching lines across all requested days/services are returned.
 func History(workspace string, services, days, patterns []string, n int) ([]Line, error) {
 	if n < 0 {
 		n = 0
 	}
-	var matched []Line
-	for _, day := range days {
-		for _, service := range services {
+	if n == 0 {
+		var matched []Line
+		for _, day := range days {
+			for _, service := range services {
+				path := daemon.DailyLogPath(workspace, service, day)
+				lines, err := readFileLines(path, service, patterns, 0)
+				if err != nil {
+					if os.IsNotExist(err) {
+						continue
+					}
+					return nil, err
+				}
+				matched = append(matched, lines...)
+			}
+		}
+		return matched, nil
+	}
+
+	var collected []Line
+	remaining := n
+	for d := len(days) - 1; d >= 0 && remaining > 0; d-- {
+		day := days[d]
+		for s := len(services) - 1; s >= 0 && remaining > 0; s-- {
+			service := services[s]
 			path := daemon.DailyLogPath(workspace, service, day)
-			lines, err := readFileLines(path, service, patterns)
+			lines, err := readFileLines(path, service, patterns, remaining)
 			if err != nil {
 				if os.IsNotExist(err) {
 					continue
 				}
 				return nil, err
 			}
-			matched = append(matched, lines...)
+			if len(lines) == 0 {
+				continue
+			}
+			collected = append(lines, collected...)
+			remaining -= len(lines)
 		}
 	}
-	if n == 0 || len(matched) <= n {
-		return matched, nil
-	}
-	return matched[len(matched)-n:], nil
+	return collected, nil
 }
 
-func readFileLines(path, source string, patterns []string) ([]Line, error) {
+// readFileLines reads matching lines from path. If limit > 0, only the last limit lines are returned.
+// Uses bufio.Reader to handle lines of arbitrary length without bufio.Scanner buffer limits.
+func readFileLines(path, source string, patterns []string, limit int) ([]Line, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	var out []Line
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		text := scanner.Text()
-		if MatchGrep(text, patterns) {
-			out = append(out, Line{Source: source, Text: text})
+
+	var ring []Line
+	if limit > 0 {
+		ring = make([]Line, 0, limit)
+	}
+
+	reader := bufio.NewReader(f)
+	for {
+		line, err := reader.ReadString('\n')
+		if len(line) > 0 {
+			text := strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
+			if MatchGrep(text, patterns) {
+				if limit > 0 && len(ring) == limit {
+					copy(ring, ring[1:])
+					ring[limit-1] = Line{Source: source, Text: text}
+				} else {
+					ring = append(ring, Line{Source: source, Text: text})
+				}
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
-	return out, scanner.Err()
+	return ring, nil
 }
 
 // FormatLine renders one log line as text or NDJSON. No trailing newline.

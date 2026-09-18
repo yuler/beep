@@ -1,4 +1,4 @@
-package logview
+package logs
 
 import (
 	"bufio"
@@ -27,6 +27,7 @@ func Follow(ctx context.Context, workspace string, services, patterns []string, 
 		now = time.Now
 	}
 	cursors := map[string]*cursor{}
+	initialTick := true
 
 	tick := func() error {
 		day := now().Format("2006-01-02")
@@ -38,11 +39,14 @@ func Follow(ctx context.Context, workspace string, services, patterns []string, 
 				cursors[path] = c
 			}
 			if !c.seen {
-				if info, err := os.Stat(path); err == nil {
-					c.offset = info.Size()
+				if initialTick {
+					if info, err := os.Stat(path); err == nil {
+						c.offset = info.Size()
+					}
+					c.seen = true
+					continue
 				}
 				c.seen = true
-				continue
 			}
 			if err := emitNew(c, patterns, w, asJSON, color); err != nil {
 				return err
@@ -54,6 +58,7 @@ func Follow(ctx context.Context, workspace string, services, patterns []string, 
 	if err := tick(); err != nil {
 		return err
 	}
+	initialTick = false
 	timer := time.NewTicker(followPoll)
 	defer timer.Stop()
 	for {

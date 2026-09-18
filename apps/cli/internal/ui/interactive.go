@@ -197,7 +197,7 @@ func PromptJobCreate(defaults JobCreateParams) (*JobCreateParams, error) {
 	timeoutStr := strconv.Itoa(res.TimeoutSeconds) + "s"
 	err = huh.NewSelect[string]().
 		Title("Timeout").
-		Description("Max execution time before considering task timed out").
+		Description("Max execution time before considering job timed out").
 		Options(
 			huh.NewOption("30 seconds (Default)", "30s"),
 			huh.NewOption("10 seconds (Fast check)", "10s"),
@@ -661,7 +661,7 @@ func PromptConfigSetWizard(fc *config.FileConfig) error {
 
 			huh.NewInput().
 				Title("Poll Interval").
-				Description("Interval to poll Core for due tasks").
+				Description("Interval to poll Core for due jobs").
 				Value(&interval).
 				Validate(func(s string) error {
 					if strings.TrimSpace(s) == "" {
