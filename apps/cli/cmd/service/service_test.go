@@ -306,5 +306,3 @@ func TestServiceDefaultRunsStatus(t *testing.T) {
 		t.Fatalf("expected 'beep service' without args to run status successfully, got: %v", err)
 	}
 }
-
-
