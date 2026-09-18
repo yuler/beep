@@ -22,8 +22,13 @@ func NewCmdStop() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "stop [runner|channel]",
 		Aliases: []string{"down"},
-		Short:   "Stop running Beep daemon services (runner and channel)",
-		Args:    cobra.MaximumNArgs(1),
+		Short:   "Stop running daemons and unregister autostart",
+		Long: `Stop running Beep daemon services (runner and channel).
+
+If a service is registered with systemd (Linux) or a LaunchAgent (macOS),
+stop also unregisters that autostart unit so it will not come back on login.
+Re-register with 'service start -d'.`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target, err := parseServiceArg(args)
 			if err != nil {

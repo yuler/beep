@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"text/template"
 )
@@ -21,8 +22,8 @@ ExecStart={{.ExecCmd}}
 WorkingDirectory={{.Workspace}}
 Restart=on-failure
 RestartSec=5s
-{{- range $k, $v := .Env}}
-Environment="{{$k}}={{$v}}"
+{{- range .EnvLines}}
+Environment={{.}}
 {{- end}}
 
 [Install]
@@ -113,42 +114,12 @@ func (m *SystemdManager) Install(info ServiceInfo) error {
 	unitName := m.UnitName(info.Service, info.BinaryName)
 	unitPath := filepath.Join(m.userDir, unitName)
 
-	// Build command with properly quoted arguments
-	var cmdParts []string
-	cmdParts = append(cmdParts, systemdQuote(info.ExecPath))
-	for _, arg := range info.Args {
-		cmdParts = append(cmdParts, systemdQuote(arg))
-	}
-	execCmd := strings.Join(cmdParts, " ")
-
-	desc := info.Description
-	if desc == "" {
-		desc = fmt.Sprintf("Beep %s Daemon", strings.Title(info.Service))
-	}
-
-	data := struct {
-		Description string
-		ExecCmd     string
-		Workspace   string
-		Env         map[string]string
-	}{
-		Description: desc,
-		ExecCmd:     execCmd,
-		Workspace:   info.Workspace,
-		Env:         info.Env,
-	}
-
-	tmpl, err := template.New("unit").Parse(systemdUnitTemplate)
+	rendered, err := renderSystemdUnit(info)
 	if err != nil {
-		return fmt.Errorf("failed to parse unit template: %w", err)
+		return err
 	}
 
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return fmt.Errorf("failed to render unit file: %w", err)
-	}
-
-	if err := os.WriteFile(unitPath, buf.Bytes(), 0o644); err != nil {
+	if err := writePrivateFile(unitPath, []byte(rendered)); err != nil {
 		return fmt.Errorf("failed to write unit file %s: %w", unitPath, err)
 	}
 
@@ -294,11 +265,51 @@ func (m *SystemdManager) EnsureLinger() (bool, error) {
 	return m.checkLinger()
 }
 
-func systemdQuote(s string) string {
-	if strings.ContainsAny(s, " \t\n\"\\") {
-		escaped := strings.ReplaceAll(s, `\`, `\\`)
-		escaped = strings.ReplaceAll(escaped, `"`, `\"`)
-		return `"` + escaped + `"`
+func renderSystemdUnit(info ServiceInfo) (string, error) {
+	var cmdParts []string
+	cmdParts = append(cmdParts, systemdQuote(info.ExecPath))
+	for _, arg := range info.Args {
+		cmdParts = append(cmdParts, systemdQuote(arg))
 	}
-	return s
+
+	desc := info.Description
+	if desc == "" {
+		desc = fmt.Sprintf("Beep %s Daemon", ServiceTitle(info.Service))
+	}
+
+	envLines := make([]string, 0, len(info.Env))
+	keys := make([]string, 0, len(info.Env))
+	for k := range info.Env {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		line, ok := systemdEnvironmentLine(k, info.Env[k])
+		if ok {
+			envLines = append(envLines, line)
+		}
+	}
+
+	data := struct {
+		Description string
+		ExecCmd     string
+		Workspace   string
+		EnvLines    []string
+	}{
+		Description: desc,
+		ExecCmd:     strings.Join(cmdParts, " "),
+		Workspace:   systemdQuote(info.Workspace),
+		EnvLines:    envLines,
+	}
+
+	tmpl, err := template.New("unit").Parse(systemdUnitTemplate)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse unit template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to render unit file: %w", err)
+	}
+	return buf.String(), nil
 }

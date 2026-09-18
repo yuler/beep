@@ -1,6 +1,8 @@
 package autostart
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -31,21 +33,21 @@ func TestCaptureEnv(t *testing.T) {
 }
 
 func TestSystemdUnitGeneration(t *testing.T) {
-	tmpDir := t.TempDir()
-	mgr := &SystemdManager{
-		userDir: tmpDir,
-	}
-
+	mgr := &SystemdManager{}
 	info := ServiceInfo{
 		Service:     "runner",
 		BinaryName:  "beep",
 		Description: "Beep Runner Daemon",
 		ExecPath:    "/usr/local/bin/beep",
 		Args:        []string{"runner", "start", "--workspace", "/path with spaces"},
-		Workspace:   "/home/user/.beep",
+		Workspace:   "/home/user/My Workspace",
 		Env: map[string]string{
-			"PATH": "/usr/local/bin:/bin",
-			"HOME": "/home/user",
+			"PATH":         "/usr/local/bin:/bin",
+			"HOME":         "/home/user",
+			"BEEP_QUOTE":   `say "hi"`,
+			"BEEP_DOLLAR":  "$HOME/token",
+			"BEEP_NEWLINE": "a\nb",
+			"BEEP_BAD=KEY": "nope",
 		},
 	}
 
@@ -54,16 +56,27 @@ func TestSystemdUnitGeneration(t *testing.T) {
 		t.Fatalf("expected unit name beep-runner.service, got %q", unitName)
 	}
 
-	// Test template rendering logic directly
-	var cmdParts []string
-	cmdParts = append(cmdParts, systemdQuote(info.ExecPath))
-	for _, arg := range info.Args {
-		cmdParts = append(cmdParts, systemdQuote(arg))
+	unit, err := renderSystemdUnit(info)
+	if err != nil {
+		t.Fatalf("renderSystemdUnit: %v", err)
 	}
-	execCmd := strings.Join(cmdParts, " ")
-
-	if !strings.Contains(execCmd, `--workspace "/path with spaces"`) {
-		t.Errorf("expected quoted spaces in execCmd, got: %s", execCmd)
+	if !strings.Contains(unit, `ExecStart=/usr/local/bin/beep runner start --workspace "/path with spaces"`) {
+		t.Errorf("expected quoted spaces in ExecStart, got:\n%s", unit)
+	}
+	if !strings.Contains(unit, `WorkingDirectory="/home/user/My Workspace"`) {
+		t.Errorf("expected quoted WorkingDirectory, got:\n%s", unit)
+	}
+	if !strings.Contains(unit, `Environment="BEEP_QUOTE=say \"hi\""`) {
+		t.Errorf("expected escaped quotes in Environment, got:\n%s", unit)
+	}
+	if !strings.Contains(unit, `Environment="BEEP_DOLLAR=$$HOME/token"`) {
+		t.Errorf("expected escaped $ in Environment, got:\n%s", unit)
+	}
+	if strings.Contains(unit, "BEEP_NEWLINE") {
+		t.Errorf("expected newline env values to be omitted, got:\n%s", unit)
+	}
+	if strings.Contains(unit, "BEEP_BAD=KEY") {
+		t.Errorf("expected invalid env keys to be omitted, got:\n%s", unit)
 	}
 }
 
@@ -77,6 +90,56 @@ func TestLaunchdPlistGeneration(t *testing.T) {
 	plistPath := mgr.plistPath("channel", "beep")
 	if !strings.HasSuffix(plistPath, "com.beep.channel.plist") {
 		t.Fatalf("expected plist path to end with com.beep.channel.plist, got %q", plistPath)
+	}
+
+	plist, err := renderLaunchdPlist(ServiceInfo{
+		Service:    "channel",
+		BinaryName: "beep",
+		ExecPath:   `/usr/local/bin/beep & "helper"`,
+		Args:       []string{"channel", "up", "<workspace>"},
+		Workspace:  `/tmp/a&b`,
+		Env: map[string]string{
+			"BEEP_TOKEN": "a&b<c>",
+		},
+		LogPath: "/tmp/should-not-appear.log",
+	}, label)
+	if err != nil {
+		t.Fatalf("renderLaunchdPlist: %v", err)
+	}
+	if strings.Contains(plist, "StandardOutPath") || strings.Contains(plist, "/tmp/should-not-appear.log") {
+		t.Errorf("expected no supervisor log redirect, got:\n%s", plist)
+	}
+	if !strings.Contains(plist, `<string>/usr/local/bin/beep &amp; &#34;helper&#34;</string>`) {
+		t.Errorf("expected XML-escaped ExecPath, got:\n%s", plist)
+	}
+	if !strings.Contains(plist, `<string>&lt;workspace&gt;</string>`) {
+		t.Errorf("expected XML-escaped args, got:\n%s", plist)
+	}
+	if !strings.Contains(plist, `<string>a&amp;b&lt;c&gt;</string>`) {
+		t.Errorf("expected XML-escaped env value, got:\n%s", plist)
+	}
+	if !strings.Contains(plist, "<key>SuccessfulExit</key>") {
+		t.Errorf("expected KeepAlive SuccessfulExit=false, got:\n%s", plist)
+	}
+}
+
+func TestWritePrivateFileMode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "beep-runner.service")
+	if err := writePrivateFile(path, []byte("[Unit]\n")); err != nil {
+		t.Fatalf("writePrivateFile: %v", err)
+	}
+	st, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if got := st.Mode().Perm(); got != 0o600 {
+		t.Fatalf("expected mode 0600, got %o", got)
+	}
+}
+
+func TestServiceTitle(t *testing.T) {
+	if got := ServiceTitle("runner"); got != "Runner" {
+		t.Fatalf("ServiceTitle(runner)=%q", got)
 	}
 }
 

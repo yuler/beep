@@ -30,6 +30,9 @@ func NewCmdRestart() *cobra.Command {
 		Short: "Restart Beep daemon services (stops and relaunches in background)",
 		Long: `Restart Beep daemon services (stops and relaunches in background).
 
+Stops the systemd user unit or LaunchAgent first so the supervisor does not
+immediately respawn the old process, then reinstalls and starts.
+
 When run without arguments in an interactive terminal, prompts to select which
 services to restart. In non-interactive environments (e.g. CI or scripts),
 restarts all configured services.`,
@@ -87,6 +90,8 @@ func restartService(service string, cfg *config.Config, timeout time.Duration, f
 			return fmt.Errorf("channel token is not configured (run '%s channel connect')", config.BinaryName())
 		}
 	}
+
+	intsvc.StopSupervisor(service)
 
 	running, pid, err := daemon.CheckRunning(cfg.Workspace, service)
 	if err != nil {

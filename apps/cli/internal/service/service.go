@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -26,6 +27,7 @@ var StartServiceDaemonFn = StartServiceBackgroundDaemon
 
 // AutoStartServiceDaemon automatically stops an existing daemon and starts a new background daemon for the service.
 func AutoStartServiceDaemon(service string, cfg *config.Config, rawArgs []string) error {
+	StopSupervisor(service)
 	running, pid, _ := daemon.CheckRunning(cfg.Workspace, service)
 	if running && pid > 0 {
 		fmt.Printf("%s Restarting %s daemon (stopping PID: %d)...\n", ui.Cyan("●"), service, pid)
@@ -35,6 +37,20 @@ func AutoStartServiceDaemon(service string, cfg *config.Config, rawArgs []string
 	}
 
 	return StartServiceDaemonFn(service, []string{service, "up"}, rawArgs, cfg)
+}
+
+// StopSupervisor unloads an installed autostart unit without removing it.
+// launchd KeepAlive / systemd Restart must be stopped through the supervisor, not only by killing the PID.
+func StopSupervisor(service string) {
+	mgr := autostart.CurrentManager()
+	if !mgr.IsSupported() {
+		return
+	}
+	st := mgr.GetStatus(service, config.BinaryName())
+	if !st.Installed {
+		return
+	}
+	_ = mgr.Stop(service, config.BinaryName())
 }
 
 // FormatAutostartStatus formats the autostart status for display in CLI output.
@@ -69,7 +85,7 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 
 	mgr := autostart.CurrentManager()
 	if !mgr.IsSupported() {
-		return fmt.Errorf("system autostart is not supported on this environment (%s): requires systemd (Linux) or LaunchAgent (macOS)\nTo run in foreground, execute without -d", mgr.PlatformName())
+		return startDetachedDaemon(service, rawArgs, cfg, mgr)
 	}
 
 	exe, err := osExecutable()
@@ -81,34 +97,17 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 	}
 
 	childArgs := BuildServiceChildArgs(service, rawArgs)
-
-	env := autostart.CaptureEnv()
-	if service == daemon.ServiceChannel {
-		if token := cfg.ChannelAuthToken(); token != "" {
-			env["BEEP_CHANNEL_TOKEN"] = token
-		}
-	} else if service == daemon.ServiceRunner && cfg.RunnerToken != "" {
-		env["BEEP_RUNNER_TOKEN"] = cfg.RunnerToken
-	}
-	if cfg.ServerURL != "" {
-		env["BEEP_SERVER"] = cfg.ServerURL
-	}
-	if cfg.Workspace != "" {
-		env["BEEP_WORKSPACE"] = cfg.Workspace
-	}
-
 	today := time.Now().Format("2006-01-02")
 	logFile := daemon.DailyLogPath(cfg.Workspace, service, today)
 
 	info := autostart.ServiceInfo{
 		Service:     service,
 		BinaryName:  config.BinaryName(),
-		Description: fmt.Sprintf("Beep %s Daemon", strings.Title(service)),
+		Description: fmt.Sprintf("Beep %s Daemon", autostart.ServiceTitle(service)),
 		ExecPath:    exe,
 		Args:        childArgs,
 		Workspace:   cfg.Workspace,
-		Env:         env,
-		LogPath:     logFile,
+		Env:         autostartEnv(service, cfg),
 	}
 
 	if err := mgr.Install(info); err != nil {
@@ -116,6 +115,7 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 	}
 
 	if err := mgr.Start(service, config.BinaryName()); err != nil {
+		_ = mgr.Uninstall(service, config.BinaryName())
 		return fmt.Errorf("failed to start autostart service for %s: %w", service, err)
 	}
 
@@ -141,6 +141,75 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 		}
 	}
 
+	_ = mgr.Uninstall(service, config.BinaryName())
+	return fmt.Errorf("%s daemon failed to complete handshake within 5s (check logs: %s)", service, logFile)
+}
+
+func autostartEnv(service string, cfg *config.Config) map[string]string {
+	env := autostart.CaptureEnv()
+	if service == daemon.ServiceChannel {
+		if token := cfg.ChannelAuthToken(); token != "" {
+			env["BEEP_CHANNEL_TOKEN"] = token
+		}
+	} else if service == daemon.ServiceRunner && cfg.RunnerToken != "" {
+		env["BEEP_RUNNER_TOKEN"] = cfg.RunnerToken
+	}
+	if cfg.ServerURL != "" {
+		env["BEEP_SERVER"] = cfg.ServerURL
+	}
+	if cfg.Workspace != "" {
+		env["BEEP_WORKSPACE"] = cfg.Workspace
+	}
+	return env
+}
+
+func startDetachedDaemon(service string, rawArgs []string, cfg *config.Config, mgr autostart.Manager) error {
+	exe, err := osExecutable()
+	if err != nil {
+		return fmt.Errorf("failed to determine executable path: %w", err)
+	}
+
+	cmd := exec.Command(exe, BuildServiceChildArgs(service, rawArgs)...)
+	cmd.Env = childServiceEnv(service, cfg, true)
+	proc.Detach(cmd)
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start background daemon for %s: %w", service, err)
+	}
+
+	today := time.Now().Format("2006-01-02")
+	logFile := daemon.DailyLogPath(cfg.Workspace, service, today)
+
+	for i := 0; i < 50; i++ {
+		time.Sleep(100 * time.Millisecond)
+
+		if isReady, childPID, _ := daemon.CheckReady(cfg.Workspace, service); isReady {
+			if childPID <= 0 && cmd.Process != nil {
+				childPID = cmd.Process.Pid
+			}
+			fmt.Printf("%s %s (PID: %s)\n",
+				ui.Green("✓"),
+				ui.Bold(fmt.Sprintf("Beep %s started in background", service)),
+				ui.Cyan(fmt.Sprintf("%d", childPID)),
+			)
+			fmt.Printf("  %s %s\n", ui.Dim("Autostart:"), FormatAutostartStatus(mgr.GetStatus(service, config.BinaryName())))
+			fmt.Printf("  %s %s\n", ui.Dim("Workspace:"), cfg.Workspace)
+			fmt.Printf("  %s %s\n", ui.Dim("Logs:     "), logFile)
+			fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace, service))
+			return nil
+		}
+
+		if cmd.Process != nil {
+			if exited, exitStatus := proc.Exited(cmd.Process.Pid); exited {
+				return fmt.Errorf("%s daemon failed to start (exited with status %d, check logs: %s)", service, exitStatus, logFile)
+			}
+		}
+	}
+
+	if cmd.Process != nil {
+		_ = cmd.Process.Kill()
+		_, _ = cmd.Process.Wait()
+	}
 	return fmt.Errorf("%s daemon failed to complete handshake within 5s (check logs: %s)", service, logFile)
 }
 

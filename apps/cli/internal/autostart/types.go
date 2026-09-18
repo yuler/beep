@@ -18,7 +18,7 @@ type ServiceInfo struct {
 	Args        []string          // Command line arguments for foreground run (e.g. ["runner", "start"])
 	Workspace   string            // Working directory
 	Env         map[string]string // Captured environment variables
-	LogPath     string            // Path to output log file (for launchd)
+	LogPath     string            // Unused by supervisors; daemons write daily logs themselves
 }
 
 // Status represents the autostart status of a service.

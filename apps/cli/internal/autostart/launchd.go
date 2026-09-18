@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -28,21 +29,18 @@ const launchdPlistTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 	<key>WorkingDirectory</key>
 	<string>{{.Workspace}}</string>
 	<key>KeepAlive</key>
-	<true/>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
 	<key>RunAtLoad</key>
 	<true/>
-{{- if .LogPath}}
-	<key>StandardOutPath</key>
-	<string>{{.LogPath}}</string>
-	<key>StandardErrorPath</key>
-	<string>{{.LogPath}}</string>
-{{- end}}
 {{- if .Env}}
 	<key>EnvironmentVariables</key>
 	<dict>
-{{- range $k, $v := .Env}}
-		<key>{{$k}}</key>
-		<string>{{$v}}</string>
+{{- range .Env}}
+		<key>{{.Key}}</key>
+		<string>{{.Value}}</string>
 {{- end}}
 	</dict>
 {{- end}}
@@ -110,40 +108,19 @@ func (m *LaunchdManager) Install(info ServiceInfo) error {
 	label := m.Label(info.Service, info.BinaryName)
 	plistFile := m.plistPath(info.Service, info.BinaryName)
 
-	data := struct {
-		Label     string
-		ExecPath  string
-		Args      []string
-		Workspace string
-		Env       map[string]string
-		LogPath   string
-	}{
-		Label:     label,
-		ExecPath:  info.ExecPath,
-		Args:      info.Args,
-		Workspace: info.Workspace,
-		Env:       info.Env,
-		LogPath:   info.LogPath,
-	}
-
-	tmpl, err := template.New("plist").Parse(launchdPlistTemplate)
+	rendered, err := renderLaunchdPlist(info, label)
 	if err != nil {
-		return fmt.Errorf("failed to parse plist template: %w", err)
+		return err
 	}
 
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return fmt.Errorf("failed to render plist file: %w", err)
-	}
-
-	if err := os.WriteFile(plistFile, buf.Bytes(), 0o644); err != nil {
+	if err := writePrivateFile(plistFile, []byte(rendered)); err != nil {
 		return fmt.Errorf("failed to write plist file %s: %w", plistFile, err)
 	}
 
-	// Try bootstrap gui/<uid> <plistFile>, fallback to launchctl load -w
+	// Unload first so a rewrite can re-bootstrap (KeepAlive would otherwise race).
 	target := m.guiTarget()
+	_ = exec.Command(m.launchctlPath, "bootout", fmt.Sprintf("%s/%s", target, label)).Run()
 	if out, err := exec.Command(m.launchctlPath, "bootstrap", target, plistFile).CombinedOutput(); err != nil {
-		// If bootstrap fails (e.g. older macOS), fallback to load
 		if loadOut, loadErr := exec.Command(m.launchctlPath, "load", "-w", plistFile).CombinedOutput(); loadErr != nil {
 			return fmt.Errorf("launchctl load failed: %s (%w); bootstrap output: %s",
 				strings.TrimSpace(string(loadOut)), loadErr, strings.TrimSpace(string(out)))
@@ -151,6 +128,52 @@ func (m *LaunchdManager) Install(info ServiceInfo) error {
 	}
 
 	return nil
+}
+
+func renderLaunchdPlist(info ServiceInfo, label string) (string, error) {
+	args := make([]string, len(info.Args))
+	for i, arg := range info.Args {
+		args[i] = xmlEscape(arg)
+	}
+
+	type envItem struct {
+		Key   string
+		Value string
+	}
+	env := make([]envItem, 0, len(info.Env))
+	keys := make([]string, 0, len(info.Env))
+	for k := range info.Env {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		env = append(env, envItem{Key: xmlEscape(k), Value: xmlEscape(info.Env[k])})
+	}
+
+	data := struct {
+		Label     string
+		ExecPath  string
+		Args      []string
+		Workspace string
+		Env       []envItem
+	}{
+		Label:     xmlEscape(label),
+		ExecPath:  xmlEscape(info.ExecPath),
+		Args:      args,
+		Workspace: xmlEscape(info.Workspace),
+		Env:       env,
+	}
+
+	tmpl, err := template.New("plist").Parse(launchdPlistTemplate)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse plist template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to render plist file: %w", err)
+	}
+	return buf.String(), nil
 }
 
 func (m *LaunchdManager) Uninstall(service, binaryName string) error {
@@ -178,10 +201,12 @@ func (m *LaunchdManager) Start(service, binaryName string) error {
 		return ErrUnsupported
 	}
 	label := m.Label(service, binaryName)
+	plistFile := m.plistPath(service, binaryName)
 	target := m.guiTarget()
+	domainLabel := fmt.Sprintf("%s/%s", target, label)
 
-	// Try kickstart, fallback to start
-	if err := exec.Command(m.launchctlPath, "kickstart", "-k", fmt.Sprintf("%s/%s", target, label)).Run(); err != nil {
+	_ = exec.Command(m.launchctlPath, "bootstrap", target, plistFile).Run()
+	if err := exec.Command(m.launchctlPath, "kickstart", "-k", domainLabel).Run(); err != nil {
 		if out, startErr := exec.Command(m.launchctlPath, "start", label).CombinedOutput(); startErr != nil {
 			return fmt.Errorf("launchctl start failed: %s (%w)", strings.TrimSpace(string(out)), startErr)
 		}
@@ -194,10 +219,11 @@ func (m *LaunchdManager) Stop(service, binaryName string) error {
 		return ErrUnsupported
 	}
 	label := m.Label(service, binaryName)
-	out, err := exec.Command(m.launchctlPath, "stop", label).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("launchctl stop failed: %s (%w)", strings.TrimSpace(string(out)), err)
-	}
+	plistFile := m.plistPath(service, binaryName)
+	target := m.guiTarget()
+	// bootout/unload actually stops KeepAlive jobs; launchctl stop would respawn.
+	_ = exec.Command(m.launchctlPath, "bootout", fmt.Sprintf("%s/%s", target, label)).Run()
+	_ = exec.Command(m.launchctlPath, "unload", plistFile).Run()
 	return nil
 }
 

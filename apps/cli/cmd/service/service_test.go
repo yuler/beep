@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"beep/internal/autostart"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/daemon"
@@ -141,6 +142,10 @@ func TestServiceStatusUnknownTarget(t *testing.T) {
 }
 
 func TestServiceRestartWithMock(t *testing.T) {
+	origMgr := autostart.DefaultManager
+	autostart.DefaultManager = autostart.NewUnsupportedManager()
+	t.Cleanup(func() { autostart.DefaultManager = origMgr })
+
 	tmpDir := t.TempDir()
 	cfg := &config.Config{
 		Workspace:    tmpDir,
@@ -189,9 +194,23 @@ func TestServiceHelpOutput(t *testing.T) {
 	if !strings.Contains(out, "start") || !strings.Contains(out, "stop") || !strings.Contains(out, "restart") || !strings.Contains(out, "status") {
 		t.Errorf("expected help output to contain start, stop, restart, status; got:\n%s", out)
 	}
+
+	stop := NewCmdStop()
+	var stopBuf bytes.Buffer
+	stop.SetOut(&stopBuf)
+	stop.SetErr(&stopBuf)
+	_ = stop.Help()
+	stopOut := stopBuf.String()
+	if !strings.Contains(stopOut, "unregisters") {
+		t.Errorf("expected stop help to mention unregistering autostart, got:\n%s", stopOut)
+	}
 }
 
 func TestServiceRestartInteractive(t *testing.T) {
+	origMgr := autostart.DefaultManager
+	autostart.DefaultManager = autostart.NewUnsupportedManager()
+	t.Cleanup(func() { autostart.DefaultManager = origMgr })
+
 	tmpDir := t.TempDir()
 	cfg := &config.Config{
 		Workspace:    tmpDir,
@@ -265,6 +284,10 @@ func TestServiceRestartInteractive(t *testing.T) {
 }
 
 func TestServiceRestartNonInteractiveFallback(t *testing.T) {
+	origMgr := autostart.DefaultManager
+	autostart.DefaultManager = autostart.NewUnsupportedManager()
+	t.Cleanup(func() { autostart.DefaultManager = origMgr })
+
 	tmpDir := t.TempDir()
 	cmdutil.SetOverrideWorkspace(tmpDir)
 	defer cmdutil.SetOverrideWorkspace("")
