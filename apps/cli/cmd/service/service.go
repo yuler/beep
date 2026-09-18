@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"beep/internal/cmdutil"
+
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +16,11 @@ func NewCmdService() *cobra.Command {
 		Short: "Manage local background daemon services (runner and channel)",
 		Long:  "Manage local background daemon services for executing jobs (runner) and receiving notifications (channel).",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
+			cfg, err := cmdutil.LoadConfig(cmd)
+			if err != nil {
+				return err
+			}
+			return runStatusAll(cfg)
 		},
 	}
 
