@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -20,11 +21,13 @@ type BeepFailedFields struct {
 	Schedule bool
 	Timezone bool
 	Channels bool
+	Intent   bool
+	Metadata bool
 }
 
 // Any reports whether any field failed.
 func (f BeepFailedFields) Any() bool {
-	return f.Title || f.Body || f.Schedule || f.Timezone || f.Channels
+	return f.Title || f.Body || f.Schedule || f.Timezone || f.Channels || f.Intent || f.Metadata
 }
 
 // DetectBeepFailedFields inspects error messages to identify which fields failed.
@@ -53,6 +56,12 @@ func DetectBeepFailedFields(errList []string) BeepFailedFields {
 		if strings.Contains(low, "channel") || strings.Contains(low, "notification") {
 			f.Channels = true
 		}
+		if strings.Contains(low, "intent") {
+			f.Intent = true
+		}
+		if strings.Contains(low, "metadata") {
+			f.Metadata = true
+		}
 	}
 	return f
 }
@@ -68,11 +77,13 @@ func promptBeepSelectFieldToAdjust() BeepFailedFields {
 			huh.NewOption("Schedule", "schedule"),
 			huh.NewOption("Timezone", "timezone"),
 			huh.NewOption("Notification Channels", "channels"),
+			huh.NewOption("Intent", "intent"),
+			huh.NewOption("Metadata", "metadata"),
 		).
 		Value(&choice).
 		Run()
 	if err != nil || choice == "all" || choice == "" {
-		return BeepFailedFields{Title: true, Body: true, Schedule: true, Timezone: true, Channels: true}
+		return BeepFailedFields{Title: true, Body: true, Schedule: true, Timezone: true, Channels: true, Intent: true, Metadata: true}
 	}
 	var f BeepFailedFields
 	switch choice {
@@ -86,6 +97,10 @@ func promptBeepSelectFieldToAdjust() BeepFailedFields {
 		f.Timezone = true
 	case "channels":
 		f.Channels = true
+	case "intent":
+		f.Intent = true
+	case "metadata":
+		f.Metadata = true
 	}
 	return f
 }
@@ -169,6 +184,57 @@ func promptBeepForm(initial client.CreateBeepParams, defaultChannels []string, r
 	}
 	res.Channels = strings.TrimSpace(res.Channels)
 
+	if reviewAll || strings.TrimSpace(res.Intent) == "" {
+		err := huh.NewInput().
+			Title("Intent Identifier (optional)").
+			Description("Optional business intent slug (e.g. lunch_break, get_off_work)").
+			Placeholder("e.g. lunch_break").
+			Value(&res.Intent).
+			Run()
+		if err != nil {
+			return nil, err
+		}
+	}
+	res.Intent = strings.TrimSpace(res.Intent)
+
+	var metadataStr string
+	if res.Metadata != nil {
+		if b, err := json.Marshal(res.Metadata); err == nil {
+			metadataStr = string(b)
+		}
+	}
+	if reviewAll || metadataStr == "" {
+		err := huh.NewInput().
+			Title("Metadata JSON (optional)").
+			Description("Optional JSON object for downstream handlers").
+			Placeholder(`e.g. {"key":"value"}`).
+			Value(&metadataStr).
+			Validate(func(s string) error {
+				s = strings.TrimSpace(s)
+				if s == "" {
+					return nil
+				}
+				var m map[string]any
+				if err := json.Unmarshal([]byte(s), &m); err != nil {
+					return errors.New("must be a valid JSON object or empty")
+				}
+				return nil
+			}).
+			Run()
+		if err != nil {
+			return nil, err
+		}
+	}
+	metadataStr = strings.TrimSpace(metadataStr)
+	if metadataStr != "" {
+		var m map[string]any
+		if err := json.Unmarshal([]byte(metadataStr), &m); err == nil {
+			res.Metadata = m
+		}
+	} else {
+		res.Metadata = nil
+	}
+
 	return &res, nil
 }
 
@@ -246,6 +312,59 @@ func PromptBeepAdjust(initial client.CreateBeepParams, defaultChannels []string,
 		res.Channels = strings.TrimSpace(channels)
 	}
 
+	// 6. Intent
+	if failed.Intent {
+		err := huh.NewInput().
+			Title("Intent Identifier (optional)").
+			Description("Optional business intent slug (e.g. lunch_break, get_off_work)").
+			Placeholder("e.g. lunch_break").
+			Value(&res.Intent).
+			Run()
+		if err != nil {
+			return nil, err
+		}
+		res.Intent = strings.TrimSpace(res.Intent)
+	}
+
+	// 7. Metadata
+	if failed.Metadata {
+		var metadataStr string
+		if res.Metadata != nil {
+			if b, err := json.Marshal(res.Metadata); err == nil {
+				metadataStr = string(b)
+			}
+		}
+		err := huh.NewInput().
+			Title("Metadata JSON (optional)").
+			Description("Optional JSON object for downstream handlers").
+			Placeholder(`e.g. {"key":"value"}`).
+			Value(&metadataStr).
+			Validate(func(s string) error {
+				s = strings.TrimSpace(s)
+				if s == "" {
+					return nil
+				}
+				var m map[string]any
+				if err := json.Unmarshal([]byte(s), &m); err != nil {
+					return errors.New("must be a valid JSON object or empty")
+				}
+				return nil
+			}).
+			Run()
+		if err != nil {
+			return nil, err
+		}
+		metadataStr = strings.TrimSpace(metadataStr)
+		if metadataStr != "" {
+			var m map[string]any
+			if err := json.Unmarshal([]byte(metadataStr), &m); err == nil {
+				res.Metadata = m
+			}
+		} else {
+			res.Metadata = nil
+		}
+	}
+
 	return &res, nil
 }
 
@@ -276,6 +395,14 @@ func BeepCreateSummary(params client.CreateBeepParams, errList []string) []Creat
 		CreateSummaryItem{Key: "Timezone", Value: params.Timezone, Failed: failed.Timezone},
 		CreateSummaryItem{Key: "Channels", Value: params.Channels, Failed: failed.Channels},
 	)
+	if params.Intent != "" {
+		items = append(items, CreateSummaryItem{Key: "Intent", Value: params.Intent, Failed: failed.Intent})
+	}
+	if params.Metadata != nil {
+		if metaBytes, err := json.Marshal(params.Metadata); err == nil {
+			items = append(items, CreateSummaryItem{Key: "Metadata", Value: string(metaBytes), Failed: failed.Metadata})
+		}
+	}
 	return items
 }
 
@@ -410,43 +537,4 @@ func PromptBeepProposalAction() (string, error) {
 		return "", err
 	}
 	return choice, nil
-}
-
-// PromptBeepCreateMode asks the user how they want to create the beep: natural language or form.
-func PromptBeepCreateMode() (string, error) {
-	var mode string = "natural"
-	err := huh.NewSelect[string]().
-		Title("Creation Mode").
-		Description("How would you like to create this beep?").
-		Options(
-			huh.NewOption("Natural language (AI prompt)", "natural"),
-			huh.NewOption("Interactive form (step-by-step)", "form"),
-		).
-		Value(&mode).
-		Run()
-	if err != nil {
-		return "", err
-	}
-	return mode, nil
-}
-
-// PromptBeepNaturalPrompt prompts for a natural language description of the beep.
-func PromptBeepNaturalPrompt() (string, error) {
-	var promptText string
-	err := huh.NewInput().
-		Title("Natural Language Prompt").
-		Description("Describe your beep in plain language (e.g. 'remind me in 30 minutes to drink water')").
-		Placeholder("e.g. Check server logs tomorrow at 10am").
-		Value(&promptText).
-		Validate(func(s string) error {
-			if strings.TrimSpace(s) == "" {
-				return errors.New("prompt is required")
-			}
-			return nil
-		}).
-		Run()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(promptText), nil
 }

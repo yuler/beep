@@ -160,49 +160,26 @@ Examples:
 						defaultChannels = client.SanitizeChannelDefaults(s.NotificationChannels)
 					}
 
-					// When no explicit schedule flags are given in interactive mode, default to AI proposal:
-					// 1. If args were provided (e.g. `beep create xxx`), directly pass them to AI proposal
-					// 2. If no args were provided, prompt user to choose between natural language or form
-					if schedKind == "" {
-						prompt := argText
-						if prompt == "" {
-							mode, modeErr := ui.PromptBeepCreateMode()
-							if modeErr != nil {
-								if isUserAbort(ctx, modeErr) {
-									return nil
-								}
-								return modeErr
-							}
-							if mode == "natural" {
-								var pErr error
-								prompt, pErr = ui.PromptBeepNaturalPrompt()
-								if pErr != nil {
-									if isUserAbort(ctx, pErr) {
-										return nil
-									}
-									return pErr
-								}
-							}
+					// When no explicit schedule flags are given in interactive mode:
+					// 1. If args were provided (e.g. `beep create "natural text"`), default to AI proposal
+					// 2. If no args were provided (e.g. `beep create`), directly proceed to interactive form
+					if schedKind == "" && argText != "" {
+						err := handleNaturalCreate(ctx, c, cmd, argText, flagBody, flagChannels, tz, flagIntent, metadataMap)
+						if err == nil {
+							return nil
 						}
-
-						if prompt != "" {
-							err := handleNaturalCreate(ctx, c, cmd, prompt, flagBody, flagChannels, tz, flagIntent, metadataMap)
-							if err == nil {
-								return nil
-							}
-							if isUserAbort(ctx, err) {
-								return nil
-							}
-							var proposalErr *aiProposalError
-							if errors.As(err, &proposalErr) {
-								// If AI proposal failed (e.g. offline/unconfigured), warn and fall back to manual form
-								fmt.Println(ui.Warn("AI proposal unavailable (%v), falling back to form...", proposalErr.err))
-								params.Title = prompt
-								aiFallback = true
-								ui.PrintBeepCreateSummary(params, nil)
-							} else {
-								return err
-							}
+						if isUserAbort(ctx, err) {
+							return nil
+						}
+						var proposalErr *aiProposalError
+						if errors.As(err, &proposalErr) {
+							// If AI proposal failed (e.g. offline/unconfigured), warn and fall back to manual form
+							fmt.Println(ui.Warn("AI proposal unavailable (%v), falling back to form...", proposalErr.err))
+							params.Title = argText
+							aiFallback = true
+							ui.PrintBeepCreateSummary(params, nil)
+						} else {
+							return err
 						}
 					}
 
@@ -519,6 +496,14 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 			}
 			if len(displayChannels) > 0 {
 				fmt.Println(ui.KeyValue("Channels", strings.Join(displayChannels, ", ")))
+			}
+			if params.Intent != "" {
+				fmt.Println(ui.KeyValue("Intent", params.Intent))
+			}
+			if params.Metadata != nil {
+				if metaBytes, err := json.Marshal(params.Metadata); err == nil {
+					fmt.Println(ui.KeyValue("Metadata", string(metaBytes)))
+				}
 			}
 			fmt.Println()
 
