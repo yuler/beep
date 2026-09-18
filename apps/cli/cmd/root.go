@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"beep/cmd/api"
 	"beep/cmd/beep"
 	"beep/cmd/beeper"
 	"beep/cmd/service"
@@ -114,6 +115,10 @@ func init() {
 	RootCmd.AddCommand(legacyBeepCmd)
 	RootCmd.AddCommand(beeperCmd)
 	RootCmd.AddCommand(configCmd)
+
+	apiCmd := api.NewCmdAPI()
+	apiCmd.GroupID = "core"
+	RootCmd.AddCommand(apiCmd)
 
 	// 2. Beep subcommands (default scope - can be used directly without 'beep beep')
 	beepCommands := []*cobra.Command{
