@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"beep/internal/cmdutil"
+	"beep/internal/config"
 	"beep/internal/daemon"
 	intsvc "beep/internal/service"
+	"beep/internal/supervisor"
 	"beep/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -61,18 +63,23 @@ func runStopAll(workspaceDir string, timeout time.Duration, force bool) error {
 	runnerRunning, _, _ := daemon.CheckRunning(workspaceDir, daemon.ServiceRunner)
 	channelRunning, _, _ := daemon.CheckRunning(workspaceDir, daemon.ServiceChannel)
 
-	if !runnerRunning && !channelRunning {
+	mgr := supervisor.CurrentManager()
+	bin := config.BinaryName()
+	runnerInstalled := mgr.IsSupported() && mgr.GetStatus(daemon.ServiceRunner, bin).Installed
+	channelInstalled := mgr.IsSupported() && mgr.GetStatus(daemon.ServiceChannel, bin).Installed
+
+	if !runnerRunning && !channelRunning && !runnerInstalled && !channelInstalled {
 		fmt.Println(ui.Info("No running Beep daemons found in workspace: %s", ui.Dim(workspaceDir)))
 		return nil
 	}
 
-	if runnerRunning {
+	if runnerRunning || runnerInstalled {
 		if err := intsvc.StopSingleService(daemon.ServiceRunner, workspaceDir, timeout, force); err != nil {
 			return err
 		}
 	}
 
-	if channelRunning {
+	if channelRunning || channelInstalled {
 		if err := intsvc.StopSingleService(daemon.ServiceChannel, workspaceDir, timeout, force); err != nil {
 			return err
 		}

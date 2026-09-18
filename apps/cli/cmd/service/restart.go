@@ -105,7 +105,7 @@ func restartService(service string, cfg *config.Config, timeout time.Duration, f
 		}
 	}
 
-	return intsvc.StartServiceDaemonFn(service, []string{service, "up"}, os.Args[1:], cfg)
+	return intsvc.StartServiceDaemonFn(service, os.Args[1:], cfg)
 }
 
 func restartAll(cfg *config.Config, timeout time.Duration, force bool) error {

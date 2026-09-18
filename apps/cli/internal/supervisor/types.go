@@ -17,8 +17,7 @@ type ServiceInfo struct {
 	ExecPath    string            // Absolute path to the executable
 	Args        []string          // Command line arguments for foreground run (e.g. ["runner", "start"])
 	Workspace   string            // Working directory
-	Env         map[string]string // Captured environment variables
-	LogPath     string            // Unused by supervisors; daemons write daily logs themselves
+	Env         map[string]string // Non-secret environment (PATH/HOME/USER and workspace/server)
 }
 
 // Status represents the autostart status of a service.
@@ -40,7 +39,6 @@ type Manager interface {
 	Uninstall(service, binaryName string) error
 	Start(service, binaryName string) error
 	Stop(service, binaryName string) error
-	Restart(service, binaryName string) error
 	GetStatus(service, binaryName string) Status
 	EnsureLinger() (bool, error)
 }

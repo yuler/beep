@@ -21,8 +21,8 @@ func TestCaptureEnv(t *testing.T) {
 	if env["HOME"] != "/home/testuser" {
 		t.Errorf("expected HOME in env, got %q", env["HOME"])
 	}
-	if env["BEEP_RUNNER_TOKEN"] != "test_token_123" {
-		t.Errorf("expected BEEP_RUNNER_TOKEN in env, got %q", env["BEEP_RUNNER_TOKEN"])
+	if env["BEEP_RUNNER_TOKEN"] != "" {
+		t.Errorf("expected BEEP_RUNNER_TOKEN not to be captured into supervisor env")
 	}
 	if _, ok := env["BEEP_DAEMON_CHILD"]; ok {
 		t.Errorf("expected BEEP_DAEMON_CHILD to be excluded from captured env")
@@ -99,9 +99,10 @@ func TestLaunchdPlistGeneration(t *testing.T) {
 		Args:       []string{"channel", "up", "<workspace>"},
 		Workspace:  `/tmp/a&b`,
 		Env: map[string]string{
-			"BEEP_TOKEN": "a&b<c>",
+			"BEEP_TOKEN":   "a&b<c>",
+			"BEEP_NEWLINE": "a\nb",
+			"BEEP_CTRL":    "ok\x00bad",
 		},
-		LogPath: "/tmp/should-not-appear.log",
 	}, label)
 	if err != nil {
 		t.Fatalf("renderLaunchdPlist: %v", err)
@@ -118,6 +119,12 @@ func TestLaunchdPlistGeneration(t *testing.T) {
 	if !strings.Contains(plist, `<string>a&amp;b&lt;c&gt;</string>`) {
 		t.Errorf("expected XML-escaped env value, got:\n%s", plist)
 	}
+	if strings.Contains(plist, "BEEP_NEWLINE") || strings.Contains(plist, "a\nb") {
+		t.Errorf("expected newline env values to be omitted, got:\n%s", plist)
+	}
+	if strings.Contains(plist, "BEEP_CTRL") {
+		t.Errorf("expected control-char env values to be omitted, got:\n%s", plist)
+	}
 	if !strings.Contains(plist, "<key>SuccessfulExit</key>") {
 		t.Errorf("expected KeepAlive SuccessfulExit=false, got:\n%s", plist)
 	}
@@ -125,6 +132,12 @@ func TestLaunchdPlistGeneration(t *testing.T) {
 
 func TestWritePrivateFileMode(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "beep-runner.service")
+	if err := os.WriteFile(path, []byte("old\n"), 0o644); err != nil {
+		t.Fatalf("seed world-readable file: %v", err)
+	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatalf("chmod 0644: %v", err)
+	}
 	if err := writePrivateFile(path, []byte("[Unit]\n")); err != nil {
 		t.Fatalf("writePrivateFile: %v", err)
 	}
@@ -133,7 +146,7 @@ func TestWritePrivateFileMode(t *testing.T) {
 		t.Fatalf("stat: %v", err)
 	}
 	if got := st.Mode().Perm(); got != 0o600 {
-		t.Fatalf("expected mode 0600, got %o", got)
+		t.Fatalf("expected mode 0600 after overwrite, got %o", got)
 	}
 }
 

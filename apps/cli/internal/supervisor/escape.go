@@ -8,7 +8,10 @@ import (
 )
 
 func writePrivateFile(path string, data []byte) error {
-	return os.WriteFile(path, data, 0o600)
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return err
+	}
+	return os.Chmod(path, 0o600)
 }
 
 func ServiceTitle(service string) string {
@@ -39,4 +42,13 @@ func systemdEnvironmentLine(key, value string) (string, bool) {
 
 func xmlEscape(s string) string {
 	return html.EscapeString(s)
+}
+
+func hasXMLUnsafeControl(s string) bool {
+	for _, r := range s {
+		if r < 0x20 && r != '\t' {
+			return true
+		}
+	}
+	return false
 }

@@ -246,7 +246,7 @@ func TestChannelConnectAutomaticallyStartsDaemon(t *testing.T) {
 
 	var startedService string
 	var startedRawArgs []string
-	service.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	service.StartServiceDaemonFn = func(service string, rawArgs []string, c *config.Config) error {
 		startedService = service
 		startedRawArgs = rawArgs
 		return nil

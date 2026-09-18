@@ -147,7 +147,11 @@ func renderLaunchdPlist(info ServiceInfo, label string) (string, error) {
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		env = append(env, envItem{Key: xmlEscape(k), Value: xmlEscape(info.Env[k])})
+		v := info.Env[k]
+		if hasXMLUnsafeControl(k) || hasXMLUnsafeControl(v) {
+			continue
+		}
+		env = append(env, envItem{Key: xmlEscape(k), Value: xmlEscape(v)})
 	}
 
 	data := struct {
@@ -206,7 +210,7 @@ func (m *LaunchdManager) Start(service, binaryName string) error {
 	domainLabel := fmt.Sprintf("%s/%s", target, label)
 
 	_ = exec.Command(m.launchctlPath, "bootstrap", target, plistFile).Run()
-	if err := exec.Command(m.launchctlPath, "kickstart", "-k", domainLabel).Run(); err != nil {
+	if err := exec.Command(m.launchctlPath, "kickstart", domainLabel).Run(); err != nil {
 		if out, startErr := exec.Command(m.launchctlPath, "start", label).CombinedOutput(); startErr != nil {
 			return fmt.Errorf("launchctl start failed: %s (%w)", strings.TrimSpace(string(out)), startErr)
 		}
@@ -224,20 +228,6 @@ func (m *LaunchdManager) Stop(service, binaryName string) error {
 	// bootout/unload actually stops KeepAlive jobs; launchctl stop would respawn.
 	_ = exec.Command(m.launchctlPath, "bootout", fmt.Sprintf("%s/%s", target, label)).Run()
 	_ = exec.Command(m.launchctlPath, "unload", plistFile).Run()
-	return nil
-}
-
-func (m *LaunchdManager) Restart(service, binaryName string) error {
-	if !m.IsSupported() {
-		return ErrUnsupported
-	}
-	label := m.Label(service, binaryName)
-	target := m.guiTarget()
-
-	if err := exec.Command(m.launchctlPath, "kickstart", "-k", fmt.Sprintf("%s/%s", target, label)).Run(); err != nil {
-		_ = m.Stop(service, binaryName)
-		return m.Start(service, binaryName)
-	}
 	return nil
 }
 

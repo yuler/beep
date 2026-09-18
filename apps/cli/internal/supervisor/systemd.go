@@ -188,18 +188,6 @@ func (m *SystemdManager) Stop(service, binaryName string) error {
 	return nil
 }
 
-func (m *SystemdManager) Restart(service, binaryName string) error {
-	if !m.IsSupported() {
-		return ErrUnsupported
-	}
-	unitName := m.UnitName(service, binaryName)
-	out, err := exec.Command(m.systemctlPath, "--user", "restart", unitName).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("systemctl --user restart %s failed: %s (%w)", unitName, strings.TrimSpace(string(out)), err)
-	}
-	return nil
-}
-
 func (m *SystemdManager) GetStatus(service, binaryName string) Status {
 	unitName := m.UnitName(service, binaryName)
 	status := Status{

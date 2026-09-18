@@ -157,7 +157,7 @@ func TestServiceRestartWithMock(t *testing.T) {
 	origFn := intsvc.StartServiceDaemonFn
 	defer func() { intsvc.StartServiceDaemonFn = origFn }()
 
-	intsvc.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	intsvc.StartServiceDaemonFn = func(service string, rawArgs []string, c *config.Config) error {
 		calledServices = append(calledServices, service)
 		return nil
 	}
@@ -222,7 +222,7 @@ func TestServiceRestartInteractive(t *testing.T) {
 	origStartFn := intsvc.StartServiceDaemonFn
 	defer func() { intsvc.StartServiceDaemonFn = origStartFn }()
 
-	intsvc.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	intsvc.StartServiceDaemonFn = func(service string, rawArgs []string, c *config.Config) error {
 		calledServices = append(calledServices, service)
 		return nil
 	}
@@ -305,7 +305,7 @@ func TestServiceRestartNonInteractiveFallback(t *testing.T) {
 	origStartFn := intsvc.StartServiceDaemonFn
 	defer func() { intsvc.StartServiceDaemonFn = origStartFn }()
 
-	intsvc.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	intsvc.StartServiceDaemonFn = func(service string, rawArgs []string, c *config.Config) error {
 		calledServices = append(calledServices, service)
 		return nil
 	}
@@ -327,5 +327,53 @@ func TestServiceDefaultRunsStatus(t *testing.T) {
 	cmd := NewCmdService()
 	if err := cmd.RunE(cmd, []string{}); err != nil {
 		t.Fatalf("expected 'beep service' without args to run status successfully, got: %v", err)
+	}
+}
+
+type stubSupervisor struct {
+	installed    map[string]bool
+	uninstalled  []string
+	uninstallErr error
+}
+
+func (s *stubSupervisor) IsSupported() bool                         { return true }
+func (s *stubSupervisor) PlatformName() string                      { return "systemd" }
+func (s *stubSupervisor) Install(info supervisor.ServiceInfo) error { return nil }
+func (s *stubSupervisor) Uninstall(service, binaryName string) error {
+	if s.uninstallErr != nil {
+		return s.uninstallErr
+	}
+	s.uninstalled = append(s.uninstalled, service)
+	if s.installed != nil {
+		s.installed[service] = false
+	}
+	return nil
+}
+func (s *stubSupervisor) Start(service, binaryName string) error { return nil }
+func (s *stubSupervisor) Stop(service, binaryName string) error  { return nil }
+func (s *stubSupervisor) GetStatus(service, binaryName string) supervisor.Status {
+	return supervisor.Status{
+		Supported: true,
+		Platform:  "systemd",
+		Installed: s.installed[service],
+		UnitName:  service,
+	}
+}
+func (s *stubSupervisor) EnsureLinger() (bool, error) { return true, nil }
+
+func TestRunStopAllUnregistersInstalledWhenNotRunning(t *testing.T) {
+	orig := supervisor.DefaultManager
+	stub := &stubSupervisor{installed: map[string]bool{
+		daemon.ServiceRunner:  true,
+		daemon.ServiceChannel: true,
+	}}
+	supervisor.DefaultManager = stub
+	t.Cleanup(func() { supervisor.DefaultManager = orig })
+
+	if err := runStopAll(t.TempDir(), time.Second, true); err != nil {
+		t.Fatalf("runStopAll: %v", err)
+	}
+	if len(stub.uninstalled) != 2 {
+		t.Fatalf("expected both services uninstalled, got %v", stub.uninstalled)
 	}
 }

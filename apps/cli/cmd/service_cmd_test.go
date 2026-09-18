@@ -207,7 +207,7 @@ func TestAutoStartServiceDaemon(t *testing.T) {
 
 	var calledService string
 	var calledRawArgs []string
-	service.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	service.StartServiceDaemonFn = func(service string, rawArgs []string, c *config.Config) error {
 		calledService = service
 		calledRawArgs = rawArgs
 		return nil

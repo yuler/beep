@@ -74,12 +74,12 @@ func runStartAll(cfg *config.Config, daemonMode bool) error {
 
 	if daemonMode {
 		if hasRunner {
-			if err := intsvc.StartServiceDaemonFn(daemon.ServiceRunner, []string{"runner", "up"}, os.Args[1:], cfg); err != nil {
+			if err := intsvc.StartServiceDaemonFn(daemon.ServiceRunner, os.Args[1:], cfg); err != nil {
 				return err
 			}
 		}
 		if hasChannel {
-			if err := intsvc.StartServiceDaemonFn(daemon.ServiceChannel, []string{"channel", "up"}, os.Args[1:], cfg); err != nil {
+			if err := intsvc.StartServiceDaemonFn(daemon.ServiceChannel, os.Args[1:], cfg); err != nil {
 				return err
 			}
 		}

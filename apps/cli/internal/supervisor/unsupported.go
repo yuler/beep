@@ -31,10 +31,6 @@ func (m *UnsupportedManager) Stop(service, binaryName string) error {
 	return ErrUnsupported
 }
 
-func (m *UnsupportedManager) Restart(service, binaryName string) error {
-	return ErrUnsupported
-}
-
 func (m *UnsupportedManager) GetStatus(service, binaryName string) Status {
 	return Status{
 		Supported: false,

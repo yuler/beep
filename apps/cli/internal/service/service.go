@@ -36,7 +36,7 @@ func AutoStartServiceDaemon(service string, cfg *config.Config, rawArgs []string
 		}
 	}
 
-	return StartServiceDaemonFn(service, []string{service, "up"}, rawArgs, cfg)
+	return StartServiceDaemonFn(service, rawArgs, cfg)
 }
 
 // StopSupervisor unloads an installed autostart unit without removing it.
@@ -77,7 +77,7 @@ func FormatAutostartStatus(st supervisor.Status) string {
 
 // StartServiceBackgroundDaemon starts a background daemon by registering it with the system supervisor
 // (systemd user unit on Linux, LaunchAgent on macOS) so that it automatically recovers across system reboots.
-func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawArgs []string, cfg *config.Config) error {
+func StartServiceBackgroundDaemon(service string, rawArgs []string, cfg *config.Config) error {
 	running, pid, _ := daemon.CheckRunning(cfg.Workspace, service)
 	if running {
 		return fmt.Errorf("%s daemon is already running (PID: %d, socket: %s)", service, pid, daemon.SocketPath(cfg.Workspace, service))
@@ -107,16 +107,18 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 		ExecPath:    exe,
 		Args:        childArgs,
 		Workspace:   cfg.Workspace,
-		Env:         supervisorEnv(service, cfg),
+		Env:         supervisorEnv(cfg),
 	}
 
 	if err := mgr.Install(info); err != nil {
 		return fmt.Errorf("failed to register autostart service for %s: %w", service, err)
 	}
 
-	if err := mgr.Start(service, config.BinaryName()); err != nil {
-		_ = mgr.Uninstall(service, config.BinaryName())
-		return fmt.Errorf("failed to start autostart service for %s: %w", service, err)
+	if st := mgr.GetStatus(service, config.BinaryName()); !st.Active {
+		if err := mgr.Start(service, config.BinaryName()); err != nil {
+			_ = mgr.Uninstall(service, config.BinaryName())
+			return fmt.Errorf("failed to start autostart service for %s: %w", service, err)
+		}
 	}
 
 	for i := 0; i < 50; i++ {
@@ -145,15 +147,8 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 	return fmt.Errorf("%s daemon failed to complete handshake within 5s (check logs: %s)", service, logFile)
 }
 
-func supervisorEnv(service string, cfg *config.Config) map[string]string {
+func supervisorEnv(cfg *config.Config) map[string]string {
 	env := supervisor.CaptureEnv()
-	if service == daemon.ServiceChannel {
-		if token := cfg.ChannelAuthToken(); token != "" {
-			env["BEEP_CHANNEL_TOKEN"] = token
-		}
-	} else if service == daemon.ServiceRunner && cfg.RunnerToken != "" {
-		env["BEEP_RUNNER_TOKEN"] = cfg.RunnerToken
-	}
 	if cfg.ServerURL != "" {
 		env["BEEP_SERVER"] = cfg.ServerURL
 	}
@@ -220,9 +215,10 @@ func StopSingleService(service, workspaceDir string, timeout time.Duration, forc
 	if mgr.IsSupported() {
 		st := mgr.GetStatus(service, config.BinaryName())
 		if st.Installed {
-			if err := mgr.Uninstall(service, config.BinaryName()); err == nil {
-				uninstalledAutostart = true
+			if err := mgr.Uninstall(service, config.BinaryName()); err != nil {
+				return fmt.Errorf("failed to unregister autostart for %s: %w", service, err)
 			}
+			uninstalledAutostart = true
 		}
 	}
 
@@ -351,7 +347,7 @@ func RunRunnerService(cfg *config.Config, daemonMode bool, rawArgs []string) err
 
 	isChild := os.Getenv("BEEP_DAEMON_CHILD") == "1"
 	if daemonMode && !isChild {
-		return StartServiceDaemonFn(daemon.ServiceRunner, []string{"runner", "up"}, rawArgs, cfg)
+		return StartServiceDaemonFn(daemon.ServiceRunner, rawArgs, cfg)
 	}
 
 	ws, err := workspace.Open(cfg.Workspace)
@@ -400,7 +396,7 @@ func RunChannelService(cfg *config.Config, daemonMode bool, rawArgs []string) er
 
 	isChild := os.Getenv("BEEP_DAEMON_CHILD") == "1"
 	if daemonMode && !isChild {
-		return StartServiceDaemonFn(daemon.ServiceChannel, []string{"channel", "up"}, rawArgs, cfg)
+		return StartServiceDaemonFn(daemon.ServiceChannel, rawArgs, cfg)
 	}
 
 	ws, err := workspace.Open(cfg.Workspace)
@@ -453,8 +449,8 @@ func StripDaemonFlags(args []string) []string {
 }
 
 // BuildServiceChildArgs builds the arguments passed to the spawned child process.
-// Token flags are stripped so they do not appear in the child process list;
-// StartServiceBackgroundDaemon injects tokens from cfg via the environment instead.
+// Token flags are stripped so they do not appear in the child process list.
+// Supervisor units do not embed tokens; the child loads them from config.json.
 func BuildServiceChildArgs(service string, args []string) []string {
 	stripped := StripDaemonFlags(args)
 	var flags []string
