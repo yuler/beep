@@ -15,7 +15,15 @@ import {
 import { CreateBeepDialog } from "@/components/beeps/create-beep-dialog";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Button } from "@/components/ui/button";
-import { fetchBeepStats, fetchBeeps } from "@/lib/api/beeps";
+import {
+	type BeepSortDir,
+	type BeepSortField,
+	beepSortQuery,
+	fetchBeepStats,
+	fetchBeeps,
+	isBeepSortField,
+	parseBeepSort,
+} from "@/lib/api/beeps";
 import { fetchSettings } from "@/lib/api/settings";
 import { withAuthRedirects } from "@/lib/auth/guards";
 import { m } from "@/locale/paraglide/messages";
@@ -25,6 +33,8 @@ const accountRoute = getRouteApi("/$account_slug");
 type BeepsSearch = {
 	tab?: FilterStatus;
 	q?: string;
+	sort?: BeepSortField;
+	dir?: BeepSortDir;
 };
 
 export const Route = createFileRoute("/$account_slug/beeps")({
@@ -45,17 +55,30 @@ export const Route = createFileRoute("/$account_slug/beeps")({
 			typeof search.q === "string" && search.q.trim().length > 0
 				? search.q.trim()
 				: undefined;
-		return { tab, q };
+		const sort =
+			typeof search.sort === "string" && isBeepSortField(search.sort)
+				? search.sort
+				: undefined;
+		const dir =
+			search.dir === "asc" || search.dir === "desc" ? search.dir : undefined;
+		return { tab, q, sort, dir };
 	},
-	loaderDeps: ({ search }) => ({ tab: search.tab, q: search.q }),
+	loaderDeps: ({ search }) => ({
+		tab: search.tab,
+		q: search.q,
+		sort: search.sort,
+		dir: search.dir,
+	}),
 	loader: withAuthRedirects(async ({ params, deps, abortController }) => {
 		const slug = params?.account_slug ?? "";
 		const beepsDeps = deps as BeepsSearch;
 		const statusFilter = beepsDeps?.tab ?? "active";
+		const { sort, dir } = parseBeepSort(beepsDeps.sort, beepsDeps.dir);
 		const [beepsRes, statsRes, settingsRes] = await Promise.all([
 			fetchBeeps(slug, {
 				...getFilterOptions(statusFilter),
 				q: beepsDeps?.q,
+				...beepSortQuery(sort, dir),
 				signal: abortController?.signal,
 			}),
 			fetchBeepStats(slug),
@@ -68,6 +91,8 @@ export const Route = createFileRoute("/$account_slug/beeps")({
 			settings: settingsRes,
 			currentTab: statusFilter,
 			searchQuery: beepsDeps?.q ?? "",
+			sort,
+			dir,
 		};
 	}),
 	component: BeepsPage,
@@ -77,8 +102,16 @@ function BeepsPage() {
 	const { account_slug: slug } = accountRoute.useParams();
 	const router = useRouter();
 	const navigate = useNavigate({ from: Route.fullPath });
-	const { beeps, pagination, stats, settings, currentTab, searchQuery } =
-		Route.useLoaderData();
+	const {
+		beeps,
+		pagination,
+		stats,
+		settings,
+		currentTab,
+		searchQuery,
+		sort,
+		dir,
+	} = Route.useLoaderData();
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 
 	async function handleCreated() {
@@ -99,6 +132,18 @@ function BeepsPage() {
 			search: (prev) => ({
 				...prev,
 				q: nextQ.trim() ? nextQ.trim() : undefined,
+			}),
+			replace: true,
+		});
+	}
+
+	function handleSortChange(nextSort: BeepSortField, nextDir: BeepSortDir) {
+		const query = beepSortQuery(nextSort, nextDir);
+		void navigate({
+			search: (prev) => ({
+				...prev,
+				sort: query.sort,
+				dir: query.dir,
 			}),
 			replace: true,
 		});
@@ -147,6 +192,9 @@ function BeepsPage() {
 					onTabChange={handleTabChange}
 					searchQuery={searchQuery}
 					onSearchChange={handleSearchChange}
+					sort={sort}
+					dir={dir}
+					onSortChange={handleSortChange}
 				/>
 
 				<CreateBeepDialog

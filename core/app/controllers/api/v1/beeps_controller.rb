@@ -21,7 +21,7 @@ class Api::V1::BeepsController < Api::V1::BaseController
     end
 
     @beeps = set_page_and_extract_portion_from scope,
-                                               ordered_by: { created_at: :desc, id: :desc }
+                                               ordered_by: index_order
     @run_stats = Beep::Run.stats_by_beep(@beeps.map(&:id))
     @recent_runs = Beep::Run.recent_by_beep(@beeps.map(&:id))
     render :index
@@ -69,6 +69,23 @@ class Api::V1::BeepsController < Api::V1::BaseController
   end
 
   private
+    SORT_COLUMNS = {
+      "title" => :title,
+      "status" => :status,
+      "created_at" => :created_at,
+      "schedule" => :next_run_at
+    }.freeze
+
+    def index_order
+      column = SORT_COLUMNS[params[:sort].to_s]
+      if column
+        direction = params[:dir].to_s == "asc" ? :asc : :desc
+        { column => direction, id: direction }
+      else
+        { created_at: :desc, id: :desc }
+      end
+    end
+
     def beep_params
       params.permit(:title, :body, :run_at, :cron, :kind, :intent, notification_channels: [], metadata: {})
     end

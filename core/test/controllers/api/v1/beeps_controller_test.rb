@@ -33,6 +33,35 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2", response.headers["X-Total-Count"]
   end
 
+  test "index sorts by title and created_at" do
+    older = @account.beeps.create!(kind: :once, title: "Bravo", run_at: @run_at)
+    newer = @account.beeps.create!(kind: :once, title: "Alpha", run_at: @run_at + 1.hour)
+
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { sort: "title", dir: "asc" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal [ "Alpha", "Bravo" ], response.parsed_body["beeps"].map { |beep| beep["title"] }
+
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { sort: "created_at", dir: "asc" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal [ older.id, newer.id ], response.parsed_body["beeps"].map { |beep| beep["id"] }
+
+    get "/api/v1/#{@account.slug}/beeps",
+      params: { sort: "not_a_column", dir: "asc" },
+      headers: { "Authorization" => "Bearer #{@token}" },
+      as: :json
+
+    assert_response :success
+    assert_equal [ newer.id, older.id ], response.parsed_body["beeps"].map { |beep| beep["id"] }
+  end
+
   test "index filters by search query q across title, body, and id" do
     match_title = @account.beeps.create!(kind: :once, title: "Special Invoice reminder", run_at: @run_at)
     match_body = @account.beeps.create!(kind: :once, title: "Meeting", body: "Check invoice details", run_at: @run_at)

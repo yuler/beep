@@ -2,6 +2,7 @@ import {
 	type Column,
 	type createColumnHelper,
 	createSortedRowModel,
+	type OnChangeFn,
 	type RowData,
 	type RowSelectionState,
 	rowSelectionFeature,
@@ -110,6 +111,9 @@ type DataTableProps<TData extends RowData> = {
 	className?: string;
 	emptyMessage?: string;
 	onRowClick?: (row: TData) => void;
+	sorting?: SortingState;
+	onSortingChange?: OnChangeFn<SortingState>;
+	manualSorting?: boolean;
 };
 
 export function DataTable<TData extends RowData>({
@@ -119,17 +123,22 @@ export function DataTable<TData extends RowData>({
 	className,
 	emptyMessage = "No rows to display.",
 	onRowClick,
+	sorting: sortingProp,
+	onSortingChange,
+	manualSorting = false,
 }: DataTableProps<TData>) {
-	const [sorting, setSorting] = useState<SortingState>([]);
+	const [internalSorting, setInternalSorting] = useState<SortingState>([]);
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+	const sorting = sortingProp ?? internalSorting;
 
 	const table = useTable<typeof dataTableFeatures, TData>({
 		features: dataTableFeatures,
 		data,
 		columns,
 		getRowId,
+		manualSorting,
 		state: { sorting, rowSelection },
-		onSortingChange: setSorting,
+		onSortingChange: onSortingChange ?? setInternalSorting,
 		onRowSelectionChange: setRowSelection,
 	});
 

@@ -64,6 +64,41 @@ export type BeepStatsResponse = {
 	stats: BeepStatsData;
 };
 
+export const BEEP_SORT_FIELDS = [
+	"title",
+	"status",
+	"schedule",
+	"created_at",
+] as const;
+
+export type BeepSortField = (typeof BEEP_SORT_FIELDS)[number];
+export type BeepSortDir = "asc" | "desc";
+
+export function isBeepSortField(val: string): val is BeepSortField {
+	return (BEEP_SORT_FIELDS as readonly string[]).includes(val);
+}
+
+export const DEFAULT_BEEP_SORT: { sort: BeepSortField; dir: BeepSortDir } = {
+	sort: "created_at",
+	dir: "desc",
+};
+
+export function parseBeepSort(
+	sort?: string,
+	dir?: string,
+): { sort: BeepSortField; dir: BeepSortDir } {
+	const field = sort && isBeepSortField(sort) ? sort : DEFAULT_BEEP_SORT.sort;
+	const direction: BeepSortDir = dir === "asc" ? "asc" : "desc";
+	return { sort: field, dir: direction };
+}
+
+export function beepSortQuery(sort: BeepSortField, dir: BeepSortDir) {
+	if (sort === DEFAULT_BEEP_SORT.sort && dir === DEFAULT_BEEP_SORT.dir) {
+		return {};
+	}
+	return { sort, dir };
+}
+
 export function fetchBeeps(
 	slug: string,
 	options?: {
@@ -71,6 +106,8 @@ export function fetchBeeps(
 		status?: string | null;
 		kind?: string | null;
 		q?: string | null;
+		sort?: string | null;
+		dir?: string | null;
 		signal?: AbortSignal;
 	},
 ) {
@@ -79,6 +116,8 @@ export function fetchBeeps(
 	if (options?.status) params.set("status", options.status);
 	if (options?.kind) params.set("kind", options.kind);
 	if (options?.q) params.set("q", options.q);
+	if (options?.sort) params.set("sort", options.sort);
+	if (options?.dir) params.set("dir", options.dir);
 	const query = params.toString() ? `?${params.toString()}` : "";
 	return apiFetch<BeepsResponse>(`/api/v1/${slug}/beeps${query}`, {
 		method: "GET",

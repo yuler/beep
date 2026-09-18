@@ -1,5 +1,9 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { createColumnHelper } from "@tanstack/react-table";
+import {
+	createColumnHelper,
+	type OnChangeFn,
+	type SortingState,
+} from "@tanstack/react-table";
 import {
 	Activity,
 	Clock,
@@ -23,8 +27,12 @@ import { Input } from "@/components/ui/input";
 import { ProgressBar, StatusPill } from "@/components/ui/status-pill";
 import {
 	type Beep,
+	type BeepSortDir,
+	type BeepSortField,
 	type BeepStatsData,
+	beepSortQuery,
 	fetchBeeps,
+	isBeepSortField,
 	type PaginationMeta,
 } from "@/lib/api/beeps";
 import { formatBeepScheduleTime } from "@/lib/beep-datetime";
@@ -91,11 +99,13 @@ function BeepIdText({ id, className }: { id: string; className?: string }) {
 
 function useBeepColumns(slug: string, variant: "compact" | "full") {
 	return useMemo(() => {
+		const sortable = variant === "full";
 		const fullColumns =
 			variant === "full"
 				? [
 						columnHelper.accessor((row) => row.notification_channels, {
 							id: "channels",
+							enableSorting: false,
 							header: m.beeps_channels(),
 							cell: ({ row }) => {
 								const channels = row.original.notification_channels ?? [];
@@ -123,18 +133,16 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 						}),
 						columnHelper.accessor((row) => beepRunSuccessRate(row), {
 							id: "run_success",
-							header: ({ column }) => (
-								<SortableHeader column={column} label={m.beeps_run_success()} />
-							),
+							enableSorting: false,
+							header: m.beeps_run_success(),
 							cell: ({ row }) => (
 								<ProgressBar value={beepRunSuccessRate(row.original)} />
 							),
 						}),
 						columnHelper.accessor((row) => beepRunCount(row), {
 							id: "runs",
-							header: ({ column }) => (
-								<SortableHeader column={column} label={m.beeps_runs()} />
-							),
+							enableSorting: false,
+							header: m.beeps_runs(),
 							cell: ({ row }) => {
 								const beep = row.original;
 								const lastRun = beep.runs?.[0];
@@ -163,10 +171,16 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			makeSelectColumn(columnHelper),
 			columnHelper.accessor("title", {
 				id: "title",
+				enableSorting: sortable,
 				meta: { className: "min-w-72" },
-				header: ({ column }) => (
-					<SortableHeader column={column} label={m.term_beep_capitalized()} />
-				),
+				header: sortable
+					? ({ column }) => (
+							<SortableHeader
+								column={column}
+								label={m.term_beep_capitalized()}
+							/>
+						)
+					: m.term_beep_capitalized(),
 				cell: ({ row }) => {
 					const beep = row.original;
 					return (
@@ -190,6 +204,7 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			}),
 			columnHelper.accessor((row) => row.beeper?.name ?? row.kind, {
 				id: "source",
+				enableSorting: false,
 				header: m.beeps_source(),
 				cell: ({ row }) => {
 					const beep = row.original;
@@ -220,9 +235,12 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			}),
 			columnHelper.accessor("status", {
 				id: "status",
-				header: ({ column }) => (
-					<SortableHeader column={column} label={m.common_status()} />
-				),
+				enableSorting: sortable,
+				header: sortable
+					? ({ column }) => (
+							<SortableHeader column={column} label={m.common_status()} />
+						)
+					: m.common_status(),
 				cell: ({ row }) => (
 					<StatusPill
 						label={beepStatusLabel(row.original.status)}
@@ -232,9 +250,12 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			}),
 			columnHelper.accessor((row) => beepRunAt(row)?.toString() ?? "", {
 				id: "schedule",
-				header: ({ column }) => (
-					<SortableHeader column={column} label={m.beeps_schedule()} />
-				),
+				enableSorting: sortable,
+				header: sortable
+					? ({ column }) => (
+							<SortableHeader column={column} label={m.beeps_schedule()} />
+						)
+					: m.beeps_schedule(),
 				cell: ({ row }) => {
 					const beep = row.original;
 					return (
@@ -253,10 +274,13 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			}),
 			columnHelper.accessor("created_at", {
 				id: "created_at",
+				enableSorting: sortable,
 				meta: { className: "min-w-36 whitespace-nowrap" },
-				header: ({ column }) => (
-					<SortableHeader column={column} label={m.common_created()} />
-				),
+				header: sortable
+					? ({ column }) => (
+							<SortableHeader column={column} label={m.common_created()} />
+						)
+					: m.common_created(),
 				cell: ({ row }) => {
 					const beep = row.original;
 					return (
@@ -299,6 +323,9 @@ export function BeepList({
 	onTabChange,
 	searchQuery = "",
 	onSearchChange,
+	sort: sortField = "created_at",
+	dir: sortDir = "desc",
+	onSortChange,
 }: {
 	beeps: Beep[];
 	initialPagination?: PaginationMeta;
@@ -310,6 +337,9 @@ export function BeepList({
 	onTabChange?: (tab: FilterStatus) => void;
 	searchQuery?: string;
 	onSearchChange?: (q: string) => void;
+	sort?: BeepSortField;
+	dir?: BeepSortDir;
+	onSortChange?: (sort: BeepSortField, dir: BeepSortDir) => void;
 }) {
 	const navigate = useNavigate();
 	const [items, setItems] = useState<Beep[]>(initialBeeps);
@@ -325,6 +355,14 @@ export function BeepList({
 	const [internalStatusFilter, setInternalStatusFilter] =
 		useState<FilterStatus>("active");
 	const statusFilter = currentTab ?? internalStatusFilter;
+	const sortQuery = useMemo(
+		() => beepSortQuery(sortField, sortDir),
+		[sortField, sortDir],
+	);
+	const sorting: SortingState = useMemo(
+		() => [{ id: sortField, desc: sortDir === "desc" }],
+		[sortField, sortDir],
+	);
 
 	const inputRef = useRef<HTMLInputElement>(null);
 	const lastDispatchedRef = useRef(searchQuery);
@@ -362,6 +400,7 @@ export function BeepList({
 			fetchBeeps(slug, {
 				...getFilterOptions(statusFilter),
 				q: trimmed || undefined,
+				...sortQuery,
 			})
 				.then((res) => {
 					if (filterRequestRef.current === requestId) {
@@ -378,7 +417,7 @@ export function BeepList({
 					}
 				});
 		},
-		[onSearchChange, slug, statusFilter],
+		[onSearchChange, slug, statusFilter, sortQuery],
 	);
 
 	useEffect(() => {
@@ -406,6 +445,7 @@ export function BeepList({
 			fetchBeeps(slug, {
 				...getFilterOptions(nextFilter),
 				q: lastDispatchedRef.current.trim() || undefined,
+				...sortQuery,
 			})
 				.then((res) => {
 					if (filterRequestRef.current === requestId) {
@@ -422,7 +462,7 @@ export function BeepList({
 					}
 				});
 		},
-		[slug, onTabChange],
+		[slug, onTabChange, sortQuery],
 	);
 
 	const loadMore = useCallback(async () => {
@@ -440,6 +480,7 @@ export function BeepList({
 				page: pagination.next_page,
 				...getFilterOptions(statusFilter),
 				q: lastDispatchedRef.current.trim() || undefined,
+				...sortQuery,
 			});
 			setItems((prev) => {
 				const existingIds = new Set(prev.map((b) => b.id));
@@ -453,7 +494,43 @@ export function BeepList({
 			isLoadingMoreRef.current = false;
 			setIsLoadingMore(false);
 		}
-	}, [pagination, slug, statusFilter]);
+	}, [pagination, slug, statusFilter, sortQuery]);
+
+	const handleSortingChange = useCallback<OnChangeFn<SortingState>>(
+		(updater) => {
+			const next = typeof updater === "function" ? updater(sorting) : updater;
+			const first = next[0];
+			if (!first || !isBeepSortField(first.id)) return;
+			const nextDir: BeepSortDir = first.desc ? "desc" : "asc";
+			if (onSortChange) {
+				onSortChange(first.id, nextDir);
+				return;
+			}
+
+			const requestId = ++filterRequestRef.current;
+			setIsFiltering(true);
+			fetchBeeps(slug, {
+				...getFilterOptions(statusFilter),
+				q: lastDispatchedRef.current.trim() || undefined,
+				...beepSortQuery(first.id, nextDir),
+			})
+				.then((res) => {
+					if (filterRequestRef.current === requestId) {
+						setItems(res.beeps);
+						setPagination(res.pagination);
+					}
+				})
+				.catch((err) => {
+					console.error("Failed to sort beeps", err);
+				})
+				.finally(() => {
+					if (filterRequestRef.current === requestId) {
+						setIsFiltering(false);
+					}
+				});
+		},
+		[sorting, onSortChange, slug, statusFilter],
+	);
 
 	useEffect(() => {
 		if (!pagination?.has_more) return;
@@ -759,6 +836,9 @@ export function BeepList({
 							columns={columns}
 							getRowId={(beep) => beep.id}
 							emptyMessage={m.beeps_filter_no_match()}
+							manualSorting={variant === "full"}
+							sorting={sorting}
+							onSortingChange={handleSortingChange}
 							onRowClick={(beep) =>
 								navigate({
 									to: "/$account_slug/beeps/$beepId",
