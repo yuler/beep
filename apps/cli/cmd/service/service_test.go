@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"beep/internal/autostart"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/daemon"
 	intsvc "beep/internal/service"
+	"beep/internal/supervisor"
 
 	"github.com/charmbracelet/huh"
 )
@@ -142,9 +142,9 @@ func TestServiceStatusUnknownTarget(t *testing.T) {
 }
 
 func TestServiceRestartWithMock(t *testing.T) {
-	origMgr := autostart.DefaultManager
-	autostart.DefaultManager = autostart.NewUnsupportedManager()
-	t.Cleanup(func() { autostart.DefaultManager = origMgr })
+	origMgr := supervisor.DefaultManager
+	supervisor.DefaultManager = supervisor.NewUnsupportedManager()
+	t.Cleanup(func() { supervisor.DefaultManager = origMgr })
 
 	tmpDir := t.TempDir()
 	cfg := &config.Config{
@@ -207,9 +207,9 @@ func TestServiceHelpOutput(t *testing.T) {
 }
 
 func TestServiceRestartInteractive(t *testing.T) {
-	origMgr := autostart.DefaultManager
-	autostart.DefaultManager = autostart.NewUnsupportedManager()
-	t.Cleanup(func() { autostart.DefaultManager = origMgr })
+	origMgr := supervisor.DefaultManager
+	supervisor.DefaultManager = supervisor.NewUnsupportedManager()
+	t.Cleanup(func() { supervisor.DefaultManager = origMgr })
 
 	tmpDir := t.TempDir()
 	cfg := &config.Config{
@@ -284,9 +284,9 @@ func TestServiceRestartInteractive(t *testing.T) {
 }
 
 func TestServiceRestartNonInteractiveFallback(t *testing.T) {
-	origMgr := autostart.DefaultManager
-	autostart.DefaultManager = autostart.NewUnsupportedManager()
-	t.Cleanup(func() { autostart.DefaultManager = origMgr })
+	origMgr := supervisor.DefaultManager
+	supervisor.DefaultManager = supervisor.NewUnsupportedManager()
+	t.Cleanup(func() { supervisor.DefaultManager = origMgr })
 
 	tmpDir := t.TempDir()
 	cmdutil.SetOverrideWorkspace(tmpDir)

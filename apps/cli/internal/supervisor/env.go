@@ -1,17 +1,17 @@
-package autostart
+package supervisor
 
 import (
 	"os"
 	"strings"
 )
 
-// transientEnvVars are environment variables that should NOT be captured into autostart configs.
+// transientEnvVars are environment variables that should NOT be captured into supervisor configs.
 var transientEnvVars = map[string]bool{
 	"BEEP_DAEMON_CHILD": true,
 }
 
 // CaptureEnv snapshots critical environment variables (PATH, HOME, USER, and BEEP_*)
-// to ensure background services started by system supervisors have the required runtime environment.
+// so supervisor-started processes keep a usable runtime environment.
 func CaptureEnv() map[string]string {
 	env := make(map[string]string)
 

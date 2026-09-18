@@ -1,15 +1,15 @@
-package autostart
+package supervisor
 
 import (
 	"errors"
 )
 
 var (
-	// ErrUnsupported is returned when autostart is not supported on the current platform.
+	// ErrUnsupported is returned when no OS process supervisor is available.
 	ErrUnsupported = errors.New("autostart is not supported on this platform (requires systemd on Linux or LaunchAgent on macOS)")
 )
 
-// ServiceInfo contains details required to generate and register an autostart service.
+// ServiceInfo contains details required to generate and register a supervisor unit.
 type ServiceInfo struct {
 	Service     string            // "runner" or "channel"
 	BinaryName  string            // "beep" or "beep-local"
@@ -32,7 +32,7 @@ type Status struct {
 	Detail       string // Additional status details or error message
 }
 
-// Manager defines the interface for managing background service autostart.
+// Manager talks to the host process supervisor (systemd user units or LaunchAgents).
 type Manager interface {
 	IsSupported() bool
 	PlatformName() string

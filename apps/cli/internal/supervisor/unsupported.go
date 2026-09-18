@@ -1,4 +1,4 @@
-package autostart
+package supervisor
 
 // UnsupportedManager is used when no system supervisor is available.
 type UnsupportedManager struct{}

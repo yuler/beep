@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"beep/internal/autostart"
 	"beep/internal/channel"
 	"beep/internal/config"
 	"beep/internal/daemon"
 	"beep/internal/proc"
 	"beep/internal/runner"
+	"beep/internal/supervisor"
 	"beep/internal/ui"
 	"beep/internal/updater"
 	"beep/internal/workspace"
@@ -42,7 +42,7 @@ func AutoStartServiceDaemon(service string, cfg *config.Config, rawArgs []string
 // StopSupervisor unloads an installed autostart unit without removing it.
 // launchd KeepAlive / systemd Restart must be stopped through the supervisor, not only by killing the PID.
 func StopSupervisor(service string) {
-	mgr := autostart.CurrentManager()
+	mgr := supervisor.CurrentManager()
 	if !mgr.IsSupported() {
 		return
 	}
@@ -54,7 +54,7 @@ func StopSupervisor(service string) {
 }
 
 // FormatAutostartStatus formats the autostart status for display in CLI output.
-func FormatAutostartStatus(st autostart.Status) string {
+func FormatAutostartStatus(st supervisor.Status) string {
 	if st.Installed {
 		if st.Platform == "systemd" {
 			if st.LingerActive {
@@ -83,7 +83,7 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 		return fmt.Errorf("%s daemon is already running (PID: %d, socket: %s)", service, pid, daemon.SocketPath(cfg.Workspace, service))
 	}
 
-	mgr := autostart.CurrentManager()
+	mgr := supervisor.CurrentManager()
 	if !mgr.IsSupported() {
 		return startDetachedDaemon(service, rawArgs, cfg, mgr)
 	}
@@ -100,14 +100,14 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 	today := time.Now().Format("2006-01-02")
 	logFile := daemon.DailyLogPath(cfg.Workspace, service, today)
 
-	info := autostart.ServiceInfo{
+	info := supervisor.ServiceInfo{
 		Service:     service,
 		BinaryName:  config.BinaryName(),
-		Description: fmt.Sprintf("Beep %s Daemon", autostart.ServiceTitle(service)),
+		Description: fmt.Sprintf("Beep %s Daemon", supervisor.ServiceTitle(service)),
 		ExecPath:    exe,
 		Args:        childArgs,
 		Workspace:   cfg.Workspace,
-		Env:         autostartEnv(service, cfg),
+		Env:         supervisorEnv(service, cfg),
 	}
 
 	if err := mgr.Install(info); err != nil {
@@ -145,8 +145,8 @@ func StartServiceBackgroundDaemon(service string, childSubcommand []string, rawA
 	return fmt.Errorf("%s daemon failed to complete handshake within 5s (check logs: %s)", service, logFile)
 }
 
-func autostartEnv(service string, cfg *config.Config) map[string]string {
-	env := autostart.CaptureEnv()
+func supervisorEnv(service string, cfg *config.Config) map[string]string {
+	env := supervisor.CaptureEnv()
 	if service == daemon.ServiceChannel {
 		if token := cfg.ChannelAuthToken(); token != "" {
 			env["BEEP_CHANNEL_TOKEN"] = token
@@ -163,7 +163,7 @@ func autostartEnv(service string, cfg *config.Config) map[string]string {
 	return env
 }
 
-func startDetachedDaemon(service string, rawArgs []string, cfg *config.Config, mgr autostart.Manager) error {
+func startDetachedDaemon(service string, rawArgs []string, cfg *config.Config, mgr supervisor.Manager) error {
 	exe, err := osExecutable()
 	if err != nil {
 		return fmt.Errorf("failed to determine executable path: %w", err)
@@ -215,7 +215,7 @@ func startDetachedDaemon(service string, rawArgs []string, cfg *config.Config, m
 
 // StopSingleService stops a running daemon for the given service and unregisters its autostart service.
 func StopSingleService(service, workspaceDir string, timeout time.Duration, force bool) error {
-	mgr := autostart.CurrentManager()
+	mgr := supervisor.CurrentManager()
 	var uninstalledAutostart bool
 	if mgr.IsSupported() {
 		st := mgr.GetStatus(service, config.BinaryName())
@@ -278,7 +278,7 @@ func ShowSingleServiceStatus(service string, cfg *config.Config) error {
 	logFile := daemon.DailyLogPath(cfg.Workspace, service, today)
 	socketFile := daemon.SocketPath(cfg.Workspace, service)
 
-	mgr := autostart.CurrentManager()
+	mgr := supervisor.CurrentManager()
 	autostartStatus := FormatAutostartStatus(mgr.GetStatus(service, config.BinaryName()))
 
 	title := fmt.Sprintf("Beep %s Daemon Status:", service)

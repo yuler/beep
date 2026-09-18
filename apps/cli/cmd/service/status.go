@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"beep/internal/autostart"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
 	"beep/internal/daemon"
 	intsvc "beep/internal/service"
+	"beep/internal/supervisor"
 	"beep/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -56,7 +56,7 @@ func runStatusAll(cfg *config.Config) error {
 		return fmt.Errorf("failed to query channel daemon status: %w", err)
 	}
 
-	mgr := autostart.CurrentManager()
+	mgr := supervisor.CurrentManager()
 	runnerAutostart := intsvc.FormatAutostartStatus(mgr.GetStatus(daemon.ServiceRunner, config.BinaryName()))
 	channelAutostart := intsvc.FormatAutostartStatus(mgr.GetStatus(daemon.ServiceChannel, config.BinaryName()))
 
