@@ -87,7 +87,12 @@ export function parseBeepSort(
 	sort?: string,
 	dir?: string,
 ): { sort: BeepSortField; dir: BeepSortDir } {
-	const field = sort && isBeepSortField(sort) ? sort : DEFAULT_BEEP_SORT.sort;
+	const field =
+		sort === "scheduled_at"
+			? "schedule"
+			: sort && isBeepSortField(sort)
+				? sort
+				: DEFAULT_BEEP_SORT.sort;
 	const direction: BeepSortDir = dir === "asc" ? "asc" : "desc";
 	return { sort: field, dir: direction };
 }
