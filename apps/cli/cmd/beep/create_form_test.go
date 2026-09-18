@@ -139,4 +139,3 @@ func TestIsUserAbort(t *testing.T) {
 		})
 	}
 }
-
