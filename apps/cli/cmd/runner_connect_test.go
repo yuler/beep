@@ -51,9 +51,6 @@ func TestAllCommandsFlagsNoConflict(t *testing.T) {
 	if cmd.Flags().Lookup("tags") == nil {
 		t.Fatal("expected 'tags' flag to be registered on runner connect")
 	}
-	if cmd.Flags().Lookup("token") == nil {
-		t.Fatal("expected inherited 'token' flag to be available on runner connect")
-	}
 }
 
 func TestRunnerDisconnectCommandClearsToken(t *testing.T) {

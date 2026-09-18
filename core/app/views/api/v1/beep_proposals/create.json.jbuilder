@@ -1,4 +1,6 @@
+json.action @proposal.action
 json.intent @proposal.intent
+json.metadata @proposal.metadata
 json.kind @proposal.kind
 json.title @proposal.title
 json.body @proposal.body

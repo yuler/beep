@@ -59,6 +59,7 @@ type CreateBeepRequest struct {
 	Cron                 string         `json:"cron,omitempty"`
 	Timezone             string         `json:"timezone,omitempty"`
 	NotificationChannels []string       `json:"notification_channels,omitempty"`
+	Intent               string         `json:"intent,omitempty"`
 	Metadata             map[string]any `json:"metadata,omitempty"`
 }
 
@@ -157,7 +158,9 @@ func (pe *ProposalErrors) UnmarshalJSON(data []byte) error {
 }
 
 type BeepProposal struct {
-	Intent      string         `json:"intent"`
+	Action      string         `json:"action,omitempty"`
+	Intent      string         `json:"intent,omitempty"`
+	Metadata    map[string]any `json:"metadata,omitempty"`
 	Kind        string         `json:"kind"`
 	Title       string         `json:"title"`
 	Body        string         `json:"body"`
@@ -183,6 +186,10 @@ func (p *BeepProposal) UnmarshalJSON(data []byte) error {
 	}
 	if len(p.Channels) == 0 && len(aux.AltChannels) > 0 {
 		p.Channels = aux.AltChannels
+	}
+	if p.Action == "" && (p.Intent == "create" || p.Intent == "other") {
+		p.Action = p.Intent
+		p.Intent = ""
 	}
 	return nil
 }
@@ -277,6 +284,8 @@ type CreateBeepParams struct {
 	ScheduleVal  string
 	Timezone     string
 	Channels     string
+	Intent       string
+	Metadata     map[string]any
 }
 
 // ToRequest validates and transforms CreateBeepParams into a CreateBeepRequest.
@@ -294,6 +303,8 @@ func (p *CreateBeepParams) ToRequest() (*CreateBeepRequest, error) {
 		Title:    strings.TrimSpace(p.Title),
 		Body:     strings.TrimSpace(p.Body),
 		Timezone: tz,
+		Intent:   strings.TrimSpace(p.Intent),
+		Metadata: p.Metadata,
 	}
 
 	if trimmedChannels := strings.TrimSpace(p.Channels); trimmedChannels != "" {
