@@ -11,4 +11,3 @@ json.notification_channels @proposal.notification_channels
 json.errors @proposal.errors
 json.confirmable @proposal.confirmable?
 json.message @proposal.message
-
