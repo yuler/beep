@@ -75,6 +75,20 @@ function formatChannel(channel: string) {
 	return channel;
 }
 
+function BeepIdText({ id, className }: { id: string; className?: string }) {
+	return (
+		<span
+			className={cn(
+				"font-mono text-[11px] text-muted-foreground select-all whitespace-nowrap",
+				className,
+			)}
+			title={id}
+		>
+			#{id}
+		</span>
+	);
+}
+
 function useBeepColumns(slug: string, variant: "compact" | "full") {
 	return useMemo(() => {
 		const fullColumns =
@@ -104,24 +118,6 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 											</Badge>
 										))}
 									</div>
-								);
-							},
-						}),
-						columnHelper.accessor("created_at", {
-							id: "created_at",
-							header: ({ column }) => (
-								<SortableHeader column={column} label={m.common_created()} />
-							),
-							cell: ({ row }) => {
-								const beep = row.original;
-								return (
-									<span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-										{formatBeepScheduleTime(
-											beep.created_at,
-											beep.timezone,
-											"short",
-										)}
-									</span>
 								);
 							},
 						}),
@@ -167,19 +163,15 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 			makeSelectColumn(columnHelper),
 			columnHelper.accessor("title", {
 				id: "title",
+				meta: { className: "min-w-72" },
 				header: ({ column }) => (
 					<SortableHeader column={column} label={m.term_beep_capitalized()} />
 				),
 				cell: ({ row }) => {
 					const beep = row.original;
 					return (
-						<div className="flex min-w-0 max-w-md flex-col gap-0.5">
-							<span
-								className="font-mono text-[11px] text-muted-foreground select-all break-all"
-								title={beep.id}
-							>
-								{beep.id}
-							</span>
+						<div className="flex min-w-72 max-w-md flex-col gap-0.5">
+							<BeepIdText id={beep.id} />
 							<Link
 								to="/$account_slug/beeps/$beepId"
 								params={{
@@ -256,6 +248,21 @@ function useBeepColumns(slug: string, variant: "compact" | "full") {
 								</span>
 							) : null}
 						</div>
+					);
+				},
+			}),
+			columnHelper.accessor("created_at", {
+				id: "created_at",
+				meta: { className: "min-w-36 whitespace-nowrap" },
+				header: ({ column }) => (
+					<SortableHeader column={column} label={m.common_created()} />
+				),
+				cell: ({ row }) => {
+					const beep = row.original;
+					return (
+						<span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+							{formatBeepScheduleTime(beep.created_at, beep.timezone, "short")}
+						</span>
 					);
 				},
 			}),
@@ -639,12 +646,10 @@ export function BeepList({
 									/>
 									<div className="relative z-10 flex items-start justify-between gap-3 pointer-events-none">
 										<div className="flex min-w-0 flex-col gap-0.5">
-											<span
-												className="pointer-events-auto font-mono text-[11px] text-muted-foreground select-all break-all"
-												title={beep.id}
-											>
-												{beep.id}
-											</span>
+											<BeepIdText
+												id={beep.id}
+												className="pointer-events-auto"
+											/>
 											<span className="truncate text-base font-semibold text-foreground">
 												{beep.title}
 											</span>

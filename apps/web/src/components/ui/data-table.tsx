@@ -67,6 +67,14 @@ export function makeSelectColumn<TData extends RowData>(
 	});
 }
 
+export type DataTableColumnMeta = {
+	className?: string;
+};
+
+function columnMetaClassName(meta: unknown) {
+	return (meta as DataTableColumnMeta | undefined)?.className;
+}
+
 export function SortableHeader<TData extends RowData, TValue>({
 	column,
 	label,
@@ -145,7 +153,10 @@ export function DataTable<TData extends RowData>({
 							{headerGroup.headers.map((header) => (
 								<TableHead
 									key={header.id}
-									className="h-10 px-3 text-xs font-medium text-muted-foreground"
+									className={cn(
+										"h-10 px-3 text-xs font-medium text-muted-foreground",
+										columnMetaClassName(header.column.columnDef.meta),
+									)}
 								>
 									{header.isPlaceholder ? null : (
 										<table.FlexRender header={header} />
@@ -206,7 +217,10 @@ export function DataTable<TData extends RowData>({
 								{row.getAllCells().map((cell) => (
 									<TableCell
 										key={cell.id}
-										className="min-w-0 px-3 py-3 align-middle"
+										className={cn(
+											"min-w-0 px-3 py-3 align-middle",
+											columnMetaClassName(cell.column.columnDef.meta),
+										)}
 									>
 										<table.FlexRender cell={cell} />
 									</TableCell>
