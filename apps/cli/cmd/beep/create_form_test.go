@@ -1,6 +1,13 @@
 package beep
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"testing"
+
+	"github.com/charmbracelet/huh"
+)
 
 func TestShouldPromptBeepCreateForm(t *testing.T) {
 	tests := []struct {
@@ -54,3 +61,82 @@ func TestShouldPromptBeepCreateForm(t *testing.T) {
 		})
 	}
 }
+
+func TestIsUserAbort(t *testing.T) {
+	canceledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	activeCtx := context.Background()
+
+	tests := []struct {
+		name      string
+		ctx       context.Context
+		err       error
+		wantAbort bool
+	}{
+		{
+			name:      "nil error and active ctx is not abort",
+			ctx:       activeCtx,
+			err:       nil,
+			wantAbort: false,
+		},
+		{
+			name:      "canceled ctx is abort",
+			ctx:       canceledCtx,
+			err:       nil,
+			wantAbort: true,
+		},
+		{
+			name:      "context.Canceled error is abort",
+			ctx:       activeCtx,
+			err:       context.Canceled,
+			wantAbort: true,
+		},
+		{
+			name:      "wrapped context.Canceled error is abort",
+			ctx:       activeCtx,
+			err:       fmt.Errorf("request failed: %w", context.Canceled),
+			wantAbort: true,
+		},
+		{
+			name:      "huh.ErrUserAborted is abort",
+			ctx:       activeCtx,
+			err:       huh.ErrUserAborted,
+			wantAbort: true,
+		},
+		{
+			name:      "user aborted text is abort",
+			ctx:       activeCtx,
+			err:       errors.New("prompt: user aborted"),
+			wantAbort: true,
+		},
+		{
+			name:      "cancelled text is abort",
+			ctx:       activeCtx,
+			err:       errors.New("action cancelled by user"),
+			wantAbort: true,
+		},
+		{
+			name:      "ai proposal failure is not abort",
+			ctx:       activeCtx,
+			err:       &aiProposalError{err: errors.New("ai model timeout")},
+			wantAbort: false,
+		},
+		{
+			name:      "generic network error is not abort",
+			ctx:       activeCtx,
+			err:       errors.New("connection refused"),
+			wantAbort: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := isUserAbort(tc.ctx, tc.err)
+			if got != tc.wantAbort {
+				t.Fatalf("isUserAbort() = %v, want %v", got, tc.wantAbort)
+			}
+		})
+	}
+}
+
