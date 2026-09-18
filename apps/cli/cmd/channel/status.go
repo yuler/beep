@@ -1,9 +1,9 @@
 package channel
 
 import (
-	"beep/internal/cliservice"
 	"beep/internal/cmdutil"
 	"beep/internal/daemon"
+	"beep/internal/service"
 
 	"github.com/spf13/cobra"
 )
@@ -19,7 +19,7 @@ func NewCmdStatus() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return cliservice.ShowSingleServiceStatus(daemon.ServiceChannel, cfg)
+			return service.ShowSingleServiceStatus(daemon.ServiceChannel, cfg)
 		},
 	}
 }

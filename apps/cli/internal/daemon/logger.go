@@ -29,9 +29,6 @@ func DailyLogPath(workspaceDir, prefix, day string) string {
 }
 
 func dailyLogName(prefix, day string) string {
-	if prefix == "" {
-		return day + ".log"
-	}
 	return prefix + "-" + day + ".log"
 }
 

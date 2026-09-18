@@ -1,4 +1,4 @@
-class Api::V1::Runner::Tasks::ResultsController < Api::V1::Runner::BaseController
+class Api::V1::Runner::Runs::ResultsController < Api::V1::Runner::BaseController
   before_action :set_run
 
   def create

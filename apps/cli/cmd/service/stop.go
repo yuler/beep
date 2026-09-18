@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"beep/internal/cliservice"
 	"beep/internal/cmdutil"
 	"beep/internal/daemon"
+	intsvc "beep/internal/service"
 	"beep/internal/ui"
 
 	"github.com/spf13/cobra"
@@ -37,9 +37,9 @@ func NewCmdStop() *cobra.Command {
 
 			switch target {
 			case "runner":
-				return cliservice.StopSingleService(daemon.ServiceRunner, cfg.Workspace, timeout, force)
+				return intsvc.StopSingleService(daemon.ServiceRunner, cfg.Workspace, timeout, force)
 			case "channel":
-				return cliservice.StopSingleService(daemon.ServiceChannel, cfg.Workspace, timeout, force)
+				return intsvc.StopSingleService(daemon.ServiceChannel, cfg.Workspace, timeout, force)
 			default:
 				return runStopAll(cfg.Workspace, timeout, force)
 			}
@@ -62,13 +62,13 @@ func runStopAll(workspaceDir string, timeout time.Duration, force bool) error {
 	}
 
 	if runnerRunning {
-		if err := cliservice.StopSingleService(daemon.ServiceRunner, workspaceDir, timeout, force); err != nil {
+		if err := intsvc.StopSingleService(daemon.ServiceRunner, workspaceDir, timeout, force); err != nil {
 			return err
 		}
 	}
 
 	if channelRunning {
-		if err := cliservice.StopSingleService(daemon.ServiceChannel, workspaceDir, timeout, force); err != nil {
+		if err := intsvc.StopSingleService(daemon.ServiceChannel, workspaceDir, timeout, force); err != nil {
 			return err
 		}
 	}

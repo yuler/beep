@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"beep/internal/config"
-	"beep/internal/task"
+	"beep/internal/job"
 	"beep/internal/version"
 )
 
@@ -160,11 +160,11 @@ func (c *Client) DeleteJob(ctx context.Context, slug string) error {
 }
 
 type PollResponse struct {
-	Task *task.Task `json:"task"`
+	Job *job.Job `json:"run"`
 }
 
-func (c *Client) Poll(ctx context.Context) (*task.Task, error) {
-	url := fmt.Sprintf("%s/api/v1/runner/tasks", c.cfg.ServerURL)
+func (c *Client) Poll(ctx context.Context) (*job.Job, error) {
+	url := fmt.Sprintf("%s/api/v1/runner/runs", c.cfg.ServerURL)
 	payload := map[string]any{
 		"version":  version.Version,
 		"os":       runtime.GOOS,
@@ -196,7 +196,7 @@ func (c *Client) Poll(ctx context.Context) (*task.Task, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
 		return nil, fmt.Errorf("failed to decode poll response: %w", err)
 	}
-	return res.Task, nil
+	return res.Job, nil
 }
 
 func (c *Client) ReportLog(ctx context.Context, logURL, chunk string) error {
@@ -223,7 +223,7 @@ func (c *Client) ReportLog(ctx context.Context, logURL, chunk string) error {
 	return nil
 }
 
-func (c *Client) ReportResult(ctx context.Context, resultURL string, result *task.Result) error {
+func (c *Client) ReportResult(ctx context.Context, resultURL string, result *job.Result) error {
 	if err := c.allowedCallbackURL(resultURL); err != nil {
 		return err
 	}
@@ -265,8 +265,8 @@ func (c *Client) allowedCallbackURL(raw string) error {
 	if !strings.EqualFold(target.Scheme, base.Scheme) || !strings.EqualFold(target.Host, base.Host) {
 		return fmt.Errorf("callback url %s does not match server %s", raw, c.cfg.ServerURL)
 	}
-	if !strings.HasPrefix(target.Path, "/api/v1/runner/tasks/") {
-		return fmt.Errorf("callback url path is not a runner task endpoint")
+	if !strings.HasPrefix(target.Path, "/api/v1/runner/runs/") {
+		return fmt.Errorf("callback url path is not a runner run endpoint")
 	}
 	return nil
 }

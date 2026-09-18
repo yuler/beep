@@ -8,6 +8,7 @@ import (
 	"beep/cmd/api"
 	"beep/cmd/beep"
 	"beep/cmd/beeper"
+	"beep/cmd/logs"
 	"beep/cmd/service"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
@@ -139,10 +140,13 @@ func init() {
 	runnerCmd.GroupID = "service"
 	serviceCmd := service.NewCmdService()
 	serviceCmd.GroupID = "service"
+	logsCmd := logs.NewCmdLogs()
+	logsCmd.GroupID = "service"
 
 	RootCmd.AddCommand(channelCmd)
 	RootCmd.AddCommand(runnerCmd)
 	RootCmd.AddCommand(serviceCmd)
+	RootCmd.AddCommand(logsCmd)
 
 	// 4. Additional commands
 	upgradeCmd.GroupID = "additional"

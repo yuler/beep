@@ -3,9 +3,9 @@ package runner
 import (
 	"time"
 
-	"beep/internal/cliservice"
 	"beep/internal/cmdutil"
 	"beep/internal/daemon"
+	"beep/internal/service"
 
 	"github.com/spf13/cobra"
 )
@@ -26,7 +26,7 @@ func NewCmdStop() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return cliservice.StopSingleService(daemon.ServiceRunner, cfg.Workspace, timeout, force)
+			return service.StopSingleService(daemon.ServiceRunner, cfg.Workspace, timeout, force)
 		},
 	}
 

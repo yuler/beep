@@ -12,7 +12,7 @@ import (
 	"beep/internal/client"
 	"beep/internal/config"
 	"beep/internal/exec"
-	"beep/internal/task"
+	beepjob "beep/internal/job"
 	"beep/internal/ui"
 	"beep/internal/workspace"
 )
@@ -123,7 +123,7 @@ func (r *Runner) PollAndExecute(ctx context.Context) {
 
 		r.sem <- struct{}{}
 		r.wg.Add(1)
-		go func(job *task.Task) {
+		go func(job *beepjob.Job) {
 			defer func() {
 				<-r.sem
 				r.wg.Done()
@@ -133,17 +133,17 @@ func (r *Runner) PollAndExecute(ctx context.Context) {
 	}
 }
 
-func (r *Runner) execute(ctx context.Context, job *task.Task) {
+func (r *Runner) execute(ctx context.Context, job *beepjob.Job) {
 	timeout := time.Duration(job.TimeoutSeconds) * time.Second
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
-	taskCtx, cancel := context.WithTimeout(ctx, timeout)
+	jobCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	argv, err := r.workspace.Resolve(job.JobSlug)
 	if err != nil {
-		result := task.Error("Unknown local job", err.Error(), nil)
+		result := beepjob.Error("Unknown local job", err.Error(), nil)
 		r.logJobBlock(job, []string{err.Error()}, result)
 		errCtx, errCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer errCancel()
@@ -156,7 +156,7 @@ func (r *Runner) execute(ctx context.Context, job *task.Task) {
 
 	env, err := r.JobEnv(job)
 	if err != nil {
-		result := task.Error("Workspace environment", err.Error(), nil)
+		result := beepjob.Error("Workspace environment", err.Error(), nil)
 		r.logJobBlock(job, []string{err.Error()}, result)
 		errCtx, errCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer errCancel()
@@ -210,7 +210,7 @@ func (r *Runner) execute(ctx context.Context, job *task.Task) {
 	var localLines []string
 	var localMu sync.Mutex
 
-	result := r.executor.Run(taskCtx, argv, env, timeout, func(line string) {
+	result := r.executor.Run(jobCtx, argv, env, timeout, func(line string) {
 		cleanLine := strings.TrimRight(line, "\r\n")
 		if cleanLine != "" {
 			localMu.Lock()
@@ -219,7 +219,7 @@ func (r *Runner) execute(ctx context.Context, job *task.Task) {
 		}
 		select {
 		case logChan <- line:
-		case <-taskCtx.Done():
+		case <-jobCtx.Done():
 		}
 	})
 	close(logChan)
@@ -234,7 +234,7 @@ func (r *Runner) execute(ctx context.Context, job *task.Task) {
 	}
 }
 
-func (r *Runner) logJobBlock(job *task.Task, lines []string, result *task.Result) {
+func (r *Runner) logJobBlock(job *beepjob.Job, lines []string, result *beepjob.Result) {
 	r.logMu.Lock()
 	defer r.logMu.Unlock()
 
@@ -250,7 +250,7 @@ func (r *Runner) logJobBlock(job *task.Task, lines []string, result *task.Result
 		log.Printf("%s %s", ui.Dim(fmt.Sprintf("[%s]", job.JobSlug)), line)
 	}
 
-	if result.Status == task.StatusOk {
+	if result.Status == beepjob.StatusOk {
 		log.Printf("%s %s %s %s",
 			ui.Bold(ui.Cyan("[beep-runner]")),
 			ui.Green("✓"),
@@ -268,7 +268,7 @@ func (r *Runner) logJobBlock(job *task.Task, lines []string, result *task.Result
 }
 
 // JobEnv resolves the execution environment variables for a job.
-func (r *Runner) JobEnv(job *task.Task) ([]string, error) {
+func (r *Runner) JobEnv(job *beepjob.Job) ([]string, error) {
 	configJSON, _ := json.Marshal(job.Config)
 
 	var wsEnv []string
