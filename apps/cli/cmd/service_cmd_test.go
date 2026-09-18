@@ -224,3 +224,4 @@ func TestAutoStartServiceDaemon(t *testing.T) {
 		t.Errorf("expected rawArgs to contain --workspace %s, got %v", tmpDir, calledRawArgs)
 	}
 }
+

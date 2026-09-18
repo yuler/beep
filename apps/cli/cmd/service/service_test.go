@@ -251,3 +251,15 @@ func TestServiceRestartNonInteractiveFallback(t *testing.T) {
 		t.Errorf("expected all 2 configured services restarted in non-interactive mode, got %d (%v)", len(calledServices), calledServices)
 	}
 }
+
+func TestServiceDefaultRunsStatus(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("BEEP_WORKSPACE", tmpDir)
+
+	cmd := NewCmdService()
+	if err := cmd.RunE(cmd, []string{}); err != nil {
+		t.Fatalf("expected 'beep service' without args to run status successfully, got: %v", err)
+	}
+}
+
+

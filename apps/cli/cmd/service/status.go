@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"beep/internal/autostart"
 	"beep/internal/cliservice"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
@@ -55,6 +56,10 @@ func runStatusAll(cfg *config.Config) error {
 		return fmt.Errorf("failed to query channel daemon status: %w", err)
 	}
 
+	mgr := autostart.CurrentManager()
+	runnerAutostart := cliservice.FormatAutostartStatus(mgr.GetStatus(daemon.ServiceRunner, config.BinaryName()))
+	channelAutostart := cliservice.FormatAutostartStatus(mgr.GetStatus(daemon.ServiceChannel, config.BinaryName()))
+
 	// Runner Section
 	fmt.Println(ui.Bold("● Runner Service:"))
 	if runnerStatus != nil && runnerStatus.PID > 0 {
@@ -66,12 +71,13 @@ func runStatusAll(cfg *config.Config) error {
 	} else {
 		fmt.Printf("  %s\n", ui.Dim("○ stopped"))
 	}
-	fmt.Printf("  %s %s\n", ui.Dim("Socket:"), daemon.SocketPath(cfg.Workspace, daemon.ServiceRunner))
-	fmt.Printf("  %s %s\n", ui.Dim("Logs:  "), daemon.DailyLogPath(cfg.Workspace, daemon.ServiceRunner, today))
+	fmt.Printf("  %s %s\n", ui.Dim("Autostart:"), runnerAutostart)
+	fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace, daemon.ServiceRunner))
+	fmt.Printf("  %s %s\n", ui.Dim("Logs:     "), daemon.DailyLogPath(cfg.Workspace, daemon.ServiceRunner, today))
 	if cfg.RunnerToken != "" {
-		fmt.Printf("  %s %s\n", ui.Dim("Token: "), ui.Yellow(config.MaskToken(cfg.RunnerToken)))
+		fmt.Printf("  %s %s\n", ui.Dim("Token:    "), ui.Yellow(config.MaskToken(cfg.RunnerToken)))
 	} else {
-		fmt.Printf("  %s %s\n", ui.Dim("Token: "), ui.Dim("(not configured)"))
+		fmt.Printf("  %s %s\n", ui.Dim("Token:    "), ui.Dim("(not configured)"))
 	}
 	fmt.Println()
 
@@ -86,13 +92,14 @@ func runStatusAll(cfg *config.Config) error {
 	} else {
 		fmt.Printf("  %s\n", ui.Dim("○ stopped"))
 	}
-	fmt.Printf("  %s %s\n", ui.Dim("Socket:"), daemon.SocketPath(cfg.Workspace, daemon.ServiceChannel))
-	fmt.Printf("  %s %s\n", ui.Dim("Logs:  "), daemon.DailyLogPath(cfg.Workspace, daemon.ServiceChannel, today))
+	fmt.Printf("  %s %s\n", ui.Dim("Autostart:"), channelAutostart)
+	fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace, daemon.ServiceChannel))
+	fmt.Printf("  %s %s\n", ui.Dim("Logs:     "), daemon.DailyLogPath(cfg.Workspace, daemon.ServiceChannel, today))
 	chToken := cfg.ChannelAuthToken()
 	if chToken != "" {
-		fmt.Printf("  %s %s\n", ui.Dim("Token: "), ui.Yellow(config.MaskToken(chToken)))
+		fmt.Printf("  %s %s\n", ui.Dim("Token:    "), ui.Yellow(config.MaskToken(chToken)))
 	} else {
-		fmt.Printf("  %s %s\n", ui.Dim("Token: "), ui.Dim("(not configured)"))
+		fmt.Printf("  %s %s\n", ui.Dim("Token:    "), ui.Dim("(not configured)"))
 	}
 
 	if (runnerStatus == nil || runnerStatus.PID <= 0) && (channelStatus == nil || channelStatus.PID <= 0) {
