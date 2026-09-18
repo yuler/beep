@@ -3,14 +3,36 @@ package logview
 import (
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"beep/internal/daemon"
 )
+
+// safeBuffer wraps bytes.Buffer with a mutex to allow concurrent reads and writes.
+type safeBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (sb *safeBuffer) Write(p []byte) (int, error) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.Write(p)
+}
+
+func (sb *safeBuffer) String() string {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.String()
+}
+
+var _ io.Writer = (*safeBuffer)(nil)
 
 func TestFollowReadsAppendedLines(t *testing.T) {
 	ws := t.TempDir()
@@ -25,7 +47,7 @@ func TestFollowReadsAppendedLines(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	var buf bytes.Buffer
+	var buf safeBuffer
 	done := make(chan error, 1)
 	go func() {
 		done <- Follow(ctx, ws, []string{daemon.ServiceRunner}, nil, time.Now, &buf, false, false)
