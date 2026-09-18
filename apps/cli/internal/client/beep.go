@@ -202,10 +202,30 @@ type listBeepsResponse struct {
 	Beeps []*Beep `json:"beeps"`
 }
 
-func (c *Client) ListBeeps(ctx context.Context) ([]*Beep, error) {
-	url := fmt.Sprintf("%s/api/v1/beeps", c.cfg.ServerURL)
+// ListBeepsParams filters GET /api/v1/beeps. Empty Status/Kind omit those query params
+// (same as the web "all" filter). Status "all" is treated as empty.
+type ListBeepsParams struct {
+	Status string
+	Kind   string
+}
+
+func (c *Client) ListBeeps(ctx context.Context, params ListBeepsParams) ([]*Beep, error) {
+	u, err := url.Parse(fmt.Sprintf("%s/api/v1/beeps", c.cfg.ServerURL))
+	if err != nil {
+		return nil, err
+	}
+	q := u.Query()
+	status := strings.TrimSpace(params.Status)
+	if status != "" && !strings.EqualFold(status, "all") {
+		q.Set("status", status)
+	}
+	if kind := strings.TrimSpace(params.Kind); kind != "" {
+		q.Set("kind", kind)
+	}
+	u.RawQuery = q.Encode()
+
 	var res listBeepsResponse
-	if err := c.getAuthJSON(ctx, url, &res); err != nil {
+	if err := c.getAuthJSON(ctx, u.String(), &res); err != nil {
 		return nil, err
 	}
 	return res.Beeps, nil

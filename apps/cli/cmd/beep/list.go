@@ -14,18 +14,32 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewCmdList creates the 'beep list' subcommand.
+// NewCmdList creates the 'beep list' / top-level 'list' subcommand.
 func NewCmdList() *cobra.Command {
-	return &cobra.Command{
+	var flagStatus string
+	var flagKind string
+
+	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "List beeps",
+		Short:   "List beeps (default: active)",
+		Long: `List beeps for the current account.
+
+Defaults to active beeps to match the web UI.
+Use --status all to include every status, or pass a specific status
+(active, paused, completed, cancelled, firing).
+Optional --kind once|recurring mirrors the API/web kind filter.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmdutil.RunWithClient(cmd, func(ctx context.Context, cfg *config.Config, c *client.Client) error {
+				params := client.ListBeepsParams{
+					Status: flagStatus,
+					Kind:   flagKind,
+				}
+
 				var beeps []*client.Beep
 				err := ui.WithSpinner("Fetching beeps...", func() error {
 					var listErr error
-					beeps, listErr = c.ListBeeps(ctx)
+					beeps, listErr = c.ListBeeps(ctx, params)
 					return listErr
 				})
 				if err != nil {
@@ -45,10 +59,15 @@ func NewCmdList() *cobra.Command {
 				if accountDisplay == "" {
 					accountDisplay = "personal"
 				}
-				fmt.Printf("%s %s\n\n", ui.Bold(ui.Cyan("Beeps")), ui.Dim(fmt.Sprintf("(account: %s)", accountDisplay)))
+				filterNote := formatListFilterNote(params)
+				fmt.Printf("%s %s\n\n", ui.Bold(ui.Cyan("Beeps")), ui.Dim(fmt.Sprintf("(account: %s%s)", accountDisplay, filterNote)))
 
 				if len(beeps) == 0 {
-					fmt.Println(ui.Dim(fmt.Sprintf("  No beeps found. Create one with '%s create'.", config.BinaryName())))
+					hint := fmt.Sprintf("  No beeps found. Create one with '%s create'.", config.BinaryName())
+					if !strings.EqualFold(strings.TrimSpace(params.Status), "all") && params.Kind == "" {
+						hint = fmt.Sprintf("  No beeps found. Try '%s list --status all', or create one with '%s create'.", config.BinaryName(), config.BinaryName())
+					}
+					fmt.Println(ui.Dim(hint))
 					return nil
 				}
 
@@ -83,4 +102,22 @@ func NewCmdList() *cobra.Command {
 			})
 		},
 	}
+
+	cmd.Flags().StringVar(&flagStatus, "status", "active", "Filter by status: active, paused, completed, cancelled, firing, or all")
+	cmd.Flags().StringVar(&flagKind, "kind", "", "Filter by kind: once or recurring")
+
+	return cmd
+}
+
+func formatListFilterNote(params client.ListBeepsParams) string {
+	parts := make([]string, 0, 2)
+	status := strings.TrimSpace(params.Status)
+	if status == "" {
+		status = "all"
+	}
+	parts = append(parts, "status: "+status)
+	if kind := strings.TrimSpace(params.Kind); kind != "" {
+		parts = append(parts, "kind: "+kind)
+	}
+	return ", " + strings.Join(parts, ", ")
 }
