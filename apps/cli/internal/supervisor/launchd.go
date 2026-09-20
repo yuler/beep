@@ -29,10 +29,7 @@ const launchdPlistTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 	<key>WorkingDirectory</key>
 	<string>{{.Workspace}}</string>
 	<key>KeepAlive</key>
-	<dict>
-		<key>SuccessfulExit</key>
-		<false/>
-	</dict>
+	<true/>
 	<key>RunAtLoad</key>
 	<true/>
 {{- if .Env}}

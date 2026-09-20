@@ -78,6 +78,15 @@ func TestSystemdUnitGeneration(t *testing.T) {
 	if strings.Contains(unit, "BEEP_BAD=KEY") {
 		t.Errorf("expected invalid env keys to be omitted, got:\n%s", unit)
 	}
+	if !strings.Contains(unit, "Restart=always") {
+		t.Errorf("expected Restart=always, got:\n%s", unit)
+	}
+	if strings.Contains(unit, "Restart=on-failure") {
+		t.Errorf("did not expect Restart=on-failure, got:\n%s", unit)
+	}
+	if !strings.Contains(unit, "StartLimitBurst=5") {
+		t.Errorf("expected StartLimitBurst=5, got:\n%s", unit)
+	}
 }
 
 func TestLaunchdPlistGeneration(t *testing.T) {
@@ -125,8 +134,11 @@ func TestLaunchdPlistGeneration(t *testing.T) {
 	if strings.Contains(plist, "BEEP_CTRL") {
 		t.Errorf("expected control-char env values to be omitted, got:\n%s", plist)
 	}
-	if !strings.Contains(plist, "<key>SuccessfulExit</key>") {
-		t.Errorf("expected KeepAlive SuccessfulExit=false, got:\n%s", plist)
+	if !strings.Contains(plist, "<key>KeepAlive</key>\n\t<true/>") {
+		t.Errorf("expected KeepAlive true, got:\n%s", plist)
+	}
+	if strings.Contains(plist, "<key>SuccessfulExit</key>") {
+		t.Errorf("did not expect KeepAlive SuccessfulExit, got:\n%s", plist)
 	}
 }
 

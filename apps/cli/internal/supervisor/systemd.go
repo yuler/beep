@@ -15,12 +15,14 @@ import (
 const systemdUnitTemplate = `[Unit]
 Description={{.Description}}
 After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple
 ExecStart={{.ExecCmd}}
 WorkingDirectory={{.Workspace}}
-Restart=on-failure
+Restart=always
 RestartSec=5s
 {{- range .EnvLines}}
 Environment={{.}}
