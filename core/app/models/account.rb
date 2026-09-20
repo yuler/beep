@@ -5,10 +5,13 @@ class Account < ApplicationRecord
 
   has_many :users, dependent: :destroy
   has_many :beeps, dependent: :destroy
+  has_many :beep_runs, through: :beeps, source: :runs
   has_many :beepers, dependent: :destroy
+  has_many :beeper_runs, through: :beepers, source: :runs
   has_many :beeper_apps, dependent: :destroy
   has_many :runners, dependent: :destroy
   has_many :runner_jobs, class_name: "Runner::Job", dependent: :destroy
+  has_many :runner_runs, through: :runner_jobs, source: :runs
   has_many :push_subscriptions, class_name: "Push::Subscription", dependent: :destroy
   has_many :channels, dependent: :destroy
   has_many :channel_authorizations, class_name: "Channel::Authorization", dependent: :destroy

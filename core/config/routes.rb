@@ -82,6 +82,7 @@ Rails.application.routes.draw do
       end
 
       resource :settings, only: %i[ show update ]
+      resource :dashboard, only: :show, controller: "dashboard"
 
       resources :channels, only: %i[ index create destroy ] do
         scope module: :channels do
