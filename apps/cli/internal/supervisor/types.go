@@ -6,7 +6,7 @@ import (
 
 var (
 	// ErrUnsupported is returned when no OS process supervisor is available.
-	ErrUnsupported = errors.New("autostart is not supported on this platform (requires systemd on Linux or LaunchAgent on macOS)")
+	ErrUnsupported = errors.New("process supervisor is not supported on this platform (requires systemd on Linux or LaunchAgent on macOS)")
 )
 
 // ServiceInfo contains details required to generate and register a supervisor unit.
@@ -20,13 +20,14 @@ type ServiceInfo struct {
 	Env         map[string]string // Non-secret environment (PATH/HOME/USER and workspace/server)
 }
 
-// Status represents the autostart status of a service.
+// Status represents the supervisor registration status of a service.
 type Status struct {
 	Supported    bool
 	Platform     string // "systemd", "launchd", or "unsupported"
 	Installed    bool
 	Active       bool
 	UnitName     string
+	ConfigPath   string // Path to unit file or LaunchAgent plist
 	LingerActive bool   // Linux only: whether loginctl linger is enabled
 	Detail       string // Additional status details or error message
 }

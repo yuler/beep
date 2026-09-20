@@ -73,7 +73,7 @@ func TestStopSingleServiceReturnsUninstallError(t *testing.T) {
 	t.Cleanup(func() { supervisor.DefaultManager = orig })
 
 	err := StopSingleService(daemon.ServiceRunner, t.TempDir(), time.Second, true)
-	if err == nil || !strings.Contains(err.Error(), "unregister autostart") {
+	if err == nil || !strings.Contains(err.Error(), "unregister supervisor") {
 		t.Fatalf("expected unregister error, got %v", err)
 	}
 }

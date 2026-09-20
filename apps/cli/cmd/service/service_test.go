@@ -201,8 +201,8 @@ func TestServiceHelpOutput(t *testing.T) {
 	stop.SetErr(&stopBuf)
 	_ = stop.Help()
 	stopOut := stopBuf.String()
-	if !strings.Contains(stopOut, "unregisters") {
-		t.Errorf("expected stop help to mention unregistering autostart, got:\n%s", stopOut)
+	if !strings.Contains(stopOut, "unregisters") || !strings.Contains(stopOut, "supervisor") {
+		t.Errorf("expected stop help to mention unregistering the supervisor unit, got:\n%s", stopOut)
 	}
 }
 

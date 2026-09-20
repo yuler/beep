@@ -127,6 +127,7 @@ func (m *LaunchdManager) Install(info ServiceInfo) error {
 		}
 	}
 
+	// RunAtLoad starts the job; callers must not kickstart immediately after Install.
 	return nil
 }
 
@@ -233,17 +234,18 @@ func (m *LaunchdManager) Stop(service, binaryName string) error {
 
 func (m *LaunchdManager) GetStatus(service, binaryName string) Status {
 	label := m.Label(service, binaryName)
+	plistFile := m.plistPath(service, binaryName)
 	status := Status{
-		Supported: m.IsSupported(),
-		Platform:  "launchd",
-		UnitName:  label,
+		Supported:  m.IsSupported(),
+		Platform:   "launchd",
+		UnitName:   label,
+		ConfigPath: plistFile,
 	}
 
 	if !status.Supported {
 		return status
 	}
 
-	plistFile := m.plistPath(service, binaryName)
 	if _, err := os.Stat(plistFile); err == nil {
 		status.Installed = true
 	}

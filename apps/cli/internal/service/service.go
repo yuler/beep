@@ -39,7 +39,7 @@ func AutoStartServiceDaemon(service string, cfg *config.Config, rawArgs []string
 	return StartServiceDaemonFn(service, rawArgs, cfg)
 }
 
-// StopSupervisor unloads an installed autostart unit without removing it.
+// StopSupervisor unloads an installed supervisor unit without removing it.
 // launchd KeepAlive / systemd Restart must be stopped through the supervisor, not only by killing the PID.
 func StopSupervisor(service string) {
 	mgr := supervisor.CurrentManager()
@@ -53,8 +53,8 @@ func StopSupervisor(service string) {
 	_ = mgr.Stop(service, config.BinaryName())
 }
 
-// FormatAutostartStatus formats the autostart status for display in CLI output.
-func FormatAutostartStatus(st supervisor.Status) string {
+// FormatSupervisorStatus formats the supervisor registration status for CLI output.
+func FormatSupervisorStatus(st supervisor.Status) string {
 	if st.Installed {
 		if st.Platform == "systemd" {
 			if st.LingerActive {
@@ -70,7 +70,7 @@ func FormatAutostartStatus(st supervisor.Status) string {
 		return ui.Dim("not registered")
 	}
 	if st.Detail != "" {
-		return ui.Warn("not supported (" + st.Detail + ")")
+		return ui.Warn("not supported (%s)", st.Detail)
 	}
 	return ui.Warn("not supported")
 }
@@ -111,13 +111,15 @@ func StartServiceBackgroundDaemon(service string, rawArgs []string, cfg *config.
 	}
 
 	if err := mgr.Install(info); err != nil {
-		return fmt.Errorf("failed to register autostart service for %s: %w", service, err)
+		return fmt.Errorf("failed to register supervisor service for %s: %w", service, err)
 	}
 
-	if st := mgr.GetStatus(service, config.BinaryName()); !st.Active {
+	// launchd Install already bootstraps with RunAtLoad. A follow-up Start/kickstart
+	// races GetStatus.Active and can start a second copy of the first job.
+	if mgr.PlatformName() != "launchd" {
 		if err := mgr.Start(service, config.BinaryName()); err != nil {
 			_ = mgr.Uninstall(service, config.BinaryName())
-			return fmt.Errorf("failed to start autostart service for %s: %w", service, err)
+			return fmt.Errorf("failed to start supervisor service for %s: %w", service, err)
 		}
 	}
 
@@ -128,10 +130,10 @@ func StartServiceBackgroundDaemon(service string, rawArgs []string, cfg *config.
 			st := mgr.GetStatus(service, config.BinaryName())
 			fmt.Printf("%s %s (PID: %s)\n",
 				ui.Green("✓"),
-				ui.Bold(fmt.Sprintf("Beep %s autostart service registered and started in background", service)),
+				ui.Bold(fmt.Sprintf("Beep %s supervisor service registered and started in background", service)),
 				ui.Cyan(fmt.Sprintf("%d", childPID)),
 			)
-			fmt.Printf("  %s %s\n", ui.Dim("Autostart:"), FormatAutostartStatus(st))
+			fmt.Printf("  %s %s\n", ui.Dim("Supervisor:"), FormatSupervisorStatus(st))
 			fmt.Printf("  %s %s\n", ui.Dim("Workspace:"), cfg.Workspace)
 			fmt.Printf("  %s %s\n", ui.Dim("Logs:     "), logFile)
 			fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace, service))
@@ -187,7 +189,7 @@ func startDetachedDaemon(service string, rawArgs []string, cfg *config.Config, m
 				ui.Bold(fmt.Sprintf("Beep %s started in background", service)),
 				ui.Cyan(fmt.Sprintf("%d", childPID)),
 			)
-			fmt.Printf("  %s %s\n", ui.Dim("Autostart:"), FormatAutostartStatus(mgr.GetStatus(service, config.BinaryName())))
+			fmt.Printf("  %s %s\n", ui.Dim("Supervisor:"), FormatSupervisorStatus(mgr.GetStatus(service, config.BinaryName())))
 			fmt.Printf("  %s %s\n", ui.Dim("Workspace:"), cfg.Workspace)
 			fmt.Printf("  %s %s\n", ui.Dim("Logs:     "), logFile)
 			fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace, service))
@@ -208,17 +210,17 @@ func startDetachedDaemon(service string, rawArgs []string, cfg *config.Config, m
 	return fmt.Errorf("%s daemon failed to complete handshake within 5s (check logs: %s)", service, logFile)
 }
 
-// StopSingleService stops a running daemon for the given service and unregisters its autostart service.
+// StopSingleService stops a running daemon for the given service and unregisters its supervisor unit.
 func StopSingleService(service, workspaceDir string, timeout time.Duration, force bool) error {
 	mgr := supervisor.CurrentManager()
-	var uninstalledAutostart bool
+	var uninstalled bool
 	if mgr.IsSupported() {
 		st := mgr.GetStatus(service, config.BinaryName())
 		if st.Installed {
 			if err := mgr.Uninstall(service, config.BinaryName()); err != nil {
-				return fmt.Errorf("failed to unregister autostart for %s: %w", service, err)
+				return fmt.Errorf("failed to unregister supervisor for %s: %w", service, err)
 			}
-			uninstalledAutostart = true
+			uninstalled = true
 		}
 	}
 
@@ -228,10 +230,10 @@ func StopSingleService(service, workspaceDir string, timeout time.Duration, forc
 	}
 
 	if !running || pid == 0 {
-		if uninstalledAutostart {
+		if uninstalled {
 			fmt.Printf("%s %s\n",
 				ui.Green("✓"),
-				ui.Bold(fmt.Sprintf("Beep %s autostart service unregistered", service)),
+				ui.Bold(fmt.Sprintf("Beep %s supervisor service unregistered", service)),
 			)
 			return nil
 		}
@@ -251,8 +253,8 @@ func StopSingleService(service, workspaceDir string, timeout time.Duration, forc
 	}
 
 	msg := fmt.Sprintf("Beep %s stopped", service)
-	if uninstalledAutostart {
-		msg = fmt.Sprintf("Beep %s stopped and autostart service unregistered", service)
+	if uninstalled {
+		msg = fmt.Sprintf("Beep %s stopped and supervisor service unregistered", service)
 	}
 
 	fmt.Printf("%s %s (PID: %s)\n",
@@ -275,7 +277,7 @@ func ShowSingleServiceStatus(service string, cfg *config.Config) error {
 	socketFile := daemon.SocketPath(cfg.Workspace, service)
 
 	mgr := supervisor.CurrentManager()
-	autostartStatus := FormatAutostartStatus(mgr.GetStatus(service, config.BinaryName()))
+	supervisorStatus := FormatSupervisorStatus(mgr.GetStatus(service, config.BinaryName()))
 
 	title := fmt.Sprintf("Beep %s Daemon Status:", service)
 	if service == daemon.ServiceRunner {
@@ -292,7 +294,7 @@ func ShowSingleServiceStatus(service string, cfg *config.Config) error {
 		}
 
 		fmt.Println(ui.KeyValue("Status", ui.Green("running")+" "+ui.Green("●")))
-		fmt.Println(ui.KeyValue("Autostart", autostartStatus))
+		fmt.Println(ui.KeyValue("Supervisor", supervisorStatus))
 		fmt.Println(ui.KeyValue("PID", ui.Cyan(fmt.Sprintf("%d", status.PID))))
 		if status.Version != "" {
 			fmt.Println(ui.KeyValue("Version", ui.Bold(status.Version)))
@@ -316,7 +318,7 @@ func ShowSingleServiceStatus(service string, cfg *config.Config) error {
 		}
 	} else {
 		fmt.Println(ui.KeyValue("Status", ui.Dim("stopped")+" "+ui.Dim("○")))
-		fmt.Println(ui.KeyValue("Autostart", autostartStatus))
+		fmt.Println(ui.KeyValue("Supervisor", supervisorStatus))
 		fmt.Println(ui.KeyValue("Workspace", ui.Dim(cfg.Workspace)))
 		fmt.Println(ui.KeyValue("Socket", ui.Dim(socketFile)))
 		fmt.Println(ui.KeyValue("Logs", ui.Dim(logFile)))

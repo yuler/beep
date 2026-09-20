@@ -35,7 +35,7 @@ func (m *UnsupportedManager) GetStatus(service, binaryName string) Status {
 	return Status{
 		Supported: false,
 		Platform:  "unsupported",
-		Detail:    "system autostart requires systemd (Linux) or launchd (macOS)",
+		Detail:    "process supervisor requires systemd (Linux) or launchd (macOS)",
 	}
 }
 
