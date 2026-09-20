@@ -70,9 +70,9 @@ func FormatAutostartStatus(st supervisor.Status) string {
 		return ui.Dim("not registered")
 	}
 	if st.Detail != "" {
-		return ui.Dim("not supported (" + st.Detail + ")")
+		return ui.Warn("not supported (" + st.Detail + ")")
 	}
-	return ui.Dim("not supported")
+	return ui.Warn("not supported")
 }
 
 // StartServiceBackgroundDaemon starts a background daemon by registering it with the system supervisor
