@@ -31,9 +31,10 @@ export const Route = createFileRoute("/$account_slug/")({
 	}),
 	loader: withAuthRedirects(async ({ params, deps, abortController }) => {
 		const slug = params?.account_slug ?? "";
+		const dashboardDeps = deps as DashboardSearch;
 		const [dashboardRes, settingsRes] = await Promise.all([
 			fetchDashboard(slug, {
-				range: deps.range,
+				range: dashboardDeps?.range,
 				signal: abortController?.signal,
 			}),
 			fetchSettings(slug).catch(() => null),
