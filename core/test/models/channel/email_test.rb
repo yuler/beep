@@ -33,6 +33,6 @@ class Channel::EmailTest < ActiveSupport::TestCase
 
     assert_equal 1, ActionMailer::Base.deliveries.size
     assert_equal [ @user.identity.email ], ActionMailer::Base.deliveries.last.to
-    assert_equal "Test notification", ActionMailer::Base.deliveries.last.subject
+    assert_match %r{\A\[Beep\] Test notification \(\d{2}-\d{2} \d{2}:\d{2}\)\z}, ActionMailer::Base.deliveries.last.subject
   end
 end
