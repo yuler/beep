@@ -45,20 +45,8 @@ interface RunnerListProps {
 }
 
 export function getRunnerStatusBadge(runner: Runner) {
-	const isHealthyOnline = runner.is_online ?? runner.status !== "offline";
-	if (!isHealthyOnline || runner.status === "offline") {
-		return (
-			<Badge
-				variant="outline"
-				className="gap-1.5 border-zinc-500/30 text-muted-foreground"
-			>
-				<span className="size-1.5 rounded-full bg-zinc-400" />
-				{m.runners_status_offline()}
-			</Badge>
-		);
-	}
-
-	if (runner.status === "online") {
+	const isHealthyOnline = runner.is_online ?? runner.status === "online";
+	if (isHealthyOnline && runner.status === "online") {
 		return (
 			<Badge
 				variant="outline"
@@ -73,10 +61,10 @@ export function getRunnerStatusBadge(runner: Runner) {
 	return (
 		<Badge
 			variant="outline"
-			className="gap-1.5 border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400"
+			className="gap-1.5 border-zinc-500/30 text-muted-foreground"
 		>
-			<span className="size-1.5 rounded-full bg-sky-500" />
-			{m.runners_status_idle()}
+			<span className="size-1.5 rounded-full bg-zinc-400" />
+			{m.runners_status_offline()}
 		</Badge>
 	);
 }

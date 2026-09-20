@@ -1,8 +1,6 @@
 class Api::V1::Runner::RunsController < Api::V1::Runner::BaseController
   def create
-    has_running = @current_runner.runs.where(status: "running").exists?
     @current_runner.touch_activity(
-      status: has_running ? "online" : "idle",
       version: params[:version],
       os: params[:os],
       arch: params[:arch],
@@ -18,7 +16,6 @@ class Api::V1::Runner::RunsController < Api::V1::Runner::BaseController
                          .first
 
     if candidate&.claim_for(@current_runner)
-      @current_runner.update_columns(status: "online")
       @run = candidate
       @api_base_url = runner_callback_base_url
       render :create

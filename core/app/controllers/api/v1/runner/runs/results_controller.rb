@@ -19,8 +19,7 @@ class Api::V1::Runner::Runs::ResultsController < Api::V1::Runner::BaseController
     )
 
     if recorded
-      has_running = @current_runner.runs.where(status: "running").where.not(id: @run.id).exists?
-      @current_runner.touch_activity(status: has_running ? "online" : "idle")
+      @current_runner.touch_activity
       head :no_content
     else
       render_json_error(

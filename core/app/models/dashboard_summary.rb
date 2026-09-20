@@ -173,7 +173,7 @@ class DashboardSummary
   def runner_stats
     runners = account.runners
     total = runners.count
-    online = runners.where(status: "online").count
+    online = runners.where(status: "online").where(last_seen_at: Runner::OFFLINE_TIMEOUT.ago..).count
     active_jobs = account.runner_jobs.where(status: "active").count
 
     {

@@ -53,12 +53,11 @@ class RunnerTest < ActiveSupport::TestCase
         os: "linux",
         arch: "arm64",
         hostname: "nas-01",
-        ip_address: "192.168.1.50",
-        status: "idle"
+        ip_address: "192.168.1.50"
       )
 
       runner.reload
-      assert_equal "idle", runner.status
+      assert_equal "online", runner.status
       assert_equal "1.0.0", runner.version
       assert_equal "linux", runner.os
       assert_equal "arm64", runner.arch
@@ -73,10 +72,10 @@ class RunnerTest < ActiveSupport::TestCase
     active_runner.update_columns(status: "online", last_seen_at: 10.seconds.ago)
 
     stale_runner = @account.runners.create!(name: "Stale-Runner")
-    stale_runner.update_columns(status: "idle", last_seen_at: 70.seconds.ago)
+    stale_runner.update_columns(status: "online", last_seen_at: 70.seconds.ago)
 
     never_seen_runner = @account.runners.create!(name: "Never-Seen")
-    never_seen_runner.update_columns(status: "idle", last_seen_at: nil)
+    never_seen_runner.update_columns(status: "online", last_seen_at: nil)
 
     Runner.mark_stale_offline
 
@@ -88,9 +87,6 @@ class RunnerTest < ActiveSupport::TestCase
   test "online? returns true only for active runners seen within OFFLINE_TIMEOUT" do
     runner = @account.runners.create!(name: "Test-Runner")
     runner.update_columns(status: "online", last_seen_at: 10.seconds.ago)
-    assert runner.online?
-
-    runner.update_columns(status: "idle", last_seen_at: 10.seconds.ago)
     assert runner.online?
 
     runner.update_columns(status: "offline", last_seen_at: 10.seconds.ago)

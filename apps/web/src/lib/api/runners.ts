@@ -1,6 +1,6 @@
 import { apiFetch } from "@/lib/api/client";
 
-export type RunnerStatus = "online" | "idle" | "offline";
+export type RunnerStatus = "online" | "offline";
 
 export type Runner = {
 	id: string;

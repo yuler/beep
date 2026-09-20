@@ -8,7 +8,7 @@ class Runner < ApplicationRecord
   has_many :runs, dependent: :destroy
   has_many :authorizations, class_name: "Runner::Authorization", dependent: :nullify
 
-  enum :status, %w[ offline online idle ].index_by(&:itself), default: "offline"
+  enum :status, %w[ offline online ].index_by(&:itself), default: "offline"
 
   has_secure_token prefix: TOKEN_PREFIX
 
@@ -21,16 +21,16 @@ class Runner < ApplicationRecord
 
   class << self
     def mark_stale_offline
-      where(status: %w[ online idle ])
+      where(status: "online")
         .where(last_seen_at: ..OFFLINE_TIMEOUT.ago)
-        .or(where(status: %w[ online idle ], last_seen_at: nil))
+        .or(where(status: "online", last_seen_at: nil))
         .update_all(status: "offline")
     end
   end
 
-  def touch_activity(version: nil, os: nil, arch: nil, hostname: nil, ip_address: nil, status: "idle")
+  def touch_activity(version: nil, os: nil, arch: nil, hostname: nil, ip_address: nil, status: "online")
     attrs = {
-      status: status.in?(%w[ online idle ]) ? status : "idle",
+      status: "online",
       last_seen_at: Time.current
     }
     attrs[:version] = version if version.present?
@@ -49,7 +49,7 @@ class Runner < ApplicationRecord
   end
 
   def online?
-    status.in?(%w[ online idle ]) && last_seen_at.present? && last_seen_at >= OFFLINE_TIMEOUT.ago
+    status == "online" && last_seen_at.present? && last_seen_at >= OFFLINE_TIMEOUT.ago
   end
 
   def masked_token
