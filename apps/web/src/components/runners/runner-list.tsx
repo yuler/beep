@@ -8,6 +8,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { confirm } from "@/components/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,7 +99,7 @@ export function RunnerList({
 	const [busyRunnerId, setBusyRunnerId] = useState<string | null>(null);
 
 	async function handleDelete(runner: Runner) {
-		if (!window.confirm(m.runners_delete_confirm({ name: runner.name }))) {
+		if (!(await confirm(m.runners_delete_confirm({ name: runner.name })))) {
 			return;
 		}
 
@@ -120,7 +121,9 @@ export function RunnerList({
 
 	async function handleRegenerateToken(runner: Runner) {
 		if (
-			!window.confirm(m.runners_regenerate_token_confirm({ name: runner.name }))
+			!(await confirm(
+				m.runners_regenerate_token_confirm({ name: runner.name }),
+			))
 		) {
 			return;
 		}

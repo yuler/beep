@@ -10,6 +10,7 @@ import { useState } from "react";
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
 import { BeepRuns } from "@/components/beeps/beep-runs";
 import { BEEP_STATUS_META } from "@/components/beeps/beep-status";
+import { confirm } from "@/components/confirm-dialog";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,10 @@ function BeepDetailPage() {
 			beep.status !== "completed" &&
 			beep.run_at &&
 			Number(new Date(beep.run_at)) > Date.now() &&
-			!window.confirm(m.beeps_send_now_confirm_future())
+			!(await confirm({
+				description: m.beeps_send_now_confirm_future(),
+				variant: "default",
+			}))
 		) {
 			return;
 		}
@@ -110,7 +114,7 @@ function BeepDetailPage() {
 	}
 
 	async function handleDelete() {
-		if (!window.confirm(m.beeps_delete_confirm({ title: beep.title }))) {
+		if (!(await confirm(m.beeps_delete_confirm({ title: beep.title })))) {
 			return;
 		}
 

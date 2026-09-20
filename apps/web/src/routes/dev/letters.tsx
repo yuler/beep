@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { ExternalLink, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { confirm } from "@/components/confirm-dialog";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -58,7 +59,7 @@ function LettersPage() {
 
 	async function handleClear() {
 		if (!letters.length) return;
-		if (!window.confirm(m.dev_clear_letters_confirm())) return;
+		if (!(await confirm(m.dev_clear_letters_confirm()))) return;
 
 		setClearing(true);
 		setError(null);

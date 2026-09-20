@@ -9,6 +9,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { confirm } from "@/components/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -100,7 +101,8 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 
 	async function handleDelete(id: string) {
 		if (deletingId || testingId) return;
-		if (!confirm("Are you sure you want to remove this channel?")) return;
+		if (!(await confirm("Are you sure you want to remove this channel?")))
+			return;
 		setDeletingId(id);
 		try {
 			await deleteChannel(slug, id);
