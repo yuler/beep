@@ -11,7 +11,7 @@ class BeepMailer < ApplicationMailer
 
     timezone = user.timezone.presence || @beep.timezone.presence || "UTC"
     zone = Time.find_zone(timezone) || Time.zone
-    time = (@run.scheduled_for || Time.current).in_time_zone(zone)
+    time = Time.current.in_time_zone(zone)
     @formatted_time = time.strftime("%m-%d %H:%M")
     @detailed_time = time.strftime("%Y-%m-%d %H:%M %Z")
 
