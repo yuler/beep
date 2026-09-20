@@ -69,6 +69,8 @@ func FormatBeepStatus(s string) string {
 	switch strings.ToLower(s) {
 	case "active":
 		return ui.Green("active")
+	case "firing":
+		return ui.Yellow("firing")
 	case "paused":
 		return ui.Yellow("paused")
 	case "completed":

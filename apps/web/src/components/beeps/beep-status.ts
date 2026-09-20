@@ -1,9 +1,9 @@
 import {
-	AlertCircle,
 	CheckCircle2,
 	Flame,
 	type LucideIcon,
 	PauseCircle,
+	XCircle,
 } from "lucide-react";
 
 import type { Beep } from "@/lib/api/beeps";
@@ -43,8 +43,8 @@ export const BEEP_STATUS_META: Record<
 		badgeVariant: "outline",
 	},
 	cancelled: {
-		icon: AlertCircle,
-		colorClass: "text-destructive",
-		badgeVariant: "destructive",
+		icon: XCircle,
+		colorClass: "text-muted-foreground",
+		badgeVariant: "secondary",
 	},
 };

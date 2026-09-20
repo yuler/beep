@@ -60,8 +60,6 @@ function beepStatusTone(status: Beep["status"]) {
 			return "emerald" as const;
 		case "firing":
 			return "amber" as const;
-		case "cancelled":
-			return "rose" as const;
 		default:
 			return "muted" as const;
 	}
