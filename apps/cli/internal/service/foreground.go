@@ -54,7 +54,6 @@ func runForegroundServices(cfg *config.Config, services []string, rawArgs []stri
 		}
 	}
 
-	var copyWG sync.WaitGroup
 	var writeMu sync.Mutex
 	prefixed := func(p []byte) (int, error) {
 		writeMu.Lock()
@@ -62,6 +61,7 @@ func runForegroundServices(cfg *config.Config, services []string, rawArgs []stri
 		return out.Write(p)
 	}
 
+	errCh := make(chan error, len(built))
 	for _, c := range built {
 		stdout, err := c.cmd.StdoutPipe()
 		if err != nil {
@@ -79,27 +79,26 @@ func runForegroundServices(cfg *config.Config, services []string, rawArgs []stri
 		}
 		started = append(started, c.cmd)
 
-		copyWG.Add(2)
+		var childWG sync.WaitGroup
+		childWG.Add(2)
 		go func(service string, r io.Reader) {
-			defer copyWG.Done()
+			defer childWG.Done()
 			_ = CopyPrefixedLines(service, r, writerFunc(prefixed))
 		}(c.service, stdout)
 		go func(service string, r io.Reader) {
-			defer copyWG.Done()
+			defer childWG.Done()
 			_ = CopyPrefixedLines(service, r, writerFunc(prefixed))
 		}(c.service, stderr)
+
+		go func(cmd *exec.Cmd) {
+			childWG.Wait()
+			errCh <- cmd.Wait()
+		}(c.cmd)
 	}
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, proc.ShutdownSignals...)
 	defer signal.Stop(sigChan)
-
-	errCh := make(chan error, len(started))
-	for _, cmd := range started {
-		go func(cmd *exec.Cmd) {
-			errCh <- cmd.Wait()
-		}(cmd)
-	}
 
 	var firstErr error
 	remaining := len(started)
@@ -115,7 +114,6 @@ func runForegroundServices(cfg *config.Config, services []string, rawArgs []stri
 			}
 		}
 	}
-	copyWG.Wait()
 	return firstErr
 }
 

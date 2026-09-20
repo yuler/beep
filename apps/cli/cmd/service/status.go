@@ -57,8 +57,10 @@ func runStatusAll(cfg *config.Config) error {
 	}
 
 	mgr := supervisor.CurrentManager()
-	runnerSupervisor := intsvc.FormatSupervisorStatus(mgr.GetStatus(daemon.ServiceRunner, config.BinaryName()))
-	channelSupervisor := intsvc.FormatSupervisorStatus(mgr.GetStatus(daemon.ServiceChannel, config.BinaryName()))
+	runnerSt := mgr.GetStatus(daemon.ServiceRunner, config.BinaryName())
+	channelSt := mgr.GetStatus(daemon.ServiceChannel, config.BinaryName())
+	runnerSupervisor := intsvc.FormatSupervisorStatus(runnerSt)
+	channelSupervisor := intsvc.FormatSupervisorStatus(channelSt)
 
 	// Runner Section
 	fmt.Println(ui.Bold("● Runner Service:"))
@@ -72,6 +74,9 @@ func runStatusAll(cfg *config.Config) error {
 		fmt.Printf("  %s\n", ui.Dim("○ stopped"))
 	}
 	fmt.Printf("  %s %s\n", ui.Dim("Supervisor:"), runnerSupervisor)
+	if runnerSt.ConfigPath != "" && runnerSt.Installed {
+		fmt.Printf("  %s %s\n", ui.Dim("ConfigPath:"), runnerSt.ConfigPath)
+	}
 	fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace, daemon.ServiceRunner))
 	fmt.Printf("  %s %s\n", ui.Dim("Logs:     "), daemon.DailyLogPath(cfg.Workspace, daemon.ServiceRunner, today))
 	if cfg.RunnerToken != "" {
@@ -93,6 +98,9 @@ func runStatusAll(cfg *config.Config) error {
 		fmt.Printf("  %s\n", ui.Dim("○ stopped"))
 	}
 	fmt.Printf("  %s %s\n", ui.Dim("Supervisor:"), channelSupervisor)
+	if channelSt.ConfigPath != "" && channelSt.Installed {
+		fmt.Printf("  %s %s\n", ui.Dim("ConfigPath:"), channelSt.ConfigPath)
+	}
 	fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace, daemon.ServiceChannel))
 	fmt.Printf("  %s %s\n", ui.Dim("Logs:     "), daemon.DailyLogPath(cfg.Workspace, daemon.ServiceChannel, today))
 	chToken := cfg.ChannelAuthToken()

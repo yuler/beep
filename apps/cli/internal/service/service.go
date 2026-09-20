@@ -134,9 +134,12 @@ func StartServiceBackgroundDaemon(service string, rawArgs []string, cfg *config.
 				ui.Cyan(fmt.Sprintf("%d", childPID)),
 			)
 			fmt.Printf("  %s %s\n", ui.Dim("Supervisor:"), FormatSupervisorStatus(st))
-			fmt.Printf("  %s %s\n", ui.Dim("Workspace:"), cfg.Workspace)
-			fmt.Printf("  %s %s\n", ui.Dim("Logs:     "), logFile)
-			fmt.Printf("  %s %s\n", ui.Dim("Socket:   "), daemon.SocketPath(cfg.Workspace, service))
+			if st.ConfigPath != "" {
+				fmt.Printf("  %s %s\n", ui.Dim("ConfigPath:"), st.ConfigPath)
+			}
+			fmt.Printf("  %s %s\n", ui.Dim("Workspace: "), cfg.Workspace)
+			fmt.Printf("  %s %s\n", ui.Dim("Logs:      "), logFile)
+			fmt.Printf("  %s %s\n", ui.Dim("Socket:    "), daemon.SocketPath(cfg.Workspace, service))
 
 			if mgr.PlatformName() == "systemd" && !st.LingerActive {
 				fmt.Printf("  %s %s\n", ui.Yellow("!"), ui.Dim("Tip: Run 'loginctl enable-linger' to allow service to start on boot before login"))
@@ -277,7 +280,8 @@ func ShowSingleServiceStatus(service string, cfg *config.Config) error {
 	socketFile := daemon.SocketPath(cfg.Workspace, service)
 
 	mgr := supervisor.CurrentManager()
-	supervisorStatus := FormatSupervisorStatus(mgr.GetStatus(service, config.BinaryName()))
+	st := mgr.GetStatus(service, config.BinaryName())
+	supervisorStatus := FormatSupervisorStatus(st)
 
 	title := fmt.Sprintf("Beep %s Daemon Status:", service)
 	if service == daemon.ServiceRunner {
@@ -295,6 +299,9 @@ func ShowSingleServiceStatus(service string, cfg *config.Config) error {
 
 		fmt.Println(ui.KeyValue("Status", ui.Green("running")+" "+ui.Green("●")))
 		fmt.Println(ui.KeyValue("Supervisor", supervisorStatus))
+		if st.ConfigPath != "" && st.Installed {
+			fmt.Println(ui.KeyValue("ConfigPath", st.ConfigPath))
+		}
 		fmt.Println(ui.KeyValue("PID", ui.Cyan(fmt.Sprintf("%d", status.PID))))
 		if status.Version != "" {
 			fmt.Println(ui.KeyValue("Version", ui.Bold(status.Version)))
@@ -319,6 +326,9 @@ func ShowSingleServiceStatus(service string, cfg *config.Config) error {
 	} else {
 		fmt.Println(ui.KeyValue("Status", ui.Dim("stopped")+" "+ui.Dim("○")))
 		fmt.Println(ui.KeyValue("Supervisor", supervisorStatus))
+		if st.ConfigPath != "" && st.Installed {
+			fmt.Println(ui.KeyValue("ConfigPath", st.ConfigPath))
+		}
 		fmt.Println(ui.KeyValue("Workspace", ui.Dim(cfg.Workspace)))
 		fmt.Println(ui.KeyValue("Socket", ui.Dim(socketFile)))
 		fmt.Println(ui.KeyValue("Logs", ui.Dim(logFile)))

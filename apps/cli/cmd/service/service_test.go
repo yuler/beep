@@ -2,6 +2,8 @@ package service
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -353,10 +355,11 @@ func (s *stubSupervisor) Start(service, binaryName string) error { return nil }
 func (s *stubSupervisor) Stop(service, binaryName string) error  { return nil }
 func (s *stubSupervisor) GetStatus(service, binaryName string) supervisor.Status {
 	return supervisor.Status{
-		Supported: true,
-		Platform:  "systemd",
-		Installed: s.installed[service],
-		UnitName:  service,
+		Supported:  true,
+		Platform:   "systemd",
+		Installed:  s.installed[service],
+		UnitName:   service,
+		ConfigPath: "/home/user/.config/systemd/user/" + service + ".service",
 	}
 }
 func (s *stubSupervisor) EnsureLinger() (bool, error) { return true, nil }
@@ -375,5 +378,37 @@ func TestRunStopAllUnregistersInstalledWhenNotRunning(t *testing.T) {
 	}
 	if len(stub.uninstalled) != 2 {
 		t.Fatalf("expected both services uninstalled, got %v", stub.uninstalled)
+	}
+}
+
+func TestServiceStatusDisplaysConfigPathWhenInstalled(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &config.Config{
+		Workspace: tmpDir,
+	}
+
+	stub := &stubSupervisor{installed: map[string]bool{
+		daemon.ServiceRunner: true,
+	}}
+	orig := supervisor.DefaultManager
+	supervisor.DefaultManager = stub
+	t.Cleanup(func() { supervisor.DefaultManager = orig })
+
+	var buf bytes.Buffer
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := runStatusAll(cfg)
+	_ = w.Close()
+	os.Stdout = oldStdout
+	_, _ = io.Copy(&buf, r)
+
+	if err != nil {
+		t.Fatalf("runStatusAll: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "ConfigPath:") || !strings.Contains(out, "runner.service") {
+		t.Fatalf("expected ConfigPath in status output, got:\n%s", out)
 	}
 }
