@@ -17,6 +17,7 @@ Guidelines for coding agents in this beep monorepo.
 ```bash
 mise setup
 mise dev
+mise db:dev   # Prisma Studio at http://127.0.0.1:5555 (local SQLite)
 ```
 
 `mise dev` → `scripts/dev.sh` prints subdomain URLs, then starts [`Procfile.dev`](Procfile.dev) via overmind:

@@ -60,6 +60,9 @@ apps/web/src/locale/paraglide
 # MiMoCode
 .mimocode/
 
+# Prisma Studio (local reverse-engineered schema; see mise db:dev)
+.prisma/
+
 # Shared
 TODO.md
 

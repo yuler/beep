@@ -105,6 +105,10 @@ run = "pnpm --filter web locale:compile"
 description = "Start core and web development servers"
 run = "bash scripts/dev.sh"
 
+[tasks."db:dev"]
+description = "Start Prisma Studio against local Rails SQLite (db pull, then studio)"
+run = "bash scripts/db-dev.sh"
+
 [tasks.core]
 description = "Run common core rails commands (interactive)"
 env = { RAILS_ENV = "development" }
