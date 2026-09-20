@@ -67,6 +67,11 @@ go build -ldflags="-s -w \
   -o ../../bin/beep .
 """
 
+[tasks."cli:install"]
+description = "Build current CLI and install it for local dogfooding (no GitHub release)"
+depends = ["cli:build"]
+run = "bash scripts/cli-install.sh"
+
 
 [tasks."cli:test"]
 description = "Run Go CLI unit tests"
