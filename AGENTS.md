@@ -36,6 +36,12 @@ Local CORS for web → core `/api/v1` is development-only: [`core/config/initial
 beep-local --help
 ```
 
+Dogfood the compiled CLI (overwrites an existing user install such as `~/.local/bin/beep`, not a GitHub release):
+
+```bash
+mise cli:install
+```
+
 ## Rules
 
 - Git commit title format: `emoji [scope] The main change` — example: `✨ [core] Adopt shared account slug tenancy for personal and team`
