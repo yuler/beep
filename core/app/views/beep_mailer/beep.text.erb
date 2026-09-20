@@ -1,9 +1,11 @@
-<%= @beep.title %>
+[Beep] <%= @beep.title %>
 
+<%= t(:mailer_triggered_at, default: "Triggered at") %>: <%= @detailed_time %>
 <% if @beep.body_text.present? -%>
-<%= @beep.body_text %>
 
+<%= @beep.body_text %>
 <% end -%>
-<%= t(:mailer_open_beep, default: "Open beep") %>: <%= @beep.web_url %>
+
+<%= t(:mailer_view_in_beep, default: "View in Beep") %>: <%= @beep.web_url %>
 
 <%= t(:email_reminders_turn_off, default: "Turn off email reminders") %>: <%= @unsubscribe_url %>

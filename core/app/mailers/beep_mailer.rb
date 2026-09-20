@@ -8,6 +8,13 @@ class BeepMailer < ApplicationMailer
     headers["List-Unsubscribe"] = "<#{@unsubscribe_url}>"
     headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
     @run = beep_run
-    mail to: user.identity.email, subject: @beep.title
+
+    timezone = user.timezone.presence || @beep.timezone.presence || "UTC"
+    zone = Time.find_zone(timezone) || Time.zone
+    time = Time.current.in_time_zone(zone)
+    @formatted_time = time.strftime("%m-%d %H:%M")
+    @detailed_time = time.strftime("%Y-%m-%d %H:%M %Z")
+
+    mail to: user.identity.email, subject: "[Beep] #{@beep.title} (#{@formatted_time})"
   end
 end

@@ -102,7 +102,7 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
       beep_run.deliver_now
 
       assert_equal 1, ActionMailer::Base.deliveries.size
-      assert_equal "Target Down", ActionMailer::Base.deliveries.last.subject
+      assert_match %r{\A\[Beep\] Target Down \(\d{2}-\d{2} \d{2}:\d{2}\)\z}, ActionMailer::Base.deliveries.last.subject
     end
   end
 
@@ -157,7 +157,7 @@ class BeeperSignalAndAlertTest < ActiveSupport::TestCase
       beep_run.deliver_now
 
       assert_equal 1, ActionMailer::Base.deliveries.size
-      assert_equal "Target Recovered", ActionMailer::Base.deliveries.last.subject
+      assert_match %r{\A\[Beep\] Target Recovered \(\d{2}-\d{2} \d{2}:\d{2}\)\z}, ActionMailer::Base.deliveries.last.subject
     end
   end
 

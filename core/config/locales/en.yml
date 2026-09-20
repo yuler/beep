@@ -29,3 +29,5 @@
 
 en:
   hello: "Hello world"
+  mailer_triggered_at: "Triggered at"
+  mailer_view_in_beep: "View in Beep"
