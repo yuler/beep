@@ -15,6 +15,8 @@ class Beep < ApplicationRecord
   has_many :runs, class_name: "Beep::Run", dependent: :destroy
 
   enum :kind, %w[ once recurring ].index_by(&:itself)
+  # Schedule lifecycle status. Execution results (succeeded, failed, skipped, expired)
+  # belong exclusively to Beep::Run.
   enum :status, %w[ active paused completed cancelled firing ].index_by(&:itself)
 
   normalizes :title, with: ->(value) { value.strip.presence }
