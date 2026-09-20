@@ -6,10 +6,9 @@
 #   INSTALL_DIR=$HOME/.local/bin ./scripts/cli-install.sh
 #
 # Destination (first match):
-#   1. INSTALL_DIR
-#   2. Directory of an existing `beep` on PATH (skip this repo's bin/ and Homebrew)
+#   1. INSTALL_DIR (any writable dir; refuses Homebrew Cellar/bottle paths)
+#   2. Directory of an existing `beep` on PATH (skip this repo's bin/; refuses Homebrew)
 #   3. ~/.local/bin
-#   4. /usr/local/bin if writable
 #
 # Does not use sudo. After install, restart daemons: beep service restart
 
@@ -28,11 +27,48 @@ info() {
   printf '%s\n' "$1"
 }
 
+resolve_path() {
+  local p="$1"
+  if command -v realpath >/dev/null 2>&1; then
+    if realpath "$p" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  if command -v readlink >/dev/null 2>&1; then
+    if readlink -f "$p" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  if [ -d "$p" ]; then
+    (cd "$p" && pwd)
+    return 0
+  fi
+  if [ -e "$p" ]; then
+    local dir base
+    dir="$(cd "$(dirname "$p")" && pwd)"
+    base="$(basename "$p")"
+    printf '%s/%s\n' "$dir" "$base"
+    return 0
+  fi
+  printf '%s\n' "$p"
+}
+
 is_homebrew_path() {
   local lower
   lower="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
   case "$lower" in
     */cellar/*|*/homebrew/*|*/.linuxbrew/*) return 0 ;;
+  esac
+  return 1
+}
+
+# Standard Homebrew shim directories (automatic destination selection only).
+is_brew_managed_bin() {
+  local dir resolved
+  dir="$1"
+  resolved="$(resolve_path "$dir")"
+  case "$resolved" in
+    /opt/homebrew/bin|/usr/local/bin|/home/linuxbrew/.linuxbrew/bin) return 0 ;;
   esac
   return 1
 }
@@ -54,16 +90,18 @@ existing_beep() {
 
 default_install_dir() {
   if [ -n "${INSTALL_DIR:-}" ]; then
-    printf '%s\n' "$INSTALL_DIR"
+    mkdir -p "$INSTALL_DIR" || err "cannot create $INSTALL_DIR"
+    printf '%s\n' "$(cd "$INSTALL_DIR" && pwd)"
     return
   fi
 
-  local existing dest
+  local existing resolved dest
   if existing="$(existing_beep)"; then
+    resolved="$(resolve_path "$existing")"
     dest="$(cd "$(dirname "$existing")" && pwd)"
-    if is_homebrew_path "$dest" || is_homebrew_path "$existing"; then
+    if is_brew_managed_bin "$dest" || is_homebrew_path "$dest" || is_homebrew_path "$resolved"; then
       err "existing beep looks like a Homebrew install ($existing).
-Refusing to overwrite. Use brew, or set INSTALL_DIR to a writable directory."
+Refusing to overwrite. Use brew, or set INSTALL_DIR=~/.local/bin (or another writable directory)."
     fi
     printf '%s\n' "$dest"
     return
@@ -74,11 +112,6 @@ Refusing to overwrite. Use brew, or set INSTALL_DIR to a writable directory."
       printf '%s\n' "$HOME/.local/bin"
       return
     fi
-  fi
-
-  if [ -w /usr/local/bin ]; then
-    printf '%s\n' /usr/local/bin
-    return
   fi
 
   err "no writable install directory.
@@ -93,7 +126,7 @@ dest="$(default_install_dir)"
 target="$dest/beep"
 
 if is_homebrew_path "$dest" || is_homebrew_path "$target"; then
-  err "refusing to install into a Homebrew prefix ($dest).
+  err "refusing to install into a Homebrew bottle path ($dest).
 Set INSTALL_DIR to a writable directory such as ~/.local/bin."
 fi
 
