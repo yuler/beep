@@ -19,6 +19,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EditBeeperDialog } from "@/components/beepers/edit-beeper-dialog";
 import { BeepMarkdown } from "@/components/beeps/beep-markdown";
+import { confirm } from "@/components/confirm-dialog";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -231,7 +232,7 @@ function BeeperDetailPage() {
 	}
 
 	async function handleDelete() {
-		if (!window.confirm(m.beepers_delete_confirm({ title: beeper.title }))) {
+		if (!(await confirm(m.beepers_delete_confirm({ title: beeper.title })))) {
 			return;
 		}
 

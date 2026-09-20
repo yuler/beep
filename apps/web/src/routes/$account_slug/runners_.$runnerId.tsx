@@ -17,6 +17,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { confirm } from "@/components/confirm-dialog";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { RunnerJobFormDialog } from "@/components/runners/runner-job-form-dialog";
 import {
@@ -206,7 +207,7 @@ function RunnerDetailPage() {
 	}
 
 	async function handleDelete(job: RunnerJob) {
-		if (!window.confirm(m.runners_jobs_delete_confirm({ name: job.name }))) {
+		if (!(await confirm(m.runners_jobs_delete_confirm({ name: job.name })))) {
 			return;
 		}
 		setError(null);
@@ -228,7 +229,7 @@ function RunnerDetailPage() {
 		if (!selectedJob) {
 			return;
 		}
-		if (!window.confirm(m.runners_runs_delete_confirm())) {
+		if (!(await confirm(m.runners_runs_delete_confirm()))) {
 			return;
 		}
 		setError(null);
@@ -252,7 +253,7 @@ function RunnerDetailPage() {
 		if (!selectedJob) {
 			return;
 		}
-		if (!window.confirm(m.runners_runs_clear_confirm())) {
+		if (!(await confirm(m.runners_runs_clear_confirm()))) {
 			return;
 		}
 		setError(null);

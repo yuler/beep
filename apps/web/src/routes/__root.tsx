@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { type ReactNode, useEffect } from "react";
+import { ConfirmDialogHost } from "@/components/confirm-dialog";
 import { NotFound } from "@/components/not-found";
 import { VersionUpdateDialog } from "@/components/version-update-dialog";
 import { fetchMeOrNull } from "@/lib/api/session";
@@ -97,6 +98,7 @@ function RootComponent() {
 	return (
 		<>
 			<Outlet />
+			<ConfirmDialogHost />
 			<VersionUpdateDialog />
 		</>
 	);

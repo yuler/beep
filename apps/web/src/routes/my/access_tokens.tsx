@@ -13,6 +13,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { confirm } from "@/components/confirm-dialog";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,7 +102,7 @@ function AccessTokensPage() {
 	}
 
 	async function handleDelete(id: string) {
-		if (!confirm(m.my_revoke_confirm())) {
+		if (!(await confirm(m.my_revoke_confirm()))) {
 			return;
 		}
 
