@@ -2,6 +2,8 @@ package service
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -11,6 +13,7 @@ import (
 	"beep/internal/config"
 	"beep/internal/daemon"
 	intsvc "beep/internal/service"
+	"beep/internal/supervisor"
 
 	"github.com/charmbracelet/huh"
 )
@@ -141,6 +144,10 @@ func TestServiceStatusUnknownTarget(t *testing.T) {
 }
 
 func TestServiceRestartWithMock(t *testing.T) {
+	origMgr := supervisor.DefaultManager
+	supervisor.DefaultManager = supervisor.NewUnsupportedManager()
+	t.Cleanup(func() { supervisor.DefaultManager = origMgr })
+
 	tmpDir := t.TempDir()
 	cfg := &config.Config{
 		Workspace:    tmpDir,
@@ -152,7 +159,7 @@ func TestServiceRestartWithMock(t *testing.T) {
 	origFn := intsvc.StartServiceDaemonFn
 	defer func() { intsvc.StartServiceDaemonFn = origFn }()
 
-	intsvc.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	intsvc.StartServiceDaemonFn = func(service string, rawArgs []string, c *config.Config) error {
 		calledServices = append(calledServices, service)
 		return nil
 	}
@@ -189,9 +196,23 @@ func TestServiceHelpOutput(t *testing.T) {
 	if !strings.Contains(out, "start") || !strings.Contains(out, "stop") || !strings.Contains(out, "restart") || !strings.Contains(out, "status") {
 		t.Errorf("expected help output to contain start, stop, restart, status; got:\n%s", out)
 	}
+
+	stop := NewCmdStop()
+	var stopBuf bytes.Buffer
+	stop.SetOut(&stopBuf)
+	stop.SetErr(&stopBuf)
+	_ = stop.Help()
+	stopOut := stopBuf.String()
+	if !strings.Contains(stopOut, "unregisters") || !strings.Contains(stopOut, "supervisor") {
+		t.Errorf("expected stop help to mention unregistering the supervisor unit, got:\n%s", stopOut)
+	}
 }
 
 func TestServiceRestartInteractive(t *testing.T) {
+	origMgr := supervisor.DefaultManager
+	supervisor.DefaultManager = supervisor.NewUnsupportedManager()
+	t.Cleanup(func() { supervisor.DefaultManager = origMgr })
+
 	tmpDir := t.TempDir()
 	cfg := &config.Config{
 		Workspace:    tmpDir,
@@ -203,7 +224,7 @@ func TestServiceRestartInteractive(t *testing.T) {
 	origStartFn := intsvc.StartServiceDaemonFn
 	defer func() { intsvc.StartServiceDaemonFn = origStartFn }()
 
-	intsvc.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	intsvc.StartServiceDaemonFn = func(service string, rawArgs []string, c *config.Config) error {
 		calledServices = append(calledServices, service)
 		return nil
 	}
@@ -265,6 +286,10 @@ func TestServiceRestartInteractive(t *testing.T) {
 }
 
 func TestServiceRestartNonInteractiveFallback(t *testing.T) {
+	origMgr := supervisor.DefaultManager
+	supervisor.DefaultManager = supervisor.NewUnsupportedManager()
+	t.Cleanup(func() { supervisor.DefaultManager = origMgr })
+
 	tmpDir := t.TempDir()
 	cmdutil.SetOverrideWorkspace(tmpDir)
 	defer cmdutil.SetOverrideWorkspace("")
@@ -282,7 +307,7 @@ func TestServiceRestartNonInteractiveFallback(t *testing.T) {
 	origStartFn := intsvc.StartServiceDaemonFn
 	defer func() { intsvc.StartServiceDaemonFn = origStartFn }()
 
-	intsvc.StartServiceDaemonFn = func(service string, childSubcommand []string, rawArgs []string, c *config.Config) error {
+	intsvc.StartServiceDaemonFn = func(service string, rawArgs []string, c *config.Config) error {
 		calledServices = append(calledServices, service)
 		return nil
 	}
@@ -294,5 +319,96 @@ func TestServiceRestartNonInteractiveFallback(t *testing.T) {
 	}
 	if len(calledServices) != 2 {
 		t.Errorf("expected all 2 configured services restarted in non-interactive mode, got %d (%v)", len(calledServices), calledServices)
+	}
+}
+
+func TestServiceDefaultRunsStatus(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("BEEP_WORKSPACE", tmpDir)
+
+	cmd := NewCmdService()
+	if err := cmd.RunE(cmd, []string{}); err != nil {
+		t.Fatalf("expected 'beep service' without args to run status successfully, got: %v", err)
+	}
+}
+
+type stubSupervisor struct {
+	installed    map[string]bool
+	uninstalled  []string
+	uninstallErr error
+}
+
+func (s *stubSupervisor) IsSupported() bool                         { return true }
+func (s *stubSupervisor) PlatformName() string                      { return "systemd" }
+func (s *stubSupervisor) Install(info supervisor.ServiceInfo) error { return nil }
+func (s *stubSupervisor) Uninstall(service, binaryName string) error {
+	if s.uninstallErr != nil {
+		return s.uninstallErr
+	}
+	s.uninstalled = append(s.uninstalled, service)
+	if s.installed != nil {
+		s.installed[service] = false
+	}
+	return nil
+}
+func (s *stubSupervisor) Start(service, binaryName string) error { return nil }
+func (s *stubSupervisor) Stop(service, binaryName string) error  { return nil }
+func (s *stubSupervisor) GetStatus(service, binaryName string) supervisor.Status {
+	return supervisor.Status{
+		Supported:  true,
+		Platform:   "systemd",
+		Installed:  s.installed[service],
+		UnitName:   service,
+		ConfigPath: "/home/user/.config/systemd/user/" + service + ".service",
+	}
+}
+func (s *stubSupervisor) EnsureLinger() (bool, error) { return true, nil }
+
+func TestRunStopAllUnregistersInstalledWhenNotRunning(t *testing.T) {
+	orig := supervisor.DefaultManager
+	stub := &stubSupervisor{installed: map[string]bool{
+		daemon.ServiceRunner:  true,
+		daemon.ServiceChannel: true,
+	}}
+	supervisor.DefaultManager = stub
+	t.Cleanup(func() { supervisor.DefaultManager = orig })
+
+	if err := runStopAll(t.TempDir(), time.Second, true); err != nil {
+		t.Fatalf("runStopAll: %v", err)
+	}
+	if len(stub.uninstalled) != 2 {
+		t.Fatalf("expected both services uninstalled, got %v", stub.uninstalled)
+	}
+}
+
+func TestServiceStatusDisplaysConfigPathWhenInstalled(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &config.Config{
+		Workspace: tmpDir,
+	}
+
+	stub := &stubSupervisor{installed: map[string]bool{
+		daemon.ServiceRunner: true,
+	}}
+	orig := supervisor.DefaultManager
+	supervisor.DefaultManager = stub
+	t.Cleanup(func() { supervisor.DefaultManager = orig })
+
+	var buf bytes.Buffer
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := runStatusAll(cfg)
+	_ = w.Close()
+	os.Stdout = oldStdout
+	_, _ = io.Copy(&buf, r)
+
+	if err != nil {
+		t.Fatalf("runStatusAll: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "ConfigPath:") || !strings.Contains(out, "runner.service") {
+		t.Fatalf("expected ConfigPath in status output, got:\n%s", out)
 	}
 }

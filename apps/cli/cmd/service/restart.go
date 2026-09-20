@@ -30,6 +30,9 @@ func NewCmdRestart() *cobra.Command {
 		Short: "Restart Beep daemon services (stops and relaunches in background)",
 		Long: `Restart Beep daemon services (stops and relaunches in background).
 
+Stops the systemd user unit or LaunchAgent first so the supervisor does not
+immediately respawn the old process, then reinstalls and starts.
+
 When run without arguments in an interactive terminal, prompts to select which
 services to restart. In non-interactive environments (e.g. CI or scripts),
 restarts all configured services.`,
@@ -88,6 +91,8 @@ func restartService(service string, cfg *config.Config, timeout time.Duration, f
 		}
 	}
 
+	intsvc.StopSupervisor(service)
+
 	running, pid, err := daemon.CheckRunning(cfg.Workspace, service)
 	if err != nil {
 		return fmt.Errorf("failed to check %s daemon status: %w", service, err)
@@ -100,7 +105,7 @@ func restartService(service string, cfg *config.Config, timeout time.Duration, f
 		}
 	}
 
-	return intsvc.StartServiceDaemonFn(service, []string{service, "up"}, os.Args[1:], cfg)
+	return intsvc.StartServiceDaemonFn(service, os.Args[1:], cfg)
 }
 
 func restartAll(cfg *config.Config, timeout time.Duration, force bool) error {
