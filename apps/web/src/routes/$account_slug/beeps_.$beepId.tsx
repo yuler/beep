@@ -184,9 +184,16 @@ function BeepDetailPage() {
 						</p>
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
-						<Badge variant={BEEP_STATUS_META[beep.status].badgeVariant}>
-							{beepStatusLabel(beep.status)}
-						</Badge>
+						{(() => {
+							const statusMeta = BEEP_STATUS_META[beep.status];
+							const StatusIcon = statusMeta.icon;
+							return (
+								<Badge variant={statusMeta.badgeVariant} className="gap-1">
+									<StatusIcon className="size-3" />
+									{beepStatusLabel(beep.status)}
+								</Badge>
+							);
+						})()}
 						{beep.status === "active" || beep.status === "paused" ? (
 							<Button
 								variant="outline"

@@ -72,7 +72,7 @@ func FormatBeepStatus(s string) string {
 	case "firing":
 		return ui.Yellow("firing")
 	case "paused":
-		return ui.Yellow("paused")
+		return ui.Dim("paused")
 	case "completed":
 		return ui.Dim("completed")
 	case "cancelled":

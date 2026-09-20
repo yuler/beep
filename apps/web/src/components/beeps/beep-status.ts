@@ -13,6 +13,9 @@ type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
 /**
  * Single source of truth for how a beep status is displayed across the app
  * (list indicators and detail badges).
+ *
+ * Beep status represents the schedule lifecycle (active, firing, paused, completed, cancelled).
+ * Execution results (succeeded, failed, skipped, expired) belong exclusively to Beep::Run.
  */
 export const BEEP_STATUS_META: Record<
 	Beep["status"],
