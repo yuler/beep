@@ -197,6 +197,7 @@ Rails.application.routes.draw do
     resource :stats
   end
   mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
+  mount RailsStudio::Engine => "/rails_studio" if Rails.env.development?
 
   # Hotwire Spark live-reloading (dev only)
   if defined?(Hotwire::Spark) && Rails.env.development?

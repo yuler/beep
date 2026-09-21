@@ -14,6 +14,7 @@ const RESERVED_FROM_CORE = [
 	"my",
 	"payment",
 	"rails",
+	"rails_studio",
 	"service-worker",
 	"session",
 	"settings",

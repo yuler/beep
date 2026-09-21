@@ -73,6 +73,7 @@ group :development do
   gem "web-console"
   gem "hotwire-spark"
   gem "ruby-lsp-rails"
+  gem "rails_studio", github: "yuler/rails_studio"
 end
 
 group :test do

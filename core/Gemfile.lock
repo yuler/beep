@@ -101,6 +101,13 @@ GIT
       tsort (>= 0.2)
       zeitwerk (~> 2.6)
 
+GIT
+  remote: https://github.com/yuler/rails_studio.git
+  revision: 81350fd60e9df4fb14e69afef0f278cf1d2ae710
+  specs:
+    rails_studio (0.1.0)
+      rails (>= 7.0.0)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -492,6 +499,7 @@ DEPENDENCIES
   propshaft
   puma (>= 5.0)
   rails!
+  rails_studio!
   rubocop-rails-omakase
   ruby-lsp-rails
   ruby_llm

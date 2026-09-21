@@ -10,7 +10,7 @@ module AccountSlug
   # - EXTRA: policy / future / infra words reserved even without a matching route today.
   RESERVED_FROM_ROUTES = %w[
     admin api beep_proposals beeps cable channels home hotwire-spark invitations join join_code
-    beeper_apps beepers landing letter_opener manifest my payment rails runner runners service-worker session settings
+    beeper_apps beepers landing letter_opener manifest my payment rails rails_studio runner runners service-worker session settings
     subscription up users webhooks
   ].freeze
   RESERVED_EXTRA = %w[

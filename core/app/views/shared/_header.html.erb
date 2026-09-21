@@ -69,6 +69,10 @@
               <%= link_to letter_opener_web_path, class: class_names("menu__item", "is-active": letters_active), aria: ({ current: "page" } if letters_active) do %>
                 <span><%= t(:nav_letters, default: "Letters") %></span>
               <% end %>
+              <% studio_active = menu_item_active?(rails_studio_path) %>
+              <%= link_to rails_studio_path, class: class_names("menu__item", "is-active": studio_active), aria: ({ current: "page" } if studio_active) do %>
+                <span>Rails Studio</span>
+              <% end %>
             <% end %>
 
             <% if Current.identity.staff? %>
