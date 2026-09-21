@@ -3,6 +3,7 @@ import {
 	Activity,
 	Bell,
 	BriefcaseBusiness,
+	ExternalLink,
 	KeyRound,
 	LayoutDashboard,
 	Mail,
@@ -27,6 +28,7 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { coreAppUrl } from "@/config";
 import type { MeResponse } from "@/lib/api/session";
 import { m } from "@/locale/paraglide/messages";
 
@@ -58,6 +60,7 @@ export function DashboardSidebar({
 	const settingsGeneralPath = `/${slug}/settings/general`;
 	const settingsChannelsPath = `/${slug}/settings/channels`;
 	const lettersPath = "/dev/letters";
+	const studioUrl = coreAppUrl("/rails_studio");
 	const jobsPath = "/admin/jobs";
 	const statsPath = "/admin/stats";
 	const mySettingsPath = "/my/settings";
@@ -306,6 +309,24 @@ export function DashboardSidebar({
 												<span>{m.nav_letters()}</span>
 											</SidebarMenuButton>
 										</SidebarMenuItem>
+										{studioUrl ? (
+											<SidebarMenuItem>
+												<SidebarMenuButton
+													tooltip={m.nav_studio()}
+													render={
+														<a
+															href={studioUrl}
+															target="_blank"
+															rel="noreferrer"
+															onClick={closeMobileSidebar}
+														>
+															<ExternalLink />
+															<span>{m.nav_studio()}</span>
+														</a>
+													}
+												/>
+											</SidebarMenuItem>
+										) : null}
 									</SidebarMenu>
 								</SidebarGroupContent>
 							</SidebarGroup>
