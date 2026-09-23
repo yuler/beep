@@ -589,4 +589,3 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 end
-
