@@ -126,4 +126,3 @@ func TestNextRun(t *testing.T) {
 		t.Errorf("NextRun('every 15 minutes') = %v, want %v", nextNat, expectedNat)
 	}
 }
-

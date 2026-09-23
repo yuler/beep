@@ -162,4 +162,3 @@ func TestFormatBeepSchedule(t *testing.T) {
 		t.Errorf("FormatBeepSchedule() = %q, expected 'instant'", gotInstant)
 	}
 }
-

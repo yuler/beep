@@ -857,4 +857,3 @@ func PromptBeepConfirmation(params client.CreateBeepParams, defaultChannels []st
 		}
 	}
 }
-

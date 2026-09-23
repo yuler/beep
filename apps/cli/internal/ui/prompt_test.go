@@ -255,4 +255,3 @@ func TestFormatScheduleHuman(t *testing.T) {
 		t.Errorf("cron */5 * * * * got key=%q val=%q", k, v)
 	}
 }
-

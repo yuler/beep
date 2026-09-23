@@ -354,7 +354,7 @@ func MatchField(field string, val int, min, max int, isDow, isMonth bool) bool {
 				return true
 			}
 		} else {
-			if (v >= lo || v <= hi) {
+			if v >= lo || v <= hi {
 				return true
 			}
 		}
@@ -565,4 +565,3 @@ func Describe(expr string) string {
 
 	return ""
 }
-
