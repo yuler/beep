@@ -8,9 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	"strconv"
 	"strings"
-	"time"
 
 	"beep/internal/schedule"
 )
@@ -356,22 +354,12 @@ func (p *CreateBeepParams) ToRequest() (*CreateBeepRequest, error) {
 		if val == "" {
 			return nil, errors.New("empty --in duration")
 		}
-		if _, err := ParseInDuration(val); err != nil {
-			return nil, fmt.Errorf("invalid --in duration (e.g. 10m, 2h, 1d): %w", err)
-		}
 		req.Kind = "once"
 		req.In = val
 	case "at":
 		val := strings.TrimSpace(p.ScheduleVal)
 		if val == "" {
 			return nil, errors.New("empty --at time")
-		}
-		loc, err := time.LoadLocation(tz)
-		if err != nil {
-			loc = time.Local
-		}
-		if _, err := ParseAtTime(val, loc); err != nil {
-			return nil, fmt.Errorf("invalid --at time (e.g. 15:30, 2026-10-01 10:00): %w", err)
 		}
 		req.Kind = "once"
 		req.At = val
@@ -382,62 +370,4 @@ func (p *CreateBeepParams) ToRequest() (*CreateBeepRequest, error) {
 	}
 
 	return req, nil
-}
-
-// ParseInDuration parses a delay duration string supporting 'd' suffix (e.g. 1d, 2d, 15m, 2h).
-func ParseInDuration(s string) (time.Duration, error) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return 0, errors.New("empty duration")
-	}
-	var d time.Duration
-	var err error
-	if strings.HasSuffix(s, "d") {
-		daysStr := strings.TrimSuffix(s, "d")
-		days, aErr := strconv.Atoi(daysStr)
-		if aErr != nil {
-			return 0, fmt.Errorf("invalid days format %q: %w", s, aErr)
-		}
-		d = time.Duration(days) * 24 * time.Hour
-	} else {
-		d, err = time.ParseDuration(s)
-		if err != nil {
-			return 0, err
-		}
-	}
-	if d <= 0 {
-		return 0, fmt.Errorf("duration must be greater than zero: %q", s)
-	}
-	return d, nil
-}
-
-// ParseAtTime parses a specific time/datetime string relative to location.
-func ParseAtTime(s string, loc *time.Location) (time.Time, error) {
-	s = strings.TrimSpace(s)
-	formats := []string{
-		time.RFC3339,
-		"2006-01-02 15:04:05",
-		"2006-01-02 15:04",
-		"2006-01-02T15:04:05",
-		"2006-01-02T15:04",
-	}
-	for _, layout := range formats {
-		if t, err := time.ParseInLocation(layout, s, loc); err == nil {
-			return t, nil
-		}
-	}
-
-	// Try time-only "15:04:05" or "15:04"
-	for _, layout := range []string{"15:04:05", "15:04"} {
-		if t, err := time.ParseInLocation(layout, s, loc); err == nil {
-			now := time.Now().In(loc)
-			target := time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), t.Second(), 0, loc)
-			if target.Before(now) {
-				target = target.AddDate(0, 0, 1)
-			}
-			return target, nil
-		}
-	}
-
-	return time.Time{}, fmt.Errorf("unrecognized time format %q", s)
 }

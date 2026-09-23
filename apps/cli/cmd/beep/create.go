@@ -58,6 +58,11 @@ Note: --cron, --in, --at, and --natural are mutually exclusive.
 When using --json, interactive confirmation is skipped.
 Optional --body and --channels can also be combined with --natural to supplement proposal fields.
 
+Timezone precedence:
+  If your Beep account has a configured User timezone, wall-clock times (e.g. --at 16:30)
+  are scheduled in that user timezone. The --timezone flag / auto-detected machine timezone
+  is sent as a fallback when no user timezone has been configured.
+
 Examples:
   # Instant beep (fires immediately)
   %s create "Deploy finished"
@@ -334,7 +339,7 @@ Examples:
 	cmd.Flags().StringVar(&flagAt, "at", "", "Specific time to fire (e.g. 16:30, 2026-10-01 10:00)")
 	cmd.Flags().StringVar(&flagRunAt, "run-at", "", "Alias for --at: specific time to fire")
 	cmd.Flags().StringVarP(&flagCron, "cron", "c", "", "Recurring cron schedule (e.g. '0 9 * * *')")
-	cmd.Flags().StringVarP(&flagTimezone, "timezone", "z", "", "Timezone (defaults to local timezone)")
+	cmd.Flags().StringVarP(&flagTimezone, "timezone", "z", "", "Timezone fallback if not configured on user account (defaults to local timezone)")
 	cmd.Flags().StringVar(&flagChannels, "channels", "", "Comma-separated notification channel names or IDs")
 	cmd.Flags().StringVar(&flagChannel, "channel", "", "Alias for --channels: notification channel name or ID")
 	cmd.Flags().StringVarP(&flagNatural, "natural", "n", "", "Natural language beep prompt parsed by AI")
