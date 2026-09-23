@@ -38,7 +38,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.321.0
+        uses: ruby/setup-ruby@v1.323.0
         with:
           bundler-cache: true
           working-directory: core
