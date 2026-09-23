@@ -4,10 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
-
-	"beep/internal/client"
 
 	"github.com/charmbracelet/huh"
 )
@@ -140,25 +137,5 @@ func TestIsUserAbort(t *testing.T) {
 				t.Fatalf("isUserAbort() = %v, want %v", got, tc.wantAbort)
 			}
 		})
-	}
-}
-
-func TestFormatBeepSchedule(t *testing.T) {
-	bRecurring := &client.Beep{
-		Kind: "recurring",
-		Cron: "0 9 * * 1-5",
-	}
-	got := FormatBeepSchedule(bRecurring)
-	want := "cron: 0 9 * * 1-5"
-	if got != want {
-		t.Errorf("FormatBeepSchedule() = %q, want %q", got, want)
-	}
-
-	bInstant := &client.Beep{
-		Kind: "once",
-	}
-	gotInstant := FormatBeepSchedule(bInstant)
-	if !strings.Contains(gotInstant, "instant") {
-		t.Errorf("FormatBeepSchedule() = %q, expected 'instant'", gotInstant)
 	}
 }

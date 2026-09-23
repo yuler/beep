@@ -65,15 +65,6 @@ class Beep::Preview
   end
 
   private
-    def beep_attributes
-      raw = if @params.respond_to?(:permit)
-        @params.permit(:title, :body, :run_at, :cron, :kind, :intent, notification_channels: [], metadata: {})
-      else
-        @params
-      end
-      raw.to_h.symbolize_keys.slice(:title, :body, :run_at, :cron, :kind, :intent, :notification_channels, :metadata)
-    end
-
     def resolve_schedule_run_at(timezone:)
       if @params[:cron].present? && (@params[:in].present? || @params[:at].present?)
         @errors << "Cannot specify :cron together with :in or :at"
@@ -89,6 +80,15 @@ class Beep::Preview
     rescue Beep::ScheduleParser::Error => e
       @errors << e.message
       nil
+    end
+
+    def beep_attributes
+      raw = if @params.respond_to?(:permit)
+        @params.permit(:title, :body, :run_at, :cron, :kind, :intent, notification_channels: [], metadata: {})
+      else
+        @params
+      end
+      raw.to_h.symbolize_keys.slice(:title, :body, :run_at, :cron, :kind, :intent, :notification_channels, :metadata)
     end
 
     def format_schedule(run_at:, timezone:)

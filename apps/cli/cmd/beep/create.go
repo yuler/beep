@@ -206,7 +206,7 @@ Examples:
 					}
 
 					// Interactive creates (form or flags) confirm via server preview.
-					// --json / non-interactive skip this path entirely.
+					// --json skips preview; non-interactive never reaches here (outer IsInteractive guard).
 					if !cmdutil.IsJSON(cmd) {
 						confirmed, ok, cErr := confirmBeepWithPreview(ctx, c, params, defaultChannels, "Proposed Beep:")
 						if cErr != nil {
@@ -499,8 +499,6 @@ func confirmBeepWithPreview(ctx context.Context, c *client.Client, initial clien
 			current = *prompted
 			continue
 		case "create":
-			return &current, true, nil
-		default:
 			return &current, true, nil
 		}
 	}

@@ -262,7 +262,6 @@ type BeepPreview struct {
 	RunAt                string         `json:"run_at,omitempty"`
 	NextRunAt            string         `json:"next_run_at,omitempty"`
 	Cron                 string         `json:"cron,omitempty"`
-	CronDescription      string         `json:"cron_description,omitempty"`
 	ScheduleKey          string         `json:"schedule_key"`
 	ScheduleDisplay      string         `json:"schedule_display"`
 }
@@ -336,15 +335,14 @@ type CreateBeepParams struct {
 }
 
 // ToRequest validates and transforms CreateBeepParams into a CreateBeepRequest.
+// Empty timezone is passed through (omitempty); the server is the single
+// source of truth for timezone resolution.
 func (p *CreateBeepParams) ToRequest() (*CreateBeepRequest, error) {
 	if strings.TrimSpace(p.Title) == "" {
 		return nil, errors.New("beep title is required")
 	}
 
 	tz := strings.TrimSpace(p.Timezone)
-	if tz == "" {
-		tz = "UTC"
-	}
 
 	req := &CreateBeepRequest{
 		Title:    strings.TrimSpace(p.Title),
