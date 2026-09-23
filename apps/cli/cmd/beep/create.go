@@ -207,17 +207,19 @@ Examples:
 
 					// Interactive creates (form or flags) confirm via server preview.
 					// --json / non-interactive skip this path entirely.
-					confirmed, ok, cErr := confirmBeepWithPreview(ctx, c, params, defaultChannels, "Proposed Beep:")
-					if cErr != nil {
-						if isUserAbort(ctx, cErr) {
+					if !cmdutil.IsJSON(cmd) {
+						confirmed, ok, cErr := confirmBeepWithPreview(ctx, c, params, defaultChannels, "Proposed Beep:")
+						if cErr != nil {
+							if isUserAbort(ctx, cErr) {
+								return nil
+							}
+							return cErr
+						}
+						if !ok {
 							return nil
 						}
-						return cErr
+						params = *confirmed
 					}
-					if !ok {
-						return nil
-					}
-					params = *confirmed
 
 					for {
 						if params.ScheduleKind == "" {
