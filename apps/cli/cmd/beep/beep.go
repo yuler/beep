@@ -9,6 +9,7 @@ import (
 	"beep/internal/client"
 	"beep/internal/cmdutil"
 	"beep/internal/config"
+	"beep/internal/schedule"
 	"beep/internal/ui"
 
 	"github.com/charmbracelet/huh"
@@ -97,6 +98,9 @@ func FormatRunStatus(s string) string {
 
 func FormatBeepSchedule(b *client.Beep) string {
 	if b.Kind == "recurring" && b.Cron != "" {
+		if desc := schedule.Describe(b.Cron); desc != "" {
+			return fmt.Sprintf("cron: %s (%s)", b.Cron, desc)
+		}
 		return "cron: " + b.Cron
 	}
 	if b.NextRunAt != "" {

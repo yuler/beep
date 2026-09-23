@@ -203,6 +203,18 @@ Examples:
 							return err
 						}
 						params = *prompted
+
+						confirmed, ok, cErr := ui.PromptBeepConfirmation(params, defaultChannels, "Proposed Beep:")
+						if cErr != nil {
+							if isUserAbort(ctx, cErr) {
+								return nil
+							}
+							return cErr
+						}
+						if !ok {
+							return nil
+						}
+						params = *confirmed
 					}
 
 					for {
@@ -473,90 +485,17 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 	}
 
 	if cmdutil.IsInteractive(cmd) && !cmdutil.IsJSON(cmd) {
-		for {
-			var displayChannels []string
-			if strings.TrimSpace(params.Channels) != "" {
-				for _, ch := range strings.Split(params.Channels, ",") {
-					if trimmed := strings.TrimSpace(ch); trimmed != "" {
-						displayChannels = append(displayChannels, trimmed)
-					}
-				}
-			}
-
-			fmt.Println()
-			fmt.Println(ui.Bold(ui.Cyan("  Proposed Beep:")))
-			fmt.Println(ui.KeyValue("Title", params.Title))
-			if strings.TrimSpace(params.Body) != "" {
-				if strings.Contains(params.Body, "\n") {
-					fmt.Println(ui.KeyValue("Body", ""))
-					for _, line := range strings.Split(params.Body, "\n") {
-						fmt.Printf("      %s\n", line)
-					}
-				} else {
-					fmt.Println(ui.KeyValue("Body", params.Body))
-				}
-			} else {
-				fmt.Println(ui.KeyValue("Body", ui.Dim("(empty)")))
-			}
-
-			intentVal := params.Intent
-			if strings.TrimSpace(intentVal) == "" {
-				intentVal = ui.Dim("(empty)")
-			}
-			fmt.Println(ui.KeyValue("Intent", intentVal))
-
-			metaVal := ui.Dim("(empty)")
-			if params.Metadata != nil && len(params.Metadata) > 0 {
-				if metaBytes, err := json.Marshal(params.Metadata); err == nil {
-					metaVal = string(metaBytes)
-				}
-			}
-			fmt.Println(ui.KeyValue("Metadata", metaVal))
-
-			kind := "once"
-			if params.ScheduleKind == "cron" {
-				kind = "recurring"
-			}
-			fmt.Println(ui.KeyValue("Kind", kind))
-
-			switch params.ScheduleKind {
-			case "cron":
-				fmt.Println(ui.KeyValue("Cron", params.ScheduleVal))
-			case "at":
-				fmt.Println(ui.KeyValue("Run At", params.ScheduleVal))
-			case "delay":
-				fmt.Println(ui.KeyValue("Delay", params.ScheduleVal))
-			default:
-				fmt.Println(ui.KeyValue("Schedule", ui.Dim("instant")))
-			}
-
-			if params.Timezone != "" {
-				fmt.Println(ui.KeyValue("Timezone", params.Timezone))
-			}
-			if len(displayChannels) > 0 {
-				fmt.Println(ui.KeyValue("Channels", strings.Join(displayChannels, ", ")))
-			}
-			fmt.Println()
-
-			action, actionErr := ui.PromptBeepProposalAction()
-			if actionErr != nil {
-				return actionErr
-			}
-			if action == "cancel" {
-				fmt.Println(ui.Dim("Cancelled."))
+		confirmed, ok, cErr := ui.PromptBeepConfirmation(params, defaultChannels, "Proposed Beep:")
+		if cErr != nil {
+			if isUserAbort(ctx, cErr) {
 				return nil
 			}
-			if action == "edit" {
-				prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels, nil)
-				if pErr != nil {
-					return pErr
-				}
-				params = *prompted
-				continue
-			}
-
-			break
+			return cErr
 		}
+		if !ok {
+			return nil
+		}
+		params = *confirmed
 	}
 
 	var b *client.Beep

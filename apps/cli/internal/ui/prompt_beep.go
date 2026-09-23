@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -536,3 +538,323 @@ func PromptBeepProposalAction() (string, error) {
 	}
 	return choice, nil
 }
+
+func parseDelayDuration(s string) (time.Duration, error) {
+	s = strings.TrimSpace(strings.ToLower(s))
+	if s == "" {
+		return 0, errors.New("empty duration")
+	}
+
+	reDay := regexp.MustCompile(`^(\d+)\s*(?:d|days?)$`)
+	if m := reDay.FindStringSubmatch(s); len(m) == 2 {
+		n, err := strconv.Atoi(m[1])
+		if err != nil {
+			return 0, err
+		}
+		return time.Duration(n) * 24 * time.Hour, nil
+	}
+
+	reWeek := regexp.MustCompile(`^(\d+)\s*(?:w|weeks?)$`)
+	if m := reWeek.FindStringSubmatch(s); len(m) == 2 {
+		n, err := strconv.Atoi(m[1])
+		if err != nil {
+			return 0, err
+		}
+		return time.Duration(n) * 7 * 24 * time.Hour, nil
+	}
+
+	s = strings.ReplaceAll(s, "minutes", "m")
+	s = strings.ReplaceAll(s, "minute", "m")
+	s = strings.ReplaceAll(s, "mins", "m")
+	s = strings.ReplaceAll(s, "min", "m")
+	s = strings.ReplaceAll(s, "hours", "h")
+	s = strings.ReplaceAll(s, "hour", "h")
+	s = strings.ReplaceAll(s, "hrs", "h")
+	s = strings.ReplaceAll(s, "hr", "h")
+	s = strings.ReplaceAll(s, "seconds", "s")
+	s = strings.ReplaceAll(s, "second", "s")
+	s = strings.ReplaceAll(s, "secs", "s")
+	s = strings.ReplaceAll(s, "sec", "s")
+	s = strings.ReplaceAll(s, " ", "")
+
+	return time.ParseDuration(s)
+}
+
+func formatDurationFriendly(d time.Duration) string {
+	if d <= 0 {
+		return "0s"
+	}
+	days := int(d / (24 * time.Hour))
+	rem := d % (24 * time.Hour)
+	hours := int(rem / time.Hour)
+	rem = rem % time.Hour
+	minutes := int(rem / time.Minute)
+	seconds := int((rem % time.Minute) / time.Second)
+
+	var parts []string
+	if days > 0 {
+		parts = append(parts, fmt.Sprintf("%dd", days))
+	}
+	if hours > 0 {
+		parts = append(parts, fmt.Sprintf("%dh", hours))
+	}
+	if minutes > 0 {
+		parts = append(parts, fmt.Sprintf("%dm", minutes))
+	}
+	if seconds > 0 && days == 0 && hours == 0 {
+		parts = append(parts, fmt.Sprintf("%ds", seconds))
+	}
+	if len(parts) == 0 {
+		return d.String()
+	}
+	return strings.Join(parts, " ")
+}
+
+func resolveLocation(tz string) *time.Location {
+	if tz != "" {
+		if loc, err := time.LoadLocation(tz); err == nil && loc != nil {
+			return loc
+		}
+	}
+	if detected, ok := workspace.DetectTimezoneOK(); ok {
+		if loc, err := time.LoadLocation(detected); err == nil && loc != nil {
+			return loc
+		}
+	}
+	return time.Local
+}
+
+func isSameDay(t1, t2 time.Time) bool {
+	return t1.Year() == t2.Year() && t1.YearDay() == t2.YearDay()
+}
+
+// FormatScheduleHuman returns a human-friendly key and converted natural language description.
+func FormatScheduleHuman(scheduleKind, scheduleVal, tz string, now time.Time) (key string, formattedVal string) {
+	loc := resolveLocation(tz)
+	tzName := tz
+	if tzName == "" {
+		tzName = loc.String()
+	}
+
+	switch scheduleKind {
+	case "cron":
+		key = "Cron"
+		s := strings.TrimSpace(scheduleVal)
+		if s == "" {
+			return key, Dim("(empty)")
+		}
+		desc := schedule.Describe(s)
+		nextRun, ok := schedule.NextRun(s, now, loc)
+		if ok {
+			var nextStr string
+			if isSameDay(nextRun, now.In(loc)) {
+				nextStr = fmt.Sprintf("Today at %s (%s %s)", nextRun.Format("15:04"), nextRun.Format("2006-01-02 15:04:05"), tzName)
+			} else if isSameDay(nextRun, now.In(loc).AddDate(0, 0, 1)) {
+				nextStr = fmt.Sprintf("Tomorrow at %s (%s %s)", nextRun.Format("15:04"), nextRun.Format("2006-01-02 15:04:05"), tzName)
+			} else {
+				nextStr = fmt.Sprintf("%s %s", nextRun.Format("2006-01-02 15:04:05"), tzName)
+			}
+
+			if desc != "" {
+				formattedVal = fmt.Sprintf("%s (%s · Next: %s)", s, desc, nextStr)
+			} else {
+				formattedVal = fmt.Sprintf("%s (Next: %s)", s, nextStr)
+			}
+		} else {
+			if desc != "" {
+				formattedVal = fmt.Sprintf("%s (%s)", s, desc)
+			} else {
+				formattedVal = s
+			}
+		}
+		return key, formattedVal
+
+	case "at":
+		key = "Run At"
+		s := strings.TrimSpace(scheduleVal)
+		if s == "" {
+			return key, Dim("(empty)")
+		}
+		localNow := now.In(loc)
+
+		reTime := regexp.MustCompile(`^(\d{1,2}):(\d{2})(?::(\d{2}))?$`)
+		if m := reTime.FindStringSubmatch(s); len(m) >= 3 {
+			hour, _ := strconv.Atoi(m[1])
+			minute, _ := strconv.Atoi(m[2])
+			second := 0
+			if len(m) == 4 && m[3] != "" {
+				second, _ = strconv.Atoi(m[3])
+			}
+			if hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 && second >= 0 && second <= 59 {
+				target := time.Date(localNow.Year(), localNow.Month(), localNow.Day(), hour, minute, second, 0, loc)
+				isTomorrow := false
+				if !target.After(localNow) {
+					target = target.AddDate(0, 0, 1)
+					isTomorrow = true
+				}
+				if isTomorrow {
+					formattedVal = fmt.Sprintf("%s (Tomorrow at %s · %s %s)", s, target.Format("15:04"), target.Format("2006-01-02 15:04:05"), tzName)
+				} else {
+					formattedVal = fmt.Sprintf("%s (Today at %s · %s %s)", s, target.Format("15:04"), target.Format("2006-01-02 15:04:05"), tzName)
+				}
+				return key, formattedVal
+			}
+		}
+
+		var target time.Time
+		var parseErr error
+		layouts := []string{
+			"2006-01-02 15:04:05",
+			"2006-01-02 15:04",
+			"2006/01/02 15:04:05",
+			"2006/01/02 15:04",
+			time.RFC3339,
+			time.RFC3339Nano,
+		}
+		for _, layout := range layouts {
+			if parsed, err := time.ParseInLocation(layout, s, loc); err == nil {
+				target = parsed
+				parseErr = nil
+				break
+			} else {
+				parseErr = err
+			}
+		}
+		if parseErr == nil {
+			if target.Before(localNow) {
+				formattedVal = fmt.Sprintf("%s (in the past · %s %s)", s, target.Format("2006-01-02 15:04:05"), tzName)
+			} else if isSameDay(target, localNow) {
+				formattedVal = fmt.Sprintf("%s (Today at %s · %s %s)", s, target.Format("15:04"), target.Format("2006-01-02 15:04:05"), tzName)
+			} else if isSameDay(target, localNow.AddDate(0, 0, 1)) {
+				formattedVal = fmt.Sprintf("%s (Tomorrow at %s · %s %s)", s, target.Format("15:04"), target.Format("2006-01-02 15:04:05"), tzName)
+			} else {
+				diff := target.Sub(localNow)
+				days := int(diff.Hours() / 24)
+				formattedVal = fmt.Sprintf("%s (%s %s · in %d days)", s, target.Format("2006-01-02 15:04:05"), tzName, days)
+			}
+			return key, formattedVal
+		}
+
+		return key, s
+
+	case "delay":
+		key = "Delay"
+		s := strings.TrimSpace(scheduleVal)
+		if s == "" {
+			return key, Dim("(empty)")
+		}
+		dur, err := parseDelayDuration(s)
+		if err != nil {
+			return key, s
+		}
+		target := now.In(loc).Add(dur)
+		durFriendly := formatDurationFriendly(dur)
+
+		if isSameDay(target, now.In(loc)) {
+			formattedVal = fmt.Sprintf("%s (in %s · Today at %s · %s %s)", s, durFriendly, target.Format("15:04:05"), target.Format("2006-01-02 15:04:05"), tzName)
+		} else if isSameDay(target, now.In(loc).AddDate(0, 0, 1)) {
+			formattedVal = fmt.Sprintf("%s (in %s · Tomorrow at %s · %s %s)", s, durFriendly, target.Format("15:04:05"), target.Format("2006-01-02 15:04:05"), tzName)
+		} else {
+			formattedVal = fmt.Sprintf("%s (in %s · %s %s)", s, durFriendly, target.Format("2006-01-02 15:04:05"), tzName)
+		}
+		return key, formattedVal
+
+	default: // instant
+		key = "Schedule"
+		return key, "instant " + Dim("(fires immediately)")
+	}
+}
+
+// PrintBeepPreview prints a structured summary of the beep before creation.
+func PrintBeepPreview(params client.CreateBeepParams, header string) {
+	if header == "" {
+		header = "Proposed Beep:"
+	}
+	var displayChannels []string
+	if strings.TrimSpace(params.Channels) != "" {
+		for _, ch := range strings.Split(params.Channels, ",") {
+			if trimmed := strings.TrimSpace(ch); trimmed != "" {
+				displayChannels = append(displayChannels, trimmed)
+			}
+		}
+	}
+
+	fmt.Println()
+	fmt.Println(Bold(Cyan("  " + header)))
+	fmt.Println(KeyValue("Title", params.Title))
+	if strings.TrimSpace(params.Body) != "" {
+		if strings.Contains(params.Body, "\n") {
+			fmt.Println(KeyValue("Body", ""))
+			for _, line := range strings.Split(params.Body, "\n") {
+				fmt.Printf("      %s\n", line)
+			}
+		} else {
+			fmt.Println(KeyValue("Body", params.Body))
+		}
+	} else {
+		fmt.Println(KeyValue("Body", Dim("(empty)")))
+	}
+
+	intentVal := params.Intent
+	if strings.TrimSpace(intentVal) == "" {
+		intentVal = Dim("(empty)")
+	}
+	fmt.Println(KeyValue("Intent", intentVal))
+
+	metaVal := Dim("(empty)")
+	if params.Metadata != nil && len(params.Metadata) > 0 {
+		if metaBytes, err := json.Marshal(params.Metadata); err == nil {
+			metaVal = string(metaBytes)
+		}
+	}
+	fmt.Println(KeyValue("Metadata", metaVal))
+
+	kind := "once"
+	if params.ScheduleKind == "cron" {
+		kind = "recurring"
+	}
+	fmt.Println(KeyValue("Kind", kind))
+
+	schedKey, schedVal := FormatScheduleHuman(params.ScheduleKind, params.ScheduleVal, params.Timezone, time.Now())
+	fmt.Println(KeyValue(schedKey, schedVal))
+
+	if params.Timezone != "" {
+		fmt.Println(KeyValue("Timezone", params.Timezone))
+	}
+	if len(displayChannels) > 0 {
+		fmt.Println(KeyValue("Channels", strings.Join(displayChannels, ", ")))
+	}
+	fmt.Println()
+}
+
+// PromptBeepConfirmation displays the beep preview and prompts the user to
+// create, edit, or cancel. It loops if the user chooses to edit.
+// Returns (updatedParams, true, nil) to proceed, (nil, false, nil) on cancel.
+func PromptBeepConfirmation(params client.CreateBeepParams, defaultChannels []string, header string) (*client.CreateBeepParams, bool, error) {
+	current := params
+	for {
+		PrintBeepPreview(current, header)
+
+		action, actionErr := PromptBeepProposalAction()
+		if actionErr != nil {
+			return nil, false, actionErr
+		}
+		switch action {
+		case "cancel":
+			fmt.Println(Dim("Cancelled."))
+			return nil, false, nil
+		case "edit":
+			prompted, pErr := PromptBeepAdjust(current, defaultChannels, nil)
+			if pErr != nil {
+				return nil, false, pErr
+			}
+			current = *prompted
+			continue
+		case "create":
+			return &current, true, nil
+		default:
+			return &current, true, nil
+		}
+	}
+}
+
