@@ -203,7 +203,7 @@ func TestPrintBeepPreview(t *testing.T) {
 		Body:                 "Test Body",
 		Intent:               "test_intent",
 		ScheduleKey:          "Delay",
-		ScheduleDisplay:      "15m (in 15m · Today at 17:56:00 · 2026-09-23 17:56:00 Asia/Shanghai)",
+		ScheduleDisplay:      "15m → Today at 17:56:00 · 2026-09-23 17:56:00 Asia/Shanghai",
 		Timezone:             "Asia/Shanghai",
 		NotificationChannels: []string{"cli", "desktop"},
 	}

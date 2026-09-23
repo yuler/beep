@@ -107,10 +107,10 @@ Rails.application.routes.draw do
 
       # Beep
       resources :beep_proposals, only: :create
+      resource :beep_preview, only: :create
       resources :beeps, only: %i[ index show create update destroy ] do
         scope module: :beeps do
           collection do
-            resource :preview, only: :create
             resource :stats, only: :show, as: :beeps_stats
           end
           resource :pause, only: %i[ create destroy ]

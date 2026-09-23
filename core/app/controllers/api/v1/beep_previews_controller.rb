@@ -1,4 +1,4 @@
-class Api::V1::Beeps::PreviewsController < Api::V1::BaseController
+class Api::V1::BeepPreviewsController < Api::V1::BaseController
   def create
     @preview = Beep::Preview.build(
       account: Current.account,

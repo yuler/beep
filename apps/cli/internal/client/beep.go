@@ -268,7 +268,7 @@ type BeepPreview struct {
 }
 
 func (c *Client) PreviewBeep(ctx context.Context, req *CreateBeepRequest) (*BeepPreview, error) {
-	url := fmt.Sprintf("%s/api/v1/beeps/preview", c.cfg.ServerURL)
+	url := fmt.Sprintf("%s/api/v1/beep_preview", c.cfg.ServerURL)
 	var preview BeepPreview
 	if err := c.postAuthJSON(ctx, url, req, http.StatusOK, &preview); err != nil {
 		return nil, err

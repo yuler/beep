@@ -10,6 +10,5 @@ json.notification_channels @preview.notification_channels
 json.run_at @preview.run_at&.iso8601
 json.next_run_at @preview.next_run_at&.iso8601
 json.cron @preview.cron
-json.cron_description @preview.cron_description
 json.schedule_key @preview.schedule_key
 json.schedule_display @preview.schedule_display
