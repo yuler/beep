@@ -249,6 +249,32 @@ func (c *Client) CreateBeep(ctx context.Context, req *CreateBeepRequest) (*Beep,
 	return &beep, nil
 }
 
+type BeepPreview struct {
+	Valid                bool           `json:"valid"`
+	Errors               []string       `json:"errors,omitempty"`
+	Kind                 string         `json:"kind"`
+	Title                string         `json:"title"`
+	Body                 string         `json:"body,omitempty"`
+	Intent               string         `json:"intent,omitempty"`
+	Metadata             map[string]any `json:"metadata,omitempty"`
+	Timezone             string         `json:"timezone"`
+	NotificationChannels []string       `json:"notification_channels,omitempty"`
+	RunAt                string         `json:"run_at,omitempty"`
+	NextRunAt            string         `json:"next_run_at,omitempty"`
+	Cron                 string         `json:"cron,omitempty"`
+	ScheduleKey          string         `json:"schedule_key"`
+	ScheduleDisplay      string         `json:"schedule_display"`
+}
+
+func (c *Client) PreviewBeep(ctx context.Context, req *CreateBeepRequest) (*BeepPreview, error) {
+	url := fmt.Sprintf("%s/api/v1/beep_preview", c.cfg.ServerURL)
+	var preview BeepPreview
+	if err := c.postAuthJSON(ctx, url, req, http.StatusOK, &preview); err != nil {
+		return nil, err
+	}
+	return &preview, nil
+}
+
 func (c *Client) DeleteBeep(ctx context.Context, id string) error {
 	url := fmt.Sprintf("%s/api/v1/beeps/%s", c.cfg.ServerURL, url.PathEscape(id))
 	return c.deleteAuth(ctx, url)
@@ -309,15 +335,14 @@ type CreateBeepParams struct {
 }
 
 // ToRequest validates and transforms CreateBeepParams into a CreateBeepRequest.
+// Empty timezone is passed through (omitempty); the server is the single
+// source of truth for timezone resolution.
 func (p *CreateBeepParams) ToRequest() (*CreateBeepRequest, error) {
 	if strings.TrimSpace(p.Title) == "" {
 		return nil, errors.New("beep title is required")
 	}
 
 	tz := strings.TrimSpace(p.Timezone)
-	if tz == "" {
-		tz = "UTC"
-	}
 
 	req := &CreateBeepRequest{
 		Title:    strings.TrimSpace(p.Title),

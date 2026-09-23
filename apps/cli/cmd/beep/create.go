@@ -205,6 +205,22 @@ Examples:
 						params = *prompted
 					}
 
+					// Interactive creates (form or flags) confirm via server preview.
+					// --json skips preview; non-interactive never reaches here (outer IsInteractive guard).
+					if !cmdutil.IsJSON(cmd) {
+						confirmed, ok, cErr := confirmBeepWithPreview(ctx, c, params, defaultChannels, "Proposed Beep:")
+						if cErr != nil {
+							if isUserAbort(ctx, cErr) {
+								return nil
+							}
+							return cErr
+						}
+						if !ok {
+							return nil
+						}
+						params = *confirmed
+					}
+
 					for {
 						if params.ScheduleKind == "" {
 							params.ScheduleKind = "instant"
@@ -389,6 +405,105 @@ func shouldPromptBeepCreateForm(title, scheduleKind string, argCount int, aiFall
 	return strings.TrimSpace(title) == "" || (scheduleKind == "" && argCount == 0)
 }
 
+func confirmBeepWithPreview(ctx context.Context, c *client.Client, initial client.CreateBeepParams, defaultChannels []string, header string) (*client.CreateBeepParams, bool, error) {
+	current := initial
+	for {
+		if current.ScheduleKind == "" {
+			current.ScheduleKind = "instant"
+		}
+		req, err := current.ToRequest()
+		if err != nil {
+			errList := client.ExtractErrorList(err)
+			ui.PrintErrorList("Invalid input", errList)
+			ui.PrintBeepCreateSummary(current, errList)
+			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
+			if promptErr != nil {
+				return nil, false, promptErr
+			}
+			if !retry {
+				return nil, false, nil
+			}
+			prompted, pErr := ui.PromptBeepAdjust(current, defaultChannels, errList)
+			if pErr != nil {
+				return nil, false, pErr
+			}
+			current = *prompted
+			continue
+		}
+
+		var preview *client.BeepPreview
+		err = ui.WithSpinner("Fetching preview...", func() error {
+			var pErr error
+			preview, pErr = c.PreviewBeep(ctx, req)
+			return pErr
+		})
+		if err != nil {
+			if isUserAbort(ctx, err) {
+				return nil, false, err
+			}
+			errList := client.ExtractErrorList(err)
+			ui.PrintErrorList("Preview failed", errList)
+			ui.PrintBeepCreateSummary(current, errList)
+			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs and retry?", true)
+			if promptErr != nil {
+				return nil, false, promptErr
+			}
+			if !retry {
+				return nil, false, nil
+			}
+			prompted, pErr := ui.PromptBeepAdjust(current, defaultChannels, errList)
+			if pErr != nil {
+				return nil, false, pErr
+			}
+			current = *prompted
+			continue
+		}
+
+		if !preview.Valid {
+			ui.PrintErrorList("Invalid beep schedule", preview.Errors)
+			ui.PrintBeepCreateSummary(current, preview.Errors)
+			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
+			if promptErr != nil {
+				return nil, false, promptErr
+			}
+			if !retry {
+				return nil, false, nil
+			}
+			prompted, pErr := ui.PromptBeepAdjust(current, defaultChannels, preview.Errors)
+			if pErr != nil {
+				return nil, false, pErr
+			}
+			current = *prompted
+			continue
+		}
+
+		if current.Timezone == "" && preview.Timezone != "" {
+			current.Timezone = preview.Timezone
+		}
+
+		ui.PrintBeepPreview(preview, header)
+
+		action, actionErr := ui.PromptBeepProposalAction()
+		if actionErr != nil {
+			return nil, false, actionErr
+		}
+		switch action {
+		case "cancel":
+			fmt.Println(ui.Dim("Cancelled."))
+			return nil, false, nil
+		case "edit":
+			prompted, pErr := ui.PromptBeepAdjust(current, defaultChannels, nil)
+			if pErr != nil {
+				return nil, false, pErr
+			}
+			current = *prompted
+			continue
+		case "create":
+			return &current, true, nil
+		}
+	}
+}
+
 func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Command, prompt, bodyFlag, channelsFlag, tz, intentFlag string, metadata map[string]any) error {
 	var proposal *client.BeepProposal
 	err := ui.WithSpinner("Analyzing natural language prompt with AI...", func() error {
@@ -473,90 +588,17 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 	}
 
 	if cmdutil.IsInteractive(cmd) && !cmdutil.IsJSON(cmd) {
-		for {
-			var displayChannels []string
-			if strings.TrimSpace(params.Channels) != "" {
-				for _, ch := range strings.Split(params.Channels, ",") {
-					if trimmed := strings.TrimSpace(ch); trimmed != "" {
-						displayChannels = append(displayChannels, trimmed)
-					}
-				}
-			}
-
-			fmt.Println()
-			fmt.Println(ui.Bold(ui.Cyan("  Proposed Beep:")))
-			fmt.Println(ui.KeyValue("Title", params.Title))
-			if strings.TrimSpace(params.Body) != "" {
-				if strings.Contains(params.Body, "\n") {
-					fmt.Println(ui.KeyValue("Body", ""))
-					for _, line := range strings.Split(params.Body, "\n") {
-						fmt.Printf("      %s\n", line)
-					}
-				} else {
-					fmt.Println(ui.KeyValue("Body", params.Body))
-				}
-			} else {
-				fmt.Println(ui.KeyValue("Body", ui.Dim("(empty)")))
-			}
-
-			intentVal := params.Intent
-			if strings.TrimSpace(intentVal) == "" {
-				intentVal = ui.Dim("(empty)")
-			}
-			fmt.Println(ui.KeyValue("Intent", intentVal))
-
-			metaVal := ui.Dim("(empty)")
-			if params.Metadata != nil && len(params.Metadata) > 0 {
-				if metaBytes, err := json.Marshal(params.Metadata); err == nil {
-					metaVal = string(metaBytes)
-				}
-			}
-			fmt.Println(ui.KeyValue("Metadata", metaVal))
-
-			kind := "once"
-			if params.ScheduleKind == "cron" {
-				kind = "recurring"
-			}
-			fmt.Println(ui.KeyValue("Kind", kind))
-
-			switch params.ScheduleKind {
-			case "cron":
-				fmt.Println(ui.KeyValue("Cron", params.ScheduleVal))
-			case "at":
-				fmt.Println(ui.KeyValue("Run At", params.ScheduleVal))
-			case "delay":
-				fmt.Println(ui.KeyValue("Delay", params.ScheduleVal))
-			default:
-				fmt.Println(ui.KeyValue("Schedule", ui.Dim("instant")))
-			}
-
-			if params.Timezone != "" {
-				fmt.Println(ui.KeyValue("Timezone", params.Timezone))
-			}
-			if len(displayChannels) > 0 {
-				fmt.Println(ui.KeyValue("Channels", strings.Join(displayChannels, ", ")))
-			}
-			fmt.Println()
-
-			action, actionErr := ui.PromptBeepProposalAction()
-			if actionErr != nil {
-				return actionErr
-			}
-			if action == "cancel" {
-				fmt.Println(ui.Dim("Cancelled."))
+		confirmed, ok, cErr := confirmBeepWithPreview(ctx, c, params, defaultChannels, "Proposed Beep:")
+		if cErr != nil {
+			if isUserAbort(ctx, cErr) {
 				return nil
 			}
-			if action == "edit" {
-				prompted, pErr := ui.PromptBeepAdjust(params, defaultChannels, nil)
-				if pErr != nil {
-					return pErr
-				}
-				params = *prompted
-				continue
-			}
-
-			break
+			return cErr
 		}
+		if !ok {
+			return nil
+		}
+		params = *confirmed
 	}
 
 	var b *client.Beep

@@ -536,3 +536,59 @@ func PromptBeepProposalAction() (string, error) {
 	}
 	return choice, nil
 }
+
+// PrintBeepPreview prints the server's structured preview of the beep before creation.
+func PrintBeepPreview(preview *client.BeepPreview, header string) {
+	if header == "" {
+		header = "Proposed Beep:"
+	}
+	fmt.Println()
+	fmt.Println(Bold(Cyan("  " + header)))
+	fmt.Println(KeyValue("Title", preview.Title))
+	if strings.TrimSpace(preview.Body) != "" {
+		if strings.Contains(preview.Body, "\n") {
+			fmt.Println(KeyValue("Body", ""))
+			for _, line := range strings.Split(preview.Body, "\n") {
+				fmt.Printf("      %s\n", line)
+			}
+		} else {
+			fmt.Println(KeyValue("Body", preview.Body))
+		}
+	} else {
+		fmt.Println(KeyValue("Body", Dim("(empty)")))
+	}
+
+	intentVal := preview.Intent
+	if strings.TrimSpace(intentVal) == "" {
+		intentVal = Dim("(empty)")
+	}
+	fmt.Println(KeyValue("Intent", intentVal))
+
+	metaVal := Dim("(empty)")
+	if preview.Metadata != nil && len(preview.Metadata) > 0 {
+		if metaBytes, err := json.Marshal(preview.Metadata); err == nil {
+			metaVal = string(metaBytes)
+		}
+	}
+	fmt.Println(KeyValue("Metadata", metaVal))
+
+	fmt.Println(KeyValue("Kind", preview.Kind))
+
+	schedKey := preview.ScheduleKey
+	if schedKey == "" {
+		schedKey = "Schedule"
+	}
+	schedVal := preview.ScheduleDisplay
+	if schedVal == "" {
+		schedVal = Dim("(empty)")
+	}
+	fmt.Println(KeyValue(schedKey, schedVal))
+
+	if preview.Timezone != "" {
+		fmt.Println(KeyValue("Timezone", preview.Timezone))
+	}
+	if len(preview.NotificationChannels) > 0 {
+		fmt.Println(KeyValue("Channels", strings.Join(preview.NotificationChannels, ", ")))
+	}
+	fmt.Println()
+}

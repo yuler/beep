@@ -194,3 +194,19 @@ func TestCommonIANATimezonesAreValid(t *testing.T) {
 		}
 	}
 }
+
+func TestPrintBeepPreview(t *testing.T) {
+	preview := &client.BeepPreview{
+		Valid:                true,
+		Kind:                 "once",
+		Title:                "Test Beep",
+		Body:                 "Test Body",
+		Intent:               "test_intent",
+		ScheduleKey:          "Delay",
+		ScheduleDisplay:      "15m → Today at 17:56:00 · 2026-09-23 17:56:00 Asia/Shanghai",
+		Timezone:             "Asia/Shanghai",
+		NotificationChannels: []string{"cli", "desktop"},
+	}
+	// Verify it prints without panicking
+	PrintBeepPreview(preview, "Test Preview")
+}
