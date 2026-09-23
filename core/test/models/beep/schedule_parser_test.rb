@@ -54,6 +54,21 @@ class Beep::ScheduleParserTest < ActiveSupport::TestCase
     assert_raises(Beep::ScheduleParser::Error) { Beep::ScheduleParser.parse_at("12345") }
   end
 
+  test "parse_at rejects past datetime" do
+    tz = "Asia/Shanghai"
+    now = Time.find_zone(tz).local(2026, 9, 23, 10, 0, 0)
+
+    err = assert_raises(Beep::ScheduleParser::Error) do
+      Beep::ScheduleParser.parse_at("2026-09-20 10:00", timezone: tz, now: now)
+    end
+    assert_match(/cannot be in the past/, err.message)
+
+    # Exact current datetime is also rejected (must be in the future)
+    assert_raises(Beep::ScheduleParser::Error) do
+      Beep::ScheduleParser.parse_at("2026-09-23 10:00:00", timezone: tz, now: now)
+    end
+  end
+
   test "resolve_run_at handles mutual exclusivity" do
     assert_raises(Beep::ScheduleParser::Error) do
       Beep::ScheduleParser.resolve_run_at(in_val: "15m", at_val: "15:30")

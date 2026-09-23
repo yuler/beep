@@ -562,6 +562,19 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "create with :at rejects past datetime" do
+    travel_to Time.utc(2026, 9, 23, 10, 0, 0) do
+      post "/api/v1/#{@account.slug}/beeps",
+        params: { title: "Past event", at: "2026-09-20 10:00", timezone: "Asia/Shanghai" },
+        headers: { "Authorization" => "Bearer #{@token}" },
+        as: :json
+
+      assert_response :unprocessable_entity
+      assert_equal "VALIDATION_ERROR", response.parsed_body["code"]
+      assert_match(/cannot be in the past/, response.parsed_body["message"])
+    end
+  end
+
   test "create rejects conflicting schedule options" do
     # in and at
     post "/api/v1/#{@account.slug}/beeps",
