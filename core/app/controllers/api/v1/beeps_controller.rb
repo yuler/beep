@@ -1,4 +1,13 @@
 class Api::V1::BeepsController < Api::V1::BaseController
+  rescue_from Beep::ScheduleParser::Error do |exception|
+    render_json_error(
+      status: :unprocessable_entity,
+      message: exception.message,
+      code: "VALIDATION_ERROR",
+      errors: [ exception.message ]
+    )
+  end
+
   def index
     scope = Current.account.beeps.includes(beeper: :beeper_app)
     scope = scope.where(status: params[:status]) if params[:status].present? && Beep.statuses.key?(params[:status])
@@ -33,8 +42,16 @@ class Api::V1::BeepsController < Api::V1::BaseController
   end
 
   def create
+    # Resolved timezone respects user's preference first, falling back to payload timezone, then UTC.
+    # Note: request payload timezone does not override an already configured user timezone.
+    timezone = beep_timezone
+    run_at = resolve_schedule_run_at(timezone: timezone)
     kind = params[:kind].presence || (params[:cron].present? ? "recurring" : "once")
-    @beep = Current.account.beeps.new(beep_params.merge(kind: kind, timezone: beep_timezone))
+
+    attrs = beep_params.merge(kind: kind, timezone: timezone)
+    attrs[:run_at] = run_at if run_at.present?
+
+    @beep = Current.account.beeps.new(attrs)
 
     if @beep.save
       render :create, status: :created
@@ -51,7 +68,15 @@ class Api::V1::BeepsController < Api::V1::BaseController
   def update
     @beep = Current.account.beeps.find(params[:id])
 
-    if @beep.update(beep_params)
+    # Timezone parameter serves as a transient reference zone to interpret :at wall-clock time if provided,
+    # falling back to the beep's existing timezone. The beep's stored timezone itself remains immutable.
+    timezone = IanaTimezone.resolve(params[:timezone], @beep.timezone)
+    run_at = resolve_schedule_run_at(timezone: timezone)
+
+    attrs = beep_params
+    attrs = attrs.merge(run_at: run_at) if run_at.present?
+
+    if @beep.update(attrs)
       render :show
     else
       render_json_error(
@@ -90,6 +115,19 @@ class Api::V1::BeepsController < Api::V1::BaseController
 
     def beep_params
       params.permit(:title, :body, :run_at, :cron, :kind, :intent, notification_channels: [], metadata: {})
+    end
+
+    def resolve_schedule_run_at(timezone:)
+      if params[:cron].present? && (params[:in].present? || params[:at].present?)
+        raise Beep::ScheduleParser::Error, "Cannot specify :cron together with :in or :at"
+      end
+
+      Beep::ScheduleParser.resolve_run_at(
+        in_val: params[:in],
+        at_val: params[:at],
+        run_at_val: params[:run_at],
+        timezone: timezone
+      )
     end
 
     def beep_timezone

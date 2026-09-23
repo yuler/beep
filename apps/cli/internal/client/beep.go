@@ -8,9 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	"strconv"
 	"strings"
-	"time"
 
 	"beep/internal/schedule"
 )
@@ -56,6 +54,8 @@ type CreateBeepRequest struct {
 	Body                 string         `json:"body,omitempty"`
 	Kind                 string         `json:"kind,omitempty"`
 	RunAt                string         `json:"run_at,omitempty"`
+	In                   string         `json:"in,omitempty"`
+	At                   string         `json:"at,omitempty"`
 	Cron                 string         `json:"cron,omitempty"`
 	Timezone             string         `json:"timezone,omitempty"`
 	NotificationChannels []string       `json:"notification_channels,omitempty"`
@@ -350,85 +350,24 @@ func (p *CreateBeepParams) ToRequest() (*CreateBeepRequest, error) {
 		req.Kind = "recurring"
 		req.Cron = strings.TrimSpace(p.ScheduleVal)
 	case "delay":
-		d, err := ParseInDuration(p.ScheduleVal)
-		if err != nil {
-			return nil, fmt.Errorf("invalid --in duration (e.g. 10m, 2h, 1d): %w", err)
+		val := strings.TrimSpace(p.ScheduleVal)
+		if val == "" {
+			return nil, errors.New("empty --in duration")
 		}
 		req.Kind = "once"
-		req.RunAt = time.Now().Add(d).Format(time.RFC3339)
+		req.In = val
 	case "at":
-		loc, err := time.LoadLocation(tz)
-		if err != nil {
-			loc = time.Local
-		}
-		t, err := ParseAtTime(p.ScheduleVal, loc)
-		if err != nil {
-			return nil, fmt.Errorf("invalid --at time (e.g. 15:30, 2026-10-01 10:00): %w", err)
+		val := strings.TrimSpace(p.ScheduleVal)
+		if val == "" {
+			return nil, errors.New("empty --at time")
 		}
 		req.Kind = "once"
-		req.RunAt = t.Format(time.RFC3339)
+		req.At = val
 	case "instant":
 		req.Kind = "once"
-		req.RunAt = time.Now().Format(time.RFC3339)
 	default:
 		return nil, fmt.Errorf("unknown schedule kind %q", kind)
 	}
 
 	return req, nil
-}
-
-// ParseInDuration parses a delay duration string supporting 'd' suffix (e.g. 1d, 2d, 15m, 2h).
-func ParseInDuration(s string) (time.Duration, error) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return 0, errors.New("empty duration")
-	}
-	var d time.Duration
-	var err error
-	if strings.HasSuffix(s, "d") {
-		daysStr := strings.TrimSuffix(s, "d")
-		days, aErr := strconv.Atoi(daysStr)
-		if aErr != nil {
-			return 0, fmt.Errorf("invalid days format %q: %w", s, aErr)
-		}
-		d = time.Duration(days) * 24 * time.Hour
-	} else {
-		d, err = time.ParseDuration(s)
-		if err != nil {
-			return 0, err
-		}
-	}
-	if d <= 0 {
-		return 0, fmt.Errorf("duration must be greater than zero: %q", s)
-	}
-	return d, nil
-}
-
-// ParseAtTime parses a specific time/datetime string relative to location.
-func ParseAtTime(s string, loc *time.Location) (time.Time, error) {
-	s = strings.TrimSpace(s)
-	formats := []string{
-		time.RFC3339,
-		"2006-01-02 15:04:05",
-		"2006-01-02 15:04",
-		"2006-01-02T15:04:05",
-		"2006-01-02T15:04",
-	}
-	for _, layout := range formats {
-		if t, err := time.ParseInLocation(layout, s, loc); err == nil {
-			return t, nil
-		}
-	}
-
-	// Try time-only "15:04"
-	if t, err := time.ParseInLocation("15:04", s, loc); err == nil {
-		now := time.Now().In(loc)
-		target := time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), 0, 0, loc)
-		if target.Before(now) {
-			target = target.AddDate(0, 0, 1)
-		}
-		return target, nil
-	}
-
-	return time.Time{}, fmt.Errorf("unrecognized time format %q", s)
 }

@@ -256,12 +256,16 @@ func TestBeepCreateCommand(t *testing.T) {
 		if r.URL.Path == "/api/v1/beeps" && r.Method == http.MethodPost {
 			_ = json.NewDecoder(r.Body).Decode(&receivedBody)
 			w.WriteHeader(http.StatusCreated)
+			runAt := receivedBody.RunAt
+			if runAt == "" && receivedBody.Kind == "once" {
+				runAt = "2026-09-23T10:00:00Z"
+			}
 			_ = json.NewEncoder(w).Encode(&client.Beep{
 				ID:       "beep_new",
 				Title:    receivedBody.Title,
 				Kind:     receivedBody.Kind,
 				Cron:     receivedBody.Cron,
-				RunAt:    receivedBody.RunAt,
+				RunAt:    runAt,
 				Timezone: receivedBody.Timezone,
 			})
 			return
@@ -293,7 +297,7 @@ func TestBeepCreateCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("beep create instant failed: %v", err)
 	}
-	if receivedBody.Title != "Instant Test" || receivedBody.Kind != "once" || receivedBody.RunAt == "" {
+	if receivedBody.Title != "Instant Test" || receivedBody.Kind != "once" || receivedBody.In != "" || receivedBody.At != "" || receivedBody.RunAt != "" {
 		t.Errorf("unexpected instant create request: %+v", receivedBody)
 	}
 	if receivedBody.Timezone == "" {
@@ -309,14 +313,30 @@ func TestBeepCreateCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("beep create with --in failed: %v", err)
 	}
-	if receivedBody.Title != "Delay Test" || receivedBody.Kind != "once" || receivedBody.RunAt == "" {
+	if receivedBody.Title != "Delay Test" || receivedBody.Kind != "once" || receivedBody.In != "15m" || receivedBody.RunAt != "" {
 		t.Errorf("unexpected delay create request: %+v", receivedBody)
 	}
 	if receivedBody.Timezone == "" {
 		t.Errorf("expected auto-detected timezone to be set on delay create, got empty")
 	}
 
-	// 3. Recurring with --cron
+	// 3. Specific time with --at 16:30
+	createCmd.Flags().Set("at", "16:30")
+	_, err = captureStdout(func() error {
+		return createCmd.RunE(createCmd, []string{"At Test"})
+	})
+	createCmd.Flags().Set("at", "")
+	if err != nil {
+		t.Fatalf("beep create with --at failed: %v", err)
+	}
+	if receivedBody.Title != "At Test" || receivedBody.Kind != "once" || receivedBody.At != "16:30" || receivedBody.RunAt != "" {
+		t.Errorf("unexpected at create request: %+v", receivedBody)
+	}
+	if receivedBody.Timezone == "" {
+		t.Errorf("expected auto-detected timezone to be set on at create, got empty")
+	}
+
+	// 4. Recurring with --cron
 	createCmd.Flags().Set("cron", "*/5 * * * *")
 	_, err = captureStdout(func() error {
 		return createCmd.RunE(createCmd, []string{"Cron Test"})

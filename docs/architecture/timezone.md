@@ -44,4 +44,4 @@ The settings picker lists zones from tzdb (search + country flag). The live prob
 2. Else the IANA on that create/proposal request (does not write User)
 3. Else UTC
 
-Create UI does not expose a timezone field. Updating a beep cannot change its timezone.
+Create UI does not expose a timezone field. On create requests, a payload `timezone` does not override an already-configured user timezone. Updating a beep cannot change its stored timezone (though PATCH with `:at` can pass a transient `timezone` parameter to interpret local wall-clock time).

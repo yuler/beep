@@ -461,8 +461,7 @@ func promptBeepSchedule(res *client.CreateBeepParams) error {
 				if strings.TrimSpace(s) == "" {
 					return errors.New("delay duration is required")
 				}
-				_, err := client.ParseInDuration(s)
-				return err
+				return nil
 			}).
 			Run()
 		if err != nil {
@@ -492,8 +491,7 @@ func promptBeepSchedule(res *client.CreateBeepParams) error {
 				if strings.TrimSpace(s) == "" {
 					return errors.New("time is required")
 				}
-				_, err := client.ParseAtTime(s, loc)
-				return err
+				return nil
 			}).
 			Run()
 		if err != nil {
