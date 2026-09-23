@@ -56,6 +56,8 @@ type CreateBeepRequest struct {
 	Body                 string         `json:"body,omitempty"`
 	Kind                 string         `json:"kind,omitempty"`
 	RunAt                string         `json:"run_at,omitempty"`
+	In                   string         `json:"in,omitempty"`
+	At                   string         `json:"at,omitempty"`
 	Cron                 string         `json:"cron,omitempty"`
 	Timezone             string         `json:"timezone,omitempty"`
 	NotificationChannels []string       `json:"notification_channels,omitempty"`
@@ -350,26 +352,31 @@ func (p *CreateBeepParams) ToRequest() (*CreateBeepRequest, error) {
 		req.Kind = "recurring"
 		req.Cron = strings.TrimSpace(p.ScheduleVal)
 	case "delay":
-		d, err := ParseInDuration(p.ScheduleVal)
-		if err != nil {
+		val := strings.TrimSpace(p.ScheduleVal)
+		if val == "" {
+			return nil, errors.New("empty --in duration")
+		}
+		if _, err := ParseInDuration(val); err != nil {
 			return nil, fmt.Errorf("invalid --in duration (e.g. 10m, 2h, 1d): %w", err)
 		}
 		req.Kind = "once"
-		req.RunAt = time.Now().Add(d).Format(time.RFC3339)
+		req.In = val
 	case "at":
+		val := strings.TrimSpace(p.ScheduleVal)
+		if val == "" {
+			return nil, errors.New("empty --at time")
+		}
 		loc, err := time.LoadLocation(tz)
 		if err != nil {
 			loc = time.Local
 		}
-		t, err := ParseAtTime(p.ScheduleVal, loc)
-		if err != nil {
+		if _, err := ParseAtTime(val, loc); err != nil {
 			return nil, fmt.Errorf("invalid --at time (e.g. 15:30, 2026-10-01 10:00): %w", err)
 		}
 		req.Kind = "once"
-		req.RunAt = t.Format(time.RFC3339)
+		req.At = val
 	case "instant":
 		req.Kind = "once"
-		req.RunAt = time.Now().Format(time.RFC3339)
 	default:
 		return nil, fmt.Errorf("unknown schedule kind %q", kind)
 	}
@@ -420,14 +427,16 @@ func ParseAtTime(s string, loc *time.Location) (time.Time, error) {
 		}
 	}
 
-	// Try time-only "15:04"
-	if t, err := time.ParseInLocation("15:04", s, loc); err == nil {
-		now := time.Now().In(loc)
-		target := time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), 0, 0, loc)
-		if target.Before(now) {
-			target = target.AddDate(0, 0, 1)
+	// Try time-only "15:04:05" or "15:04"
+	for _, layout := range []string{"15:04:05", "15:04"} {
+		if t, err := time.ParseInLocation(layout, s, loc); err == nil {
+			now := time.Now().In(loc)
+			target := time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), t.Second(), 0, loc)
+			if target.Before(now) {
+				target = target.AddDate(0, 0, 1)
+			}
+			return target, nil
 		}
-		return target, nil
 	}
 
 	return time.Time{}, fmt.Errorf("unrecognized time format %q", s)

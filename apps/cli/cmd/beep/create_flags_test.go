@@ -64,6 +64,49 @@ func TestCreateBeepParamsToRequest_IntentAndMetadata(t *testing.T) {
 	}
 }
 
+func TestCreateBeepParamsToRequest_ScheduleOptions(t *testing.T) {
+	// 1. Instant: leaves RunAt, In, At empty
+	pInstant := client.CreateBeepParams{
+		Title:        "Instant",
+		ScheduleKind: "instant",
+	}
+	rInstant, err := pInstant.ToRequest()
+	if err != nil {
+		t.Fatalf("ToRequest instant failed: %v", err)
+	}
+	if rInstant.Kind != "once" || rInstant.In != "" || rInstant.At != "" || rInstant.RunAt != "" {
+		t.Errorf("unexpected instant request: %+v", rInstant)
+	}
+
+	// 2. Delay: passes In directly
+	pDelay := client.CreateBeepParams{
+		Title:        "Delay",
+		ScheduleKind: "delay",
+		ScheduleVal:  "30m",
+	}
+	rDelay, err := pDelay.ToRequest()
+	if err != nil {
+		t.Fatalf("ToRequest delay failed: %v", err)
+	}
+	if rDelay.Kind != "once" || rDelay.In != "30m" || rDelay.RunAt != "" {
+		t.Errorf("unexpected delay request: %+v", rDelay)
+	}
+
+	// 3. At: passes At directly
+	pAt := client.CreateBeepParams{
+		Title:        "At",
+		ScheduleKind: "at",
+		ScheduleVal:  "16:30",
+	}
+	rAt, err := pAt.ToRequest()
+	if err != nil {
+		t.Fatalf("ToRequest at failed: %v", err)
+	}
+	if rAt.Kind != "once" || rAt.At != "16:30" || rAt.RunAt != "" {
+		t.Errorf("unexpected at request: %+v", rAt)
+	}
+}
+
 func TestNewCmdCreate_FlagsAndAliases(t *testing.T) {
 	var receivedReq client.CreateBeepRequest
 
