@@ -100,10 +100,10 @@ func FormatBeepSchedule(b *client.Beep) string {
 		return "cron: " + b.Cron
 	}
 	if b.NextRunAt != "" {
-		return b.NextRunAt
+		return ui.FormatTimestamp(b.NextRunAt, b.Timezone)
 	}
 	if b.RunAt != "" {
-		return b.RunAt
+		return ui.FormatTimestamp(b.RunAt, b.Timezone)
 	}
 	return ui.Dim("instant")
 }

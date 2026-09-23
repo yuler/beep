@@ -82,13 +82,13 @@ func NewCmdShow() *cobra.Command {
 					}
 				}
 				if b.LastPingAt != "" {
-					fmt.Println(ui.KeyValue("Last Ping", b.LastPingAt))
+					fmt.Println(ui.KeyValue("Last Ping", ui.FormatTimestamp(b.LastPingAt, b.Timezone)))
 				}
 				if b.NextRunAt != "" {
-					fmt.Println(ui.KeyValue("Next Run", b.NextRunAt))
+					fmt.Println(ui.KeyValue("Next Run", ui.FormatTimestamp(b.NextRunAt, b.Timezone)))
 				}
 				if b.LastRunAt != "" {
-					fmt.Println(ui.KeyValue("Last Run", b.LastRunAt))
+					fmt.Println(ui.KeyValue("Last Run", ui.FormatTimestamp(b.LastRunAt, b.Timezone)))
 				}
 				if len(b.NotificationChannels) > 0 {
 					fmt.Println(ui.KeyValue("Channels", strings.Join(b.NotificationChannels, ", ")))
@@ -119,7 +119,7 @@ func NewCmdShow() *cobra.Command {
 						}
 						tbl.AddRow(
 							r.ID,
-							r.ScheduledFor,
+							ui.FormatTimestamp(r.ScheduledFor, b.Timezone),
 							FormatRunStatus(r.Status),
 							sigStatus,
 						)

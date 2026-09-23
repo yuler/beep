@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"beep/internal/client"
 	"beep/internal/cmdutil"
@@ -27,10 +28,31 @@ func NewCmdRuns() *cobra.Command {
 					return err
 				}
 
-				var runs []*client.BeeperRun
+				var (
+					runs   []*client.BeeperRun
+					beeper *client.Beeper
+				)
 				err = ui.WithSpinner("Fetching beeper runs...", func() error {
-					var listErr error
-					runs, listErr = c.ListBeeperRuns(ctx, id)
+					if cmdutil.IsJSON(cmd) {
+						var listErr error
+						runs, listErr = c.ListBeeperRuns(ctx, id)
+						return listErr
+					}
+
+					var (
+						wg      sync.WaitGroup
+						listErr error
+					)
+					wg.Add(2)
+					go func() {
+						defer wg.Done()
+						runs, listErr = c.ListBeeperRuns(ctx, id)
+					}()
+					go func() {
+						defer wg.Done()
+						beeper, _ = c.GetBeeper(ctx, id)
+					}()
+					wg.Wait()
 					return listErr
 				})
 				if err != nil {
@@ -56,6 +78,11 @@ func NewCmdRuns() *cobra.Command {
 				tbl := ui.NewTable("ID", "SCHEDULED FOR", "STATUS", "SIGNAL STATUS", "CREATED AT")
 				tbl.SetIndent("  ")
 
+				tz := ""
+				if beeper != nil {
+					tz = beeper.Timezone
+				}
+
 				for _, r := range runs {
 					sigStatus := "-"
 					if r.SignalStatus != "" {
@@ -63,10 +90,10 @@ func NewCmdRuns() *cobra.Command {
 					}
 					tbl.AddRow(
 						r.ID,
-						r.ScheduledFor,
+						ui.FormatTimestamp(r.ScheduledFor, tz),
 						FormatRunStatus(r.Status),
 						sigStatus,
-						r.CreatedAt,
+						ui.FormatTimestamp(r.CreatedAt, tz),
 					)
 				}
 
