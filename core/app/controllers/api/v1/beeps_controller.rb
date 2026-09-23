@@ -42,6 +42,8 @@ class Api::V1::BeepsController < Api::V1::BaseController
   end
 
   def create
+    # Resolved timezone respects user's preference first, falling back to payload timezone, then UTC.
+    # Note: request payload timezone does not override an already configured user timezone.
     timezone = beep_timezone
     run_at = resolve_schedule_run_at(timezone: timezone)
     kind = params[:kind].presence || (params[:cron].present? ? "recurring" : "once")
@@ -66,6 +68,8 @@ class Api::V1::BeepsController < Api::V1::BaseController
   def update
     @beep = Current.account.beeps.find(params[:id])
 
+    # Timezone parameter serves as a transient reference zone to interpret :at wall-clock time if provided,
+    # falling back to the beep's existing timezone. The beep's stored timezone itself remains immutable.
     timezone = IanaTimezone.resolve(params[:timezone], @beep.timezone)
     run_at = resolve_schedule_run_at(timezone: timezone)
 

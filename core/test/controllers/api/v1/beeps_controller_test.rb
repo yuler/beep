@@ -499,12 +499,15 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Invalid in duration/, response.parsed_body["message"])
   end
 
-  test "create with :at time-only schedules run_at respecting timezone" do
+  test "create with :at time-only schedules run_at respecting user timezone" do
+    users(:john).update!(timezone: "Asia/Shanghai", timezone_source: "manual")
+
     # Current time: 10:00 UTC, user timezone Asia/Shanghai (18:00 local)
     travel_to Time.utc(2026, 9, 23, 10, 0, 0) do
       # Target: 19:30 local today (which is 11:30 UTC today)
+      # Request payload timezone cannot override user's configured timezone
       post "/api/v1/#{@account.slug}/beeps",
-        params: { title: "Dinner", at: "19:30", timezone: "Asia/Shanghai" },
+        params: { title: "Dinner", at: "19:30", timezone: "America/New_York" },
         headers: { "Authorization" => "Bearer #{@token}" },
         as: :json
 
@@ -517,7 +520,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
 
       # Target: 12:00 local (already passed today in Asia/Shanghai 18:00 -> rolls to tomorrow 12:00 local = tomorrow 04:00 UTC)
       post "/api/v1/#{@account.slug}/beeps",
-        params: { title: "Lunch tomorrow", at: "12:00", timezone: "Asia/Shanghai" },
+        params: { title: "Lunch tomorrow", at: "12:00" },
         headers: { "Authorization" => "Bearer #{@token}" },
         as: :json
 
@@ -525,6 +528,23 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
       body = response.parsed_body
       expected_tomorrow_utc = Time.utc(2026, 9, 24, 4, 0, 0)
       assert_equal expected_tomorrow_utc.iso8601, Time.iso8601(body["run_at"]).iso8601
+    end
+  end
+
+  test "create with :at falls back to request timezone when user timezone is unset" do
+    assert_nil users(:john).timezone
+
+    travel_to Time.utc(2026, 9, 23, 10, 0, 0) do
+      post "/api/v1/#{@account.slug}/beeps",
+        params: { title: "Dinner", at: "19:30", timezone: "Asia/Shanghai" },
+        headers: { "Authorization" => "Bearer #{@token}" },
+        as: :json
+
+      assert_response :created
+      body = response.parsed_body
+      assert_equal "Asia/Shanghai", body["timezone"]
+      expected_utc = Time.utc(2026, 9, 23, 11, 30, 0)
+      assert_equal expected_utc.iso8601, Time.iso8601(body["run_at"]).iso8601
     end
   end
 
@@ -573,7 +593,7 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update supports :in and :at to reschedule beep" do
-    beep = @account.beeps.create!(kind: :once, title: "Meeting", run_at: @run_at)
+    beep = @account.beeps.create!(kind: :once, title: "Meeting", run_at: @run_at, timezone: "UTC")
 
     travel_to Time.utc(2026, 9, 23, 10, 0, 0) do
       patch "/api/v1/#{@account.slug}/beeps/#{beep.id}",
@@ -586,6 +606,21 @@ class Api::V1::BeepsControllerTest < ActionDispatch::IntegrationTest
       expected_run_at = Time.utc(2026, 9, 23, 10, 45, 0)
       assert_equal expected_run_at.iso8601, Time.iso8601(body["run_at"]).iso8601
       assert_equal expected_run_at.to_i, beep.reload.run_at.to_i
+
+      # Reschedule with :at and transient timezone:
+      # schedules run_at in Asia/Shanghai local time while leaving stored beep.timezone unchanged ("UTC")
+      patch "/api/v1/#{@account.slug}/beeps/#{beep.id}",
+        params: { at: "19:30", timezone: "Asia/Shanghai" },
+        headers: { "Authorization" => "Bearer #{@token}" },
+        as: :json
+
+      assert_response :success
+      body = response.parsed_body
+      expected_at_utc = Time.utc(2026, 9, 23, 11, 30, 0)
+      assert_equal expected_at_utc.iso8601, Time.iso8601(body["run_at"]).iso8601
+      assert_equal expected_at_utc.to_i, beep.reload.run_at.to_i
+      assert_equal "UTC", body["timezone"]
+      assert_equal "UTC", beep.reload.timezone
     end
   end
 end

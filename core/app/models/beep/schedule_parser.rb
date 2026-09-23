@@ -62,6 +62,8 @@ module Beep::ScheduleParser
         nil
       end
 
+      # Time.zone.parse is lenient and coerces arbitrary numbers (e.g. "12345") into ancient dates (e.g. year 0012).
+      # Rejecting dates prior to year 2000 prevents false-positive parses for non-date inputs while supporting all modern schedule dates.
       if parsed && parsed.year >= 2000
         return parsed
       end
