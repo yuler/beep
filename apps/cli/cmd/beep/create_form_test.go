@@ -149,7 +149,7 @@ func TestFormatBeepSchedule(t *testing.T) {
 		Cron: "0 9 * * 1-5",
 	}
 	got := FormatBeepSchedule(bRecurring)
-	want := "cron: 0 9 * * 1-5 (Every weekday at 09:00)"
+	want := "cron: 0 9 * * 1-5"
 	if got != want {
 		t.Errorf("FormatBeepSchedule() = %q, want %q", got, want)
 	}

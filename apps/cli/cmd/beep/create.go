@@ -204,7 +204,7 @@ Examples:
 						}
 						params = *prompted
 
-						confirmed, ok, cErr := ui.PromptBeepConfirmation(params, defaultChannels, "Proposed Beep:")
+						confirmed, ok, cErr := confirmBeepWithPreview(ctx, c, params, defaultChannels, "Proposed Beep:")
 						if cErr != nil {
 							if isUserAbort(ctx, cErr) {
 								return nil
@@ -401,6 +401,107 @@ func shouldPromptBeepCreateForm(title, scheduleKind string, argCount int, aiFall
 	return strings.TrimSpace(title) == "" || (scheduleKind == "" && argCount == 0)
 }
 
+func confirmBeepWithPreview(ctx context.Context, c *client.Client, initial client.CreateBeepParams, defaultChannels []string, header string) (*client.CreateBeepParams, bool, error) {
+	current := initial
+	for {
+		if current.ScheduleKind == "" {
+			current.ScheduleKind = "instant"
+		}
+		req, err := current.ToRequest()
+		if err != nil {
+			errList := client.ExtractErrorList(err)
+			ui.PrintErrorList("Invalid input", errList)
+			ui.PrintBeepCreateSummary(current, errList)
+			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
+			if promptErr != nil {
+				return nil, false, promptErr
+			}
+			if !retry {
+				return nil, false, nil
+			}
+			prompted, pErr := ui.PromptBeepAdjust(current, defaultChannels, errList)
+			if pErr != nil {
+				return nil, false, pErr
+			}
+			current = *prompted
+			continue
+		}
+
+		var preview *client.BeepPreview
+		err = ui.WithSpinner("Fetching preview...", func() error {
+			var pErr error
+			preview, pErr = c.PreviewBeep(ctx, req)
+			return pErr
+		})
+		if err != nil {
+			if isUserAbort(ctx, err) {
+				return nil, false, err
+			}
+			errList := client.ExtractErrorList(err)
+			ui.PrintErrorList("Preview failed", errList)
+			ui.PrintBeepCreateSummary(current, errList)
+			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs and retry?", true)
+			if promptErr != nil {
+				return nil, false, promptErr
+			}
+			if !retry {
+				return nil, false, nil
+			}
+			prompted, pErr := ui.PromptBeepAdjust(current, defaultChannels, errList)
+			if pErr != nil {
+				return nil, false, pErr
+			}
+			current = *prompted
+			continue
+		}
+
+		if !preview.Valid {
+			ui.PrintErrorList("Invalid beep schedule", preview.Errors)
+			ui.PrintBeepCreateSummary(current, preview.Errors)
+			retry, promptErr := ui.PromptConfirm("Would you like to adjust your inputs?", true)
+			if promptErr != nil {
+				return nil, false, promptErr
+			}
+			if !retry {
+				return nil, false, nil
+			}
+			prompted, pErr := ui.PromptBeepAdjust(current, defaultChannels, preview.Errors)
+			if pErr != nil {
+				return nil, false, pErr
+			}
+			current = *prompted
+			continue
+		}
+
+		if current.Timezone == "" && preview.Timezone != "" {
+			current.Timezone = preview.Timezone
+		}
+
+		ui.PrintBeepPreview(preview, header)
+
+		action, actionErr := ui.PromptBeepProposalAction()
+		if actionErr != nil {
+			return nil, false, actionErr
+		}
+		switch action {
+		case "cancel":
+			fmt.Println(ui.Dim("Cancelled."))
+			return nil, false, nil
+		case "edit":
+			prompted, pErr := ui.PromptBeepAdjust(current, defaultChannels, nil)
+			if pErr != nil {
+				return nil, false, pErr
+			}
+			current = *prompted
+			continue
+		case "create":
+			return &current, true, nil
+		default:
+			return &current, true, nil
+		}
+	}
+}
+
 func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Command, prompt, bodyFlag, channelsFlag, tz, intentFlag string, metadata map[string]any) error {
 	var proposal *client.BeepProposal
 	err := ui.WithSpinner("Analyzing natural language prompt with AI...", func() error {
@@ -485,7 +586,7 @@ func handleNaturalCreate(ctx context.Context, c *client.Client, cmd *cobra.Comma
 	}
 
 	if cmdutil.IsInteractive(cmd) && !cmdutil.IsJSON(cmd) {
-		confirmed, ok, cErr := ui.PromptBeepConfirmation(params, defaultChannels, "Proposed Beep:")
+		confirmed, ok, cErr := confirmBeepWithPreview(ctx, c, params, defaultChannels, "Proposed Beep:")
 		if cErr != nil {
 			if isUserAbort(ctx, cErr) {
 				return nil

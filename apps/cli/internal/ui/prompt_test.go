@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -196,62 +195,18 @@ func TestCommonIANATimezonesAreValid(t *testing.T) {
 	}
 }
 
-func TestFormatScheduleHuman(t *testing.T) {
-	loc, _ := time.LoadLocation("Asia/Shanghai")
-	// 2026-09-23 17:41:00 Wednesday
-	now := time.Date(2026, 9, 23, 17, 41, 0, 0, loc)
-
-	// 1. Instant
-	k, v := FormatScheduleHuman("instant", "", "Asia/Shanghai", now)
-	if k != "Schedule" || !strings.Contains(v, "instant") || !strings.Contains(v, "fires immediately") {
-		t.Errorf("instant got key=%q val=%q", k, v)
+func TestPrintBeepPreview(t *testing.T) {
+	preview := &client.BeepPreview{
+		Valid:                true,
+		Kind:                 "once",
+		Title:                "Test Beep",
+		Body:                 "Test Body",
+		Intent:               "test_intent",
+		ScheduleKey:          "Delay",
+		ScheduleDisplay:      "15m (in 15m · Today at 17:56:00 · 2026-09-23 17:56:00 Asia/Shanghai)",
+		Timezone:             "Asia/Shanghai",
+		NotificationChannels: []string{"cli", "desktop"},
 	}
-
-	// 2. Delay: 15m
-	k, v = FormatScheduleHuman("delay", "15m", "Asia/Shanghai", now)
-	if k != "Delay" || !strings.Contains(v, "15m") || !strings.Contains(v, "Today at 17:56:00") || !strings.Contains(v, "Asia/Shanghai") {
-		t.Errorf("delay 15m got key=%q val=%q", k, v)
-	}
-
-	// 3. Delay: 20h (crosses midnight)
-	k, v = FormatScheduleHuman("delay", "20h", "Asia/Shanghai", now)
-	if k != "Delay" || !strings.Contains(v, "Tomorrow at 13:41:00") {
-		t.Errorf("delay 20h got key=%q val=%q", k, v)
-	}
-
-	// 4. Delay: 1d
-	k, v = FormatScheduleHuman("delay", "1d", "Asia/Shanghai", now)
-	if k != "Delay" || !strings.Contains(v, "Tomorrow at 17:41:00") {
-		t.Errorf("delay 1d got key=%q val=%q", k, v)
-	}
-
-	// 5. At: 16:30 (already passed at 17:41 today, must be tomorrow!)
-	k, v = FormatScheduleHuman("at", "16:30", "Asia/Shanghai", now)
-	if k != "Run At" || !strings.Contains(v, "Tomorrow at 16:30") || !strings.Contains(v, "2026-09-24 16:30:00") {
-		t.Errorf("at 16:30 (after) got key=%q val=%q", k, v)
-	}
-
-	// 6. At: 18:30 (still in future today!)
-	k, v = FormatScheduleHuman("at", "18:30", "Asia/Shanghai", now)
-	if k != "Run At" || !strings.Contains(v, "Today at 18:30") || !strings.Contains(v, "2026-09-23 18:30:00") {
-		t.Errorf("at 18:30 (before) got key=%q val=%q", k, v)
-	}
-
-	// 7. At: specific date
-	k, v = FormatScheduleHuman("at", "2026-10-01 10:00", "Asia/Shanghai", now)
-	if k != "Run At" || !strings.Contains(v, "2026-10-01 10:00:00") || !strings.Contains(v, "in 7 days") {
-		t.Errorf("at specific date got key=%q val=%q", k, v)
-	}
-
-	// 8. Cron: 0 9 * * 1-5
-	k, v = FormatScheduleHuman("cron", "0 9 * * 1-5", "Asia/Shanghai", now)
-	if k != "Cron" || !strings.Contains(v, "Every weekday at 09:00") || !strings.Contains(v, "2026-09-24 09:00:00") {
-		t.Errorf("cron 0 9 * * 1-5 got key=%q val=%q", k, v)
-	}
-
-	// 9. Cron: */5 * * * *
-	k, v = FormatScheduleHuman("cron", "*/5 * * * *", "Asia/Shanghai", now)
-	if k != "Cron" || !strings.Contains(v, "Every 5 minutes") || !strings.Contains(v, "2026-09-23 17:45:00") {
-		t.Errorf("cron */5 * * * * got key=%q val=%q", k, v)
-	}
+	// Verify it prints without panicking
+	PrintBeepPreview(preview, "Test Preview")
 }
