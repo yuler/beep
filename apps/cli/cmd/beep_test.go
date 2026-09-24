@@ -710,3 +710,128 @@ func TestNaturalCreateChannelsPriority(t *testing.T) {
 		t.Errorf("expected empty channels, got %v", lastCreatedChannels)
 	}
 }
+
+func TestBeepTimezoneDisplay(t *testing.T) {
+	mockBeep := &client.Beep{
+		ID:        "beep_tz",
+		Title:     "TZ Beep",
+		Status:    "active",
+		Kind:      "once",
+		Timezone:  "Asia/Shanghai",
+		RunAt:     "2026-09-23T10:00:00Z",
+		NextRunAt: "2026-09-23T10:00:00Z",
+		LastRunAt: "2026-09-22T10:00:00Z",
+		Runs: []client.BeepRun{
+			{ID: "run_tz1", Status: "succeeded", ScheduledFor: "2026-09-23T10:00:00Z"},
+		},
+	}
+	mockRecurringBeep := &client.Beep{
+		ID:       "beep_rec",
+		Title:    "Recurring Beep",
+		Status:   "active",
+		Kind:     "recurring",
+		Cron:     "0 9 * * *",
+		Timezone: "Asia/Shanghai",
+	}
+	mockInvalidTZBeep := &client.Beep{
+		ID:        "beep_invalid_tz",
+		Title:     "Invalid TZ Beep",
+		Status:    "active",
+		Kind:      "once",
+		Timezone:  "Invalid/Unknown_Zone",
+		NextRunAt: "2026-09-23T10:00:00Z",
+	}
+
+	_, cleanup := setupBeepTestEnv(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/me" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"identity": map[string]any{"id": "id_1", "email": "test@example.com"},
+			})
+			return
+		}
+		if r.URL.Path == "/api/v1/beeps" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"beeps": []*client.Beep{mockBeep, mockRecurringBeep, mockInvalidTZBeep},
+			})
+			return
+		}
+		if r.URL.Path == "/api/v1/beeps/beep_tz" {
+			_ = json.NewEncoder(w).Encode(mockBeep)
+			return
+		}
+		if r.URL.Path == "/api/v1/beeps/beep_invalid_tz" {
+			_ = json.NewEncoder(w).Encode(mockInvalidTZBeep)
+			return
+		}
+		http.NotFound(w, r)
+	})
+	defer cleanup()
+
+	listCmd := findBeepCmd(t, "list")
+	showCmd := findBeepCmd(t, "show")
+
+	// 1. beep list human-readable
+	outList, err := captureStdout(func() error {
+		resetCmdFlags(listCmd)
+		return listCmd.RunE(listCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("beep list failed: %v", err)
+	}
+	if !strings.Contains(outList, "2026-09-23 18:00:00") {
+		t.Errorf("expected beep list to show '2026-09-23 18:00:00', got:\n%s", outList)
+	}
+	if !strings.Contains(outList, "cron: 0 9 * * *") {
+		t.Errorf("expected beep list to keep 'cron: 0 9 * * *', got:\n%s", outList)
+	}
+	if !strings.Contains(outList, "2026-09-23 10:00:00") {
+		t.Errorf("expected invalid timezone to fall back to UTC '2026-09-23 10:00:00', got:\n%s", outList)
+	}
+
+	// 2. beep list --json preserves original ISO string
+	flagJSON = true
+	jsonList, err := captureStdout(func() error {
+		return listCmd.RunE(listCmd, nil)
+	})
+	flagJSON = false
+	if err != nil {
+		t.Fatalf("beep list --json failed: %v", err)
+	}
+	if !strings.Contains(jsonList, "2026-09-23T10:00:00Z") {
+		t.Errorf("expected beep list --json to keep original ISO string, got:\n%s", jsonList)
+	}
+
+	// 3. beep show human-readable
+	outShow, err := captureStdout(func() error {
+		resetCmdFlags(showCmd)
+		return showCmd.RunE(showCmd, []string{"beep_tz"})
+	})
+	if err != nil {
+		t.Fatalf("beep show failed: %v", err)
+	}
+	if !strings.Contains(outShow, "Run At:") || !strings.Contains(outShow, "2026-09-23 18:00:00") {
+		t.Errorf("expected Run At '2026-09-23 18:00:00', got:\n%s", outShow)
+	}
+	if !strings.Contains(outShow, "Next Run:") || !strings.Contains(outShow, "2026-09-23 18:00:00") {
+		t.Errorf("expected Next Run '2026-09-23 18:00:00', got:\n%s", outShow)
+	}
+	if !strings.Contains(outShow, "Last Run:") || !strings.Contains(outShow, "2026-09-22 18:00:00") {
+		t.Errorf("expected Last Run '2026-09-22 18:00:00', got:\n%s", outShow)
+	}
+	if !strings.Contains(outShow, "2026-09-23 18:00:00") {
+		t.Errorf("expected Recent Runs Scheduled For '2026-09-23 18:00:00', got:\n%s", outShow)
+	}
+
+	// 4. beep show --json preserves original ISO string
+	flagJSON = true
+	jsonShow, err := captureStdout(func() error {
+		return showCmd.RunE(showCmd, []string{"beep_tz"})
+	})
+	flagJSON = false
+	if err != nil {
+		t.Fatalf("beep show --json failed: %v", err)
+	}
+	if !strings.Contains(jsonShow, "2026-09-23T10:00:00Z") {
+		t.Errorf("expected beep show --json to keep original ISO string, got:\n%s", jsonShow)
+	}
+}

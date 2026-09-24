@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -440,5 +441,226 @@ func TestBeeperOmittedIDNonInteractive(t *testing.T) {
 		} else if !strings.Contains(err.Error(), "beeper ID is required") {
 			t.Errorf("expected 'beeper ID is required' error for %s, got: %v", c.Name(), err)
 		}
+	}
+}
+
+func TestBeeperTimezoneDisplay(t *testing.T) {
+	mockBeeper1 := &client.Beeper{
+		ID:         "bp_tz1",
+		Title:      "Ping Beeper",
+		Status:     "active",
+		AlertState: "ok",
+		Timezone:   "Asia/Shanghai",
+		LastPingAt: "2026-09-23T10:00:00Z",
+		NextRunAt:  "2026-09-23T11:00:00Z",
+		LastRunAt:  "2026-09-23T09:00:00Z",
+		Runs: []client.BeeperRun{
+			{
+				ID:           "brun_1",
+				ScheduledFor: "2026-09-23T10:00:00Z",
+				Status:       "ok",
+				CreatedAt:    "2026-09-23T09:30:00Z",
+			},
+		},
+	}
+	mockBeeper2 := &client.Beeper{
+		ID:         "bp_tz2",
+		Title:      "Run-only Beeper",
+		Status:     "active",
+		AlertState: "ok",
+		Timezone:   "Asia/Shanghai",
+		LastRunAt:  "2026-09-23T10:00:00Z",
+	}
+	mockBeeper3 := &client.Beeper{
+		ID:         "bp_tz3",
+		Title:      "No ping or run",
+		Status:     "active",
+		AlertState: "ok",
+		Timezone:   "Asia/Shanghai",
+	}
+	mockBeeperInvalid := &client.Beeper{
+		ID:         "bp_inv",
+		Title:      "Invalid TZ Beeper",
+		Status:     "active",
+		AlertState: "ok",
+		Timezone:   "Unknown/Invalid_Zone",
+		LastPingAt: "2026-09-23T10:00:00Z",
+	}
+
+	mockRuns := []*client.BeeperRun{
+		{
+			ID:           "brun_1",
+			ScheduledFor: "2026-09-23T10:00:00Z",
+			Status:       "ok",
+			CreatedAt:    "2026-09-23T09:30:00Z",
+		},
+	}
+
+	_, cleanup := setupBeeperTestEnv(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/me" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"identity": map[string]any{"id": "id_1", "email": "test@example.com"},
+			})
+			return
+		}
+		if r.URL.Path == "/api/v1/beepers" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"beepers": []*client.Beeper{mockBeeper1, mockBeeper2, mockBeeper3, mockBeeperInvalid},
+			})
+			return
+		}
+		if r.URL.Path == "/api/v1/beepers/bp_tz1" {
+			_ = json.NewEncoder(w).Encode(mockBeeper1)
+			return
+		}
+		if r.URL.Path == "/api/v1/beepers/bp_tz1/runs" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"runs": mockRuns,
+			})
+			return
+		}
+		if r.URL.Path == "/api/v1/beepers/bp_notz/runs" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"runs": mockRuns,
+			})
+			return
+		}
+		http.NotFound(w, r)
+	})
+	defer cleanup()
+
+	listCmd := findBeeperCmd(t, "list")
+	showCmd := findBeeperCmd(t, "show")
+	runsCmd := findBeeperCmd(t, "runs")
+
+	// 1. beeper list human-readable
+	outList, err := captureStdout(func() error {
+		resetCmdFlags(listCmd)
+		return listCmd.RunE(listCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("beeper list failed: %v", err)
+	}
+	// bp_tz1: LastPingAt converted to Asia/Shanghai (10:00 UTC -> 18:00)
+	// bp_tz2: LastRunAt converted to Asia/Shanghai (10:00 UTC -> 18:00)
+	if !strings.Contains(outList, "2026-09-23 18:00:00") {
+		t.Errorf("expected beeper list to contain '2026-09-23 18:00:00', got:\n%s", outList)
+	}
+	// bp_tz3: empty last run -> assert row ends with "-"
+	var bp3Line string
+	for _, line := range strings.Split(outList, "\n") {
+		if strings.Contains(line, "bp_tz3") {
+			bp3Line = line
+			break
+		}
+	}
+	if bp3Line == "" {
+		t.Fatalf("expected beeper list to contain row for 'bp_tz3', got:\n%s", outList)
+	}
+	if !strings.HasSuffix(strings.TrimSpace(bp3Line), "-") {
+		t.Errorf("expected row for 'bp_tz3' to end with '-' (empty last ping/run), got line: %q", bp3Line)
+	}
+	// bp_inv: invalid timezone -> UTC (10:00 UTC -> 10:00:00)
+	if !strings.Contains(outList, "2026-09-23 10:00:00") {
+		t.Errorf("expected beeper list to contain '2026-09-23 10:00:00' for invalid timezone, got:\n%s", outList)
+	}
+
+	// 2. beeper list --json keeps original ISO strings
+	flagJSON = true
+	jsonList, err := captureStdout(func() error {
+		return listCmd.RunE(listCmd, nil)
+	})
+	flagJSON = false
+	if err != nil {
+		t.Fatalf("beeper list --json failed: %v", err)
+	}
+	if !strings.Contains(jsonList, "2026-09-23T10:00:00Z") {
+		t.Errorf("expected beeper list --json to retain original ISO string, got:\n%s", jsonList)
+	}
+
+	// 3. beeper show human-readable
+	outShow, err := captureStdout(func() error {
+		resetCmdFlags(showCmd)
+		return showCmd.RunE(showCmd, []string{"bp_tz1"})
+	})
+	if err != nil {
+		t.Fatalf("beeper show failed: %v", err)
+	}
+	if !strings.Contains(outShow, "Last Ping:") || !strings.Contains(outShow, "2026-09-23 18:00:00") {
+		t.Errorf("expected Last Ping '2026-09-23 18:00:00', got:\n%s", outShow)
+	}
+	if !strings.Contains(outShow, "Next Run:") || !strings.Contains(outShow, "2026-09-23 19:00:00") {
+		t.Errorf("expected Next Run '2026-09-23 19:00:00', got:\n%s", outShow)
+	}
+	if !strings.Contains(outShow, "Last Run:") || !strings.Contains(outShow, "2026-09-23 17:00:00") {
+		t.Errorf("expected Last Run '2026-09-23 17:00:00', got:\n%s", outShow)
+	}
+	if !strings.Contains(outShow, "brun_1") || !strings.Contains(outShow, "2026-09-23 18:00:00") {
+		t.Errorf("expected recent run row Scheduled For '2026-09-23 18:00:00', got:\n%s", outShow)
+	}
+
+	// 4. beeper show --json keeps original ISO strings
+	flagJSON = true
+	jsonShow, err := captureStdout(func() error {
+		return showCmd.RunE(showCmd, []string{"bp_tz1"})
+	})
+	flagJSON = false
+	if err != nil {
+		t.Fatalf("beeper show --json failed: %v", err)
+	}
+	if !strings.Contains(jsonShow, "2026-09-23T10:00:00Z") {
+		t.Errorf("expected beeper show --json to retain original ISO string, got:\n%s", jsonShow)
+	}
+
+	// 5. beeper runs human-readable
+	outRuns, err := captureStdout(func() error {
+		resetCmdFlags(runsCmd)
+		return runsCmd.RunE(runsCmd, []string{"bp_tz1"})
+	})
+	if err != nil {
+		t.Fatalf("beeper runs failed: %v", err)
+	}
+	// Scheduled For: 10:00 UTC -> 18:00:00 in Asia/Shanghai
+	if !strings.Contains(outRuns, "2026-09-23 18:00:00") {
+		t.Errorf("expected beeper runs Scheduled For '2026-09-23 18:00:00', got:\n%s", outRuns)
+	}
+	// Created At: 09:30 UTC -> 17:30:00 in Asia/Shanghai
+	if !strings.Contains(outRuns, "2026-09-23 17:30:00") {
+		t.Errorf("expected beeper runs Created At '2026-09-23 17:30:00', got:\n%s", outRuns)
+	}
+
+	// 6. beeper runs --json keeps original ISO strings
+	flagJSON = true
+	jsonRuns, err := captureStdout(func() error {
+		return runsCmd.RunE(runsCmd, []string{"bp_tz1"})
+	})
+	flagJSON = false
+	if err != nil {
+		t.Fatalf("beeper runs --json failed: %v", err)
+	}
+	if !strings.Contains(jsonRuns, "2026-09-23T10:00:00Z") || !strings.Contains(jsonRuns, "2026-09-23T09:30:00Z") {
+		t.Errorf("expected beeper runs --json to retain original ISO string, got:\n%s", jsonRuns)
+	}
+
+	// 7. beeper runs when GetBeeper fails: logs warning to stderr, falls back to UTC
+	var stderrBuf bytes.Buffer
+	runsCmd.SetErr(&stderrBuf)
+	outRunsFallback, err := captureStdout(func() error {
+		resetCmdFlags(runsCmd)
+		return runsCmd.RunE(runsCmd, []string{"bp_notz"})
+	})
+	runsCmd.SetErr(nil)
+	if err != nil {
+		t.Fatalf("beeper runs bp_notz failed: %v", err)
+	}
+	if !strings.Contains(stderrBuf.String(), "Warning: failed to fetch beeper details for timezone") {
+		t.Errorf("expected stderr warning when GetBeeper fails, got: %q", stderrBuf.String())
+	}
+	// Fallback to UTC
+	if !strings.Contains(outRunsFallback, "2026-09-23 10:00:00") {
+		t.Errorf("expected beeper runs fallback Scheduled For '2026-09-23 10:00:00', got:\n%s", outRunsFallback)
+	}
+	if !strings.Contains(outRunsFallback, "2026-09-23 09:30:00") {
+		t.Errorf("expected beeper runs fallback Created At '2026-09-23 09:30:00', got:\n%s", outRunsFallback)
 	}
 }

@@ -218,6 +218,14 @@ func timezoneFromLocaltime() (string, bool) {
 		return "", false
 	}
 	target = filepath.ToSlash(target)
+	if idx := strings.Index(target, "/zoneinfo/"); idx != -1 {
+		tz := target[idx+len("/zoneinfo/"):]
+		tz = strings.TrimPrefix(tz, "posix/")
+		tz = strings.TrimPrefix(tz, "right/")
+		if ValidIANATimezone(tz) {
+			return tz, true
+		}
+	}
 	for _, prefix := range []string{
 		"/usr/share/zoneinfo/",
 		"/var/db/timezone/zoneinfo/",

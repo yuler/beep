@@ -65,9 +65,9 @@ func NewCmdList() *cobra.Command {
 					scheduleStr := FormatBeeperSchedule(b.Cron)
 					lastRun := "-"
 					if b.LastPingAt != "" {
-						lastRun = b.LastPingAt
+						lastRun = ui.FormatTimestamp(b.LastPingAt, b.Timezone)
 					} else if b.LastRunAt != "" {
-						lastRun = b.LastRunAt
+						lastRun = ui.FormatTimestamp(b.LastRunAt, b.Timezone)
 					}
 
 					title := ui.Truncate(b.Title, 28)
