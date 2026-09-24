@@ -625,4 +625,3 @@ func TestBeeperTimezoneDisplay(t *testing.T) {
 		t.Errorf("expected beeper runs --json to retain original ISO string, got:\n%s", jsonRuns)
 	}
 }
-

@@ -835,4 +835,3 @@ func TestBeepTimezoneDisplay(t *testing.T) {
 		t.Errorf("expected beep show --json to keep original ISO string, got:\n%s", jsonShow)
 	}
 }
-
