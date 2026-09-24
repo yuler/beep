@@ -29,8 +29,9 @@ func NewCmdRuns() *cobra.Command {
 				}
 
 				var (
-					runs   []*client.BeeperRun
-					beeper *client.Beeper
+					runs      []*client.BeeperRun
+					beeper    *client.Beeper
+					beeperErr error
 				)
 				err = ui.WithSpinner("Fetching beeper runs...", func() error {
 					if cmdutil.IsJSON(cmd) {
@@ -50,13 +51,17 @@ func NewCmdRuns() *cobra.Command {
 					}()
 					go func() {
 						defer wg.Done()
-						beeper, _ = c.GetBeeper(ctx, id)
+						beeper, beeperErr = c.GetBeeper(ctx, id)
 					}()
 					wg.Wait()
 					return listErr
 				})
 				if err != nil {
 					return err
+				}
+
+				if beeperErr != nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to fetch beeper details for timezone: %v (falling back to UTC)\n", beeperErr)
 				}
 
 				if cmdutil.IsJSON(cmd) {

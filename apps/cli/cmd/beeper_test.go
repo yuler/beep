@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -518,6 +519,12 @@ func TestBeeperTimezoneDisplay(t *testing.T) {
 			})
 			return
 		}
+		if r.URL.Path == "/api/v1/beepers/bp_notz/runs" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"runs": mockRuns,
+			})
+			return
+		}
 		http.NotFound(w, r)
 	})
 	defer cleanup()
@@ -539,9 +546,19 @@ func TestBeeperTimezoneDisplay(t *testing.T) {
 	if !strings.Contains(outList, "2026-09-23 18:00:00") {
 		t.Errorf("expected beeper list to contain '2026-09-23 18:00:00', got:\n%s", outList)
 	}
-	// bp_tz3: empty last run -> "-"
-	if !strings.Contains(outList, "-") {
-		t.Errorf("expected beeper list to contain '-' for empty ping/run, got:\n%s", outList)
+	// bp_tz3: empty last run -> assert row ends with "-"
+	var bp3Line string
+	for _, line := range strings.Split(outList, "\n") {
+		if strings.Contains(line, "bp_tz3") {
+			bp3Line = line
+			break
+		}
+	}
+	if bp3Line == "" {
+		t.Fatalf("expected beeper list to contain row for 'bp_tz3', got:\n%s", outList)
+	}
+	if !strings.HasSuffix(strings.TrimSpace(bp3Line), "-") {
+		t.Errorf("expected row for 'bp_tz3' to end with '-' (empty last ping/run), got line: %q", bp3Line)
 	}
 	// bp_inv: invalid timezone -> UTC (10:00 UTC -> 10:00:00)
 	if !strings.Contains(outList, "2026-09-23 10:00:00") {
@@ -623,5 +640,27 @@ func TestBeeperTimezoneDisplay(t *testing.T) {
 	}
 	if !strings.Contains(jsonRuns, "2026-09-23T10:00:00Z") || !strings.Contains(jsonRuns, "2026-09-23T09:30:00Z") {
 		t.Errorf("expected beeper runs --json to retain original ISO string, got:\n%s", jsonRuns)
+	}
+
+	// 7. beeper runs when GetBeeper fails: logs warning to stderr, falls back to UTC
+	var stderrBuf bytes.Buffer
+	runsCmd.SetErr(&stderrBuf)
+	outRunsFallback, err := captureStdout(func() error {
+		resetCmdFlags(runsCmd)
+		return runsCmd.RunE(runsCmd, []string{"bp_notz"})
+	})
+	runsCmd.SetErr(nil)
+	if err != nil {
+		t.Fatalf("beeper runs bp_notz failed: %v", err)
+	}
+	if !strings.Contains(stderrBuf.String(), "Warning: failed to fetch beeper details for timezone") {
+		t.Errorf("expected stderr warning when GetBeeper fails, got: %q", stderrBuf.String())
+	}
+	// Fallback to UTC
+	if !strings.Contains(outRunsFallback, "2026-09-23 10:00:00") {
+		t.Errorf("expected beeper runs fallback Scheduled For '2026-09-23 10:00:00', got:\n%s", outRunsFallback)
+	}
+	if !strings.Contains(outRunsFallback, "2026-09-23 09:30:00") {
+		t.Errorf("expected beeper runs fallback Created At '2026-09-23 09:30:00', got:\n%s", outRunsFallback)
 	}
 }
