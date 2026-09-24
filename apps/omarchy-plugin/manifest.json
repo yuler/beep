@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "beep",
+  "name": "Beep",
+  "version": "0.3.4",
+  "author": "Yu Le",
+  "license": "MIT",
+  "description": "Beep runner and channel status bar widget and dashboard.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Beep",
+    "description": "Beep runner and channel daemon status and dashboard.",
+    "category": "Developer Tools",
+    "defaultSection": "right",
+    "allowMultiple": false
+  }
+}
