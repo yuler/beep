@@ -10,6 +10,21 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PLUGIN_DIR="$ROOT_DIR/apps/omarchy-plugin"
 TARGET="$HOME/.config/omarchy/plugins/beep"
 
+VERSION="$(tr -d '[:space:]' < "$ROOT_DIR/VERSION")"
+if [ -f "$PLUGIN_DIR/manifest.json" ]; then
+  python3 -c "
+import json
+p = '$PLUGIN_DIR/manifest.json'
+with open(p) as f:
+    d = json.load(f)
+if d.get('version') != '$VERSION':
+    d['version'] = '$VERSION'
+    with open(p, 'w') as f:
+        json.dump(d, f, indent=2)
+        f.write('\n')
+"
+fi
+
 if [ -L "$TARGET" ]; then
   current_target="$(readlink "$TARGET")"
   if [ "$current_target" = "$PLUGIN_DIR" ] || [ "$(readlink -f "$TARGET" 2>/dev/null)" = "$(readlink -f "$PLUGIN_DIR" 2>/dev/null)" ]; then

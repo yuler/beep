@@ -11,8 +11,6 @@ Item {
   property bool runnerRunning: false
   property bool channelRunning: false
 
-  readonly property color statusColor: "#22c55e"
-
   width: iconSize
   height: iconSize
   implicitWidth: iconSize
@@ -100,14 +98,53 @@ Item {
     }
   }
 
-  Rectangle {
-    readonly property real markSize: Math.max(4, Math.round(root.iconSize * 0.22))
+  component StatusMark: Item {
+    id: mark
+    property bool active: false
+    property real markSize: Math.max(4, Math.round(root.iconSize * 0.28))
 
-    anchors.top: parent.top
-    anchors.right: parent.right
     width: markSize
     height: markSize
-    radius: markSize / 2
-    color: root.statusColor
+
+    // Green dot
+    Rectangle {
+      visible: mark.active
+      anchors.centerIn: parent
+      width: mark.markSize
+      height: mark.markSize
+      radius: mark.markSize / 2
+      color: "#22c55e"
+    }
+
+    // Red slash
+    Rectangle {
+      visible: !mark.active
+      anchors.centerIn: parent
+      width: Math.round(mark.markSize * 1.4)
+      height: Math.max(1.5, Math.round(mark.markSize * 0.35))
+      radius: height / 2
+      color: "#ef4444"
+      rotation: -45
+    }
+  }
+
+  // Top Mark: Runner
+  StatusMark {
+    id: topRunnerMark
+    active: root.runnerRunning
+    anchors.top: parent.top
+    anchors.right: parent.right
+    anchors.topMargin: 0
+    anchors.rightMargin: 0
+  }
+
+  // Bottom Mark: Channel
+  StatusMark {
+    id: bottomChannelMark
+    active: root.channelRunning
+    anchors.bottom: parent.bottom
+    anchors.right: parent.right
+    anchors.bottomMargin: 0
+    anchors.rightMargin: 0
   }
 }

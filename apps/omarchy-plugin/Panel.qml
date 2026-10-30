@@ -17,7 +17,7 @@ Panel {
   property bool runnerRunning: false
   property bool channelRunning: false
 
-  property var userData: ({ userName: "", userEmail: "", accountSlug: "", serverUrl: "", isLoggedIn: false })
+  property var userData: ({ userName: "", userEmail: "", accountSlug: "", isLoggedIn: false })
   property var beeps: []
   property int beepsTotal: 0
   property bool beepsLoading: false
@@ -54,89 +54,8 @@ Panel {
     return false
   }
 
-  readonly property string pluginDir: {
-    var here = Qt.resolvedUrl(".").toString()
-    return here.replace(/^file:\/\//, "").replace(/\/$/, "")
-  }
-
-  function webOrigin() {
-    var server = String(root.userData.serverUrl || "").replace(/\/$/, "")
-    var match = server.match(/^(https?:\/\/)core\.([^/:]+)(?::(\d+))?/i)
-    if (!match) return server
-    var port = match[3] === "3001" ? "3000" : match[3]
-    return match[1] + "web." + match[2] + (port ? ":" + port : "")
-  }
-
-  function accountWebUrl(path) {
-    var origin = root.webOrigin()
-    var slug = root.userData.accountSlug || ""
-    if (!origin || !slug || !path) return ""
-    return origin + "/" + slug + path
-  }
-
-  function beepUrl(beep) {
-    var id = beep && beep.id ? beep.id : ""
-    return root.accountWebUrl(id ? "/beeps/" + id : "")
-  }
-
-  function jobUrl(job) {
-    if (!job) return ""
-    if (job.runnerId) return root.accountWebUrl("/runners/" + job.runnerId)
-    return root.accountWebUrl("/runners")
-  }
-
-  function notifyAt(beep) {
-    if (!beep) return ""
-    return beep.next_run_at || beep.run_at || ""
-  }
-
-  function formatNotifyTime(iso) {
-    if (!iso) return "—"
-    var date = new Date(iso)
-    if (isNaN(date.getTime())) return "—"
-    return Qt.formatDateTime(date, "MM-dd HH:mm")
-  }
-
-  function linkBeeps(items) {
-    var out = []
-    for (var i = 0; i < items.length; i++) {
-      var beep = items[i] || {}
-      out.push({
-        id: beep.id || "",
-        title: beep.title || "",
-        next_run_at: beep.next_run_at || "",
-        run_at: beep.run_at || "",
-        url: root.beepUrl(beep)
-      })
-    }
-    return out
-  }
-
-  function linkJobs(items) {
-    var out = []
-    for (var i = 0; i < items.length; i++) {
-      var job = items[i] || {}
-      var linked = {
-        slug: job.slug || "",
-        id: job.id || "",
-        runnerId: job.runnerId || "",
-        name: job.name || job.slug || "",
-        url: ""
-      }
-      linked.url = root.jobUrl(linked)
-      out.push(linked)
-    }
-    return out
-  }
-
-  function openExternal(url) {
-    var target = String(url || "").trim()
-    if (!target) return
-    Util.execArgv(["xdg-open", target])
-    root.close()
-  }
-
   function fetchData() {
+    // 1. User info from local config (does not call server)
     userProc.running = false
     userProc.running = true
 
@@ -159,7 +78,7 @@ Panel {
 
   Process {
     id: userProc
-    command: ["python3", "-u", root.pluginDir + "/session.py"]
+    command: ["beep", "config", "show", "--json"]
     running: false
     stdout: StdioCollector {
       waitForEnd: true
@@ -172,13 +91,10 @@ Panel {
             userName: data.UserName || "",
             userEmail: data.UserEmail || "",
             accountSlug: data.AccountSlug || "",
-            serverUrl: data.ServerURL || "",
-            isLoggedIn: data.LoggedIn === true
+            isLoggedIn: !!(data.AccessToken && data.AccessToken.length > 0)
           }
-          if (root.beeps.length > 0) root.beeps = root.linkBeeps(root.beeps)
-          if (root.jobs.length > 0) root.jobs = root.linkJobs(root.jobs)
         } catch (e) {
-          root.userData = { userName: "", userEmail: "", accountSlug: "", serverUrl: "", isLoggedIn: false }
+          root.userData = { userName: "", userEmail: "", accountSlug: "", isLoggedIn: false }
         }
       }
     }
@@ -199,15 +115,13 @@ Panel {
           if (Array.isArray(items)) {
             root.beepsTotal = items.length
             var sorted = items.slice().sort(function(a, b) {
-              var ta = root.notifyAt(a)
-              var tb = root.notifyAt(b)
-              var da = ta ? new Date(ta).getTime() : Number.POSITIVE_INFINITY
-              var db = tb ? new Date(tb).getTime() : Number.POSITIVE_INFINITY
-              if (isNaN(da)) da = Number.POSITIVE_INFINITY
-              if (isNaN(db)) db = Number.POSITIVE_INFINITY
-              return da - db
+              var da = a.created_at ? new Date(a.created_at).getTime() : 0
+              var db = b.created_at ? new Date(b.created_at).getTime() : 0
+              if (isNaN(da)) da = 0
+              if (isNaN(db)) db = 0
+              return db - da
             })
-            root.beeps = root.linkBeeps(sorted.slice(0, 5))
+            root.beeps = sorted.slice(0, 5)
           } else {
             root.beepsTotal = 0
             root.beeps = []
@@ -235,21 +149,13 @@ Panel {
           if (Array.isArray(items)) {
             root.jobsTotal = items.length
             var top = items.slice(0, 5)
-            var jobs = []
+            var slugs = []
             for (var i = 0; i < top.length; i++) {
               var item = top[i]
-              var serverJob = item.ServerJob || null
-              var localJob = item.LocalJob || null
-              var slug = item.Slug || (localJob && localJob.slug) || (serverJob && serverJob.slug) || ""
-              if (!slug) continue
-              jobs.push({
-                slug: slug,
-                id: item.ID || (serverJob && serverJob.id) || (localJob && localJob.id) || "",
-                runnerId: (serverJob && serverJob.runner_id) || "",
-                name: (serverJob && serverJob.name) || (localJob && localJob.name) || slug
-              })
+              var slug = item.Slug || (item.LocalJob && item.LocalJob.slug) || (item.ServerJob && item.ServerJob.slug) || item.slug || ""
+              if (slug) slugs.push(slug)
             }
-            root.jobs = root.linkJobs(jobs)
+            root.jobs = slugs
           } else {
             root.jobsTotal = 0
             root.jobs = []
@@ -397,6 +303,33 @@ Panel {
             fontFamily: root.fontFamily
           }
 
+          component ServiceIndicator: Item {
+            id: indicator
+            property bool active: false
+            width: Style.space(16)
+            height: Style.space(16)
+            anchors.verticalCenter: parent.verticalCenter
+
+            Rectangle {
+              visible: indicator.active
+              anchors.centerIn: parent
+              width: Style.space(7)
+              height: Style.space(7)
+              radius: width / 2
+              color: "#22c55e"
+            }
+
+            Rectangle {
+              visible: !indicator.active
+              anchors.centerIn: parent
+              width: Style.space(10)
+              height: Style.space(2)
+              radius: height / 2
+              color: "#ef4444"
+              rotation: -45
+            }
+          }
+
           Column {
             width: parent.width
             spacing: Style.space(8)
@@ -406,29 +339,8 @@ Panel {
               width: parent.width
               spacing: Style.space(10)
 
-              Item {
-                width: Style.space(16)
-                height: Style.space(16)
-                anchors.verticalCenter: parent.verticalCenter
-
-                Rectangle {
-                  visible: root.runnerRunning
-                  anchors.centerIn: parent
-                  width: Style.space(7)
-                  height: Style.space(7)
-                  radius: width / 2
-                  color: "#22c55e"
-                }
-
-                Rectangle {
-                  visible: !root.runnerRunning
-                  anchors.centerIn: parent
-                  width: Style.space(10)
-                  height: Style.space(2)
-                  radius: height / 2
-                  color: "#ef4444"
-                  rotation: -45
-                }
+              ServiceIndicator {
+                active: root.runnerRunning
               }
 
               Text {
@@ -461,29 +373,8 @@ Panel {
               width: parent.width
               spacing: Style.space(10)
 
-              Item {
-                width: Style.space(16)
-                height: Style.space(16)
-                anchors.verticalCenter: parent.verticalCenter
-
-                Rectangle {
-                  visible: root.channelRunning
-                  anchors.centerIn: parent
-                  width: Style.space(7)
-                  height: Style.space(7)
-                  radius: width / 2
-                  color: "#22c55e"
-                }
-
-                Rectangle {
-                  visible: !root.channelRunning
-                  anchors.centerIn: parent
-                  width: Style.space(10)
-                  height: Style.space(2)
-                  radius: height / 2
-                  color: "#ef4444"
-                  rotation: -45
-                }
+              ServiceIndicator {
+                active: root.channelRunning
               }
 
               Text {
@@ -547,45 +438,37 @@ Panel {
             Repeater {
               model: root.beeps
 
-              Rectangle {
-                required property var modelData
+              Row {
                 width: parent.width
-                height: beepRow.implicitHeight
-                radius: Style.cornerRadius
-                color: beepLink.containsMouse ? root.alpha(root.foreground, 0.08) : "transparent"
+                spacing: Style.space(8)
 
-                Row {
-                  id: beepRow
-                  width: parent.width
-                  spacing: Style.space(8)
-
-                  Text {
-                    text: modelData.title || "Untitled"
-                    color: root.foreground
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
-                    elide: Text.ElideRight
-                    width: Math.max(0, parent.width - beepTime.width - parent.spacing)
-                    anchors.verticalCenter: parent.verticalCenter
-                  }
-
-                  Text {
-                    id: beepTime
-                    text: root.formatNotifyTime(modelData.next_run_at || modelData.run_at || "")
-                    color: root.dim
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    anchors.verticalCenter: parent.verticalCenter
-                  }
+                Text {
+                  text: modelData.title || "Untitled"
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.bodySmall
+                  elide: Text.ElideRight
+                  width: Math.max(0, parent.width - statusBadge.width - Style.space(12))
+                  anchors.verticalCenter: parent.verticalCenter
                 }
 
-                MouseArea {
-                  id: beepLink
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  preventStealing: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: root.openExternal(modelData.url)
+                Rectangle {
+                  id: statusBadge
+                  anchors.verticalCenter: parent.verticalCenter
+                  implicitWidth: statusText.implicitWidth + Style.space(8)
+                  implicitHeight: statusText.implicitHeight + Style.space(4)
+                  radius: Style.cornerRadius
+                  color: root.alpha(root.foreground, 0.08)
+
+                  Text {
+                    id: statusText
+                    anchors.centerIn: parent
+                    text: modelData.status || "active"
+                    color: (modelData.status === "active" || !modelData.status) ? "#22c55e" : root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    font.bold: true
+                  }
                 }
               }
             }
@@ -626,44 +509,26 @@ Panel {
             Repeater {
               model: root.jobs
 
-              Rectangle {
-                required property var modelData
+              Row {
                 width: parent.width
-                height: jobRow.implicitHeight
-                radius: Style.cornerRadius
-                color: jobLink.containsMouse ? root.alpha(root.foreground, 0.08) : "transparent"
+                spacing: Style.space(8)
 
-                Row {
-                  id: jobRow
-                  width: parent.width
-                  spacing: Style.space(8)
-
-                  Text {
-                    text: "•"
-                    color: root.dim
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    anchors.verticalCenter: parent.verticalCenter
-                  }
-
-                  Text {
-                    text: modelData.name || modelData.slug
-                    color: root.foreground
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    elide: Text.ElideRight
-                    width: Math.max(0, parent.width - Style.space(16))
-                    anchors.verticalCenter: parent.verticalCenter
-                  }
+                Text {
+                  text: "•"
+                  color: root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.bodySmall
+                  anchors.verticalCenter: parent.verticalCenter
                 }
 
-                MouseArea {
-                  id: jobLink
-                  anchors.fill: parent
-                  hoverEnabled: true
-                  preventStealing: true
-                  cursorShape: Qt.PointingHandCursor
-                  onClicked: root.openExternal(modelData.url)
+                Text {
+                  text: modelData
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.bodySmall
+                  elide: Text.ElideRight
+                  width: parent.width - Style.space(20)
+                  anchors.verticalCenter: parent.verticalCenter
                 }
               }
             }
