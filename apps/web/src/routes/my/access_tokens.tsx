@@ -12,7 +12,7 @@ import {
 	ShieldCheck,
 	Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { confirm } from "@/components/confirm-dialog";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { CopyableCode, useCopyToClipboard } from "@/components/ui/copy-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -44,6 +45,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { publicApiOrigin } from "@/config";
 import {
 	type AccessToken,
 	type AccessTokenPermission,
@@ -53,6 +55,7 @@ import {
 } from "@/lib/api/access-tokens";
 import { ApiError } from "@/lib/api/client";
 import { withAuthRedirects } from "@/lib/auth/guards";
+import { cn } from "@/lib/utils";
 import { m } from "@/locale/paraglide/messages";
 
 const myRoute = getRouteApi("/my");
@@ -391,30 +394,249 @@ function AccessTokensPage() {
 					</CardFooter>
 				</Card>
 
-				{data.access_tokens.length > 0 ? (
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-lg">
-								{m.my_api_example_title()}
-							</CardTitle>
-							<CardDescription>
-								{m.my_api_example_description()}
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-3">
-							<div className="relative rounded-lg bg-muted/50 p-4 font-mono text-xs">
-								<pre className="overflow-x-auto text-foreground">
-									{`curl -H "Authorization: Bearer <YOUR_TOKEN>" \\
-  ${typeof window !== "undefined" ? window.location.origin : ""}/api/v1/me`}
-								</pre>
-							</div>
-							<p className="text-xs text-muted-foreground">
-								{m.my_api_example_beeps_hint({ slug: account.slug })}
-							</p>
-						</CardContent>
-					</Card>
-				) : null}
+				{data.access_tokens.length > 0 ? <ApiCodeExamples /> : null}
 			</div>
 		</>
+	);
+}
+
+type ExampleLanguage = "curl" | "python" | "javascript" | "go";
+
+const LANGUAGE_TABS: { id: ExampleLanguage; label: string }[] = [
+	{ id: "curl", label: "cURL" },
+	{ id: "python", label: "Python" },
+	{ id: "javascript", label: "JavaScript" },
+	{ id: "go", label: "Go" },
+];
+
+function ApiCodeExamples() {
+	const [activeTab, setActiveTab] = useState<ExampleLanguage>("curl");
+	const identityCopy = useCopyToClipboard();
+	const createBeepCopy = useCopyToClipboard();
+
+	const baseUrl =
+		publicApiOrigin() ||
+		(typeof window !== "undefined" ? window.location.origin : "") ||
+		"https://api.beep.com";
+
+	const snippets = useMemo(() => {
+		return {
+			curl: {
+				identity: `curl -H "Authorization: Bearer <YOUR_TOKEN>" \\
+  ${baseUrl}/api/v1/me`,
+				createBeep: `curl -X POST "${baseUrl}/api/v1/beeps" \\
+  -H "Authorization: Bearer <YOUR_TOKEN>" \\
+  -H "Content-Type: application/json" \\
+  -d '{"body": "Hello from API", "kind": "once"}'`,
+			},
+			python: {
+				identity: `import requests
+
+response = requests.get(
+    "${baseUrl}/api/v1/me",
+    headers={"Authorization": "Bearer <YOUR_TOKEN>"},
+)
+print(response.json())`,
+				createBeep: `import requests
+
+response = requests.post(
+    "${baseUrl}/api/v1/beeps",
+    headers={
+        "Authorization": "Bearer <YOUR_TOKEN>",
+        "Content-Type": "application/json",
+    },
+    json={
+        "body": "Hello from API",
+        "kind": "once",
+    },
+)
+print(response.json())`,
+			},
+			javascript: {
+				identity: `const response = await fetch("${baseUrl}/api/v1/me", {
+  headers: {
+    Authorization: "Bearer <YOUR_TOKEN>",
+  },
+});
+const data = await response.json();
+console.log(data);`,
+				createBeep: `const response = await fetch("${baseUrl}/api/v1/beeps", {
+  method: "POST",
+  headers: {
+    Authorization: "Bearer <YOUR_TOKEN>",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    body: "Hello from API",
+    kind: "once",
+  }),
+});
+const data = await response.json();
+console.log(data);`,
+			},
+			go: {
+				identity: `package main
+
+import (
+    "fmt"
+    "io"
+    "net/http"
+)
+
+func main() {
+    req, err := http.NewRequest("GET", "${baseUrl}/api/v1/me", nil)
+    if err != nil {
+        panic(err)
+    }
+    req.Header.Set("Authorization", "Bearer <YOUR_TOKEN>")
+
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Println(string(body))
+}`,
+				createBeep: `package main
+
+import (
+    "bytes"
+    "fmt"
+    "io"
+    "net/http"
+)
+
+func main() {
+    payload := []byte(\`{"body": "Hello from API", "kind": "once"}\`)
+    req, err := http.NewRequest("POST", "${baseUrl}/api/v1/beeps", bytes.NewBuffer(payload))
+    if err != nil {
+        panic(err)
+    }
+    req.Header.Set("Authorization", "Bearer <YOUR_TOKEN>")
+    req.Header.Set("Content-Type", "application/json")
+
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Println(string(body))
+}`,
+			},
+		};
+	}, [baseUrl]);
+
+	const currentSnippets = snippets[activeTab];
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-lg">{m.my_api_example_title()}</CardTitle>
+				<CardDescription>{m.my_api_example_description()}</CardDescription>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				<div className="flex items-center gap-1 rounded-lg border border-input bg-muted/40 p-1">
+					{LANGUAGE_TABS.map((tab) => (
+						<button
+							key={tab.id}
+							type="button"
+							onClick={() => setActiveTab(tab.id)}
+							className={cn(
+								"flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+								activeTab === tab.id
+									? "bg-background text-foreground shadow-xs"
+									: "text-muted-foreground hover:text-foreground",
+							)}
+						>
+							<span>{tab.label}</span>
+						</button>
+					))}
+				</div>
+
+				<div className="flex flex-col gap-2">
+					<div className="flex items-center justify-between gap-2">
+						<div className="flex items-center gap-2">
+							<span className="text-xs font-semibold text-foreground">
+								{m.my_api_example_get_me()}
+							</span>
+							<Badge variant="outline" className="font-mono text-[10px]">
+								GET /api/v1/me
+							</Badge>
+						</div>
+						<Button
+							variant="ghost"
+							size="sm"
+							className="h-7 px-2 text-xs gap-1 shrink-0"
+							onClick={() => identityCopy.copy(currentSnippets.identity)}
+						>
+							{identityCopy.copied ? (
+								<>
+									<Check className="size-3.5 text-emerald-500" />
+									<span className="text-emerald-500">{m.common_copied()}</span>
+								</>
+							) : (
+								<>
+									<Copy className="size-3.5" />
+									<span>{m.common_copy()}</span>
+								</>
+							)}
+						</Button>
+					</div>
+					<CopyableCode
+						code={currentSnippets.identity}
+						copied={identityCopy.copied}
+						onCopy={() => identityCopy.copy(currentSnippets.identity)}
+						label={m.common_copy()}
+					/>
+				</div>
+
+				<div className="flex flex-col gap-2">
+					<div className="flex items-center justify-between gap-2">
+						<div className="flex items-center gap-2">
+							<span className="text-xs font-semibold text-foreground">
+								{m.my_api_example_create_beep()}
+							</span>
+							<Badge variant="outline" className="font-mono text-[10px]">
+								POST /api/v1/beeps
+							</Badge>
+						</div>
+						<Button
+							variant="ghost"
+							size="sm"
+							className="h-7 px-2 text-xs gap-1 shrink-0"
+							onClick={() => createBeepCopy.copy(currentSnippets.createBeep)}
+						>
+							{createBeepCopy.copied ? (
+								<>
+									<Check className="size-3.5 text-emerald-500" />
+									<span className="text-emerald-500">{m.common_copied()}</span>
+								</>
+							) : (
+								<>
+									<Copy className="size-3.5" />
+									<span>{m.common_copy()}</span>
+								</>
+							)}
+						</Button>
+					</div>
+					<CopyableCode
+						code={currentSnippets.createBeep}
+						copied={createBeepCopy.copied}
+						onCopy={() => createBeepCopy.copy(currentSnippets.createBeep)}
+						label={m.common_copy()}
+					/>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }
