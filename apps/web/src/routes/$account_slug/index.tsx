@@ -70,26 +70,23 @@ function AccountHomePage() {
 		<>
 			<DashboardHeader
 				breadcrumbs={[{ label: m.nav_home(), isCurrentPage: true }]}
+				actions={
+					<DashboardQuickDialog
+						slug={slug}
+						defaultChannels={settings?.notification_channels}
+						onCreated={handleCreated}
+					/>
+				}
 			/>
 
-			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-					<div>
-						<h1 className="font-heading text-2xl font-semibold tracking-tight">
-							{account?.name ?? m.account_fallback_name()}
-						</h1>
-						<p className="mt-1 text-sm text-muted-foreground">
-							Workspace overview, live system stability, and recent events.
-						</p>
-					</div>
-
-					<div className="flex items-center gap-2">
-						<DashboardQuickDialog
-							slug={slug}
-							defaultChannels={settings?.notification_channels}
-							onCreated={handleCreated}
-						/>
-					</div>
+			<div className="flex flex-1 flex-col gap-6">
+				<div className="flex flex-col gap-2">
+					<h1 className="type-title text-ink font-medium">
+						{account?.name ?? m.account_fallback_name()}
+					</h1>
+					<p className="type-meta text-gray">
+						Workspace overview, live system stability, and recent events.
+					</p>
 				</div>
 
 				<DashboardKpiCards stats={dashboard.stats} />

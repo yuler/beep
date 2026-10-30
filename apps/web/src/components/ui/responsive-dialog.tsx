@@ -129,7 +129,7 @@ function ResponsiveDialogContent({
 		return (
 			<DrawerContent
 				className={cn(
-					"max-h-[90dvh] flex flex-col focus-visible:outline-none",
+					"max-h-[90dvh] flex flex-col rounded-none border-t border-line border-x-0 border-b-0 bg-ground focus-visible:outline-none",
 					contentShellClass,
 					resolveClassName(className),
 				)}
@@ -144,7 +144,7 @@ function ResponsiveDialogContent({
 	return (
 		<DialogContent
 			className={cn(
-				"max-h-[min(90dvh,calc(100vh-3rem))] flex flex-col overflow-hidden gap-0 p-0 sm:max-w-sm",
+				"max-h-[min(90dvh,calc(100vh-3rem))] flex flex-col overflow-hidden gap-0 rounded-none border border-line bg-ground p-0 text-ink sm:max-w-md",
 				contentShellClass,
 				className,
 			)}
@@ -164,13 +164,16 @@ function ResponsiveDialogHeader({
 	if (isMobile) {
 		return (
 			<DrawerHeader
-				className={cn("shrink-0 px-4 pt-4 pb-2", className)}
+				className={cn("shrink-0 p-4 border-b border-line", className)}
 				{...props}
 			/>
 		);
 	}
 	return (
-		<DialogHeader className={cn("shrink-0 px-4 pt-4", className)} {...props} />
+		<DialogHeader
+			className={cn("shrink-0 p-4 border-b border-line", className)}
+			{...props}
+		/>
 	);
 }
 
@@ -182,7 +185,10 @@ function ResponsiveDialogFooter({
 	if (isMobile) {
 		return (
 			<DrawerFooter
-				className={cn("shrink-0 border-t bg-muted/30 p-4", className)}
+				className={cn(
+					"shrink-0 border-t border-line bg-transparent p-4",
+					className,
+				)}
 				{...props}
 			/>
 		);
@@ -190,7 +196,7 @@ function ResponsiveDialogFooter({
 	return (
 		<DialogFooter
 			className={cn(
-				"shrink-0 mx-0 mb-0 rounded-b-xl border-t bg-muted/40 p-4 sm:justify-end",
+				"shrink-0 mx-0 mb-0 rounded-none border-t border-line bg-transparent p-4 sm:justify-end",
 				className,
 			)}
 			{...props}

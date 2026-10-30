@@ -4,33 +4,33 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	"group/button inline-flex shrink-0 items-center justify-center rounded-none border text-sm font-normal whitespace-nowrap transition-colors outline-none select-none disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 min-h-[44px] sm:min-h-[40px] cursor-pointer",
 	{
 		variants: {
 			variant: {
-				default: "bg-primary text-primary-foreground hover:bg-primary/80",
+				default:
+					"bg-solid text-solid-ink border-solid hover:opacity-90 active:bg-wash active:text-ink active:border-line",
+				solid:
+					"bg-solid text-solid-ink border-solid hover:opacity-90 active:bg-wash active:text-ink active:border-line",
 				outline:
-					"border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+					"bg-transparent text-ink border-line hover:border-ink active:bg-wash active:border-ink aria-expanded:bg-solid aria-expanded:text-solid-ink",
 				secondary:
-					"bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+					"bg-wash text-ink border-line hover:border-ink active:bg-solid active:text-solid-ink",
 				ghost:
-					"hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+					"bg-transparent text-ink border-line hover:border-ink active:bg-wash active:border-ink aria-expanded:bg-solid aria-expanded:text-solid-ink aria-selected:bg-solid aria-selected:text-solid-ink data-[state=active]:bg-solid data-[state=active]:text-solid-ink",
 				destructive:
-					"bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-				link: "text-primary underline-offset-4 hover:underline",
+					"bg-transparent text-ink border-ink hover:bg-wash active:bg-solid active:text-solid-ink",
+				link: "bg-transparent text-ink border-transparent underline-offset-4 hover:underline min-h-0 sm:min-h-0 p-0",
 			},
 			size: {
-				default:
-					"h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-				xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-				sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-				lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-				icon: "size-8",
-				"icon-xs":
-					"size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-				"icon-sm":
-					"size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-				"icon-lg": "size-9",
+				default: "px-3.5 py-2.5 text-sm gap-2",
+				xs: "min-h-[32px] sm:min-h-[28px] px-2 py-1 text-xs gap-1",
+				sm: "min-h-[36px] sm:min-h-[32px] px-2.5 py-1.5 text-xs gap-1.5",
+				lg: "min-h-[48px] sm:min-h-[44px] px-4 py-3 text-base gap-2.5",
+				icon: "size-11 sm:size-10 p-0",
+				"icon-xs": "size-8 sm:size-7 p-0",
+				"icon-sm": "size-9 sm:size-8 p-0",
+				"icon-lg": "size-12 sm:size-11 p-0",
 			},
 		},
 		defaultVariants: {
@@ -40,19 +40,48 @@ const buttonVariants = cva(
 	},
 );
 
+export interface ButtonProps
+	extends ButtonPrimitive.Props,
+		VariantProps<typeof buttonVariants> {
+	loading?: boolean;
+	loadingText?: string;
+}
+
 function Button({
 	className,
 	variant = "default",
 	size = "default",
+	loading,
+	loadingText,
+	children,
+	disabled,
 	...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
 	return (
 		<ButtonPrimitive
 			data-slot="button"
+			disabled={disabled || loading}
 			className={cn(buttonVariants({ variant, size, className }))}
 			{...props}
-		/>
+		>
+			{loading ? (
+				<>
+					<span className="is-loading-spin mr-1.5" aria-hidden="true" />
+					<span>{loadingText ?? children}</span>
+				</>
+			) : (
+				children
+			)}
+		</ButtonPrimitive>
 	);
 }
 
-export { Button, buttonVariants };
+function ButtonSolid(props: ButtonProps) {
+	return <Button variant="solid" {...props} />;
+}
+
+function ButtonGhost(props: ButtonProps) {
+	return <Button variant="ghost" {...props} />;
+}
+
+export { Button, ButtonSolid, ButtonGhost, buttonVariants };

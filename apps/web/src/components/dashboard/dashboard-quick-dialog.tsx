@@ -32,15 +32,15 @@ export function DashboardQuickDialog({
 	return (
 		<ResponsiveDialog open={open} onOpenChange={setOpen}>
 			<ResponsiveDialogTrigger
-				render={<Button size="sm" className="gap-1.5" />}
+				render={<Button variant="solid" size="sm" className="gap-1.5" />}
 			>
 				<Plus className="size-4" />
 				<span>New Beep</span>
 			</ResponsiveDialogTrigger>
 			<ResponsiveDialogContent className="sm:max-w-2xl">
 				<ResponsiveDialogHeader>
-					<ResponsiveDialogTitle className="flex items-center gap-2">
-						<Bell className="size-4 text-primary" />
+					<ResponsiveDialogTitle className="flex items-center gap-2 text-ink">
+						<Bell className="size-4 text-ink" />
 						Create New Beep
 					</ResponsiveDialogTitle>
 					<ResponsiveDialogDescription>

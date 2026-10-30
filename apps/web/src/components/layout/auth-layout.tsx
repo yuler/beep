@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { LogoMark } from "@/components/logo-mark";
@@ -16,39 +15,32 @@ import { m } from "@/locale/paraglide/messages";
 /** Shown while client-only auth routes probe `session_id` on Core. */
 export function AuthPending() {
 	return (
-		<div className="flex min-h-svh items-center justify-center bg-background">
-			<Loader2
-				className="size-6 animate-spin text-muted-foreground"
-				aria-label={m.auth_checking_session()}
-			/>
+		<div className="flex min-h-svh items-center justify-center bg-ground">
+			<span className="is-loading-spin" aria-hidden="true" />
+			<span className="sr-only">{m.auth_checking_session()}</span>
 		</div>
 	);
 }
 
 export function AuthLayout({ children }: { children: ReactNode }) {
 	return (
-		<div className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background p-6 md:p-10">
-			{/* Subtle background ambient glow */}
-			<div
-				className="pointer-events-none absolute inset-x-0 top-0 -z-10 flex transform-gpu justify-center overflow-hidden blur-3xl"
-				aria-hidden="true"
-			>
-				<div className="aspect-[1155/678] w-[72.1875rem] flex-none bg-gradient-to-tr from-primary/20 via-primary/5 to-transparent opacity-60 dark:opacity-30" />
-			</div>
+		<div className="relative flex min-h-svh flex-col items-center justify-center bg-ground px-4 py-8 sm:px-6">
+			<header className="fixed top-0 inset-x-0 z-50 h-14 md:h-16 border-b border-line bg-ground">
+				<div className="mx-auto flex h-full max-w-[1080px] items-center justify-between px-4 md:px-6 lg:px-8">
+					<Link
+						to="/"
+						className="type-kicker text-gray hover:text-ink transition-colors"
+					>
+						← {m.common_back()}
+					</Link>
+					<div className="flex items-center gap-1 sm:gap-2">
+						<LocaleSwitcher />
+						<ThemeToggle />
+					</div>
+				</div>
+			</header>
 
-			<div className="absolute top-6 left-6 flex items-center gap-4">
-				<Link
-					to="/"
-					className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-				>
-					{m.common_back()}
-				</Link>
-			</div>
-			<div className="absolute top-6 right-6 flex items-center gap-2">
-				<LocaleSwitcher />
-				<ThemeToggle />
-			</div>
-			<div className="flex w-full max-w-sm flex-col gap-6">{children}</div>
+			<div className="w-full max-w-[440px] pt-12">{children}</div>
 		</div>
 	);
 }
@@ -65,22 +57,26 @@ export function AuthCard({
 	return (
 		<Card
 			className={cn(
-				"border border-border/80 bg-card/90 shadow-sm backdrop-blur-xs",
+				"border border-line bg-ground p-2 sm:p-4 text-ink shadow-none",
 				className,
 			)}
 		>
-			<CardHeader className="flex flex-col items-center gap-2 text-center">
+			<CardHeader className="flex flex-col items-center gap-2 text-center pb-6">
 				<Link
 					to="/"
 					aria-label={m.term_beep()}
-					className="mb-1 inline-flex items-center gap-2 font-semibold tracking-tight text-foreground"
+					className="mb-2 inline-flex items-center gap-2.5 text-ink hover:opacity-80 transition-opacity"
 				>
-					<LogoMark className="size-6" />
-					<span>{m.term_beep()}</span>
+					<LogoMark className="size-6 text-ink" />
+					<span className="type-kicker font-medium tracking-[0.18em] uppercase">
+						{m.term_beep()}
+					</span>
 				</Link>
-				<CardDescription>{description}</CardDescription>
+				<CardDescription className="type-meta text-gray">
+					{description}
+				</CardDescription>
 			</CardHeader>
-			<CardContent>{children}</CardContent>
+			<CardContent className="px-2 sm:px-4">{children}</CardContent>
 		</Card>
 	);
 }

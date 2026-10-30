@@ -1,184 +1,123 @@
-# Design System
+# Theme
 
-A minimal, modern styling system for the Rails core app. Vanilla CSS, no build
-step — inspired by Basecamp's [Fizzy](https://github.com/basecamp/fizzy) and the
-[Modern CSS patterns in Campfire](https://dev.37signals.com/modern-css-patterns-and-techniques-in-campfire/)
-write-up (and its [notes](https://yuler.dev/posts/modern-css-design/)). Linear/Geist
-flavor: near-neutral grays plus a single indigo/violet accent, in light and dark
-modes.
+> Beep 页面映射：`/`（介绍首页）、`/sign`（邮箱魔法链接与验证码登录）、`/$account_slug`（控制台概览）、`/$account_slug/beeps`（任务监控）、`/$account_slug/beepers`（探测探针）、`/$account_slug/runners`（执行器）、`/$account_slug/settings`（通用 / 渠道 / 通知）。顶栏左边 SVG 铃铛 Logo（`LogoMark`）+ `Beep`，右边按登录态与当前区域组织。
 
-## Principles
+界面采用移动端优先（Mobile First）。支持中英双语（保留 `LocaleSwitcher`）。颜色、字号和组件的名字用英文。
 
-- **oklch over hex/rgb.** Colors are defined as `Lightness Chroma Hue` so you can
-  adjust shade without shifting hue, and add alpha trivially.
-- **Two layers of tokens.** Raw `--lch-*` values feed semantic `--color-*` tokens.
-  Components and utilities only ever consume the semantic layer.
-- **Theme via one attribute.** `[data-theme]` on `<html>` switches everything.
-  Default follows the OS; the user can override and the choice is remembered.
-- **No Tailwind, no Sass.** Styles are hand-written CSS organized into cascade
-  layers, shipped through Propshaft's no-build asset pipeline.
+所有边角都是直角，`border-radius: 0`。
 
-## Pipeline (no build step)
+分割线是 1px 直线。层次只留黑白灰，不使用彩色。黑、白两套用同一批名字，只对调底和字。状态完全依靠文字、图标与实心/空心/灰色边框表达，不引入红、绿、黄。
 
-`core/app/assets/stylesheets/application.css` declares the layer order and
-`@import`s every partial:
+## Color
 
-```css
-@layer reset, base, components, utilities;
+| Token | 黑 (默认) | 白 | 用在 |
+| --- | --- | --- | --- |
+| `ground` | `#000000` | `#ffffff` | 所有页面的底、弹窗底色 |
+| `ink` | `#ffffff` | `#000000` | 主文字、激活高亮、出错竖线/边框 |
+| `gray` | `#888888` | `#888888` | Meta、次要说明、已填/次要边框 |
+| `line` | `#333333` | `#e5e5e5` | 分割线、幽灵按钮边框、输入框底边/边框 |
+| `wash` | `#111111` | `#f2f2f2` | 浅底块、按钮/菜单按下态反馈底色 |
+| `solid` | `#ffffff` | `#000000` | 实心按钮的底、选中态背景 |
+| `solid-ink` | `#000000` | `#ffffff` | 实心按钮的字、选中态文字 |
 
-@import url("reset.css");
-@import url("theme.css");
-@import url("base.css");
-/* …buttons, forms, tables, components, prose, header, footer, flash… */
-```
+默认是黑。顶栏右上始终挂 `ThemeSwitch`；仅在黑白之间切换（无跟随系统选项），选择保存在 `localStorage`（键名 `theme`）。
 
-Propshaft rewrites each `@import url("…")` to a fingerprinted, digested path at
-request time, so there is no compile step and nothing to watch. The layout links
-the single entry file:
+## Type
 
-```erb
-<%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
-```
+全站一种无衬线，中文优先：`"Noto Sans CJK SC"`, `"Source Han Sans SC"`, `"Noto Sans SC"`, `sans-serif`。
 
-## Cascade layers
+字重只用两档：正文 400，标题 500。
 
-Order is fixed in `application.css`; import order does not affect precedence:
+| Role | Size | Weight | Line height | 用在 |
+| --- | --- | --- | --- | --- |
+| `Kicker` | 13px | 400 | 1.4 | 导航、标签、App 名。字距 `0.18em` |
+| `Title` | 28px | 500 | 1.2 | 页面主标题 |
+| `AppTitle` | 22px | 500 | 1.2 | 分区标题 |
+| `Meta` | 14px | 400 | 1.45 | 说明文字、表格次要信息 |
+| `ButtonLabel` | 继承所在表面的正文 | 400 | 1.2 | 按钮字 |
 
-1. `reset` — modern CSS reset (`.reset` file, sits in `@layer reset`).
-2. `base` — element defaults (`body`, `a`, `h1`–`h6`, `code`, focus rings…).
-3. `components` — reusable component classes (`.btn`, `.card`, `.alert`,
-   `.table`, `.field`, `.menu`, `.header`, `.footer`…).
-4. `utilities` — single-purpose helpers (`.flex`, `.gap`, `.txt-*`, `.pad`,
-   `.margin-*`, `.stack`, spacing and color utilities).
+## Components
 
-Utilities win over components when both apply.
+### `Button`
 
-## Token architecture
+`ButtonSolid`：底 `solid`，字 `solid-ink`，边框 1px `solid`，直角，内边距 12px 14px。
 
-### 1. Raw scale — `--lch-*`
+`ButtonGhost`：透明底，1px `line` 边框，直角，内边距 8px 12px。悬停边框变 `ink`，按下 `wash` 底。选中态改为 `solid` 底、`solid-ink` 字。
 
-Just the three oklch channels, no color function. Readable and easy to tweak.
+### `TextField`
 
-```css
---lch-gray-100: 98% 0.003 285;
---lch-violet:   285 80% 60%;
---lch-green:    145 60% 45%;
-```
+无底色，只有底边 1px `line`（复杂表单为 1px `line` 四周边框），直角。上下内边距 8px。聚焦时 1px `ink` 外偏 2px 轮廓。
 
-Grays sit at hue `285`, the accent at hue `285` too — same family, so the UI
-reads as one coherent palette. Accent is a Linear-style indigo/violet.
+### `AppBar`
 
-### 2. Semantic tokens — `--color-*`
+顶栏极简。
+- 公开页（首页、登录）：左侧 `LogoMark`（Beep 铃铛图标，颜色随 `ink`）+ `Beep` 字标；右侧为 `LocaleSwitcher` + 登录/控制台入口 + `ThemeSwitch`。
+- 控制台内：左侧 `LogoMark` + `Beep` 字标 + 工作区选择器（`AccountSwitcher`）；右侧为 `LocaleSwitcher` + `ThemeSwitch` + 用户菜单（个人偏好、API Tokens、Admin、Dev、退出）。
 
-Raw values wrapped in `oklch()`. This is the API you use.
+### `Subnav`
 
-| Token | Purpose |
-| --- | --- |
-| `--color-canvas` | Page background |
-| `--color-shade` | Slightly recessed background |
-| `--color-ink` | Primary text |
-| `--color-ink-dark` | Secondary text |
-| `--color-ink-medium` | Tertiary text, placeholders |
-| `--color-ink-inverted` | Text on a dark/accent fill |
-| `--color-border` | Default hairline borders |
-| `--color-border-strong` | Emphasized borders |
-| `--color-accent` | Primary accent (links, active, focus) |
-| `--color-accent-hover` | Accent hover/active |
-| `--color-white` | Solid white (text on accent) |
-| `--color-link` | Inline link color |
-| `--color-selected` | Selection / highlight |
-| `--color-positive` | Success status |
-| `--color-negative` | Destructive / error status |
-| `--color-info` | Informational status |
+紧贴 `AppBar` 下方。采用 `Kicker` 风格字号与字距。
+- 账号工作区：`概览`、`Beeps`、`Beepers`、`Runners`、`设置`。
+- 管理后台：`← 工作区`、`任务`、`统计`。
+- 个人中心：`← 工作区`、`Tokens`、`偏好`。
+手机端支持横向滑动（`overflow-x-auto`），吸顶展示。当前激活项使用 `ink` 底部高亮边框。
 
-Alpha is trivial with oklch:
+### `Timeline`
 
-```css
---color-accent-subtle: oklch(var(--lch-violet) / 0.12);
-```
+时间线与紧凑行列表。每行上边框 1px `line`，上下内边距 10px。角色/标签前置，时间当天显示 `HH:mm`，跨天带日期。重要变动左侧加 1px `line` 竖线。
 
-## Light & dark
+### `Notice`
 
-- **Light** is the default, defined on `:root`.
-- **Dark** is defined on `:root[data-theme="dark"]`.
-- **No-JS fallback:** when `<html>` has no `data-theme`, `@media
-  (prefers-color-scheme: dark)` applies the dark values, so the OS preference is
-  honored even before any script runs.
+一行状态或提示。无背景底色，左侧 1px `line` 竖线，前面小号 `gray` 标签。异常/错误状态将竖线替换为 `ink`、标签显示「错误」或「失败」，绝不使用红色。
 
-Only the semantic `--color-*` values change between themes; component CSS never
-needs color overrides for dark mode — it reads the tokens.
+### `Panel`
 
-Files:
+分区容器，不填底色。
+- 手机端（<768px）：仅保留上边 1px `line` 分隔。
+- 平板与电脑端（≥768px）：四边 1px `line` 空心方框。
+`wash` 只留给悬停或按下态反馈。
 
-- `core/app/assets/stylesheets/theme.css` — all `--lch-*` and `--color-*` tokens
-  and the light/dark blocks.
+### `OtpField`
 
-## Theme switching
+6 个等宽方格，1px `line` 边，当前聚焦格 `ink` 边，已填格 `gray` 边。底层为透明的真实输入框，覆盖在方格上。自动填充、粘贴、退格走原生行为。填满 6 位自动提交；出错时格子变 `ink` 边重置。
 
-1. **No-flash script** (`_head.html.erb`): runs before first paint. If
-   `localStorage.theme` holds `light`/`dark` it sets `data-theme` on `<html>`;
-   otherwise it leaves the attribute unset so the OS preference drives the theme
-   live (via the `:not([data-theme])` media block in `theme.css`).
-2. **Toggle** (`theme_controller.js`, button `.theme-toggle` in `_header.html.erb`):
-   flips light ⇄ dark, persists to `localStorage`, and swaps the sun/moon icon.
-3. **First visit** (nothing stored): follows `prefers-color-scheme`, and keeps
-   following it if the OS changes.
+### `Segmented`
 
-## Components & utilities
+视图与选项切换（如设置页的 通用 / 渠道 / 通知）。多枚等宽 `ButtonGhost`，选中项为 `solid` 底、`solid-ink` 字。
 
-Component classes live in their own partials and are documented by their class
-names:
+### `Dialog / Drawer`
 
-- `.btn` with variants `.btn--primary`, `.btn--reversed`, `.btn--negative`,
-  `.btn--ghost`, `.btn--outline`, `.btn--plain`, sizes `.btn--small` /
-  `.btn--large`, `.btn--block`; circular icon buttons are automatic when the
-  label is visually hidden.
-- `.card` / `.card--raised` with `.card__body` and `.card__title`.
-- `.alert` with `.alert--success`, `.alert--error`, `.alert--info`.
-- `.table` / `.table--zebra`, `.table-scroll`.
-- `.field` (`.field__label`, `.field__hint`, `.field--with-icon`) + `.input`,
-  `.textarea`, `.select` (`.input--code`).
-- `.menu` dropdown (`.menu__trigger`, `.menu__content`, `.menu__title`,
-  `.menu__item`) — opens on `:focus-within`, no JS required.
-- `.header` / `.header__bar` / `.header__logo` / `.header__actions`,
-  `.theme-toggle`, `.footer` / `.footer__meta`.
-- `.page` width variants (`.page--sm/md/lg/xl`) and `.stage` for centered auth
-  screens.
-- Utilities: `.flex`, `.grid`, `.stack`, `.gap*`, `.items-*`, `.justify-*`,
-  `.txt-*` (size/color/weight), `.pad*`, `.margin-*`, `.fill*`, `.border*`,
-  `.visually-hidden`, etc.
+弹层与模态操作：
+- 手机端（<768px）：底部抽屉，直角，仅顶部 1px `line` 边框，无圆角拉手。
+- 平板与电脑端（≥768px）：居中方框，四边 1px `line`，直角，无投影。
+遮罩层采用 `ground` 配合 80% 半透明。
 
-## Modern CSS conventions
+### `Table / List`
 
-- **Custom properties as a mini-API.** Expose component knobs with fallback
-  values, e.g. `color: var(--btn-color, var(--color-ink));`, and declare variants
-  by overriding the custom property, not the property.
-- **`:has()` instead of state classes.** Query content rather than adding
-  server- or JS-managed modifier classes.
-- **Capability queries.** Use `@media (any-hover: hover)` for hover affordances.
-- **Logical properties.** Prefer `inline-size`/`block-size`, `padding-inline`,
-  `margin-block-start` over physical `width`/`height`, `padding-left`, etc.
+- 手机端（<1024px）：采用 `Timeline` 风格的多行列表，主次分明，减少横向滚动。
+- 电脑端（≥1024px）：采用 1px `line` 网格的表格。
 
-## Usage examples
+## Layout
 
-```html
-<!-- Card -->
-<article class="card">
-  <div class="card__body">
-    <h3 class="card__title">Title</h3>
-    <p class="txt-muted">Supporting copy.</p>
-  </div>
-</article>
+移动优先。断点：`md` 768px、`lg` 1024px。
 
-<!-- Primary button -->
-<button class="btn btn--primary">Continue</button>
+| | 手机 (<768) | 平板 (768–1023) | 电脑 (≥1024) |
+| --- | --- | --- | --- |
+| 页边距 | 16px | 24px | 32px |
+| 顶栏高 | 56px | 64px | 64px |
+| `Panel` | 无底色，只留上边 1px `line` | 四边 1px `line` 空心方框 | 同左 |
+| 表单主按钮 | 通栏 | 自然宽度 | 自然宽度 |
+| 任务与资源列表 | 行列表展示 | 行列表展示 | 数据表格展示 |
 
-<!-- Field -->
-<div class="field">
-  <label class="field__label" for="email">Email</label>
-  <input id="email" class="input" type="email">
-</div>
+内容最大宽：首页、控制台 1080px，登录 440px。顶栏通栏，内容与内容区对齐。适配 `safe-area-inset-*`。
 
-<!-- Status -->
-<span class="txt-negative">Something went wrong</span>
-```
+## Interaction
+
+- 点击区至少 44px（电脑端 40px）。
+- 悬停效果仅在 `(hover: hover)` 设备上生效；触屏用 `:active` 给按下反馈。
+- 键盘焦点统一 1px `ink` 描边、外偏 2px。
+- 有异步动作的按钮进入 `is-loading`：方形转圈 + 「…中」文案，并禁用。
+- 不可逆操作（断开绑定、删除探针、撤销 Token 等）采用确认弹窗（直角风格）。
+- 输入框按语义设 `inputMode` / `enterKeyHint` / `autoComplete`；手机端字号 ≥16px 防缩放。
+- 系统 `theme-color` 跟随 `ground`。
+- `prefers-reduced-motion` 时关掉过渡与动画。

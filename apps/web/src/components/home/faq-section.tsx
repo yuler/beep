@@ -1,6 +1,5 @@
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { m } from "@/locale/paraglide/messages";
 
@@ -35,23 +34,23 @@ export function FaqSection() {
 	}
 
 	return (
-		<section className="border-t border-border/80 bg-background py-20 md:py-28">
-			<div className="mx-auto max-w-3xl px-4 sm:px-6">
+		<section className="border-t border-line bg-ground py-16 md:py-24 text-ink">
+			<div className="mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
 				{/* Section Heading */}
 				<div className="mx-auto max-w-2xl text-center">
-					<Badge variant="outline" className="mb-3 font-medium">
+					<div className="type-kicker uppercase text-gray mb-2">
 						{m.marketing_faq_badge()}
-					</Badge>
-					<h2 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+					</div>
+					<h2 className="type-title text-2xl font-medium tracking-tight text-ink sm:text-3xl">
 						{m.marketing_faq_title()}
 					</h2>
-					<p className="mt-4 text-base text-muted-foreground sm:text-lg">
+					<p className="type-meta mt-3 text-base text-gray">
 						{m.marketing_faq_description()}
 					</p>
 				</div>
 
 				{/* FAQ Accordion List */}
-				<div className="mt-12 divide-y divide-border/60 rounded-xl border border-border bg-card shadow-xs">
+				<div className="mt-12 border-t border-line divide-y divide-line bg-ground">
 					{faqs.map(({ q, a }, index) => {
 						const isOpen = openIndex === index;
 						const questionId = `faq-question-${index}`;
@@ -62,17 +61,15 @@ export function FaqSection() {
 									type="button"
 									id={questionId}
 									onClick={() => toggleFaq(index)}
-									className="flex w-full items-center justify-between gap-4 p-5 text-left transition-colors hover:bg-muted/40"
+									className="flex w-full items-center justify-between gap-4 py-4 text-left transition-colors hover:bg-wash px-2 cursor-pointer"
 									aria-expanded={isOpen}
 									aria-controls={answerId}
 								>
-									<span className="font-heading text-base font-medium text-foreground">
-										{q()}
-									</span>
+									<span className="text-base font-normal text-ink">{q()}</span>
 									<ChevronDown
 										className={cn(
-											"size-4 shrink-0 text-muted-foreground transition-transform duration-200",
-											isOpen && "rotate-180 text-primary",
+											"size-4 shrink-0 text-gray transition-transform duration-150",
+											isOpen && "rotate-180 text-ink",
 										)}
 										aria-hidden="true"
 									/>
@@ -81,7 +78,7 @@ export function FaqSection() {
 									<section
 										id={answerId}
 										aria-labelledby={questionId}
-										className="px-5 pb-5 pt-1 text-sm leading-relaxed text-muted-foreground"
+										className="px-2 pb-4 pt-1 type-meta text-gray leading-relaxed text-sm"
 									>
 										{a()}
 									</section>

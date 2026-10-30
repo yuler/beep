@@ -5,102 +5,86 @@
 @import "tailwindcss" source("./");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
-@import "./styles/beautiful-ui.css";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design tokens — oklch, aligned with DESIGN.md.
- * Raw --lch-* values feed semantic shadcn tokens.
+ * Design tokens — strictly aligned with DESIGN.md (monochrome, straight corners).
  */
 
 :root {
-  --lch-canvas: 100% 0 0;
-  --lch-shade: 97% 0.002 285;
-  --lch-ink: 14% 0.005 285;
-  --lch-ink-dark: 45% 0.003 285;
-  --lch-ink-medium: 55% 0.002 285;
-  --lch-border: 93% 0.003 285;
-  --lch-violet: 60% 0.18 285;
-  --lch-violet-dark: 52% 0.18 285;
-  --lch-violet-foreground: 98% 0.01 285;
-  --lch-negative: 55% 0.2 25;
+  --ground: #000000;
+  --ink: #ffffff;
+  --gray: #888888;
+  --line: #333333;
+  --wash: #111111;
+  --solid: #ffffff;
+  --solid-ink: #000000;
 
-  --background: oklch(var(--lch-canvas));
-  --foreground: oklch(var(--lch-ink));
-  --card: oklch(var(--lch-canvas));
-  --card-foreground: oklch(var(--lch-ink));
-  --popover: oklch(var(--lch-canvas));
-  --popover-foreground: oklch(var(--lch-ink));
-  --primary: oklch(var(--lch-violet));
-  --primary-foreground: oklch(var(--lch-violet-foreground));
-  --secondary: oklch(var(--lch-shade));
-  --secondary-foreground: oklch(var(--lch-ink));
-  --muted: oklch(var(--lch-shade));
-  --muted-foreground: oklch(var(--lch-ink-dark));
-  --accent: oklch(var(--lch-shade));
-  --accent-foreground: oklch(var(--lch-ink));
-  --destructive: oklch(var(--lch-negative));
-  --border: oklch(var(--lch-border));
-  --input: oklch(var(--lch-border));
-  --ring: oklch(var(--lch-violet));
-  --radius: 0.5rem;
-  --sidebar: oklch(var(--lch-shade));
-  --sidebar-foreground: oklch(var(--lch-ink));
-  --sidebar-primary: oklch(var(--lch-violet));
-  --sidebar-primary-foreground: oklch(var(--lch-violet-foreground));
-  /* Distinct from --sidebar so menu hover/active is visible */
-  --sidebar-accent: oklch(94% 0.003 285);
-  --sidebar-accent-foreground: oklch(var(--lch-ink));
-  --sidebar-border: oklch(var(--lch-border));
-  --sidebar-ring: oklch(var(--lch-violet));
+  --background: var(--ground);
+  --foreground: var(--ink);
+  --card: var(--ground);
+  --card-foreground: var(--ink);
+  --popover: var(--ground);
+  --popover-foreground: var(--ink);
+  --primary: var(--solid);
+  --primary-foreground: var(--solid-ink);
+  --secondary: var(--wash);
+  --secondary-foreground: var(--ink);
+  --muted: var(--wash);
+  --muted-foreground: var(--gray);
+  --accent: var(--wash);
+  --accent-foreground: var(--ink);
+  --destructive: var(--ink);
+  --destructive-foreground: var(--ground);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--ink);
+  --radius: 0px;
+
+  --sidebar: var(--ground);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--solid);
+  --sidebar-primary-foreground: var(--solid-ink);
+  --sidebar-accent: var(--wash);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--ink);
 }
 
-.dark {
-  --lch-canvas: 14% 0.005 285;
-  --lch-shade: 20% 0.006 285;
-  --lch-ink: 97% 0.002 285;
-  --lch-ink-dark: 72% 0.004 285;
-  --lch-ink-medium: 55% 0.004 285;
-  --lch-border: 26% 0.006 285;
-  --lch-violet: 72% 0.14 285;
-  --lch-violet-dark: 78% 0.12 285;
-  --lch-violet-foreground: 14% 0.005 285;
-  --lch-negative: 68% 0.19 25;
+html:not(.dark),
+.light {
+  --ground: #ffffff;
+  --ink: #000000;
+  --gray: #888888;
+  --line: #e5e5e5;
+  --wash: #f2f2f2;
+  --solid: #000000;
+  --solid-ink: #ffffff;
+}
 
-  --background: oklch(var(--lch-canvas));
-  --foreground: oklch(var(--lch-ink));
-  --card: oklch(20% 0.006 285);
-  --card-foreground: oklch(var(--lch-ink));
-  --popover: oklch(20% 0.006 285);
-  --popover-foreground: oklch(var(--lch-ink));
-  --primary: oklch(var(--lch-violet));
-  --primary-foreground: oklch(var(--lch-violet-foreground));
-  --secondary: oklch(var(--lch-shade));
-  --secondary-foreground: oklch(var(--lch-ink));
-  --muted: oklch(var(--lch-shade));
-  --muted-foreground: oklch(var(--lch-ink-dark));
-  --accent: oklch(var(--lch-shade));
-  --accent-foreground: oklch(var(--lch-ink));
-  --destructive: oklch(var(--lch-negative));
-  --border: oklch(var(--lch-border));
-  --input: oklch(var(--lch-border));
-  --ring: oklch(var(--lch-violet));
-  --sidebar: oklch(20% 0.006 285);
-  --sidebar-foreground: oklch(var(--lch-ink));
-  --sidebar-primary: oklch(var(--lch-violet));
-  --sidebar-primary-foreground: oklch(var(--lch-violet-foreground));
-  /* Distinct from --sidebar so menu hover/active is visible */
-  --sidebar-accent: oklch(26% 0.006 285);
-  --sidebar-accent-foreground: oklch(var(--lch-ink));
-  --sidebar-border: oklch(var(--lch-border));
-  --sidebar-ring: oklch(var(--lch-violet));
+html.dark {
+  --ground: #000000;
+  --ink: #ffffff;
+  --gray: #888888;
+  --line: #333333;
+  --wash: #111111;
+  --solid: #ffffff;
+  --solid-ink: #000000;
 }
 
 @theme inline {
-  --font-sans: "Geist Variable", sans-serif;
+  --font-sans: "Noto Sans CJK SC", "Source Han Sans SC", "Noto Sans SC", sans-serif;
   --font-heading: var(--font-sans);
+
+  --color-ground: var(--ground);
+  --color-ink: var(--ink);
+  --color-gray: var(--gray);
+  --color-line: var(--line);
+  --color-wash: var(--wash);
+  --color-solid: var(--solid);
+  --color-solid-ink: var(--solid-ink);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -116,9 +100,11 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -127,29 +113,49 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--line);
+    border-radius: 0 !important;
+  }
+
+  *:focus-visible {
+    outline: 1px solid var(--ink) !important;
+    outline-offset: 2px !important;
   }
 
   html {
-    @apply bg-sidebar;
+    background-color: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
 
   body {
-    @apply bg-sidebar font-sans text-foreground antialiased;
+    background-color: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
   }
 
-  /* Hide the page-level vertical scrollbar; scrolling still works. */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 500;
+  }
+
+  /* Hide scrollbars cleanly */
   html,
   body,
   #app {
@@ -161,40 +167,62 @@
   body::-webkit-scrollbar,
   #app::-webkit-scrollbar {
     width: 0;
-    height: auto;
+    height: 0;
     display: none;
   }
+}
 
-  :is([data-slot="button"], .group\/button) {
-    cursor: pointer;
-    transition:
-      filter 0.15s ease,
-      background-color 0.15s ease,
-      border-color 0.15s ease,
-      color 0.15s ease;
+.type-kicker {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.18em;
+}
 
-    @media (any-hover: hover) {
-      &:hover:not(:disabled):not([aria-disabled="true"]) {
-        filter: brightness(var(--btn-hover-brightness, 0.94));
-      }
-    }
+.type-title {
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.type-app-title {
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.type-meta {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--gray);
+}
+
+@keyframes square-spin {
+  0% {
+    transform: rotate(0deg);
   }
-
-  .dark :is([data-slot="button"], .group\/button) {
-    --btn-hover-brightness: 1.12;
+  100% {
+    transform: rotate(360deg);
   }
 }
 
-* {
-  box-sizing: border-box;
+.is-loading-spin {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  animation: square-spin 0.75s linear infinite;
 }
 
-html,
-body,
-#app {
-  min-height: 100%;
-}
-
-body {
-  margin: 0;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -148,7 +148,7 @@ export function DataTable<TData extends RowData>({
 	return (
 		<div
 			className={cn(
-				"overflow-hidden rounded-lg border border-border bg-card",
+				"overflow-hidden rounded-none border border-line bg-ground",
 				className,
 			)}
 		>
@@ -157,13 +157,13 @@ export function DataTable<TData extends RowData>({
 					{table.getHeaderGroups().map((headerGroup) => (
 						<TableRow
 							key={headerGroup.id}
-							className="border-b bg-muted/30 hover:bg-muted/30"
+							className="border-b border-line bg-wash hover:bg-wash"
 						>
 							{headerGroup.headers.map((header) => (
 								<TableHead
 									key={header.id}
 									className={cn(
-										"h-10 px-3 text-xs font-medium text-muted-foreground",
+										"h-10 px-3 type-kicker text-gray font-normal",
 										columnMetaClassName(header.column.columnDef.meta),
 									)}
 								>
@@ -180,7 +180,7 @@ export function DataTable<TData extends RowData>({
 						<TableRow className="hover:bg-transparent">
 							<TableCell
 								colSpan={columnCount}
-								className="h-24 px-3 text-center text-sm text-muted-foreground"
+								className="h-24 px-3 text-center type-meta text-gray"
 							>
 								{emptyMessage}
 							</TableCell>
@@ -191,7 +191,7 @@ export function DataTable<TData extends RowData>({
 								key={row.id}
 								data-state={row.getIsSelected() ? "selected" : undefined}
 								className={cn(
-									"border-b border-border/60",
+									"border-b border-line transition-colors hover:bg-wash",
 									onRowClick && "cursor-pointer",
 								)}
 								tabIndex={onRowClick ? 0 : undefined}

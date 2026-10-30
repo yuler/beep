@@ -17,17 +17,19 @@ import appCss from "../styles.css?url";
 
 const themeBootScript = `(() => {
   var stored = localStorage.getItem("theme");
-  var dark =
-    stored === "dark" ||
-    (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  if (dark) {
+  var isLight = stored === "light";
+  var theme = isLight ? "light" : "dark";
+  if (theme === "dark") {
     document.documentElement.classList.add("dark");
     document.documentElement.dataset.theme = "dark";
   } else {
+    document.documentElement.classList.remove("dark");
     document.documentElement.dataset.theme = "light";
   }
   var link = document.getElementById("favicon-theme");
-  if (link) link.href = dark ? "/icon-dark.svg" : "/icon-light.svg";
+  if (link) link.href = theme === "dark" ? "/icon-dark.svg" : "/icon-light.svg";
+  var metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute("content", theme === "dark" ? "#000000" : "#ffffff");
 })();`;
 
 export const Route = createRootRoute({
@@ -51,7 +53,11 @@ export const Route = createRootRoute({
 		return {
 			meta: [
 				{ charSet: "utf-8" },
-				{ name: "viewport", content: "width=device-width, initial-scale=1" },
+				{
+					name: "viewport",
+					content: "width=device-width, initial-scale=1, viewport-fit=cover",
+				},
+				{ name: "theme-color", content: "#000000" },
 				{
 					title: m.term_beep(),
 				},

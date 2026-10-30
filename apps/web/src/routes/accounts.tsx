@@ -70,12 +70,12 @@ function AccountChoice({
 					lastUsed && "border-primary/40 bg-primary/5",
 				)}
 			>
-				<span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border">
-					<Icon className="size-4" />
+				<span className="flex size-8 shrink-0 items-center justify-center rounded-none border border-line">
+					<Icon className="size-4 text-ink" />
 				</span>
 				<span className="flex min-w-0 flex-1 flex-col items-start text-left">
-					<span className="truncate font-medium">{account.name}</span>
-					<span className="truncate text-xs font-normal text-muted-foreground">
+					<span className="truncate font-medium text-ink">{account.name}</span>
+					<span className="truncate type-meta text-xs text-gray">
 						{account.personal
 							? m.account_type_personal()
 							: m.account_type_team()}{" "}
@@ -83,7 +83,7 @@ function AccountChoice({
 						{lastUsed ? m.auth_last_used_suffix() : ""}
 					</span>
 				</span>
-				{lastUsed ? <Check className="size-4 shrink-0 text-primary" /> : null}
+				{lastUsed ? <Check className="size-4 shrink-0 text-ink" /> : null}
 			</Link>
 		</li>
 	);

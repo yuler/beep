@@ -3,7 +3,7 @@ import { Drawer as DrawerPrimitive } from "vaul";
 import { cn } from "@/lib/utils";
 
 function Drawer({
-	shouldScaleBackground = true,
+	shouldScaleBackground = false,
 	...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
 	return (
@@ -39,10 +39,7 @@ function DrawerOverlay({
 	return (
 		<DrawerPrimitive.Overlay
 			data-slot="drawer-overlay"
-			className={cn(
-				"fixed inset-0 z-50 bg-black/40 backdrop-blur-xs duration-200",
-				className,
-			)}
+			className={cn("fixed inset-0 z-50 bg-ground/80 duration-150", className)}
 			{...props}
 		/>
 	);
@@ -59,12 +56,11 @@ function DrawerContent({
 			<DrawerPrimitive.Content
 				data-slot="drawer-content"
 				className={cn(
-					"fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-[88dvh] flex-col rounded-t-2xl border bg-background focus-visible:outline-none",
+					"fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-none border-t border-line bg-ground focus-visible:outline-none",
 					className,
 				)}
 				{...props}
 			>
-				<div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/30" />
 				{children}
 			</DrawerPrimitive.Content>
 		</DrawerPortal>
@@ -78,7 +74,10 @@ function DrawerHeader({
 	return (
 		<div
 			data-slot="drawer-header"
-			className={cn("grid gap-1.5 p-4 text-left", className)}
+			className={cn(
+				"grid gap-1.5 p-4 text-left border-b border-line",
+				className,
+			)}
 			{...props}
 		/>
 	);
@@ -92,7 +91,7 @@ function DrawerFooter({
 		<div
 			data-slot="drawer-footer"
 			className={cn(
-				"mt-auto flex flex-col gap-2 p-4 border-t bg-muted/40",
+				"mt-auto flex flex-col gap-2 p-4 border-t border-line bg-transparent",
 				className,
 			)}
 			{...props}
@@ -108,7 +107,7 @@ function DrawerTitle({
 		<DrawerPrimitive.Title
 			data-slot="drawer-title"
 			className={cn(
-				"font-heading text-lg font-semibold leading-none tracking-tight",
+				"type-app-title font-medium leading-none tracking-tight text-ink",
 				className,
 			)}
 			{...props}
@@ -123,7 +122,7 @@ function DrawerDescription({
 	return (
 		<DrawerPrimitive.Description
 			data-slot="drawer-description"
-			className={cn("text-sm text-muted-foreground", className)}
+			className={cn("type-meta text-gray", className)}
 			{...props}
 		/>
 	);

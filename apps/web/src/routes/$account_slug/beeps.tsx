@@ -162,17 +162,18 @@ function BeepsPage() {
 				]}
 			/>
 
-			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+			<div className="flex flex-1 flex-col gap-6">
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex flex-col gap-1">
-						<h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
+						<h1 className="type-title text-ink font-medium">
 							{m.beeps_page_title()}
 						</h1>
-						<p className="text-sm text-muted-foreground">
+						<p className="type-meta text-gray">
 							{m.beeps_manage_description()}
 						</p>
 					</div>
 					<Button
+						variant="solid"
 						onClick={() => setIsCreateOpen(true)}
 						className="gap-2 shrink-0 self-start sm:self-auto"
 					>

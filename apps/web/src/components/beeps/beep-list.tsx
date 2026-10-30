@@ -678,32 +678,31 @@ export function BeepList({
 				</Card>
 			) : (
 				<>
-					{/* Mobile Card List View (< md) */}
-					<div className="flex flex-col gap-3 md:hidden">
+					{/* Mobile Timeline List View (< lg) */}
+					<div className="flex flex-col border-b border-line lg:hidden">
 						{filteredBeeps.map((beep) => {
-							const successRate = beepRunSuccessRate(beep);
-							const totalRuns = beepRunCount(beep);
-
 							return (
 								<div
 									key={beep.id}
-									className="relative flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-foreground/20 hover:shadow-xs"
+									className="relative flex flex-col gap-2 border-t border-line py-3 px-2 text-left transition-colors hover:bg-wash active:bg-wash"
 								>
 									<Link
 										to="/$account_slug/beeps/$beepId"
 										params={{ account_slug: slug, beepId: beep.id }}
-										className="absolute inset-0 z-0 rounded-xl"
+										className="absolute inset-0 z-0"
 										aria-label={beep.title}
 									/>
 									<div className="relative z-10 flex items-start justify-between gap-3 pointer-events-none">
 										<div className="flex min-w-0 flex-col gap-0.5">
-											<BeepIdText
-												id={beep.id}
-												className="pointer-events-auto"
-											/>
-											<span className="truncate text-base font-semibold text-foreground">
-												{beep.title}
-											</span>
+											<div className="flex items-center gap-2">
+												<BeepIdText
+													id={beep.id}
+													className="pointer-events-auto"
+												/>
+												<span className="truncate text-sm font-medium text-ink">
+													{beep.title}
+												</span>
+											</div>
 										</div>
 										<StatusPill
 											label={beepStatusLabel(beep.status)}
@@ -711,15 +710,12 @@ export function BeepList({
 										/>
 									</div>
 
-									<div className="relative z-10 grid grid-cols-2 gap-2 border-y border-border/50 py-2.5 text-xs text-muted-foreground pointer-events-none">
-										<div>
-											<span className="block text-[11px] text-muted-foreground/80">
-												{m.beeps_source()}
-											</span>
-											<span className="mt-0.5 inline-flex items-center gap-1 font-medium text-foreground">
+									<div className="relative z-10 flex flex-wrap items-center justify-between gap-2 text-xs type-meta text-gray pointer-events-none">
+										<div className="flex items-center gap-2">
+											<span className="inline-flex items-center gap-1 text-gray">
 												{beep.beeper ? (
 													<>
-														<Activity className="size-3 text-primary" />
+														<Activity className="size-3 text-ink" />
 														<span className="truncate">{beep.beeper.name}</span>
 													</>
 												) : beep.kind === "recurring" ? (
@@ -734,62 +730,30 @@ export function BeepList({
 													</>
 												)}
 											</span>
+											<span>·</span>
+											<span>
+												<LastRunCaption beep={beep} />
+											</span>
 										</div>
-										{variant === "full" ? (
-											<>
-												<div>
-													<span className="block text-[11px] text-muted-foreground/80">
-														{m.beeps_channels()}
-													</span>
-													<div className="mt-0.5 flex flex-wrap gap-1">
-														{beep.notification_channels?.length > 0 ? (
-															beep.notification_channels.map((ch) => (
-																<Badge
-																	key={ch}
-																	variant="outline"
-																	className="px-1 py-0 text-[10px]"
-																>
-																	{formatChannel(ch)}
-																</Badge>
-															))
-														) : (
-															<span>{m.beeps_channels_none()}</span>
-														)}
-													</div>
-												</div>
-												<div>
-													<span className="block text-[11px] text-muted-foreground/80">
-														{m.beeps_runs()} ({totalRuns})
-													</span>
-													<div className="mt-1">
-														<ProgressBar value={successRate} />
-													</div>
-													<span className="mt-0.5 block text-[11px] text-foreground">
-														<LastRunCaption beep={beep} />
-													</span>
-												</div>
-												<div>
-													<span className="block text-[11px] text-muted-foreground/80">
-														{m.common_created()}
-													</span>
-													<span className="mt-0.5 block font-medium text-foreground">
-														{formatBeepScheduleTime(
-															beep.created_at,
-															beep.timezone,
-															"short",
-														)}
-													</span>
-												</div>
-											</>
-										) : null}
+										<div className="flex items-center gap-1.5">
+											{beep.notification_channels?.map((ch) => (
+												<Badge
+													key={ch}
+													variant="outline"
+													className="px-1 py-0 text-[10px]"
+												>
+													{formatChannel(ch)}
+												</Badge>
+											))}
+										</div>
 									</div>
 								</div>
 							);
 						})}
 					</div>
 
-					{/* Desktop Table View (>= md) */}
-					<div className="hidden min-w-0 md:block">
+					{/* Desktop Table View (>= lg) */}
+					<div className="hidden min-w-0 lg:block">
 						<DataTable
 							data={filteredBeeps}
 							columns={columns}

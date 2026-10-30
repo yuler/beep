@@ -36,12 +36,12 @@ function ChannelSettingsPage() {
 				]}
 			/>
 
-			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+			<div className="flex flex-1 flex-col gap-6">
 				<div>
-					<h1 className="font-heading text-2xl font-semibold tracking-tight">
+					<h1 className="type-title text-ink font-medium">
 						{m.settings_channels_title()}
 					</h1>
-					<p className="mt-1 text-sm text-muted-foreground">
+					<p className="type-meta text-gray mt-1">
 						{m.settings_channels_description()}
 					</p>
 				</div>
