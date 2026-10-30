@@ -1,6 +1,5 @@
 import { Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { m } from "@/locale/paraglide/messages";
 
@@ -35,58 +34,60 @@ const testimonials = [
 
 export function TestimonialsSection() {
 	return (
-		<section className="border-t border-border/80 bg-muted/20 py-20 md:py-28">
-			<div className="mx-auto max-w-5xl px-4 sm:px-6">
+		<section className="border-t border-line bg-ground py-16 md:py-24 text-ink">
+			<div className="mx-auto max-w-[1080px] px-4 md:px-6 lg:px-8">
 				{/* Section Heading */}
 				<div className="mx-auto max-w-2xl text-center">
-					<Badge variant="outline" className="mb-3 font-medium">
+					<div className="type-kicker uppercase text-gray mb-2">
 						{m.marketing_testimonials_badge()}
-					</Badge>
-					<h2 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+					</div>
+					<h2 className="type-title text-2xl font-medium tracking-tight text-ink sm:text-3xl">
 						{m.marketing_testimonials_title()}
 					</h2>
-					<p className="mt-4 text-base text-muted-foreground sm:text-lg">
+					<p className="type-meta mt-3 text-base text-gray">
 						{m.marketing_testimonials_description()}
 					</p>
 				</div>
 
 				{/* Testimonial Cards */}
-				<div className="mt-14 grid gap-6 md:grid-cols-3">
+				<div className="mt-12 grid gap-4 md:grid-cols-3">
 					{testimonials.map(({ id, quote, author, role, avatar, initials }) => (
 						<Card
 							key={id}
-							className="relative flex flex-col justify-between overflow-hidden border-border bg-card p-6 shadow-xs transition-shadow hover:shadow-md"
+							className="border-t border-line sm:border sm:border-line bg-transparent p-5 flex flex-col justify-between"
 						>
 							<div>
 								{/* Star Rating */}
-								<div className="flex items-center gap-1 text-amber-500">
+								<div className="flex items-center gap-1 text-ink">
 									{STARS.map((starNum) => (
 										<Star
 											key={`star-${id}-${starNum}`}
-											className="size-4 fill-amber-500"
+											className="size-3.5 fill-ink text-ink"
 										/>
 									))}
 								</div>
 
 								{/* Quote */}
-								<p className="mt-4 text-sm leading-relaxed text-foreground/90 italic">
+								<p className="type-meta mt-4 text-sm text-ink leading-relaxed">
 									"{quote()}"
 								</p>
 							</div>
 
 							{/* Author Info */}
-							<div className="mt-6 flex items-center gap-3 border-t border-border/60 pt-4">
+							<div className="mt-6 flex items-center gap-3 border-t border-line pt-4">
 								<Avatar size="sm">
 									<AvatarImage src={avatar} alt={author()} />
-									<AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+									<AvatarFallback className="text-xs font-normal">
 										{initials}
 									</AvatarFallback>
 								</Avatar>
-								<div className="text-left">
-									<div className="text-sm font-semibold text-foreground">
+								<div className="text-left min-w-0">
+									<div className="text-sm font-medium text-ink truncate">
 										{author()}
 									</div>
-									<div className="text-xs text-muted-foreground">{role()}</div>
+									<div className="type-meta text-xs text-gray truncate">
+										{role()}
+									</div>
 								</div>
 							</div>
 						</Card>

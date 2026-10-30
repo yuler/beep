@@ -4,27 +4,19 @@ import { m } from "@/locale/paraglide/messages";
 
 export function CtaSection() {
 	return (
-		<section className="border-t border-border/80 bg-muted/20 py-20 md:py-28">
-			<div className="mx-auto max-w-5xl px-4 sm:px-6">
-				<div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/10 via-primary/5 to-background p-8 text-center shadow-lg md:p-14">
-					{/* Glow effect */}
-					<div
-						className="pointer-events-none absolute -top-24 left-1/2 -z-10 -translate-x-1/2 transform-gpu blur-2xl"
-						aria-hidden="true"
-					>
-						<div className="aspect-square w-96 rounded-full bg-primary/20 opacity-70" />
-					</div>
-
+		<section className="border-t border-line bg-ground py-16 md:py-24 text-ink">
+			<div className="mx-auto max-w-[1080px] px-4 md:px-6 lg:px-8">
+				<div className="border border-line bg-ground p-8 text-center md:p-14">
 					<div className="mx-auto max-w-2xl">
-						<div className="inline-flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-xs">
-							<Sparkles className="size-5" />
+						<div className="inline-flex size-8 items-center justify-center border border-line text-ink mb-4">
+							<Sparkles className="size-4" />
 						</div>
 
-						<h2 className="font-heading mt-6 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+						<h2 className="type-title text-2xl font-medium tracking-tight text-ink sm:text-3xl">
 							{m.marketing_cta_title()}
 						</h2>
 
-						<p className="mt-4 text-base text-muted-foreground sm:text-lg">
+						<p className="type-meta mt-3 text-base text-gray max-w-lg mx-auto">
 							{m.marketing_cta_description()}
 						</p>
 
@@ -32,8 +24,9 @@ export function CtaSection() {
 							<SiteAuthButton
 								signInLabel={m.common_get_started()}
 								dashboardLabel={m.common_open_dashboard()}
+								variant="solid"
 								size="lg"
-								className="h-11 px-8 shadow-md"
+								className="px-8"
 							/>
 						</div>
 					</div>

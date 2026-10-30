@@ -19,6 +19,7 @@ import {
 	ComboboxTrigger,
 } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
+import { Notice } from "@/components/ui/notice";
 import { ApiError } from "@/lib/api/client";
 import { type TimezoneSource, updateSettings } from "@/lib/api/settings";
 import { translateError } from "@/lib/i18n-labels";
@@ -192,9 +193,9 @@ export function TimezoneSettings({
 					</Button>
 				</div>
 				{error ? (
-					<p className="text-sm text-destructive" role="alert">
+					<Notice error label="出错" role="alert">
 						{error}
-					</p>
+					</Notice>
 				) : null}
 			</CardContent>
 		</Card>

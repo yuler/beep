@@ -17,7 +17,13 @@ export function NotFound() {
 				<p className="mt-3 max-w-md text-muted-foreground text-pretty">
 					{m.errors_not_found_description()}
 				</p>
-				<Link to="/" className={cn(buttonVariants({ size: "lg" }), "mt-8")}>
+				<Link
+					to="/"
+					className={cn(
+						buttonVariants({ size: "lg", variant: "solid" }),
+						"mt-8",
+					)}
+				>
 					{m.common_back()}
 				</Link>
 			</main>

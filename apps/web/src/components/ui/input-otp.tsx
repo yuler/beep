@@ -1,8 +1,6 @@
-import { type ClipboardEvent, type KeyboardEvent, useRef } from "react";
+import { type ChangeEvent, type KeyboardEvent, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
-
-const OTP_SLOT_KEYS = ["0", "1", "2", "3", "4", "5"] as const;
 
 function sanitizeCode(input: string, maxLength: number) {
 	return input
@@ -13,9 +11,10 @@ function sanitizeCode(input: string, maxLength: number) {
 		.slice(0, maxLength);
 }
 
-function InputOTP({
+export function OtpField({
 	value,
 	onChange,
+	onComplete,
 	length = 6,
 	id,
 	autoFocus,
@@ -25,6 +24,7 @@ function InputOTP({
 }: {
 	value: string;
 	onChange: (value: string) => void;
+	onComplete?: (code: string) => void;
 	length?: number;
 	id?: string;
 	autoFocus?: boolean;
@@ -32,118 +32,86 @@ function InputOTP({
 	className?: string;
 	"aria-invalid"?: boolean;
 }) {
-	const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+	const inputRef = useRef<HTMLInputElement | null>(null);
+	const [isFocused, setIsFocused] = useState(false);
 
-	function focusAt(index: number) {
-		const input = inputsRef.current[index];
-		input?.focus();
-		input?.select();
-	}
+	const code = sanitizeCode(value, length);
 
-	function applyCode(next: string) {
-		onChange(sanitizeCode(next, length));
-	}
-
-	function handlePaste(index: number, event: ClipboardEvent<HTMLInputElement>) {
-		event.preventDefault();
-		const pasted = sanitizeCode(
-			`${value.slice(0, index)}${event.clipboardData.getData("text")}`,
-			length,
-		);
-		applyCode(pasted);
-		focusAt(Math.min(pasted.length, length - 1));
-	}
-
-	function handleChange(index: number, nextValue: string) {
-		const sanitized = sanitizeCode(nextValue, length);
-
-		if (sanitized.length > 1) {
-			applyCode(sanitized);
-			focusAt(Math.min(sanitized.length, length - 1));
-			return;
-		}
-
-		const chars = value.split("");
-		while (chars.length < length) chars.push("");
-
-		if (sanitized) {
-			chars[index] = sanitized;
-			applyCode(chars.join("").trimEnd());
-			if (index < length - 1) focusAt(index + 1);
-			return;
-		}
-
-		chars[index] = "";
-		applyCode(chars.join("").trimEnd());
-	}
-
-	function handleKeyDown(
-		index: number,
-		event: KeyboardEvent<HTMLInputElement>,
-	) {
-		if (event.key === "Backspace") {
-			event.preventDefault();
-			const chars = value.split("");
-			while (chars.length < length) chars.push("");
-
-			if (chars[index]) {
-				chars[index] = "";
-				applyCode(chars.join("").trimEnd());
-				return;
-			}
-
-			if (index > 0) {
-				chars[index - 1] = "";
-				applyCode(chars.join("").trimEnd());
-				focusAt(index - 1);
-			}
-			return;
-		}
-
-		if (event.key === "ArrowLeft" && index > 0) {
-			event.preventDefault();
-			focusAt(index - 1);
-			return;
-		}
-
-		if (event.key === "ArrowRight" && index < length - 1) {
-			event.preventDefault();
-			focusAt(index + 1);
+	function handleChange(e: ChangeEvent<HTMLInputElement>) {
+		const next = sanitizeCode(e.target.value, length);
+		onChange(next);
+		if (next.length === length) {
+			onComplete?.(next);
 		}
 	}
+
+	function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+		if (e.key === "Backspace" && code.length > 0) {
+			// standard backspace handled by onChange
+		}
+	}
+
+	const slots = Array.from({ length }, (_, index) => index);
+	const activeIndex = Math.min(code.length, length - 1);
 
 	return (
 		<div
-			className={cn("flex justify-center gap-2", className)}
-			role="group"
-			aria-label="One-time code"
+			className={cn("relative flex items-center justify-center", className)}
+			onClick={() => inputRef.current?.focus()}
 		>
-			{OTP_SLOT_KEYS.slice(0, length).map((slotKey, index) => (
-				<input
-					key={slotKey}
-					ref={(element) => {
-						inputsRef.current[index] = element;
-					}}
-					id={index === 0 ? id : undefined}
-					type="text"
-					inputMode="text"
-					autoComplete={index === 0 ? "one-time-code" : "off"}
-					maxLength={index === 0 ? length : 1}
-					value={value[index] ?? ""}
-					disabled={disabled}
-					autoFocus={autoFocus && index === 0}
-					aria-invalid={ariaInvalid}
-					className={cn(
-						"h-11 w-10 rounded-lg border border-input bg-transparent text-center font-mono text-lg uppercase transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
-					)}
-					onChange={(event) => handleChange(index, event.target.value)}
-					onKeyDown={(event) => handleKeyDown(index, event)}
-					onPaste={(event) => handlePaste(index, event)}
-					onFocus={(event) => event.target.select()}
-				/>
-			))}
+			{/* Real transparent input overlay */}
+			<input
+				ref={inputRef}
+				id={id}
+				type="text"
+				inputMode="text"
+				autoComplete="one-time-code"
+				autoFocus={autoFocus}
+				disabled={disabled}
+				value={code}
+				maxLength={length}
+				onChange={handleChange}
+				onKeyDown={handleKeyDown}
+				onFocus={() => setIsFocused(true)}
+				onBlur={() => setIsFocused(false)}
+				className="absolute inset-0 z-10 w-full h-full opacity-0 cursor-text disabled:cursor-not-allowed"
+				aria-invalid={ariaInvalid}
+			/>
+
+			{/* 6 equal-width boxes */}
+			<div className="flex items-center gap-2" aria-hidden="true">
+				{slots.map((index) => {
+					const char = code[index] ?? "";
+					const isFilled = char.length > 0;
+					const isActive = isFocused && index === activeIndex;
+
+					let borderClass = "border-line";
+					if (ariaInvalid) {
+						borderClass = "border-ink";
+					} else if (isActive) {
+						borderClass = "border-ink";
+					} else if (isFilled) {
+						borderClass = "border-gray";
+					}
+
+					return (
+						<div
+							key={index}
+							className={cn(
+								"flex h-12 w-11 sm:h-13 sm:w-12 items-center justify-center border bg-transparent font-mono text-xl text-ink transition-colors select-none",
+								borderClass,
+							)}
+						>
+							{char}
+							{isActive && !isFilled && (
+								<span className="inline-block w-0.5 h-5 bg-ink animate-pulse" />
+							)}
+						</div>
+					);
+				})}
+			</div>
 		</div>
 	);
 }
 
-export { InputOTP };
+export const InputOTP = OtpField;

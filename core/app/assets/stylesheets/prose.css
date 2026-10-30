@@ -1,31 +1,32 @@
 @layer components {
   .prose {
-    color: var(--color-ink);
-    line-height: 1.7;
+    color: var(--ink);
+    line-height: 1.6;
     max-inline-size: 70ch;
 
     :is(h1, h2, h3, h4) {
-      color: var(--color-ink);
-      line-height: 1.25;
+      color: var(--ink);
+      line-height: 1.2;
       margin-block: 1.5em 0.6em;
+      font-weight: 500;
     }
 
     :first-child { margin-block-start: 0; }
 
-    h1 { font-size: var(--text-x-large); font-weight: 700; }
-    h2 { font-size: var(--text-large); font-weight: 700; }
-    h3 { font-size: var(--text-medium); font-weight: 600; }
+    h1 { font-size: 28px; font-weight: 500; }
+    h2 { font-size: 22px; font-weight: 500; }
+    h3 { font-size: 18px; font-weight: 500; }
 
     p { margin-block: 1em; }
 
-    .lead { color: var(--color-ink-dark); font-size: var(--text-medium); }
+    .lead { color: var(--gray); font-size: 15px; }
 
-    a { color: var(--color-link); text-decoration: underline; }
+    a { color: var(--ink); text-decoration: underline; }
 
     :is(ul, ol) { margin-block: 1em; padding-inline-start: 1.5em; }
     li { margin-block: 0.35em; }
 
-    strong { font-weight: 700; }
+    strong { font-weight: 500; }
 
     table { margin-block: 1.5em; }
   }

@@ -13,8 +13,8 @@
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: var(--color-canvas);
-    color: var(--color-ink);
+    background-color: var(--ground);
+    color: var(--ink);
     font-family: var(--font-sans);
     line-height: 1.5;
     min-height: 100dvh;
@@ -26,7 +26,7 @@
     text-decoration: none;
 
     &:not([class]) {
-      color: var(--color-link);
+      color: var(--ink);
       text-decoration: underline;
       text-decoration-skip-ink: auto;
     }
@@ -43,35 +43,38 @@
   }
 
   code:not([class]) {
-    background-color: var(--color-shade);
-    border-radius: var(--radius-small);
+    background-color: var(--wash);
+    border: 1px solid var(--line);
+    border-radius: 0;
     padding: 0.15em 0.4em;
   }
 
   pre {
-    background-color: var(--color-shade);
-    border-radius: var(--radius);
+    background-color: var(--wash);
+    border: 1px solid var(--line);
+    border-radius: 0;
     overflow-x: auto;
     padding: var(--block-space) var(--inline-space);
   }
 
   ::selection {
-    background-color: var(--color-selected);
+    background-color: var(--solid);
+    color: var(--solid-ink);
   }
 
   :is(a, button, input, textarea, select, .btn) {
     transition: 120ms ease-out;
-    transition-property: background-color, border-color, box-shadow, color, opacity, outline, scale;
+    transition-property: background-color, border-color, box-shadow, color, opacity, outline;
 
     &:where(:focus-visible) {
-      border-radius: var(--radius-small);
+      border-radius: 0;
       outline: var(--focus-ring-size) solid var(--focus-ring-color);
       outline-offset: var(--focus-ring-offset);
     }
 
     &:where([disabled]) {
       cursor: not-allowed;
-      opacity: 0.5;
+      opacity: 0.4;
       pointer-events: none;
     }
   }
@@ -89,6 +92,7 @@
   }
 
   .turbo-progress-bar {
-    background-color: var(--color-accent);
+    background-color: var(--ink);
+    height: 2px;
   }
 }

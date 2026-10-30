@@ -1,12 +1,7 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import {
-	Building2,
-	Check,
-	ChevronsUpDown,
-	UserRound,
-	Users,
-} from "lucide-react";
+import { Building2, Check, ChevronDown, UserRound, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -16,12 +11,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem,
-	useSidebar,
-} from "@/components/ui/sidebar";
 import { rememberLastAccount } from "@/lib/api/session";
 import type { AccountSummary } from "@/lib/auth/account";
 import { cn } from "@/lib/utils";
@@ -30,13 +19,14 @@ import { m } from "@/locale/paraglide/messages";
 export function AccountSwitcher({
 	accounts,
 	slug,
+	className,
 }: {
 	accounts: AccountSummary[];
 	slug: string;
+	className?: string;
 }) {
 	const navigate = useNavigate();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
-	const { isMobile } = useSidebar();
 	const [active, setActive] = useState<AccountSummary | null>(
 		() => accounts.find((account) => account.slug === slug) ?? null,
 	);
@@ -46,30 +36,7 @@ export function AccountSwitcher({
 	}, [accounts, slug]);
 
 	if (!active) {
-		return (
-			<SidebarMenu>
-				<SidebarMenuItem>
-					<SidebarMenuButton
-						size="lg"
-						disabled
-						tooltip={m.account_no_accounts()}
-						className="group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0!"
-					>
-						<span className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-							<Building2 className="size-4" />
-						</span>
-						<div className="grid flex-1 text-left text-sm leading-tight">
-							<span className="truncate font-semibold">
-								{m.account_no_accounts()}
-							</span>
-							<span className="truncate text-xs">
-								{m.account_create_one_to_continue()}
-							</span>
-						</div>
-					</SidebarMenuButton>
-				</SidebarMenuItem>
-			</SidebarMenu>
-		);
+		return null;
 	}
 
 	function selectAccount(account: AccountSummary) {
@@ -91,83 +58,65 @@ export function AccountSwitcher({
 	const ActiveIcon = active.personal ? UserRound : Building2;
 
 	return (
-		<SidebarMenu>
-			<SidebarMenuItem>
-				<DropdownMenu>
-					<DropdownMenuTrigger
-						render={
-							<SidebarMenuButton
-								size="lg"
-								tooltip={active.name}
-								className="data-[popup-open]:bg-sidebar-accent data-[popup-open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0!"
-							/>
-						}
-					>
-						<span className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-							<ActiveIcon className="size-4" />
-						</span>
-						<div className="grid flex-1 text-left text-sm leading-tight">
-							<span className="truncate font-semibold">{active.name}</span>
-							<span className="truncate text-xs text-muted-foreground">
-								{active.personal ? m.account_personal() : m.account_team()} · /
-								{active.slug}
-							</span>
-						</div>
-						<ChevronsUpDown className="ml-auto size-4" />
-					</DropdownMenuTrigger>
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				render={
+					<Button
+						variant="ghost"
+						size="sm"
+						className={cn(
+							"h-8 gap-1.5 px-2 text-xs font-normal text-ink hover:border-ink min-h-0 sm:min-h-0",
+							className,
+						)}
+					/>
+				}
+			>
+				<ActiveIcon className="size-3.5 text-gray shrink-0" />
+				<span className="max-w-[120px] sm:max-w-[180px] truncate">
+					{active.name}
+				</span>
+				<ChevronDown className="size-3 text-gray shrink-0" />
+			</DropdownMenuTrigger>
 
-					<DropdownMenuContent
-						className="min-w-56 rounded-lg"
-						align="start"
-						side={isMobile ? "bottom" : "right"}
-						sideOffset={4}
-					>
-						<DropdownMenuGroup>
-							<DropdownMenuLabel className="text-xs text-muted-foreground">
-								{m.account_accounts()}
-							</DropdownMenuLabel>
-							{accounts.map((account) => {
-								const Icon = account.personal ? UserRound : Building2;
-								const selected = account.id === active.id;
-								return (
-									<DropdownMenuItem
-										key={account.id}
-										className="gap-2 p-2"
-										onClick={() => selectAccount(account)}
-									>
-										<span className="flex size-6 items-center justify-center rounded-md border border-border">
-											<Icon className="size-3.5 shrink-0" />
-										</span>
-										<span className="flex-1 truncate">{account.name}</span>
-										<Check
-											className={cn(
-												"size-4",
-												selected ? "opacity-100" : "opacity-0",
-											)}
-										/>
-									</DropdownMenuItem>
-								);
-							})}
-						</DropdownMenuGroup>
-						<DropdownMenuSeparator />
-						<DropdownMenuGroup>
+			<DropdownMenuContent className="w-56" align="start" sideOffset={4}>
+				<DropdownMenuGroup>
+					<DropdownMenuLabel>{m.account_accounts()}</DropdownMenuLabel>
+					{accounts.map((account) => {
+						const Icon = account.personal ? UserRound : Building2;
+						const selected = account.id === active.id;
+						return (
 							<DropdownMenuItem
-								className="gap-2 p-2"
-								onClick={() => {
-									void navigate({ to: "/accounts" });
-								}}
+								key={account.id}
+								className="gap-2.5 py-1.5"
+								onClick={() => selectAccount(account)}
 							>
-								<span className="flex size-6 items-center justify-center rounded-md border border-border bg-transparent">
-									<Users className="size-3.5" />
-								</span>
-								<span className="font-medium">
-									{m.account_manage_accounts()}
-								</span>
+								<Icon className="size-3.5 text-gray shrink-0" />
+								<span className="flex-1 truncate">{account.name}</span>
+								<Check
+									className={cn(
+										"size-3.5 text-ink",
+										selected ? "opacity-100" : "opacity-0",
+									)}
+								/>
 							</DropdownMenuItem>
-						</DropdownMenuGroup>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</SidebarMenuItem>
-		</SidebarMenu>
+						);
+					})}
+				</DropdownMenuGroup>
+				<DropdownMenuSeparator />
+				<DropdownMenuGroup>
+					<DropdownMenuItem
+						className="gap-2.5 py-1.5"
+						onClick={() => {
+							void navigate({ to: "/accounts" });
+						}}
+					>
+						<Users className="size-3.5 text-gray shrink-0" />
+						<span className="flex-1 truncate">
+							{m.account_manage_accounts()}
+						</span>
+					</DropdownMenuItem>
+				</DropdownMenuGroup>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }

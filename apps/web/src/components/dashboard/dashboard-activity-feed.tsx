@@ -12,6 +12,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { StatusPill, type StatusPillTone } from "@/components/ui/status-pill";
+import { Timeline, TimelineItem } from "@/components/ui/timeline";
 import type { DashboardActivity } from "@/lib/api/dashboard";
 import { cn } from "@/lib/utils";
 
@@ -50,67 +51,67 @@ export function DashboardActivityFeed({
 	function getTypeIcon(type: DashboardActivity["type"]) {
 		switch (type) {
 			case "beep":
-				return <Bell className="size-3.5 text-blue-500" />;
+				return <Bell className="size-3.5 text-ink" />;
 			case "beeper":
-				return <Radio className="size-3.5 text-emerald-500" />;
+				return <Radio className="size-3.5 text-ink" />;
 			case "runner":
-				return <Server className="size-3.5 text-violet-500" />;
+				return <Server className="size-3.5 text-ink" />;
 			default:
-				return <Activity className="size-3.5 text-muted-foreground" />;
+				return <Activity className="size-3.5 text-gray" />;
 		}
 	}
 
 	return (
-		<Card className="bg-card/60 transition-colors hover:bg-card">
+		<Card className="bg-transparent border-t border-line sm:border sm:border-line">
 			<CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-3">
 				<div>
-					<CardTitle className="font-heading text-lg font-semibold tracking-tight">
+					<CardTitle className="type-app-title font-medium text-ink">
 						Recent Activity
 					</CardTitle>
-					<CardDescription className="text-xs">
+					<CardDescription className="type-meta text-gray">
 						Live timeline across task executions, probe checks, and runner runs
 					</CardDescription>
 				</div>
 
 				<div className="flex flex-wrap items-center gap-1">
 					<Button
-						variant={filter === "all" ? "secondary" : "ghost"}
-						size="sm"
-						className="h-7 text-xs px-2.5"
+						variant={filter === "all" ? "solid" : "ghost"}
+						size="xs"
+						className="h-7 text-xs px-2.5 min-h-0 sm:min-h-0"
 						onClick={() => setFilter("all")}
 					>
 						All
 					</Button>
 					<Button
-						variant={filter === "beep" ? "secondary" : "ghost"}
-						size="sm"
-						className="h-7 text-xs px-2.5"
+						variant={filter === "beep" ? "solid" : "ghost"}
+						size="xs"
+						className="h-7 text-xs px-2.5 min-h-0 sm:min-h-0"
 						onClick={() => setFilter("beep")}
 					>
 						Beeps
 					</Button>
 					<Button
-						variant={filter === "beeper" ? "secondary" : "ghost"}
-						size="sm"
-						className="h-7 text-xs px-2.5"
+						variant={filter === "beeper" ? "solid" : "ghost"}
+						size="xs"
+						className="h-7 text-xs px-2.5 min-h-0 sm:min-h-0"
 						onClick={() => setFilter("beeper")}
 					>
 						Beepers
 					</Button>
 					<Button
-						variant={filter === "runner" ? "secondary" : "ghost"}
-						size="sm"
-						className="h-7 text-xs px-2.5"
+						variant={filter === "runner" ? "solid" : "ghost"}
+						size="xs"
+						className="h-7 text-xs px-2.5 min-h-0 sm:min-h-0"
 						onClick={() => setFilter("runner")}
 					>
 						Runners
 					</Button>
 					<Button
-						variant={filter === "failures" ? "secondary" : "ghost"}
-						size="sm"
+						variant={filter === "failures" ? "solid" : "ghost"}
+						size="xs"
 						className={cn(
-							"h-7 text-xs px-2.5",
-							filter === "failures" && "text-rose-600 dark:text-rose-400",
+							"h-7 text-xs px-2.5 min-h-0 sm:min-h-0",
+							filter === "failures" && "border-ink",
 						)}
 						onClick={() => setFilter("failures")}
 					>
@@ -121,17 +122,19 @@ export function DashboardActivityFeed({
 
 			<CardContent className="pt-2">
 				{filteredActivities.length === 0 ? (
-					<div className="flex h-36 flex-col items-center justify-center rounded-lg border border-dashed border-border/80 text-muted-foreground">
-						<Filter className="size-5 mb-1.5 opacity-60" />
-						<p className="text-sm font-medium">No recent activities found</p>
-						<p className="text-xs text-muted-foreground/80">
+					<div className="flex h-36 flex-col items-center justify-center border border-line text-gray">
+						<Filter className="size-5 mb-1.5 opacity-60 text-gray" />
+						<p className="text-sm font-normal text-ink">
+							No recent activities found
+						</p>
+						<p className="type-meta text-gray">
 							{filter === "all"
 								? "Executions will appear here in real time."
 								: "No matching activities for the selected filter."}
 						</p>
 					</div>
 				) : (
-					<div className="divide-y divide-border/50">
+					<Timeline className="border-b border-line">
 						{filteredActivities.map((act) => {
 							const relativeTime = (() => {
 								try {
@@ -144,14 +147,17 @@ export function DashboardActivityFeed({
 							})();
 
 							const targetHref = `/${slug}/${act.target_path}`;
+							const isFailure =
+								act.status === "failure" || act.status === "warning";
 
 							return (
-								<div
+								<TimelineItem
 									key={act.id}
-									className="flex items-center justify-between gap-3 py-3 transition-colors hover:bg-muted/20 px-2 rounded-md"
+									bordered={isFailure}
+									className="flex items-center justify-between gap-3 py-3 px-2"
 								>
 									<div className="flex items-center gap-3 min-w-0">
-										<div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background/50">
+										<div className="flex size-7 shrink-0 items-center justify-center border border-line bg-transparent">
 											{getTypeIcon(act.type)}
 										</div>
 
@@ -159,18 +165,18 @@ export function DashboardActivityFeed({
 											<div className="flex items-center gap-2">
 												<Link
 													to={targetHref}
-													className="truncate text-sm font-medium text-foreground hover:underline"
+													className="truncate text-sm font-normal text-ink hover:underline"
 												>
 													{act.title}
 												</Link>
 												<Badge
 													variant="outline"
-													className="text-[10px] uppercase px-1.5 py-0 font-mono tracking-wider text-muted-foreground"
+													className="type-kicker px-1.5 py-0 uppercase text-gray"
 												>
 													{act.type}
 												</Badge>
 											</div>
-											<span className="truncate text-xs text-muted-foreground">
+											<span className="truncate type-meta text-gray">
 												{act.summary}
 											</span>
 										</div>
@@ -183,16 +189,16 @@ export function DashboardActivityFeed({
 											className="capitalize text-[11px] h-5 px-2"
 										/>
 										<span
-											className="text-xs text-muted-foreground whitespace-nowrap"
+											className="type-meta text-gray whitespace-nowrap text-xs"
 											title={act.occurred_at}
 										>
 											{relativeTime}
 										</span>
 									</div>
-								</div>
+								</TimelineItem>
 							);
 						})}
-					</div>
+					</Timeline>
 				)}
 			</CardContent>
 		</Card>

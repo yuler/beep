@@ -1,5 +1,4 @@
 import { ArrowRight, Bot, Cpu, Radio } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { m } from "@/locale/paraglide/messages";
 
@@ -26,47 +25,47 @@ const steps = [
 
 export function HowItWorksSection() {
 	return (
-		<section className="border-t border-border/80 bg-background py-20 md:py-28">
-			<div className="mx-auto max-w-5xl px-4 sm:px-6">
+		<section className="border-t border-line bg-ground py-16 md:py-24 text-ink">
+			<div className="mx-auto max-w-[1080px] px-4 md:px-6 lg:px-8">
 				{/* Section Heading */}
 				<div className="mx-auto max-w-2xl text-center">
-					<Badge variant="outline" className="mb-3 font-medium">
+					<div className="type-kicker uppercase text-gray mb-2">
 						{m.marketing_how_it_works_badge()}
-					</Badge>
-					<h2 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+					</div>
+					<h2 className="type-title text-2xl font-medium tracking-tight text-ink sm:text-3xl">
 						{m.marketing_how_it_works_title()}
 					</h2>
-					<p className="mt-4 text-base text-muted-foreground sm:text-lg">
+					<p className="type-meta mt-3 text-base text-gray">
 						{m.marketing_how_it_works_description()}
 					</p>
 				</div>
 
 				{/* Step Cards */}
-				<div className="mt-14 grid gap-6 md:grid-cols-3">
+				<div className="mt-12 grid gap-4 md:grid-cols-3">
 					{steps.map(({ number, icon: Icon, title, description }, index) => (
 						<Card
 							key={number()}
-							className="relative flex flex-col justify-between overflow-hidden border-border bg-card p-6 shadow-xs transition-shadow hover:shadow-md"
+							className="border-t border-line sm:border sm:border-line bg-transparent p-5 flex flex-col justify-between"
 						>
 							<div>
 								<div className="flex items-center justify-between">
-									<div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-										<Icon className="size-5" />
+									<div className="flex size-8 items-center justify-center border border-line text-ink">
+										<Icon className="size-4" />
 									</div>
-									<span className="font-mono text-2xl font-bold text-muted-foreground/30">
+									<span className="font-mono text-xl font-normal text-gray">
 										{number()}
 									</span>
 								</div>
-								<h3 className="font-heading mt-6 text-lg font-semibold text-foreground">
+								<h3 className="type-app-title mt-5 text-base font-medium text-ink">
 									{title()}
 								</h3>
-								<p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+								<p className="type-meta mt-2 text-sm text-gray leading-relaxed">
 									{description()}
 								</p>
 							</div>
 
 							{index < steps.length - 1 && (
-								<div className="mt-6 hidden items-center gap-1 text-xs font-medium text-muted-foreground md:flex">
+								<div className="mt-5 hidden items-center gap-1.5 type-kicker text-gray md:flex">
 									<span>{m.marketing_how_it_works_next_step()}</span>
 									<ArrowRight className="size-3.5" />
 								</div>

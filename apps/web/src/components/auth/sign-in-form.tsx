@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Notice } from "@/components/ui/notice";
 import { ApiError } from "@/lib/api/client";
 import { startSession } from "@/lib/api/session";
 import { safeReturnTo } from "@/lib/auth/return-to";
@@ -60,9 +61,11 @@ export function SignInForm({
 	const emailId = `${idPrefix}-email`;
 
 	return (
-		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
+		<form className="flex flex-col gap-5" onSubmit={onSubmit}>
 			<div className="flex flex-col gap-2">
-				<Label htmlFor={emailId}>{m.auth_email()}</Label>
+				<Label htmlFor={emailId} className="type-kicker text-gray">
+					{m.auth_email()}
+				</Label>
 				<Input
 					id={emailId}
 					name="email"
@@ -75,12 +78,18 @@ export function SignInForm({
 				/>
 			</div>
 			{error ? (
-				<p className="text-sm text-destructive" role="alert">
+				<Notice error label="出错" role="alert">
 					{error}
-				</p>
+				</Notice>
 			) : null}
-			<Button type="submit" disabled={pending} className="w-full">
-				{pending ? m.auth_sending() : m.auth_continue()}
+			<Button
+				type="submit"
+				variant="solid"
+				loading={pending}
+				loadingText={m.auth_sending()}
+				className="w-full"
+			>
+				{m.auth_continue()}
 			</Button>
 		</form>
 	);

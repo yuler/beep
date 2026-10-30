@@ -1,30 +1,37 @@
 @layer components {
   .btn {
-    --icon-size: var(--btn-icon-size, 1.2em);
+    --icon-size: var(--btn-icon-size, 1.1em);
 
     align-items: center;
-    background-color: var(--btn-background, var(--color-canvas));
-    border: var(--btn-border-size, 1px) solid var(--btn-border-color, var(--color-border-strong));
-    border-radius: var(--btn-border-radius, 99rem);
-    color: var(--btn-color, var(--color-ink));
+    background-color: transparent;
+    border: 1px solid var(--line);
+    border-radius: 0;
+    color: var(--ink);
     cursor: pointer;
     display: inline-flex;
-    font-size: var(--btn-font-size, 1em);
-    font-weight: var(--btn-font-weight, 600);
-    gap: var(--btn-gap, 0.5em);
+    font-family: inherit;
+    font-size: var(--btn-font-size, 14px);
+    font-weight: 400;
+    gap: 0.5em;
     justify-content: center;
     line-height: 1.2;
-    padding: var(--btn-padding, 0.55em 1.1em);
+    min-height: 44px;
+    padding: 8px 12px;
     text-decoration: none;
     white-space: nowrap;
 
-    @media (any-hover: hover) {
-      &:hover { filter: brightness(var(--btn-hover-brightness, 0.94)); }
+    @media (min-width: 768px) {
+      min-height: 40px;
     }
 
-    html[data-theme="dark"] & { --btn-hover-brightness: 1.2; }
-    @media (prefers-color-scheme: dark) {
-      html:not([data-theme]) & { --btn-hover-brightness: 1.2; }
+    @media (hover: hover) {
+      &:hover {
+        border-color: var(--ink);
+      }
+    }
+
+    &:active {
+      background-color: var(--wash);
     }
 
     &[disabled],
@@ -35,108 +42,151 @@
     }
 
     .icon,
-    img {
+    img,
+    svg {
       block-size: var(--icon-size);
       inline-size: var(--icon-size);
+      flex-shrink: 0;
     }
   }
 
-  /* Variants */
-  .btn--primary {
-    --btn-background: var(--color-accent);
-    --btn-border-color: var(--color-accent);
-    --btn-color: var(--color-white);
-    --focus-ring-color: var(--color-accent);
+  /* Solid / Primary button: solid background, solid-ink text */
+  .btn--primary,
+  .btn--solid {
+    background-color: var(--solid);
+    border-color: var(--solid);
+    color: var(--solid-ink);
+    padding: 10px 14px;
+
+    @media (hover: hover) {
+      &:hover {
+        opacity: 0.9;
+        border-color: var(--solid);
+      }
+    }
+
+    &:active {
+      opacity: 0.8;
+      background-color: var(--solid);
+    }
   }
 
   .btn--reversed {
-    --btn-background: var(--color-ink);
-    --btn-border-color: var(--color-ink);
-    --btn-color: var(--color-canvas);
+    background-color: var(--wash);
+    border-color: var(--line);
+    color: var(--ink);
   }
 
-  .btn--negative {
-    --btn-background: var(--color-negative);
-    --btn-border-color: var(--color-negative);
-    --btn-color: var(--color-white);
-    --focus-ring-color: var(--color-negative);
-  }
+  /* Ghost button: transparent background, 1px line border (or transparent) */
+  .btn--ghost {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--ink);
 
-  /* Text / ghost destructive action (e.g. Sign Out) */
-  .btn--danger {
-    --btn-background: transparent;
-    --btn-border-color: transparent;
-    --btn-color: var(--color-negative);
-    --btn-hover-brightness: 1;
-    --focus-ring-color: var(--color-negative);
-    color: var(--color-negative);
-
-    @media (any-hover: hover) {
+    @media (hover: hover) {
       &:hover {
-        --btn-background: oklch(var(--lch-red) / 0.12);
-        background-color: oklch(var(--lch-red) / 0.12);
-        color: var(--color-negative);
+        background-color: var(--wash);
+        border-color: transparent;
       }
+    }
+
+    &:active {
+      background-color: var(--wash);
+    }
+
+    &.is-selected {
+      background-color: var(--solid);
+      border-color: var(--solid);
+      color: var(--solid-ink);
     }
   }
 
-  .btn--ghost {
-    --btn-background: transparent;
-    --btn-border-color: transparent;
+  /* Outline button: transparent background, 1px line border */
+  .btn--outline,
+  .btn--secondary {
+    background-color: transparent;
+    border-color: var(--line);
+    color: var(--ink);
+
+    @media (hover: hover) {
+      &:hover {
+        border-color: var(--ink);
+      }
+    }
+
+    &:active {
+      background-color: var(--wash);
+    }
   }
 
-  .btn--outline {
-    --btn-background: transparent;
-    --btn-border-color: var(--color-border-strong);
+  /* Destructive / Danger: Monochrome - 1px line border, ink text, wash hover. No red! */
+  .btn--negative,
+  .btn--danger {
+    background-color: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+
+    @media (hover: hover) {
+      &:hover {
+        border-color: var(--ink);
+        background-color: var(--wash);
+      }
+    }
+
+    &:active {
+      background-color: var(--wash);
+    }
   }
 
   .btn--plain {
-    --btn-background: transparent;
-    --btn-border-radius: 0;
-    --btn-border-size: 0;
-    --btn-color: inherit;
-    --btn-padding: 0;
+    background-color: transparent;
+    border: 0;
+    color: inherit;
+    min-height: auto;
+    padding: 0;
   }
 
   /* Sizes */
-  .btn--small { --btn-font-size: var(--text-small); --btn-padding: 0.35em 0.8em; }
-  .btn--large { --btn-font-size: var(--text-medium); --btn-padding: 0.7em 1.4em; }
-  .btn--block { display: flex; inline-size: 100%; }
+  .btn--small {
+    font-size: 13px;
+    min-height: 36px;
+    padding: 6px 10px;
 
-  /* Circular icon button */
+    @media (min-width: 768px) {
+      min-height: 32px;
+    }
+  }
+
+  .btn--large {
+    font-size: 16px;
+    min-height: 48px;
+    padding: 12px 18px;
+  }
+
+  .btn--block {
+    display: flex;
+    inline-size: 100%;
+  }
+
+  /* Square icon button (formerly circle) */
   .btn--circle,
-  .btn:where(:has(.for-screen-reader):has(img), :has(.for-screen-reader):has(.icon)) {
-    --btn-padding: 0;
-    --icon-size: 55%;
-
+  .btn--square,
+  .btn:where(:has(.for-screen-reader):has(img), :has(.for-screen-reader):has(.icon), :has(.for-screen-reader):has(svg)) {
     aspect-ratio: 1;
-    block-size: var(--btn-size);
+    border-radius: 0;
+    padding: 0;
+    width: var(--btn-size);
+    height: var(--btn-size);
+    min-height: var(--btn-size);
     display: grid;
-    inline-size: var(--btn-size);
     place-items: center;
 
     > * { grid-area: 1/1; }
   }
 
-  /* Dark mode — primary button gets black text on white bg */
-  html[data-theme="dark"] {
-    .btn--primary {
-      --btn-color: var(--color-black);
-      --focus-ring-color: var(--color-white);
-    }
-  }
-  @media (prefers-color-scheme: dark) {
-    html:not([data-theme]) .btn--primary {
-      --btn-color: var(--color-black);
-      --focus-ring-color: var(--color-white);
-    }
-  }
-
-  /* Dark mode — white icon color */
-  html[data-theme="dark"] {
-    .icon { color: var(--color-white); }
-  }
-  @media (prefers-color-scheme: dark) {
-    html:not([data-theme]) .icon { color: var(--color-white); }
+  /* Icons inside buttons */
+  .btn .icon,
+  .btn svg {
+    color: currentColor;
   }
 }

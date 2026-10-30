@@ -5,24 +5,37 @@
     text-align: start;
 
     :is(th, td) {
-      border-block-end: 1px solid var(--color-border);
-      padding: 0.6em 0.8em;
+      border-block-end: 1px solid var(--line);
+      padding: 10px 12px;
       text-align: start;
-      vertical-align: top;
+      vertical-align: middle;
     }
 
     th {
-      color: var(--color-ink-dark);
-      font-size: var(--text-small);
-      font-weight: 600;
+      color: var(--gray);
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
     }
 
-    tbody tr:last-child :is(th, td) { border-block-end: 0; }
+    tbody tr {
+      transition: background-color 100ms ease;
+
+      @media (hover: hover) {
+        &:hover {
+          background-color: var(--wash);
+        }
+      }
+    }
+
+    tbody tr.is-last-used {
+      background-color: var(--wash);
+    }
   }
 
-  .table--zebra tbody tr:nth-child(even) {
-    background-color: var(--color-shade);
+  .table-scroll {
+    overflow-x: auto;
+    border-block-start: 1px solid var(--line);
   }
-
-  .table-scroll { overflow-x: auto; }
 }

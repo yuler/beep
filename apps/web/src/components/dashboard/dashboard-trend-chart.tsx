@@ -18,11 +18,11 @@ import type { DashboardChart } from "@/lib/api/dashboard";
 const chartConfig = {
 	success: {
 		label: "Successful",
-		color: "#10b981",
+		color: "var(--ink)",
 	},
 	failure: {
 		label: "Failed / Alert",
-		color: "#f43f5e",
+		color: "var(--gray)",
 	},
 } satisfies ChartConfig;
 
@@ -38,32 +38,32 @@ export function DashboardTrendChart({
 	const hasData = chart.points.some((p) => p.total > 0);
 
 	return (
-		<Card className="bg-card/60 transition-colors hover:bg-card">
+		<Card className="bg-transparent border-t border-line sm:border sm:border-line">
 			<CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
 				<div>
-					<CardTitle className="font-heading text-lg font-semibold tracking-tight">
+					<CardTitle className="type-app-title font-medium text-ink">
 						Execution & Health Trends
 					</CardTitle>
-					<CardDescription className="text-xs">
+					<CardDescription className="type-meta text-gray">
 						{chart.range === "24h"
 							? "Hourly performance and failure rate over the past 24 hours"
 							: "Daily execution volume and system stability over the last 7 days"}
 					</CardDescription>
 				</div>
-				<div className="flex items-center gap-1 rounded-lg border border-border p-0.5 bg-muted/40">
+				<div className="flex items-center border border-line">
 					<Button
-						variant={chart.range === "24h" ? "secondary" : "ghost"}
-						size="sm"
-						className="h-7 text-xs px-2.5"
+						variant={chart.range === "24h" ? "solid" : "ghost"}
+						size="xs"
+						className="h-7 text-xs px-2.5 min-h-0 sm:min-h-0 border-0"
 						onClick={() => onRangeChange("24h")}
 						disabled={isLoading}
 					>
 						24h
 					</Button>
 					<Button
-						variant={chart.range === "7d" ? "secondary" : "ghost"}
-						size="sm"
-						className="h-7 text-xs px-2.5"
+						variant={chart.range === "7d" ? "solid" : "ghost"}
+						size="xs"
+						className="h-7 text-xs px-2.5 min-h-0 sm:min-h-0 border-0 border-l border-line"
 						onClick={() => onRangeChange("7d")}
 						disabled={isLoading}
 					>
@@ -73,9 +73,11 @@ export function DashboardTrendChart({
 			</CardHeader>
 			<CardContent className="pt-4">
 				{!hasData ? (
-					<div className="flex h-56 flex-col items-center justify-center rounded-lg border border-dashed border-border/80 text-muted-foreground">
-						<p className="text-sm font-medium">No activity recorded yet</p>
-						<p className="text-xs text-muted-foreground/80">
+					<div className="flex h-56 flex-col items-center justify-center border border-line text-gray">
+						<p className="text-sm font-normal text-ink">
+							No activity recorded yet
+						</p>
+						<p className="type-meta text-gray">
 							Triggers, probe health checks, and runner runs will show here.
 						</p>
 					</div>
@@ -90,19 +92,22 @@ export function DashboardTrendChart({
 						>
 							<defs>
 								<linearGradient id="fillSuccess" x1="0" y1="0" x2="0" y2="1">
-									<stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-									<stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+									<stop offset="5%" stopColor="var(--ink)" stopOpacity={0.2} />
+									<stop offset="95%" stopColor="var(--ink)" stopOpacity={0.0} />
 								</linearGradient>
 								<linearGradient id="fillFailure" x1="0" y1="0" x2="0" y2="1">
-									<stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4} />
-									<stop offset="95%" stopColor="#f43f5e" stopOpacity={0.0} />
+									<stop offset="5%" stopColor="var(--gray)" stopOpacity={0.2} />
+									<stop
+										offset="95%"
+										stopColor="var(--gray)"
+										stopOpacity={0.0}
+									/>
 								</linearGradient>
 							</defs>
 							<CartesianGrid
-								strokeDasharray="3 3"
+								strokeDasharray="2 2"
 								vertical={false}
-								stroke="currentColor"
-								className="stroke-border/40"
+								stroke="var(--line)"
 							/>
 							<XAxis
 								dataKey="label"
@@ -110,17 +115,19 @@ export function DashboardTrendChart({
 								axisLine={false}
 								tickMargin={8}
 								fontSize={11}
+								stroke="var(--gray)"
 							/>
 							<YAxis
 								tickLine={false}
 								axisLine={false}
 								fontSize={11}
 								allowDecimals={false}
+								stroke="var(--gray)"
 							/>
 							<ChartTooltip
 								content={
 									<ChartTooltipContent
-										indicator="dot"
+										indicator="line"
 										labelFormatter={(_, payload) => {
 											const point = payload?.[0]?.payload as
 												| (typeof chart.points)[number]
@@ -136,16 +143,17 @@ export function DashboardTrendChart({
 								type="monotone"
 								dataKey="success"
 								name="Successful"
-								stroke="#10b981"
-								strokeWidth={2}
+								stroke="var(--ink)"
+								strokeWidth={1.5}
 								fill="url(#fillSuccess)"
 							/>
 							<Area
 								type="monotone"
 								dataKey="failure"
 								name="Failed / Alert"
-								stroke="#f43f5e"
-								strokeWidth={2}
+								stroke="var(--gray)"
+								strokeDasharray="3 3"
+								strokeWidth={1.5}
 								fill="url(#fillFailure)"
 							/>
 						</AreaChart>
