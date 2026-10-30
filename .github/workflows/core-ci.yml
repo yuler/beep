@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.321.0
+        uses: ruby/setup-ruby@v1.334.0
         with:
           bundler-cache: true
           working-directory: core
@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.321.0
+        uses: ruby/setup-ruby@v1.334.0
         with:
           bundler-cache: true
           working-directory: core
@@ -71,7 +71,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.321.0
+        uses: ruby/setup-ruby@v1.334.0
         with:
           bundler-cache: true
           working-directory: core
@@ -93,7 +93,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.321.0
+        uses: ruby/setup-ruby@v1.334.0
         with:
           bundler-cache: true
           working-directory: core
