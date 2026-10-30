@@ -8,7 +8,6 @@ on initial start and whenever systemd reports a state change.
 No polling or timers are used.
 """
 
-import os
 import signal
 import sys
 
@@ -59,10 +58,6 @@ def emit(short, state):
         current_states[short] = simplified
         print(f"{short}:{simplified}", flush=True)
 
-# Initial state query
-for u, short in UNITS.items():
-    emit(short, get_unit_state(u))
-
 def on_properties_changed(interface, changed_props, invalidated_props, path=None):
     if path in PATH_TO_NAME and "ActiveState" in changed_props:
         unit, short = PATH_TO_NAME[path]
@@ -95,6 +90,10 @@ bus.add_signal_receiver(
     signal_name="UnitFilesChanged",
     dbus_interface="org.freedesktop.systemd1.Manager",
 )
+
+# Initial state query after signal receivers are registered to avoid dropped events
+for u, short in UNITS.items():
+    emit(short, get_unit_state(u))
 
 loop = GLib.MainLoop()
 

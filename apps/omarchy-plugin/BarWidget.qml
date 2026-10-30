@@ -10,6 +10,7 @@ BarWidget {
 
   property bool runnerRunning: false
   property bool channelRunning: false
+  property string watcherError: ""
 
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
   readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing === true : false
@@ -54,6 +55,17 @@ BarWidget {
     return here.replace(/^file:\/\//, "").replace(/\/$/, "")
   }
 
+  Timer {
+    id: restartTimer
+    interval: 5000
+    repeat: false
+    onTriggered: {
+      if (!watcherProc.running) {
+        watcherProc.running = true
+      }
+    }
+  }
+
   Process {
     id: watcherProc
     command: ["python3", "-u", root.pluginDir + "/watcher.py"]
@@ -62,13 +74,26 @@ BarWidget {
       onRead: function(line) {
         var trimmed = String(line || "").trim()
         if (!trimmed) return
+        if (trimmed.startsWith("error:")) {
+          root.watcherError = trimmed.substring(6).trim()
+          return
+        }
         var parts = trimmed.split(":")
         if (parts.length === 2) {
+          root.watcherError = ""
           var svc = parts[0]
           var active = parts[1] === "active"
           if (svc === "runner") root.runnerRunning = active
           else if (svc === "channel") root.channelRunning = active
         }
+      }
+    }
+    onExited: function(exitCode, exitStatus) {
+      if (exitCode !== 0) {
+        if (!root.watcherError) {
+          root.watcherError = "Watcher exited (code " + exitCode + ")"
+        }
+        restartTimer.start()
       }
     }
   }
@@ -108,7 +133,13 @@ BarWidget {
         channelRunning: root.channelRunning
       }
     }
-    tooltipText: "Beep\nRunner: " + (root.runnerRunning ? "running" : "stopped") + "\nChannel: " + (root.channelRunning ? "running" : "stopped")
+    tooltipText: {
+      var base = "Beep\nRunner: " + (root.runnerRunning ? "running" : "stopped") + "\nChannel: " + (root.channelRunning ? "running" : "stopped")
+      if (root.watcherError) {
+        base += "\nError: " + root.watcherError
+      }
+      return base
+    }
     onPressed: function(b) {
       root.togglePanel()
     }

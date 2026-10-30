@@ -35,7 +35,6 @@ Panel {
   }
 
   function open() {
-    fetchData()
     root.controller.show()
   }
 
@@ -84,7 +83,10 @@ Panel {
       waitForEnd: true
       onStreamFinished: {
         var trimmed = String(text || "").trim()
-        if (!trimmed) return
+        if (!trimmed) {
+          root.userData = { userName: "", userEmail: "", accountSlug: "", isLoggedIn: false }
+          return
+        }
         try {
           var data = JSON.parse(trimmed)
           root.userData = {
@@ -98,6 +100,11 @@ Panel {
         }
       }
     }
+    onExited: function(exitCode, exitStatus) {
+      if (exitCode !== 0) {
+        root.userData = { userName: "", userEmail: "", accountSlug: "", isLoggedIn: false }
+      }
+    }
   }
 
   Process {
@@ -107,9 +114,13 @@ Panel {
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
-        var trimmed = String(text || "").trim()
-        if (!trimmed) return
         root.beepsLoading = false
+        var trimmed = String(text || "").trim()
+        if (!trimmed) {
+          root.beepsTotal = 0
+          root.beeps = []
+          return
+        }
         try {
           var items = JSON.parse(trimmed)
           if (Array.isArray(items)) {
@@ -132,6 +143,9 @@ Panel {
         }
       }
     }
+    onExited: function(exitCode, exitStatus) {
+      root.beepsLoading = false
+    }
   }
 
   Process {
@@ -141,9 +155,13 @@ Panel {
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
-        var trimmed = String(text || "").trim()
-        if (!trimmed) return
         root.jobsLoading = false
+        var trimmed = String(text || "").trim()
+        if (!trimmed) {
+          root.jobsTotal = 0
+          root.jobs = []
+          return
+        }
         try {
           var items = JSON.parse(trimmed)
           if (Array.isArray(items)) {
@@ -165,6 +183,9 @@ Panel {
           root.jobs = []
         }
       }
+    }
+    onExited: function(exitCode, exitStatus) {
+      root.jobsLoading = false
     }
   }
 
