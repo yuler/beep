@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   autofix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Fork PRs cannot receive pushes from GITHUB_TOKEN on the contributor branch.
     if: github.event.pull_request.head.repo.full_name == github.repository
     steps:

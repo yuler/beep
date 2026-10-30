@@ -94,6 +94,10 @@ run = "bash scripts/cli-workspace-unlink.sh .beep"
 description = "Unlink .beep.local workspace symlink from the current repo"
 run = "bash scripts/cli-workspace-unlink.sh .beep.local"
 
+[tasks."omarchy-plugin:link"]
+description = "Symlink apps/omarchy-plugin to ~/.config/omarchy/plugins/beep"
+run = "bash scripts/omarchy-plugin-link.sh"
+
 [tasks."locale:sort"]
 description = "Sort message keys alphabetically in all locale JSON files"
 run = "node scripts/locale-sort-keys.ts"

@@ -104,12 +104,21 @@ fi
 echo "$new_version" > "$VERSION_FILE"
 gum_info "Updated VERSION ($new_version)"
 
+plugin_manifest="$ROOT/apps/omarchy-plugin/manifest.json"
+if [[ -f "$plugin_manifest" ]]; then
+  sed -i -E "s/\"version\": \"[^\"]+\"/\"version\": \"$new_version\"/" "$plugin_manifest"
+fi
+
 # ── Git tag ──
 
 echo ""
 if gum confirm "Create git commit and tag v$new_version?"; then
-  # Commit only VERSION — leave any unrelated staged changes staged.
-  git commit -m "🚀 [release] Bump version to $new_version" -- VERSION
+  # Commit VERSION (and plugin manifest if present) — leave any unrelated staged changes staged.
+  commit_files=(VERSION)
+  if [[ -f "$plugin_manifest" ]]; then
+    commit_files+=(apps/omarchy-plugin/manifest.json)
+  fi
+  git commit -m "🚀 [release] Bump version to $new_version" -- "${commit_files[@]}"
   git tag "v$new_version"
   gum_info "Created commit & tag v$new_version"
   if gum confirm "Push commit and tag to origin?"; then
