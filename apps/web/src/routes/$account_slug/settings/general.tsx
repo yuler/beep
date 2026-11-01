@@ -46,8 +46,8 @@ function GeneralSettingsPage() {
 
 				<TimezoneSettings
 					slug={slug}
-					accountTimezone={settings.timezone}
-					accountTimezoneName={settings.timezone_name}
+					timezone={settings.timezone}
+					timezoneSource={settings.timezone_source}
 					onChanged={() => router.invalidate()}
 				/>
 			</div>

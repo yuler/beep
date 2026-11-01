@@ -121,7 +121,7 @@ export function RunnerList({
 			setActionError(
 				err instanceof ApiError
 					? err.message
-					: translateError(err) || m.runners_token_reveal_failed(),
+					: translateError(err) || m.runners_regenerate_failed(),
 			);
 		} finally {
 			setBusyRunnerId(null);
@@ -136,7 +136,7 @@ export function RunnerList({
 					{m.runners_no_runners()}
 				</p>
 				<p className="type-meta text-gray mt-1 max-w-sm">
-					{m.runners_empty_state_description()}
+					{m.runners_no_runners_hint()}
 				</p>
 			</div>
 		);
