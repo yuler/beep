@@ -38,7 +38,7 @@ function SelectTrigger({
 			data-slot="select-trigger"
 			data-size={size}
 			className={cn(
-				"flex w-full items-center justify-between gap-2 rounded-none border border-line bg-transparent px-3 py-2 text-sm text-ink outline-none select-none transition-colors hover:border-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40 min-h-[40px] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				"flex w-full items-center justify-between gap-2 rounded-sm border border-line bg-transparent px-3 py-2 text-sm text-ink outline-none select-none transition-colors hover:border-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40 min-h-[40px] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 				className,
 			)}
 			{...props}
@@ -81,7 +81,7 @@ function SelectContent({
 					data-slot="select-content"
 					data-align-trigger={alignItemWithTrigger}
 					className={cn(
-						"relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 overflow-x-hidden overflow-y-auto rounded-none border border-line bg-ground p-1 text-ink duration-100 outline-none",
+						"relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 overflow-x-hidden overflow-y-auto rounded-sm border border-line bg-ground p-1 text-ink duration-100 outline-none",
 						className,
 					)}
 					{...props}
@@ -117,7 +117,7 @@ function SelectItem({
 		<SelectPrimitive.Item
 			data-slot="select-item"
 			className={cn(
-				"relative flex w-full cursor-pointer items-center gap-2 rounded-none px-3 py-2 text-sm text-ink outline-none select-none hover:bg-wash focus:bg-wash data-disabled:pointer-events-none data-disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				"relative flex w-full cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm text-ink outline-none select-none hover:bg-wash focus:bg-wash data-disabled:pointer-events-none data-disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 				className,
 			)}
 			{...props}

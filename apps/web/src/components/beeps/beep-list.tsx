@@ -57,9 +57,9 @@ const columnHelper = createColumnHelper<typeof dataTableFeatures, Beep>();
 function beepStatusTone(status: Beep["status"]) {
 	switch (status) {
 		case "active":
-			return "emerald" as const;
+			return "outline" as const;
 		case "firing":
-			return "amber" as const;
+			return "live" as const;
 		default:
 			return "muted" as const;
 	}

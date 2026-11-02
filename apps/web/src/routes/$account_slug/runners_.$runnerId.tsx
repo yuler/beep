@@ -326,7 +326,7 @@ function RunnerDetailPage() {
 				</div>
 
 				{!runner.is_online && runner.status === "offline" ? (
-					<Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+					<Alert variant="warning">
 						<AlertDescription className="text-xs">
 							{m.runners_workspace_hint()}
 						</AlertDescription>
@@ -404,7 +404,7 @@ function RunnerDetailPage() {
 												aria-label="Copy Job ID"
 											>
 												{copiedJobId === job.id ? (
-													<Check className="size-3 text-emerald-500" />
+													<Check className="size-3 text-success" />
 												) : (
 													<Copy className="size-3" />
 												)}
@@ -507,7 +507,19 @@ function RunnerDetailPage() {
 												<span className="font-mono">
 													{new Date(run.scheduled_for).toLocaleString()}
 												</span>
-												<Badge variant="outline">
+												<Badge
+													variant={
+														(run.result_status || run.status) === "succeeded" ||
+														run.result_status === "ok"
+															? "success"
+															: (run.result_status || run.status) ===
+																		"failed" ||
+																	run.result_status === "error" ||
+																	run.result_status === "alerting"
+																? "destructive"
+																: "outline"
+													}
+												>
 													{run.result_status || run.status}
 												</Badge>
 											</button>

@@ -172,7 +172,7 @@ function AccessTokensPage() {
 							{createdToken ? (
 								<div className="flex flex-col flex-1 min-h-0 overflow-hidden">
 									<ResponsiveDialogHeader>
-										<ResponsiveDialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500">
+										<ResponsiveDialogTitle className="flex items-center gap-2 text-success">
 											<ShieldCheck className="size-5" />
 											{m.my_token_generated()}
 										</ResponsiveDialogTitle>
@@ -196,7 +196,7 @@ function AccessTokensPage() {
 											>
 												{hasCopied ? (
 													<>
-														<Check className="size-4 text-emerald-600" />
+														<Check className="size-4 text-success" />
 														{m.common_copied()}
 													</>
 												) : (

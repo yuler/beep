@@ -70,7 +70,7 @@ function AccountChoice({
 					lastUsed && "border-primary/40 bg-primary/5",
 				)}
 			>
-				<span className="flex size-8 shrink-0 items-center justify-center rounded-none border border-line">
+				<span className="flex size-8 shrink-0 items-center justify-center rounded-sm border border-line">
 					<Icon className="size-4 text-ink" />
 				</span>
 				<span className="flex min-w-0 flex-1 flex-col items-start text-left">

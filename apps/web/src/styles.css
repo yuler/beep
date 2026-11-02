@@ -9,17 +9,28 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design tokens — strictly aligned with DESIGN.md (monochrome, straight corners).
+ * Design tokens — strictly aligned with DESIGN.md (monochrome skeleton,
+ * semantic success / warning / danger, 2px corners).
  */
 
 :root {
-  --ground: #000000;
-  --ink: #ffffff;
-  --gray: #888888;
-  --line: #333333;
-  --wash: #111111;
-  --solid: #ffffff;
-  --solid-ink: #000000;
+  --ground: #0a0a0a;
+  --ink: #fafafa;
+  --gray: #a1a1a1;
+  --gray-subtle: #6b6b6b;
+  --line: #262626;
+  --wash: #171717;
+  --solid: #fafafa;
+  --solid-ink: #0a0a0a;
+
+  --success: #3dd68c;
+  --warning: #f5c542;
+  --danger: #ff5f57;
+  --danger-ink: #0a0a0a;
+
+  --success-soft: color-mix(in srgb, var(--success) 12%, transparent);
+  --warning-soft: color-mix(in srgb, var(--warning) 12%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger) 12%, transparent);
 
   --background: var(--ground);
   --foreground: var(--ink);
@@ -35,12 +46,12 @@
   --muted-foreground: var(--gray);
   --accent: var(--wash);
   --accent-foreground: var(--ink);
-  --destructive: var(--ink);
-  --destructive-foreground: var(--ground);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-ink);
   --border: var(--line);
   --input: var(--line);
   --ring: var(--ink);
-  --radius: 0px;
+  --radius: 2px;
 
   --sidebar: var(--ground);
   --sidebar-foreground: var(--ink);
@@ -55,22 +66,34 @@
 html:not(.dark),
 .light {
   --ground: #ffffff;
-  --ink: #000000;
-  --gray: #888888;
+  --ink: #0a0a0a;
+  --gray: #666666;
+  --gray-subtle: #a3a3a3;
   --line: #e5e5e5;
-  --wash: #f2f2f2;
-  --solid: #000000;
+  --wash: #f5f5f5;
+  --solid: #0a0a0a;
   --solid-ink: #ffffff;
+
+  --success: #16a34a;
+  --warning: #b7791f;
+  --danger: #dc2626;
+  --danger-ink: #ffffff;
 }
 
 html.dark {
-  --ground: #000000;
-  --ink: #ffffff;
-  --gray: #888888;
-  --line: #333333;
-  --wash: #111111;
-  --solid: #ffffff;
-  --solid-ink: #000000;
+  --ground: #0a0a0a;
+  --ink: #fafafa;
+  --gray: #a1a1a1;
+  --gray-subtle: #6b6b6b;
+  --line: #262626;
+  --wash: #171717;
+  --solid: #fafafa;
+  --solid-ink: #0a0a0a;
+
+  --success: #3dd68c;
+  --warning: #f5c542;
+  --danger: #ff5f57;
+  --danger-ink: #0a0a0a;
 }
 
 @theme inline {
@@ -80,10 +103,19 @@ html.dark {
   --color-ground: var(--ground);
   --color-ink: var(--ink);
   --color-gray: var(--gray);
+  --color-gray-subtle: var(--gray-subtle);
   --color-line: var(--line);
   --color-wash: var(--wash);
   --color-solid: var(--solid);
   --color-solid-ink: var(--solid-ink);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
+  --color-success-soft: var(--success-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger-soft: var(--danger-soft);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -114,19 +146,19 @@ html.dark {
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-2xl: 0px;
-  --radius-3xl: 0px;
-  --radius-4xl: 0px;
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-3xl: 2px;
+  --radius-4xl: 2px;
 }
 
 @layer base {
   * {
     border-color: var(--line);
-    border-radius: 0 !important;
   }
 
   *:focus-visible {
@@ -213,7 +245,79 @@ html.dark {
   height: 13px;
   border: 1.5px solid currentColor;
   border-top-color: transparent;
+  border-radius: 9999px;
   animation: square-spin 0.75s linear infinite;
+}
+
+@keyframes status-dot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 60%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 5px transparent;
+  }
+}
+
+.status-dot-pulse {
+  color: var(--ink);
+  animation: status-dot-pulse 1.4s ease-out infinite;
+}
+
+@keyframes story-pulse-danger {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(1.22);
+  }
+}
+
+@keyframes story-bell-swing {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(11deg);
+  }
+  40% {
+    transform: rotate(-9deg);
+  }
+  60% {
+    transform: rotate(5deg);
+  }
+  80% {
+    transform: rotate(-3deg);
+  }
+}
+
+@keyframes story-dash-flow {
+  0% {
+    stroke-dashoffset: 24;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.story-pulse-danger {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: story-pulse-danger 1.8s ease-in-out infinite;
+}
+
+.story-bell-swing {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation: story-bell-swing 2.4s ease-in-out infinite;
+}
+
+.story-dash-flow {
+  stroke-dasharray: 4 4;
+  animation: story-dash-flow 1.4s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

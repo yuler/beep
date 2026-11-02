@@ -15,7 +15,7 @@ function Avatar({
 			data-slot="avatar"
 			data-size={size}
 			className={cn(
-				"group/avatar relative flex size-8 shrink-0 rounded-none border border-line bg-wash select-none data-[size=lg]:size-10 data-[size=sm]:size-6",
+				"group/avatar relative flex size-8 shrink-0 rounded-full border border-line bg-wash select-none data-[size=lg]:size-10 data-[size=sm]:size-6",
 				className,
 			)}
 			{...props}
@@ -28,7 +28,7 @@ function AvatarImage({ className, ...props }: AvatarPrimitive.Image.Props) {
 		<AvatarPrimitive.Image
 			data-slot="avatar-image"
 			className={cn(
-				"aspect-square size-full rounded-none object-cover",
+				"aspect-square size-full rounded-full object-cover",
 				className,
 			)}
 			{...props}
@@ -44,7 +44,7 @@ function AvatarFallback({
 		<AvatarPrimitive.Fallback
 			data-slot="avatar-fallback"
 			className={cn(
-				"flex size-full items-center justify-center rounded-none bg-wash text-sm font-medium text-ink group-data-[size=sm]/avatar:text-xs",
+				"flex size-full items-center justify-center rounded-full bg-wash text-sm font-medium text-ink group-data-[size=sm]/avatar:text-xs",
 				className,
 			)}
 			{...props}
@@ -57,7 +57,7 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
 		<span
 			data-slot="avatar-badge"
 			className={cn(
-				"absolute right-0 bottom-0 z-10 inline-flex items-center justify-center rounded-none border border-line bg-solid text-solid-ink select-none",
+				"absolute right-0 bottom-0 z-10 inline-flex items-center justify-center rounded-full border border-line bg-solid text-solid-ink select-none",
 				"group-data-[size=sm]/avatar:size-2",
 				"group-data-[size=default]/avatar:size-2.5",
 				"group-data-[size=lg]/avatar:size-3",
@@ -89,7 +89,7 @@ function AvatarGroupCount({
 		<div
 			data-slot="avatar-group-count"
 			className={cn(
-				"relative flex size-8 shrink-0 items-center justify-center rounded-none border border-line bg-wash text-sm text-gray",
+				"relative flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-wash text-sm text-gray",
 				className,
 			)}
 			{...props}

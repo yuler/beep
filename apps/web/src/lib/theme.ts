@@ -1,15 +1,36 @@
 const STORAGE_KEY = "theme";
 
 export type Theme = "light" | "dark";
+export type ThemePreference = "light" | "dark" | "system";
 
-export function getStoredTheme(): Theme {
+const THEME_COLOR_DARK = "#0a0a0a";
+const THEME_COLOR_LIGHT = "#ffffff";
+
+let mediaListenerAttached = false;
+
+export function getStoredTheme(): ThemePreference {
 	if (typeof window === "undefined") return "dark";
 	const value = localStorage.getItem(STORAGE_KEY);
-	return value === "light" ? "light" : "dark";
+	if (value === "light" || value === "dark" || value === "system") {
+		return value;
+	}
+	return "dark";
 }
 
-export function getResolvedTheme(): Theme {
-	return getStoredTheme();
+function getSystemTheme(): Theme {
+	if (typeof window === "undefined" || !window.matchMedia) return "dark";
+	return window.matchMedia("(prefers-color-scheme: light)").matches
+		? "light"
+		: "dark";
+}
+
+export function getResolvedTheme(
+	pref: ThemePreference = getStoredTheme(),
+): Theme {
+	if (pref === "system") {
+		return getSystemTheme();
+	}
+	return pref;
 }
 
 function syncThemeColorMeta(theme: Theme) {
@@ -21,7 +42,7 @@ function syncThemeColorMeta(theme: Theme) {
 		meta.name = "theme-color";
 		document.head.appendChild(meta);
 	}
-	meta.content = theme === "dark" ? "#000000" : "#ffffff";
+	meta.content = theme === "dark" ? THEME_COLOR_DARK : THEME_COLOR_LIGHT;
 }
 
 function syncFavicon(theme: Theme) {
@@ -33,6 +54,24 @@ function syncFavicon(theme: Theme) {
 	}
 }
 
+function ensureSystemMediaListener() {
+	if (
+		mediaListenerAttached ||
+		typeof window === "undefined" ||
+		!window.matchMedia
+	) {
+		return;
+	}
+	mediaListenerAttached = true;
+	const mq = window.matchMedia("(prefers-color-scheme: light)");
+	const handler = () => {
+		if (getStoredTheme() === "system") {
+			applyTheme(getSystemTheme());
+		}
+	};
+	mq.addEventListener?.("change", handler);
+}
+
 export function applyTheme(theme: Theme) {
 	if (typeof document === "undefined") return;
 	document.documentElement.classList.toggle("dark", theme === "dark");
@@ -41,15 +80,24 @@ export function applyTheme(theme: Theme) {
 	syncThemeColorMeta(theme);
 }
 
-export function setTheme(theme: Theme) {
+export function setTheme(pref: ThemePreference): Theme {
 	if (typeof window !== "undefined") {
-		localStorage.setItem(STORAGE_KEY, theme);
+		localStorage.setItem(STORAGE_KEY, pref);
 	}
-	applyTheme(theme);
+	ensureSystemMediaListener();
+	const resolved = getResolvedTheme(pref);
+	applyTheme(resolved);
+	if (typeof window !== "undefined") {
+		window.dispatchEvent(
+			new CustomEvent("beep:theme-change", {
+				detail: { preference: pref, resolved },
+			}),
+		);
+	}
+	return resolved;
 }
 
 export function toggleTheme(): Theme {
 	const next = getResolvedTheme() === "dark" ? "light" : "dark";
-	setTheme(next);
-	return next;
+	return setTheme(next);
 }

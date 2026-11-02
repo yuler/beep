@@ -144,7 +144,7 @@ function ResponsiveDialogContent({
 	return (
 		<DialogContent
 			className={cn(
-				"max-h-[min(90dvh,calc(100vh-3rem))] flex flex-col overflow-hidden gap-0 rounded-none border border-line bg-ground p-0 text-ink sm:max-w-md",
+				"max-h-[min(90dvh,calc(100vh-3rem))] flex flex-col overflow-hidden gap-0 sm:rounded-sm border border-line bg-ground p-0 text-ink sm:max-w-md",
 				contentShellClass,
 				className,
 			)}

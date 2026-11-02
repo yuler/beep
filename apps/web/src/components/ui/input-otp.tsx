@@ -87,7 +87,7 @@ export function OtpField({
 
 					let borderClass = "border-line";
 					if (ariaInvalid) {
-						borderClass = "border-ink";
+						borderClass = "border-danger text-danger";
 					} else if (isActive) {
 						borderClass = "border-ink";
 					} else if (isFilled) {
@@ -98,7 +98,7 @@ export function OtpField({
 						<div
 							key={index}
 							className={cn(
-								"flex h-12 w-11 sm:h-13 sm:w-12 items-center justify-center border bg-transparent font-mono text-xl text-ink transition-colors select-none",
+								"flex h-12 w-11 sm:h-13 sm:w-12 items-center justify-center rounded-sm border bg-transparent font-mono text-xl text-ink transition-colors select-none",
 								borderClass,
 							)}
 						>

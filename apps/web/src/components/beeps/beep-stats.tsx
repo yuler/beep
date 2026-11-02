@@ -36,7 +36,7 @@ export function BeepStats({
 							{stats.active}
 						</span>
 					</div>
-					<div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary sm:size-9">
+					<div className="flex size-8 items-center justify-center rounded-lg bg-wash text-ink sm:size-9">
 						<Activity className="size-4" />
 					</div>
 				</CardContent>
@@ -55,7 +55,7 @@ export function BeepStats({
 							{stats.dueToday}
 						</span>
 					</div>
-					<div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 sm:size-9">
+					<div className="flex size-8 items-center justify-center rounded-lg bg-wash text-ink sm:size-9">
 						<Calendar className="size-4" />
 					</div>
 				</CardContent>
@@ -74,7 +74,7 @@ export function BeepStats({
 							{stats.firing}
 						</span>
 					</div>
-					<div className="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 sm:size-9">
+					<div className="flex size-8 items-center justify-center rounded-lg bg-wash text-ink sm:size-9">
 						<Zap className="size-4" />
 					</div>
 				</CardContent>

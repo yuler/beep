@@ -254,10 +254,13 @@ export function HeroBrowser() {
 								takeOver();
 								setToast(false);
 							}}
-							className="absolute right-3 bottom-3 z-10 w-[min(100%-1.5rem,16.5rem)] border border-line bg-ground p-3 text-left animate-in fade-in slide-in-from-bottom-2 duration-200"
+							className="absolute right-3 bottom-3 z-10 w-[min(100%-1.5rem,16.5rem)] rounded-sm border border-line border-l-2 border-l-success bg-ground p-3 text-left animate-in fade-in slide-in-from-bottom-2 duration-200"
 						>
 							<div className="flex items-center justify-between gap-2">
-								<span className="type-kicker text-gray">{m.term_beep()}</span>
+								<span className="inline-flex items-center gap-1.5 type-kicker text-success">
+									<span className="size-1.5 rounded-full bg-success" />
+									{m.term_beep()}
+								</span>
 								<span className="type-kicker text-gray">
 									{m.marketing_hero_activity_now()}
 								</span>
@@ -406,7 +409,7 @@ function BeepersPage({ phase }: { phase: ProbePhase }) {
 							? m.marketing_hero_live_status()
 							: m.marketing_hero_probe_checking()
 					}
-					tone={live ? "emerald" : "muted"}
+					tone={live ? "success" : "muted"}
 				/>
 			</div>
 			<div className="mt-4 flex items-center gap-2 border-t border-line pt-3 text-sm text-ink">

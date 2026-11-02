@@ -288,19 +288,16 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 									<div className="flex items-center gap-2 font-medium text-sm">
 										{ch.name}
 										{ch.is_online ? (
-											<Badge
-												variant="outline"
-												className="gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px]"
-											>
-												<span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+											<Badge variant="outline" className="gap-1.5 text-[10px]">
+												<span className="size-1.5 rounded-full bg-success" />
 												{m.channels_active()}
 											</Badge>
 										) : (
 											<Badge
 												variant="outline"
-												className="gap-1.5 border-zinc-500/30 text-muted-foreground text-[10px]"
+												className="gap-1.5 text-gray text-[10px]"
 											>
-												<span className="size-1.5 rounded-full bg-zinc-400" />
+												<span className="size-1.5 rounded-full bg-gray-subtle" />
 												{m.channels_offline()}
 											</Badge>
 										)}
@@ -329,7 +326,7 @@ export function ChannelManagementSettings({ slug }: { slug: string }) {
 										{testingId === ch.id ? (
 											<Loader2 className="size-3.5 animate-spin" />
 										) : testSentId === ch.id ? (
-											<Check className="size-3.5 text-emerald-500" />
+											<Check className="size-3.5 text-success" />
 										) : (
 											<Send className="size-3.5" />
 										)}

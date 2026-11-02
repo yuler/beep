@@ -26,6 +26,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Notice } from "@/components/ui/notice";
+import { StatusDot } from "@/components/ui/status-pill";
 import { ApiError } from "@/lib/api/client";
 import {
 	deleteRunner,
@@ -49,8 +50,8 @@ export function getRunnerStatusBadge(runner: Runner) {
 	const isHealthyOnline = runner.is_online ?? runner.status === "online";
 	if (isHealthyOnline && runner.status === "online") {
 		return (
-			<Badge variant="default" className="gap-1.5">
-				<span className="size-1.5 bg-solid-ink" />
+			<Badge variant="outline" className="gap-1.5">
+				<StatusDot tone="success" />
 				{m.runners_status_online()}
 			</Badge>
 		);
@@ -58,7 +59,7 @@ export function getRunnerStatusBadge(runner: Runner) {
 
 	return (
 		<Badge variant="outline" className="gap-1.5 text-gray">
-			<span className="size-1.5 bg-gray" />
+			<StatusDot tone="muted" />
 			{m.runners_status_offline()}
 		</Badge>
 	);

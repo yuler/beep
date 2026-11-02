@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-	"group/button inline-flex shrink-0 items-center justify-center rounded-none border text-sm font-normal whitespace-nowrap transition-colors outline-none select-none disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 min-h-[44px] sm:min-h-[40px] cursor-pointer",
+	"group/button inline-flex shrink-0 items-center justify-center rounded-sm border text-sm font-normal whitespace-nowrap transition-colors outline-none select-none disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 min-h-[44px] sm:min-h-[40px] cursor-pointer",
 	{
 		variants: {
 			variant: {
@@ -19,7 +19,7 @@ const buttonVariants = cva(
 				ghost:
 					"bg-transparent text-ink border-line hover:border-ink active:bg-wash active:border-ink aria-expanded:bg-solid aria-expanded:text-solid-ink aria-selected:bg-solid aria-selected:text-solid-ink data-[state=active]:bg-solid data-[state=active]:text-solid-ink",
 				destructive:
-					"bg-transparent text-ink border-ink hover:bg-wash active:bg-solid active:text-solid-ink",
+					"bg-danger text-danger-ink border-danger hover:opacity-90 active:opacity-80",
 				link: "bg-transparent text-ink border-transparent underline-offset-4 hover:underline min-h-0 sm:min-h-0 p-0",
 			},
 			size: {

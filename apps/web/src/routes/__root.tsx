@@ -17,7 +17,8 @@ import appCss from "../styles.css?url";
 
 const themeBootScript = `(() => {
   var stored = localStorage.getItem("theme");
-  var isLight = stored === "light";
+  var sysLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+  var isLight = stored === "light" || (stored === "system" && sysLight);
   var theme = isLight ? "light" : "dark";
   if (theme === "dark") {
     document.documentElement.classList.add("dark");
@@ -29,7 +30,7 @@ const themeBootScript = `(() => {
   var link = document.getElementById("favicon-theme");
   if (link) link.href = theme === "dark" ? "/icon-dark.svg" : "/icon-light.svg";
   var metaTheme = document.querySelector('meta[name="theme-color"]');
-  if (metaTheme) metaTheme.setAttribute("content", theme === "dark" ? "#000000" : "#ffffff");
+  if (metaTheme) metaTheme.setAttribute("content", theme === "dark" ? "#0a0a0a" : "#ffffff");
 })();`;
 
 export const Route = createRootRoute({
@@ -57,7 +58,7 @@ export const Route = createRootRoute({
 					name: "viewport",
 					content: "width=device-width, initial-scale=1, viewport-fit=cover",
 				},
-				{ name: "theme-color", content: "#000000" },
+				{ name: "theme-color", content: "#0a0a0a" },
 				{
 					title: m.term_beep(),
 				},

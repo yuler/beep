@@ -9,7 +9,9 @@ const alertVariants = cva(
 		variants: {
 			variant: {
 				default: "border-l-line text-ink",
-				destructive: "border-l-ink text-ink font-normal",
+				destructive: "border-l-danger text-ink font-normal [&>svg]:text-danger",
+				warning: "border-l-warning text-ink [&>svg]:text-warning",
+				success: "border-l-success text-ink [&>svg]:text-success",
 			},
 		},
 		defaultVariants: {

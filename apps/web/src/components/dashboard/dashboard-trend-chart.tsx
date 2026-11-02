@@ -18,11 +18,11 @@ import type { DashboardChart } from "@/lib/api/dashboard";
 const chartConfig = {
 	success: {
 		label: "Successful",
-		color: "var(--ink)",
+		color: "var(--success)",
 	},
 	failure: {
 		label: "Failed / Alert",
-		color: "var(--gray)",
+		color: "var(--danger)",
 	},
 } satisfies ChartConfig;
 
@@ -92,14 +92,26 @@ export function DashboardTrendChart({
 						>
 							<defs>
 								<linearGradient id="fillSuccess" x1="0" y1="0" x2="0" y2="1">
-									<stop offset="5%" stopColor="var(--ink)" stopOpacity={0.2} />
-									<stop offset="95%" stopColor="var(--ink)" stopOpacity={0.0} />
-								</linearGradient>
-								<linearGradient id="fillFailure" x1="0" y1="0" x2="0" y2="1">
-									<stop offset="5%" stopColor="var(--gray)" stopOpacity={0.2} />
+									<stop
+										offset="5%"
+										stopColor="var(--success)"
+										stopOpacity={0.2}
+									/>
 									<stop
 										offset="95%"
-										stopColor="var(--gray)"
+										stopColor="var(--success)"
+										stopOpacity={0.0}
+									/>
+								</linearGradient>
+								<linearGradient id="fillFailure" x1="0" y1="0" x2="0" y2="1">
+									<stop
+										offset="5%"
+										stopColor="var(--danger)"
+										stopOpacity={0.2}
+									/>
+									<stop
+										offset="95%"
+										stopColor="var(--danger)"
 										stopOpacity={0.0}
 									/>
 								</linearGradient>
@@ -143,7 +155,7 @@ export function DashboardTrendChart({
 								type="monotone"
 								dataKey="success"
 								name="Successful"
-								stroke="var(--ink)"
+								stroke="var(--success)"
 								strokeWidth={1.5}
 								fill="url(#fillSuccess)"
 							/>
@@ -151,7 +163,7 @@ export function DashboardTrendChart({
 								type="monotone"
 								dataKey="failure"
 								name="Failed / Alert"
-								stroke="var(--gray)"
+								stroke="var(--danger)"
 								strokeDasharray="3 3"
 								strokeWidth={1.5}
 								fill="url(#fillFailure)"

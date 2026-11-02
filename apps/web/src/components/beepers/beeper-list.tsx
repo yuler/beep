@@ -37,9 +37,9 @@ const columnHelper = createColumnHelper<typeof dataTableFeatures, Beeper>();
 function beeperStatusTone(status: Beeper["status"]) {
 	switch (status) {
 		case "active":
-			return "emerald" as const;
+			return "outline" as const;
 		case "firing":
-			return "amber" as const;
+			return "live" as const;
 		case "paused":
 			return "muted" as const;
 		default:
@@ -49,9 +49,9 @@ function beeperStatusTone(status: Beeper["status"]) {
 
 function healthTone(beeper: Beeper) {
 	const label = beeperHealthLabel(beeper);
-	if (label === "ok") return "emerald" as const;
-	if (label === "alerting") return "rose" as const;
-	return "amber" as const;
+	if (label === "ok") return "success" as const;
+	if (label === "alerting") return "danger" as const;
+	return "warning" as const;
 }
 
 function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
@@ -124,7 +124,7 @@ function useBeeperColumns(slug: string, onEdit: (beeper: Beeper) => void) {
 								).toUpperCase()}
 								tone={
 									beeperHealthIsDestructive(beeper)
-										? "rose"
+										? "danger"
 										: healthTone(beeper)
 								}
 							/>
@@ -365,7 +365,7 @@ export function BeeperList({
 											).toUpperCase()}
 											tone={
 												beeperHealthIsDestructive(beeper)
-													? "rose"
+													? "danger"
 													: healthTone(beeper)
 											}
 										/>

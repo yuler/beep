@@ -7,13 +7,36 @@ export function DashboardKpiCards({ stats }: { stats: DashboardStats }) {
 	const { executions, beeps, beepers, runners } = stats;
 
 	const healthTone =
-		executions.success_rate >= 99
-			? "emerald"
-			: executions.success_rate >= 90
-				? "muted"
-				: "rose";
+		executions.total === 0
+			? "muted"
+			: executions.success_rate >= 99
+				? "success"
+				: executions.success_rate >= 90
+					? "warning"
+					: "danger";
 
-	const beeperTone = beepers.alerting > 0 ? "rose" : "emerald";
+	const beeperTone =
+		beepers.total === 0
+			? "neutral"
+			: beepers.alerting > 0
+				? "danger"
+				: "success";
+
+	const runnerTone =
+		runners.total === 0
+			? "neutral"
+			: runners.online === runners.total
+				? "success"
+				: runners.online === 0
+					? "danger"
+					: "warning";
+
+	const toneText = {
+		success: "text-success",
+		warning: "text-warning",
+		danger: "text-danger",
+		neutral: "text-ink",
+	} as const;
 
 	return (
 		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -85,7 +108,9 @@ export function DashboardKpiCards({ stats }: { stats: DashboardStats }) {
 					</div>
 					<div className="flex flex-col gap-1.5">
 						<div className="flex items-baseline gap-2">
-							<span className="type-title font-medium tabular-nums text-ink">
+							<span
+								className={`type-title font-medium tabular-nums ${toneText[beeperTone]}`}
+							>
 								{beepers.healthy} / {beepers.total}
 							</span>
 							<span className="type-meta text-gray">healthy</span>
@@ -97,7 +122,7 @@ export function DashboardKpiCards({ stats }: { stats: DashboardStats }) {
 										? `${beepers.alerting} alerting`
 										: "All healthy"
 								}
-								tone={beeperTone}
+								tone={beeperTone === "neutral" ? "muted" : beeperTone}
 							/>
 						</div>
 					</div>
@@ -118,7 +143,9 @@ export function DashboardKpiCards({ stats }: { stats: DashboardStats }) {
 					</div>
 					<div className="flex flex-col gap-1.5">
 						<div className="flex items-baseline gap-2">
-							<span className="type-title font-medium tabular-nums text-ink">
+							<span
+								className={`type-title font-medium tabular-nums ${toneText[runnerTone]}`}
+							>
 								{runners.online} / {runners.total}
 							</span>
 							<span className="type-meta text-gray">online</span>

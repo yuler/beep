@@ -38,11 +38,11 @@ export function DashboardActivityFeed({
 	function getStatusTone(status: DashboardActivity["status"]): StatusPillTone {
 		switch (status) {
 			case "success":
-				return "emerald";
+				return "success";
 			case "warning":
-				return "amber";
+				return "warning";
 			case "failure":
-				return "rose";
+				return "danger";
 			default:
 				return "muted";
 		}

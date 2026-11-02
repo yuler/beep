@@ -73,33 +73,33 @@ function getBeeperAppMeta(slug: string) {
 			return {
 				icon: Globe,
 				tag: m.beepers_tag_availability,
-				accent: "text-sky-500",
-				well: "bg-sky-500/12 text-sky-500",
-				band: "from-sky-500/18 via-sky-500/6 to-transparent",
+				accent: "text-ink",
+				well: "bg-wash text-ink",
+				band: "from-wash to-transparent",
 			};
 		case "ssl-expiry":
 			return {
 				icon: ShieldCheck,
 				tag: m.beepers_tag_security,
-				accent: "text-amber-500",
-				well: "bg-amber-500/12 text-amber-500",
-				band: "from-amber-500/18 via-amber-500/6 to-transparent",
+				accent: "text-ink",
+				well: "bg-wash text-ink",
+				band: "from-wash to-transparent",
 			};
 		case "heartbeat":
 			return {
 				icon: Radio,
 				tag: m.beepers_tag_cron_worker,
-				accent: "text-emerald-500",
-				well: "bg-emerald-500/12 text-emerald-500",
-				band: "from-emerald-500/18 via-emerald-500/6 to-transparent",
+				accent: "text-ink",
+				well: "bg-wash text-ink",
+				band: "from-wash to-transparent",
 			};
 		default:
 			return {
 				icon: Activity,
 				tag: m.beepers_tag_probe,
-				accent: "text-primary",
-				well: "bg-primary/12 text-primary",
-				band: "from-primary/18 via-primary/6 to-transparent",
+				accent: "text-ink",
+				well: "bg-wash text-ink",
+				band: "from-wash to-transparent",
 			};
 	}
 }
@@ -128,7 +128,7 @@ function BeeperAppCard({
 				{isBuiltIn ? (
 					<div className="absolute right-3.5 top-2.5">
 						<span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2 py-0.5 text-[10px] font-medium tracking-tight text-muted-foreground backdrop-blur-xs">
-							<span className="size-1.5 rounded-full bg-emerald-500" />
+							<span className="size-1.5 rounded-full bg-success" />
 							{m.beepers_built_in()}
 						</span>
 					</div>
