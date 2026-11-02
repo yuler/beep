@@ -64,7 +64,7 @@ function syncFavicon(theme: Theme) {
 	}
 }
 
-function ensureSystemMediaListener() {
+export function ensureSystemMediaListener() {
 	if (
 		mediaListenerAttached ||
 		typeof window === "undefined" ||

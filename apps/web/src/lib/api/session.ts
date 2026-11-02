@@ -111,6 +111,12 @@ export async function fetchMeOrNull(): Promise<MeResponse | null> {
 
 /** Ask Core to persist the last-account picker hint on the identity. */
 export function rememberLastAccount(slug: string) {
+	if (meCached) {
+		meCached = {
+			...meCached,
+			value: { ...meCached.value, last_account_slug: slug },
+		};
+	}
 	return apiFetch<{ last_account_slug: string }>("/api/v1/me/last_account", {
 		method: "PUT",
 		body: { slug },

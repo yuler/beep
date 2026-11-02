@@ -152,12 +152,20 @@ export function HeroBrowser() {
 		};
 	}, [hidden, inView, manual, reducedMotion, sample]);
 
+	function clearUserTimers() {
+		for (const timer of userTimers.current) {
+			window.clearTimeout(timer);
+		}
+		userTimers.current = [];
+	}
+
 	function takeOver() {
 		setManual(true);
 	}
 
 	function selectTab(next: Tab) {
 		takeOver();
+		clearUserTimers();
 		setTab(next);
 		setToast(false);
 		if (next === "beeps") {
@@ -172,13 +180,14 @@ export function HeroBrowser() {
 			return;
 		}
 		takeOver();
+		clearUserTimers();
 		setTab("beeps");
 		if (!typed.trim()) {
 			setTyped(sample);
 		}
 		setBeepPhase("scheduling");
 		const scheduleAt = reducedMotion ? 0 : 720;
-		const toastAt = reducedMotion ? 0 : 2400;
+		const toastAt = 2400;
 		const scheduledTimer = window.setTimeout(() => {
 			setBeepPhase("scheduled");
 			setToast(true);

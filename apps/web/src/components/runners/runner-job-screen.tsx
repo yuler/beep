@@ -18,6 +18,7 @@ import {
 	triggerRunnerJobRun,
 } from "@/lib/api/runner-jobs";
 import type { Runner } from "@/lib/api/runners";
+import { formatBeepScheduleTime } from "@/lib/beep-datetime";
 import { translateError } from "@/lib/i18n-labels";
 import { m } from "@/locale/paraglide/messages";
 
@@ -120,17 +121,26 @@ export function RunnerJobScreen({
 						to: "/$account_slug/runners/$runnerId",
 						params: { account_slug: slug, runnerId: runner.id },
 					},
-					selectedRun
-						? {
-								label: job.name,
-								to: "/$account_slug/runners/$runnerId/jobs/$jobId",
-								params: {
-									account_slug: slug,
-									runnerId: runner.id,
-									jobId: job.id,
+					...(selectedRun
+						? [
+								{
+									label: job.name,
+									to: "/$account_slug/runners/$runnerId/jobs/$jobId" as const,
+									params: {
+										account_slug: slug,
+										runnerId: runner.id,
+										jobId: job.id,
+									},
 								},
-							}
-						: { label: job.name, isCurrentPage: true },
+								{
+									label: formatBeepScheduleTime(
+										selectedRun.scheduled_for,
+										job.timezone,
+									),
+									isCurrentPage: true,
+								},
+							]
+						: [{ label: job.name, isCurrentPage: true }]),
 				]}
 			/>
 

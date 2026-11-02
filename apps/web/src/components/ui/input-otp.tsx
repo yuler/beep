@@ -1,4 +1,10 @@
-import { type ChangeEvent, type KeyboardEvent, useRef, useState } from "react";
+import {
+	type ChangeEvent,
+	type KeyboardEvent,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -33,9 +39,27 @@ export function OtpField({
 	"aria-invalid"?: boolean;
 }) {
 	const inputRef = useRef<HTMLInputElement | null>(null);
+	const wasDisabledRef = useRef(Boolean(disabled));
 	const [isFocused, setIsFocused] = useState(false);
 
 	const code = sanitizeCode(value, length);
+
+	useEffect(() => {
+		if (wasDisabledRef.current && !disabled && autoFocus) {
+			inputRef.current?.focus();
+		}
+		wasDisabledRef.current = Boolean(disabled);
+	}, [disabled, autoFocus]);
+
+	function moveCaretToEnd(el: HTMLInputElement | null) {
+		if (!el) return;
+		const len = el.value.length;
+		try {
+			el.setSelectionRange(len, len);
+		} catch {
+			// Ignore if input does not support selection range.
+		}
+	}
 
 	function handleChange(e: ChangeEvent<HTMLInputElement>) {
 		const next = sanitizeCode(e.target.value, length);
@@ -46,8 +70,15 @@ export function OtpField({
 	}
 
 	function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-		if (e.key === "Backspace" && code.length > 0) {
-			// standard backspace handled by onChange
+		if (
+			e.key === "ArrowLeft" ||
+			e.key === "ArrowRight" ||
+			e.key === "ArrowUp" ||
+			e.key === "ArrowDown" ||
+			e.key === "Home"
+		) {
+			e.preventDefault();
+			moveCaretToEnd(e.currentTarget);
 		}
 	}
 
@@ -57,7 +88,10 @@ export function OtpField({
 	return (
 		<div
 			className={cn("relative flex items-center justify-center", className)}
-			onClick={() => inputRef.current?.focus()}
+			onClick={() => {
+				inputRef.current?.focus();
+				moveCaretToEnd(inputRef.current);
+			}}
 		>
 			{/* Real transparent input overlay */}
 			<input
@@ -69,10 +103,13 @@ export function OtpField({
 				autoFocus={autoFocus}
 				disabled={disabled}
 				value={code}
-				maxLength={length}
 				onChange={handleChange}
 				onKeyDown={handleKeyDown}
-				onFocus={() => setIsFocused(true)}
+				onFocus={(e) => {
+					setIsFocused(true);
+					moveCaretToEnd(e.currentTarget);
+				}}
+				onSelect={(e) => moveCaretToEnd(e.currentTarget)}
 				onBlur={() => setIsFocused(false)}
 				className="absolute inset-0 z-10 w-full h-full opacity-0 cursor-text disabled:cursor-not-allowed"
 				aria-invalid={ariaInvalid}

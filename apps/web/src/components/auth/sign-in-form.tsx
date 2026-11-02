@@ -78,7 +78,7 @@ export function SignInForm({
 				/>
 			</div>
 			{error ? (
-				<Notice error label="出错" role="alert">
+				<Notice error role="alert">
 					{error}
 				</Notice>
 			) : null}

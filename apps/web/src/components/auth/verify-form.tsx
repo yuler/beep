@@ -118,7 +118,10 @@ export function VerifyForm({
 				<InputOTP
 					id={codeId}
 					value={code}
-					onChange={setCode}
+					onChange={(next) => {
+						if (error) setError(null);
+						setCode(next);
+					}}
 					autoFocus
 					disabled={pending}
 					aria-invalid={Boolean(error)}
@@ -126,7 +129,7 @@ export function VerifyForm({
 				<p className="type-meta text-gray text-center">{m.auth_code_hint()}</p>
 			</div>
 			{error ? (
-				<Notice error label="出错" role="alert">
+				<Notice error role="alert">
 					{error}
 				</Notice>
 			) : null}

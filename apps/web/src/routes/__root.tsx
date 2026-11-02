@@ -27,6 +27,7 @@ const themeBootScript = `(() => {
     document.documentElement.classList.remove("dark");
     document.documentElement.dataset.theme = "light";
   }
+  document.documentElement.style.colorScheme = theme;
   var link = document.getElementById("favicon-theme");
   if (link) link.href = theme === "dark" ? "/icon-dark.svg" : "/icon-light.svg";
   var metaTheme = document.querySelector('meta[name="theme-color"]');

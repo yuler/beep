@@ -164,8 +164,12 @@ html.dark {
   }
 
   *:focus-visible {
-    outline: 1px solid var(--ink) !important;
-    outline-offset: 2px !important;
+    outline: 1px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  *[aria-invalid="true"]:focus-visible {
+    outline-color: var(--danger);
   }
 
   html {

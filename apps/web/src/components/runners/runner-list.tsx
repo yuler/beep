@@ -116,7 +116,7 @@ export function RunnerList({
 		setActionError(null);
 		try {
 			const res = await regenerateRunnerToken(slug, runner.id);
-			onTokenRevealed({ ...runner, ...res });
+			onTokenRevealed({ ...runner, ...res.runner });
 			onRefresh();
 		} catch (err) {
 			setActionError(
@@ -146,7 +146,7 @@ export function RunnerList({
 	return (
 		<div className="flex flex-col gap-4">
 			{actionError ? (
-				<Notice error label="出错" role="alert">
+				<Notice error role="alert">
 					{actionError}
 				</Notice>
 			) : null}

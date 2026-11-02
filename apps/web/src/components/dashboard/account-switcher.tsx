@@ -19,10 +19,12 @@ import { m } from "@/locale/paraglide/messages";
 export function AccountSwitcher({
 	accounts,
 	slug,
+	onSelect,
 	className,
 }: {
 	accounts: AccountSummary[];
 	slug: string;
+	onSelect?: (account: AccountSummary) => void;
 	className?: string;
 }) {
 	const navigate = useNavigate();
@@ -41,11 +43,14 @@ export function AccountSwitcher({
 
 	function selectAccount(account: AccountSummary) {
 		setActive(account);
+		onSelect?.(account);
 		void rememberLastAccount(account.slug).catch(() => {
 			// Picker hint is best-effort.
 		});
 
-		if (pathname.startsWith("/admin") || pathname.startsWith("/dev")) {
+		const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+		const isDev = pathname === "/dev" || pathname.startsWith("/dev/");
+		if (isAdmin || isDev) {
 			return;
 		}
 

@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { AccountSwitcher } from "@/components/dashboard/account-switcher";
 import { SidebarUserMenu } from "@/components/dashboard/sidebar-user-menu";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
@@ -22,10 +22,15 @@ export function DashboardShell({
 	children: ReactNode;
 }) {
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const [activeSlug, setActiveSlug] = useState(slug);
 
-	const isAdmin = pathname.startsWith("/admin");
-	const isMy = pathname.startsWith("/my");
-	const isDev = pathname.startsWith("/dev");
+	useEffect(() => {
+		setActiveSlug(slug);
+	}, [slug]);
+
+	const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+	const isMy = pathname === "/my" || pathname.startsWith("/my/");
+	const isDev = pathname === "/dev" || pathname.startsWith("/dev/");
 
 	const tabBaseClass =
 		"type-kicker uppercase tracking-[0.06em] py-3 text-xs inline-flex items-center whitespace-nowrap transition-colors border-b-2 -mb-px";
@@ -51,14 +56,18 @@ export function DashboardShell({
 								</span>
 							</Link>
 							<div className="h-4 w-px bg-line" />
-							<AccountSwitcher accounts={accounts} slug={slug} />
+							<AccountSwitcher
+								accounts={accounts}
+								slug={activeSlug}
+								onSelect={(account) => setActiveSlug(account.slug)}
+							/>
 						</div>
 
 						{/* Right: LocaleSwitcher + ThemeToggle + UserMenu */}
 						<div className="flex items-center gap-1 sm:gap-2">
 							<LocaleSwitcher />
 							<ThemeToggle />
-							{user && <SidebarUserMenu user={user} currentSlug={slug} />}
+							{user && <SidebarUserMenu user={user} currentSlug={activeSlug} />}
 						</div>
 					</div>
 				</header>
@@ -71,7 +80,7 @@ export function DashboardShell({
 								<>
 									<Link
 										to="/$account_slug"
-										params={{ account_slug: slug }}
+										params={{ account_slug: activeSlug }}
 										className={cn(tabBaseClass, tabInactiveClass)}
 									>
 										← {m.nav_back_to_workspace()}
@@ -103,7 +112,7 @@ export function DashboardShell({
 								<>
 									<Link
 										to="/$account_slug"
-										params={{ account_slug: slug }}
+										params={{ account_slug: activeSlug }}
 										className={cn(tabBaseClass, tabInactiveClass)}
 									>
 										← {m.nav_back_to_workspace()}
@@ -135,7 +144,7 @@ export function DashboardShell({
 								<>
 									<Link
 										to="/$account_slug"
-										params={{ account_slug: slug }}
+										params={{ account_slug: activeSlug }}
 										className={cn(tabBaseClass, tabInactiveClass)}
 									>
 										← {m.nav_back_to_workspace()}
@@ -160,7 +169,7 @@ export function DashboardShell({
 										activeOptions={{ exact: true }}
 										className={cn(
 											tabBaseClass,
-											pathname === `/${slug}`
+											pathname === `/${slug}` || pathname === `/${slug}/`
 												? tabActiveClass
 												: tabInactiveClass,
 										)}
@@ -172,7 +181,8 @@ export function DashboardShell({
 										params={{ account_slug: slug }}
 										className={cn(
 											tabBaseClass,
-											pathname.startsWith(`/${slug}/beeps`)
+											pathname === `/${slug}/beeps` ||
+												pathname.startsWith(`/${slug}/beeps/`)
 												? tabActiveClass
 												: tabInactiveClass,
 										)}
@@ -184,7 +194,8 @@ export function DashboardShell({
 										params={{ account_slug: slug }}
 										className={cn(
 											tabBaseClass,
-											pathname.startsWith(`/${slug}/beepers`)
+											pathname === `/${slug}/beepers` ||
+												pathname.startsWith(`/${slug}/beepers/`)
 												? tabActiveClass
 												: tabInactiveClass,
 										)}
@@ -196,7 +207,8 @@ export function DashboardShell({
 										params={{ account_slug: slug }}
 										className={cn(
 											tabBaseClass,
-											pathname.startsWith(`/${slug}/runners`)
+											pathname === `/${slug}/runners` ||
+												pathname.startsWith(`/${slug}/runners/`)
 												? tabActiveClass
 												: tabInactiveClass,
 										)}
@@ -208,7 +220,8 @@ export function DashboardShell({
 										params={{ account_slug: slug }}
 										className={cn(
 											tabBaseClass,
-											pathname.startsWith(`/${slug}/settings`)
+											pathname === `/${slug}/settings` ||
+												pathname.startsWith(`/${slug}/settings/`)
 												? tabActiveClass
 												: tabInactiveClass,
 										)}

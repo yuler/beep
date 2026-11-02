@@ -327,13 +327,13 @@ export function BeeperList({
 	return (
 		<>
 			{/* Mobile Timeline List View (< lg) */}
-			<div className="flex flex-col border-b border-line lg:hidden">
-				{items.length === 0 ? (
-					<div className="rounded-md border border-line bg-transparent p-6 text-center text-sm type-meta text-gray">
-						{m.beepers_empty_no_beepers()}
-					</div>
-				) : (
-					items.map((beeper) => {
+			{items.length === 0 ? (
+				<div className="rounded-md border border-line bg-transparent p-6 text-center text-sm type-meta text-gray lg:hidden">
+					{m.beepers_empty_no_beepers()}
+				</div>
+			) : (
+				<div className="flex flex-col border-b border-line lg:hidden">
+					{items.map((beeper) => {
 						const channels = beeper.notification_channels ?? [];
 
 						return (
@@ -392,7 +392,7 @@ export function BeeperList({
 												: m.common_em_dash()}
 										</span>
 									</div>
-									<div className="flex items-center gap-1">
+									<div className="flex items-center gap-1.5">
 										{channels.map((channel) => (
 											<Badge
 												key={channel}
@@ -402,13 +402,28 @@ export function BeeperList({
 												{channelLabel(channel as NotificationChannel)}
 											</Badge>
 										))}
+										<Button
+											type="button"
+											variant="ghost"
+											size="xs"
+											className="pointer-events-auto h-7 min-h-0 sm:min-h-0 shrink-0 px-2 text-xs"
+											aria-label={`Edit beeper ${beeper.title}`}
+											onClick={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												setEditingBeeper(beeper);
+											}}
+										>
+											<Edit className="size-3.5" data-icon="inline-start" />
+											{m.beepers_edit()}
+										</Button>
 									</div>
 								</div>
 							</div>
 						);
-					})
-				)}
-			</div>
+					})}
+				</div>
+			)}
 
 			{/* Desktop Table View (>= lg) */}
 			<div className="hidden lg:block">

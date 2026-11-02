@@ -40,9 +40,9 @@ export function Segmented<T extends string = string>({
 						disabled={item.disabled}
 						onClick={() => onChange(item.value)}
 						className={cn(
-							"flex-1 min-h-[40px] px-3 py-2 text-center text-sm font-normal transition-colors cursor-pointer select-none border-r border-line last:border-r-0 outline-none focus-visible:outline-1 focus-visible:outline-ink",
+							"flex-1 min-h-[40px] px-3 py-2 text-center text-sm font-normal transition-colors cursor-pointer select-none border-r border-line last:border-r-0 outline-none focus-visible:outline-1 focus-visible:outline-ink focus-visible:-outline-offset-2",
 							isSelected
-								? "bg-solid text-solid-ink"
+								? "bg-solid text-solid-ink focus-visible:outline-solid-ink"
 								: "bg-transparent text-ink hover:bg-wash active:bg-wash",
 							item.disabled && "opacity-40 cursor-not-allowed",
 						)}

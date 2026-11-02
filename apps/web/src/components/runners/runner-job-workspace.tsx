@@ -66,16 +66,23 @@ export function RunnerJobWorkspace({
 		if (!hasActiveRun) return;
 		let active = true;
 		const timer = window.setInterval(() => {
-			void fetchRunnerJobRuns(slug, runnerId, job.id).then((res) => {
-				if (!active) return;
-				setRuns(res.runs);
-			});
+			void fetchRunnerJobRuns(slug, runnerId, job.id)
+				.then((res) => {
+					if (!active) return;
+					setRuns(res.runs);
+					if (!res.runs.some(isActiveRunnerRun)) {
+						void router.invalidate();
+					}
+				})
+				.catch(() => {
+					// Ignore transient polling failures; next tick will retry.
+				});
 		}, 2000);
 		return () => {
 			active = false;
 			window.clearInterval(timer);
 		};
-	}, [hasActiveRun, slug, runnerId, job.id]);
+	}, [hasActiveRun, slug, runnerId, job.id, router]);
 
 	useEffect(() => {
 		if (!selectedRunId || !selectedIsActive) return;
@@ -118,6 +125,7 @@ export function RunnerJobWorkspace({
 	]);
 
 	async function closeSelectedRun() {
+		setSelectedRun(null);
 		await navigate({
 			to: "/$account_slug/runners/$runnerId/jobs/$jobId",
 			params: {

@@ -3,7 +3,12 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { m } from "@/lib/locale";
-import { cycleTheme, getStoredTheme, type ThemePreference } from "@/lib/theme";
+import {
+	cycleTheme,
+	ensureSystemMediaListener,
+	getStoredTheme,
+	type ThemePreference,
+} from "@/lib/theme";
 
 function preferenceLabel(preference: ThemePreference) {
 	if (preference === "light") return m.theme_light();
@@ -26,6 +31,7 @@ export function ThemeToggle({ className }: { className?: string }) {
 
 	useEffect(() => {
 		setPreference(getStoredTheme());
+		ensureSystemMediaListener();
 		const handler = (event: Event) => {
 			const detail = (event as CustomEvent<{ preference: ThemePreference }>)
 				.detail;

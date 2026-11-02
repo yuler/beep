@@ -1,6 +1,7 @@
 import type * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { m } from "@/locale/paraglide/messages";
 
 export type NoticeTone = "default" | "success" | "warning" | "danger";
 
@@ -33,6 +34,7 @@ export function Notice({
 	...props
 }: NoticeProps) {
 	const resolvedTone: NoticeTone = tone ?? (error ? "danger" : "default");
+	const resolvedLabel = label ?? (error ? m.common_error() : undefined);
 	return (
 		<div
 			className={cn(
@@ -42,14 +44,14 @@ export function Notice({
 			)}
 			{...props}
 		>
-			{label && (
+			{resolvedLabel && (
 				<span
 					className={cn(
 						"type-kicker shrink-0 select-none",
 						NOTICE_LABEL[resolvedTone],
 					)}
 				>
-					{label}
+					{resolvedLabel}
 				</span>
 			)}
 			<div className="flex-1 min-w-0">{children}</div>
