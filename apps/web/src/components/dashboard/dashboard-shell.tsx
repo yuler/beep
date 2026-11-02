@@ -45,7 +45,7 @@ export function DashboardShell({
 								aria-label={m.term_beep()}
 								className="inline-flex items-center gap-2 text-ink hover:opacity-80 transition-opacity"
 							>
-								<LogoMark className="size-5 text-ink" />
+								<LogoMark className="size-7 text-ink" />
 								<span className="type-kicker font-medium tracking-[0.06em] uppercase hidden sm:inline">
 									{m.term_beep()}
 								</span>

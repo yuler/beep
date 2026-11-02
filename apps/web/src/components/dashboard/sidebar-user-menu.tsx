@@ -60,13 +60,13 @@ export function SidebarUserMenu({
 				render={
 					<Button
 						variant="ghost"
-						size="icon-sm"
-						className="size-8 p-0 min-h-0 sm:min-h-0 border-0"
+						size="icon"
+						className="size-9 p-0 min-h-0 sm:min-h-0 border-0"
 						aria-label={user.name}
 					/>
 				}
 			>
-				<Avatar size="sm">
+				<Avatar>
 					<AvatarFallback>{initials}</AvatarFallback>
 				</Avatar>
 			</DropdownMenuTrigger>

@@ -155,16 +155,16 @@ function BeeperAppCard({
 				</div>
 			</div>
 
-			<CardHeader className="flex-1">
+			<CardHeader className="pb-1.5">
 				<CardTitle className="text-lg font-semibold">
 					{beeperApp.name}
 				</CardTitle>
-				<CardDescription className="line-clamp-3 leading-relaxed min-h-[4.5rem]">
+				<CardDescription className="line-clamp-3 leading-relaxed">
 					{beeperApp.description}
 				</CardDescription>
 			</CardHeader>
 
-			<CardContent>
+			<CardContent className="pb-3">
 				<div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
 					<span className="inline-flex items-center gap-1.5">
 						<Clock className="size-3.5" />

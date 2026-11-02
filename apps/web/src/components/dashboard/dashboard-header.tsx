@@ -21,11 +21,17 @@ export type DashboardBreadcrumbItem = {
 		| "/$account_slug/beeps"
 		| "/$account_slug/beepers"
 		| "/$account_slug/runners"
+		| "/$account_slug/runners/$runnerId"
+		| "/$account_slug/runners/$runnerId/jobs/$jobId"
 		| "/admin/jobs"
 		| "/admin/stats"
 		| "/my/access_tokens"
 		| "/my/settings";
-	params?: { account_slug: string };
+	params?: {
+		account_slug: string;
+		runnerId?: string;
+		jobId?: string;
+	};
 	isCurrentPage?: boolean;
 };
 
@@ -53,7 +59,18 @@ export function DashboardHeader({
 										</BreadcrumbPage>
 									) : item.to && item.params ? (
 										<BreadcrumbLink
-											render={<Link to={item.to} params={item.params} />}
+											render={
+												<Link
+													to={item.to}
+													params={
+														item.params as {
+															account_slug: string;
+															runnerId: string;
+															jobId: string;
+														}
+													}
+												/>
+											}
 											className="hover:text-ink transition-colors"
 										>
 											{item.label}
