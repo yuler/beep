@@ -1,12 +1,20 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Eraser, Trash2 } from "lucide-react";
+import { ChevronRight, Eraser, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { confirm } from "@/components/confirm-dialog";
 import {
 	isActiveRunnerRun,
 	RunnerRunStatusBadge,
 } from "@/components/runners/runner-run-status";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import {
+	Drawer,
+	DrawerContent,
+	DrawerDescription,
+	DrawerHeader,
+	DrawerTitle,
+} from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ApiError } from "@/lib/api/client";
 import {
 	clearRunnerJobRuns,
@@ -38,6 +46,7 @@ export function RunnerJobWorkspace({
 }) {
 	const router = useRouter();
 	const navigate = useNavigate();
+	const isMobile = useIsMobile();
 	const [runs, setRuns] = useState(initialRuns);
 	const [selectedRun, setSelectedRun] = useState(selectedRunProp);
 
@@ -108,6 +117,18 @@ export function RunnerJobWorkspace({
 		navigate,
 	]);
 
+	async function closeSelectedRun() {
+		await navigate({
+			to: "/$account_slug/runners/$runnerId/jobs/$jobId",
+			params: {
+				account_slug: slug,
+				runnerId,
+				jobId: job.id,
+			},
+			replace: true,
+		});
+	}
+
 	async function goToRuns(nextRuns: RunnerRun[]) {
 		const next = nextRuns[0];
 		if (next) {
@@ -121,14 +142,7 @@ export function RunnerJobWorkspace({
 				},
 			});
 		} else {
-			await navigate({
-				to: "/$account_slug/runners/$runnerId/jobs/$jobId",
-				params: {
-					account_slug: slug,
-					runnerId,
-					jobId: job.id,
-				},
-			});
+			await closeSelectedRun();
 		}
 	}
 
@@ -183,12 +197,7 @@ export function RunnerJobWorkspace({
 
 	return (
 		<div className="flex min-h-[24rem] flex-1 flex-col overflow-hidden rounded-md border border-line md:h-[calc(100dvh_-_14rem)] md:max-h-[calc(100dvh_-_14rem)] md:min-h-[28rem] md:flex-row">
-			<aside
-				className={cn(
-					"flex min-h-0 w-full flex-col overflow-hidden md:w-[min(22rem,42%)] md:shrink-0 md:border-r md:border-line",
-					selectedRunId ? "max-md:hidden" : "",
-				)}
-			>
+			<aside className="flex min-h-0 w-full flex-col overflow-hidden md:w-[min(22rem,42%)] md:shrink-0 md:border-r md:border-line">
 				<div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2.5">
 					<h2 className="text-sm font-medium text-ink">
 						{m.runners_runs_title()}
@@ -264,31 +273,11 @@ export function RunnerJobWorkspace({
 				</div>
 			</aside>
 
-			<section
-				className={cn(
-					"flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-ground",
-					selectedRunId ? "" : "max-md:hidden",
-				)}
-			>
+			<section className="hidden min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-ground md:flex">
 				{selectedRun ? (
 					<>
 						<div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
 							<div className="flex min-w-0 items-center gap-2">
-								<Link
-									to="/$account_slug/runners/$runnerId/jobs/$jobId"
-									params={{
-										account_slug: slug,
-										runnerId,
-										jobId: job.id,
-									}}
-									className={cn(
-										buttonVariants({ size: "xs", variant: "ghost" }),
-										"md:hidden",
-									)}
-								>
-									<ChevronLeft data-icon="inline-start" />
-									{m.common_back()}
-								</Link>
 								<span className="truncate font-mono text-xs text-ink">
 									{formatBeepScheduleTime(
 										selectedRun.scheduled_for,
@@ -308,11 +297,7 @@ export function RunnerJobWorkspace({
 								<Trash2 className="size-3.5" />
 							</Button>
 						</div>
-						<pre className="min-h-0 flex-1 overflow-auto bg-wash p-3 font-mono text-[11px] whitespace-pre-wrap text-ink">
-							{selectedRun.log ||
-								selectedRun.log_preview ||
-								m.runners_runs_no_log()}
-						</pre>
+						<RunnerRunLogText run={selectedRun} />
 					</>
 				) : (
 					<div className="flex h-full items-center justify-center p-6 text-sm text-gray">
@@ -322,6 +307,69 @@ export function RunnerJobWorkspace({
 					</div>
 				)}
 			</section>
+
+			{isMobile ? (
+				<Drawer
+					open={Boolean(selectedRun)}
+					onOpenChange={(open) => {
+						if (!open) void closeSelectedRun();
+					}}
+				>
+					<DrawerContent className="h-[90dvh]">
+						{selectedRun ? (
+							<>
+								<DrawerHeader className="p-3">
+									<div className="flex items-start justify-between gap-2">
+										<div className="min-w-0">
+											<DrawerTitle className="truncate font-mono text-xs">
+												{formatBeepScheduleTime(
+													selectedRun.scheduled_for,
+													job.timezone,
+												)}
+											</DrawerTitle>
+											<DrawerDescription className="sr-only">
+												{m.runners_runs_title()}
+											</DrawerDescription>
+											<div className="mt-1.5">
+												<RunnerRunStatusBadge run={selectedRun} />
+											</div>
+										</div>
+										<div className="flex shrink-0 items-center gap-1">
+											<Button
+												size="icon-xs"
+												variant="destructive"
+												disabled={selectedIsActive}
+												onClick={() => void handleDeleteRun(selectedRun)}
+												title={m.runners_runs_delete()}
+												aria-label={m.runners_runs_delete()}
+											>
+												<Trash2 className="size-3.5" />
+											</Button>
+											<Button
+												size="icon-xs"
+												variant="ghost"
+												aria-label={m.common_back()}
+												onClick={() => void closeSelectedRun()}
+											>
+												<X className="size-3.5" />
+											</Button>
+										</div>
+									</div>
+								</DrawerHeader>
+								<RunnerRunLogText run={selectedRun} />
+							</>
+						) : null}
+					</DrawerContent>
+				</Drawer>
+			) : null}
 		</div>
+	);
+}
+
+function RunnerRunLogText({ run }: { run: RunnerRun }) {
+	return (
+		<pre className="min-h-0 flex-1 overflow-auto bg-wash p-3 font-mono text-[11px] whitespace-pre-wrap text-ink">
+			{run.log || run.log_preview || m.runners_runs_no_log()}
+		</pre>
 	);
 }
