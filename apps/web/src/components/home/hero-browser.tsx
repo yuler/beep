@@ -10,8 +10,8 @@ type Tab = "beeps" | "beepers";
 type BeepPhase = "compose" | "scheduling" | "scheduled";
 type ProbePhase = "idle" | "checking" | "live";
 
-const BEEPS_URL = "app.beep.dev/acme";
-const BEEPERS_URL = "app.beep.dev/acme/beepers";
+const BEEPS_URL = "beep.yuler.cc/yuler/beeps";
+const BEEPERS_URL = "beep.yuler.cc/yuler/beepers";
 
 function usePrefersReducedMotion() {
 	const [reduced, setReduced] = useState(false);
@@ -197,14 +197,14 @@ export function HeroBrowser() {
 			className="relative mx-auto mt-14 max-w-3xl text-left"
 			aria-label={m.marketing_hero_mock_title()}
 		>
-			<div className="border border-line bg-ground">
+			<div className="overflow-hidden rounded-md border border-line bg-ground">
 				<div className="flex h-10 items-center gap-3 border-b border-line px-3">
 					<div className="flex items-center gap-1.5" aria-hidden="true">
-						<span className="size-2.5 border border-line" />
-						<span className="size-2.5 border border-line" />
-						<span className="size-2.5 border border-line" />
+						<span className="size-2.5 rounded-full border border-line" />
+						<span className="size-2.5 rounded-full border border-line" />
+						<span className="size-2.5 rounded-full border border-line" />
 					</div>
-					<div className="flex min-w-0 flex-1 items-stretch gap-0 self-end h-8">
+					<div className="flex min-w-0 flex-1 items-stretch gap-1 self-end h-8">
 						<TabButton
 							active={tab === "beeps"}
 							onClick={() => selectTab("beeps")}
@@ -254,7 +254,7 @@ export function HeroBrowser() {
 								takeOver();
 								setToast(false);
 							}}
-							className="absolute right-3 bottom-3 z-10 w-[min(100%-1.5rem,16.5rem)] rounded-sm border border-line border-l-2 border-l-success bg-ground p-3 text-left animate-in fade-in slide-in-from-bottom-2 duration-200"
+							className="absolute right-3 bottom-3 z-10 w-[min(100%-1.5rem,16.5rem)] rounded-md border border-line border-l-2 border-l-success bg-ground p-3 text-left shadow-md shadow-black/20 animate-in fade-in slide-in-from-bottom-2 duration-200"
 						>
 							<div className="flex items-center justify-between gap-2">
 								<span className="inline-flex items-center gap-1.5 type-kicker text-success">
@@ -293,7 +293,7 @@ function TabButton({
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"type-kicker -mb-px min-h-0 border border-b-0 px-3 text-xs uppercase tracking-[0.18em]",
+				"type-kicker -mb-px min-h-0 rounded-t-sm border border-b-0 px-3 text-xs uppercase tracking-[0.06em]",
 				active
 					? "border-line bg-ground text-ink"
 					: "border-transparent text-gray hover:text-ink",
@@ -323,7 +323,7 @@ function BeepsPage({
 
 	return (
 		<div className="space-y-4">
-			<div className="border border-line p-4">
+			<div className="rounded-md border border-line p-4">
 				<label htmlFor={inputId} className="type-kicker text-gray block">
 					{m.marketing_hero_mock_title()}
 				</label>
@@ -342,7 +342,7 @@ function BeepsPage({
 						spellCheck={false}
 						enterKeyHint="send"
 						onChange={(event) => onTyped(event.target.value)}
-						className="flex-1 px-0"
+						className="flex-1"
 					/>
 					<Button
 						type="submit"
@@ -392,7 +392,7 @@ function BeepersPage({ phase }: { phase: ProbePhase }) {
 	const live = phase === "live";
 
 	return (
-		<div className="border border-line p-4">
+		<div className="rounded-md border border-line p-4">
 			<div className="flex items-start justify-between gap-3">
 				<div>
 					<div className="type-kicker text-gray">{m.nav_beepers()}</div>

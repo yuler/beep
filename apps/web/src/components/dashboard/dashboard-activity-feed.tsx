@@ -62,7 +62,7 @@ export function DashboardActivityFeed({
 	}
 
 	return (
-		<Card className="bg-transparent border-t border-line sm:border sm:border-line">
+		<Card className="bg-transparent border border-line">
 			<CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-3">
 				<div>
 					<CardTitle className="type-app-title font-medium text-ink">

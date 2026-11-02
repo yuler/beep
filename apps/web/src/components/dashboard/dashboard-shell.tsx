@@ -28,7 +28,7 @@ export function DashboardShell({
 	const isDev = pathname.startsWith("/dev");
 
 	const tabBaseClass =
-		"type-kicker uppercase tracking-[0.18em] py-3 text-xs inline-flex items-center whitespace-nowrap transition-colors border-b-2 -mb-px";
+		"type-kicker uppercase tracking-[0.06em] py-3 text-xs inline-flex items-center whitespace-nowrap transition-colors border-b-2 -mb-px";
 	const tabInactiveClass = "border-transparent text-gray hover:text-ink";
 	const tabActiveClass = "border-ink text-ink font-medium";
 
@@ -46,7 +46,7 @@ export function DashboardShell({
 								className="inline-flex items-center gap-2 text-ink hover:opacity-80 transition-opacity"
 							>
 								<LogoMark className="size-5 text-ink" />
-								<span className="type-kicker font-medium tracking-[0.18em] uppercase hidden sm:inline">
+								<span className="type-kicker font-medium tracking-[0.06em] uppercase hidden sm:inline">
 									{m.term_beep()}
 								</span>
 							</Link>

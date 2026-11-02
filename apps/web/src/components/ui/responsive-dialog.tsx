@@ -129,7 +129,7 @@ function ResponsiveDialogContent({
 		return (
 			<DrawerContent
 				className={cn(
-					"max-h-[90dvh] flex flex-col rounded-none border-t border-line border-x-0 border-b-0 bg-ground focus-visible:outline-none",
+					"max-h-[90dvh] flex flex-col rounded-t-md border-t border-line border-x-0 border-b-0 bg-ground shadow-lg shadow-black/25 focus-visible:outline-none",
 					contentShellClass,
 					resolveClassName(className),
 				)}
@@ -144,7 +144,7 @@ function ResponsiveDialogContent({
 	return (
 		<DialogContent
 			className={cn(
-				"max-h-[min(90dvh,calc(100vh-3rem))] flex flex-col overflow-hidden gap-0 sm:rounded-sm border border-line bg-ground p-0 text-ink sm:max-w-md",
+				"max-h-[min(90dvh,calc(100vh-3rem))] flex flex-col overflow-hidden gap-0 sm:rounded-md border border-line bg-ground p-0 text-ink shadow-lg shadow-black/25 sm:max-w-md",
 				contentShellClass,
 				className,
 			)}

@@ -148,7 +148,7 @@ export function DataTable<TData extends RowData>({
 	return (
 		<div
 			className={cn(
-				"overflow-hidden rounded-sm border border-line bg-ground",
+				"overflow-hidden rounded-md border border-line bg-ground",
 				className,
 			)}
 		>

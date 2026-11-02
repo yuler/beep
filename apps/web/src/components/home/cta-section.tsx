@@ -6,9 +6,9 @@ export function CtaSection() {
 	return (
 		<section className="border-t border-line bg-ground py-16 md:py-24 text-ink">
 			<div className="mx-auto max-w-[1080px] px-4 md:px-6 lg:px-8">
-				<div className="border border-line bg-ground p-8 text-center md:p-14">
+				<div className="rounded-md border border-line bg-ground p-8 text-center md:p-14">
 					<div className="mx-auto max-w-2xl">
-						<div className="inline-flex size-8 items-center justify-center border border-line text-ink mb-4">
+						<div className="inline-flex size-8 items-center justify-center rounded-sm border border-line text-ink mb-4">
 							<Sparkles className="size-4" />
 						</div>
 

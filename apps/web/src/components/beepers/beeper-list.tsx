@@ -329,7 +329,7 @@ export function BeeperList({
 			{/* Mobile Timeline List View (< lg) */}
 			<div className="flex flex-col border-b border-line lg:hidden">
 				{items.length === 0 ? (
-					<div className="border border-line bg-transparent p-6 text-center text-sm type-meta text-gray">
+					<div className="rounded-md border border-line bg-transparent p-6 text-center text-sm type-meta text-gray">
 						{m.beepers_empty_no_beepers()}
 					</div>
 				) : (

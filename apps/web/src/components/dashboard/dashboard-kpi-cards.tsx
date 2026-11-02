@@ -41,14 +41,11 @@ export function DashboardKpiCards({ stats }: { stats: DashboardStats }) {
 	return (
 		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			{/* Executions & Success Rate */}
-			<Card
-				size="sm"
-				className="bg-transparent border-t border-line sm:border sm:border-line"
-			>
+			<Card size="sm" className="bg-transparent border border-line">
 				<CardContent className="flex flex-col justify-between gap-3 p-4">
 					<div className="flex items-center justify-between">
 						<span className="type-kicker text-gray">Total Executions</span>
-						<div className="flex size-7 items-center justify-center border border-line text-ink">
+						<div className="flex size-7 items-center justify-center rounded-sm border border-line text-ink">
 							<Activity className="size-3.5" />
 						</div>
 					</div>
@@ -72,14 +69,11 @@ export function DashboardKpiCards({ stats }: { stats: DashboardStats }) {
 			</Card>
 
 			{/* Beeps Status */}
-			<Card
-				size="sm"
-				className="bg-transparent border-t border-line sm:border sm:border-line"
-			>
+			<Card size="sm" className="bg-transparent border border-line">
 				<CardContent className="flex flex-col justify-between gap-3 p-4">
 					<div className="flex items-center justify-between">
 						<span className="type-kicker text-gray">Active Beeps</span>
-						<div className="flex size-7 items-center justify-center border border-line text-ink">
+						<div className="flex size-7 items-center justify-center rounded-sm border border-line text-ink">
 							<Bell className="size-3.5" />
 						</div>
 					</div>
@@ -95,14 +89,11 @@ export function DashboardKpiCards({ stats }: { stats: DashboardStats }) {
 			</Card>
 
 			{/* Beepers Health */}
-			<Card
-				size="sm"
-				className="bg-transparent border-t border-line sm:border sm:border-line"
-			>
+			<Card size="sm" className="bg-transparent border border-line">
 				<CardContent className="flex flex-col justify-between gap-3 p-4">
 					<div className="flex items-center justify-between">
 						<span className="type-kicker text-gray">Beepers Probes</span>
-						<div className="flex size-7 items-center justify-center border border-line text-ink">
+						<div className="flex size-7 items-center justify-center rounded-sm border border-line text-ink">
 							<Radio className="size-3.5" />
 						</div>
 					</div>
@@ -130,14 +121,11 @@ export function DashboardKpiCards({ stats }: { stats: DashboardStats }) {
 			</Card>
 
 			{/* Runners */}
-			<Card
-				size="sm"
-				className="bg-transparent border-t border-line sm:border sm:border-line"
-			>
+			<Card size="sm" className="bg-transparent border border-line">
 				<CardContent className="flex flex-col justify-between gap-3 p-4">
 					<div className="flex items-center justify-between">
 						<span className="type-kicker text-gray">Runners & Nodes</span>
-						<div className="flex size-7 items-center justify-center border border-line text-ink">
+						<div className="flex size-7 items-center justify-center rounded-sm border border-line text-ink">
 							<Server className="size-3.5" />
 						</div>
 					</div>

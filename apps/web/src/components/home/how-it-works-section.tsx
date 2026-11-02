@@ -45,11 +45,11 @@ export function HowItWorksSection() {
 					{steps.map(({ number, icon: Icon, title, description }, index) => (
 						<Card
 							key={number()}
-							className="border-t border-line sm:border sm:border-line bg-transparent p-5 flex flex-col justify-between"
+							className="border border-line bg-transparent p-5 flex flex-col justify-between"
 						>
 							<div>
 								<div className="flex items-center justify-between">
-									<div className="flex size-8 items-center justify-center border border-line text-ink">
+									<div className="flex size-8 items-center justify-center rounded-sm border border-line text-ink">
 										<Icon className="size-4" />
 									</div>
 									<span className="font-mono text-xl font-normal text-gray">

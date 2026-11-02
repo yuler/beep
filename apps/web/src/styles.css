@@ -65,6 +65,7 @@
 
 html:not(.dark),
 .light {
+  color-scheme: light;
   --ground: #ffffff;
   --ink: #0a0a0a;
   --gray: #666666;
@@ -81,6 +82,7 @@ html:not(.dark),
 }
 
 html.dark {
+  color-scheme: dark;
   --ground: #0a0a0a;
   --ink: #fafafa;
   --gray: #a1a1a1;
@@ -148,12 +150,12 @@ html.dark {
 
   --radius-xs: 2px;
   --radius-sm: 2px;
-  --radius-md: 2px;
-  --radius-lg: 2px;
-  --radius-xl: 2px;
-  --radius-2xl: 2px;
-  --radius-3xl: 2px;
-  --radius-4xl: 2px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 4px;
+  --radius-4xl: 4px;
 }
 
 @layer base {
@@ -208,7 +210,7 @@ html.dark {
   font-size: 13px;
   font-weight: 400;
   line-height: 1.4;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.06em;
 }
 
 .type-title {
@@ -318,6 +320,66 @@ html.dark {
 .story-dash-flow {
   stroke-dasharray: 4 4;
   animation: story-dash-flow 1.4s linear infinite;
+}
+
+/* Circular theme wipe. The clip is CSS-driven so the first composited frame
+   is already cropped — animating in transition.ready is one frame too late
+   and flashes the incoming snapshot. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+  opacity: 1;
+}
+
+@keyframes beep-theme-expand {
+  from {
+    clip-path: circle(0px at var(--vt-x) var(--vt-y));
+  }
+  to {
+    clip-path: circle(var(--vt-r) at var(--vt-x) var(--vt-y));
+  }
+}
+
+@keyframes beep-theme-shrink {
+  from {
+    clip-path: circle(var(--vt-r) at var(--vt-x) var(--vt-y));
+  }
+  to {
+    clip-path: circle(0px at var(--vt-x) var(--vt-y));
+  }
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+  animation: none;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+  animation: beep-theme-expand 450ms ease-in-out both;
+}
+
+html.theme-reveal-old::view-transition-old(root) {
+  z-index: 2147483646;
+  animation: beep-theme-shrink 450ms ease-in-out both;
+}
+
+html.theme-reveal-old::view-transition-new(root) {
+  z-index: 0;
+  animation: none;
+}
+
+::view-transition-group(root) {
+  animation: none;
+}
+
+::view-transition {
+  background-color: var(--vt-bg);
+}
+
+html.theme-transitioning,
+html.theme-transitioning * {
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

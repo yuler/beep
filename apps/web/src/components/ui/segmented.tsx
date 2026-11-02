@@ -25,7 +25,7 @@ export function Segmented<T extends string = string>({
 		<div
 			role="tablist"
 			className={cn(
-				"inline-flex w-full items-stretch border border-line p-0 bg-transparent text-sm",
+				"inline-flex w-full items-stretch overflow-hidden rounded-sm border border-line p-0 bg-transparent text-sm",
 				className,
 			)}
 		>

@@ -54,7 +54,7 @@ export function TestimonialsSection() {
 					{testimonials.map(({ id, quote, author, role, avatar, initials }) => (
 						<Card
 							key={id}
-							className="border-t border-line sm:border sm:border-line bg-transparent p-5 flex flex-col justify-between"
+							className="border border-line bg-transparent p-5 flex flex-col justify-between"
 						>
 							<div>
 								{/* Star Rating */}

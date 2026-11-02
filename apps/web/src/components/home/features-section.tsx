@@ -75,10 +75,10 @@ export function FeaturesSection() {
 					{features.map(({ id, icon: Icon, title, description }) => (
 						<Card
 							key={id}
-							className="border-t border-line sm:border sm:border-line bg-transparent p-5 hover:bg-wash transition-colors"
+							className="border border-line bg-transparent p-5 hover:bg-wash transition-colors"
 						>
 							<CardHeader className="p-0">
-								<div className="mb-3 inline-flex size-8 items-center justify-center border border-line text-ink">
+								<div className="mb-3 inline-flex size-8 items-center justify-center rounded-sm border border-line text-ink">
 									<Icon className="size-4" />
 								</div>
 								<CardTitle className="type-app-title text-base font-medium text-ink">

@@ -124,22 +124,22 @@ export function CreateBeepDialog({
 
 					<ResponsiveDialogBody className="space-y-4">
 						{/* AI Prompt box */}
-						<div className="flex flex-col gap-3 rounded-xl border border-primary/20 bg-primary/[0.03] p-3.5 dark:border-primary/30 dark:bg-primary/[0.06]">
+						<div className="flex flex-col gap-3 rounded-md border border-line bg-wash p-3.5">
 							<div className="flex flex-col gap-2">
 								<div className="flex items-center justify-between">
 									<Label
 										htmlFor={`beep-prompt-dialog-${slug}`}
-										className="flex items-center gap-1.5 text-xs font-semibold text-primary"
+										className="flex items-center gap-1.5 text-xs font-medium text-ink"
 									>
 										<Sparkles className="size-3.5" />
 										{m.beeps_prompt_ai_assistant()}
 									</Label>
-									<span className="hidden sm:flex items-center gap-1 text-[11px] text-muted-foreground">
-										<kbd className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded border border-border bg-muted/80 px-1 font-mono text-[10px] font-medium text-foreground shadow-2xs">
+									<span className="hidden sm:flex items-center gap-1 text-[11px] text-gray">
+										<kbd className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-sm border border-line bg-ground px-1 font-mono text-[10px] font-normal text-ink">
 											⌘
 										</kbd>
 										<span>+</span>
-										<kbd className="inline-flex h-4.5 items-center justify-center rounded border border-border bg-muted/80 px-1 font-mono text-[10px] font-medium text-foreground shadow-2xs">
+										<kbd className="inline-flex h-4.5 items-center justify-center rounded-sm border border-line bg-ground px-1 font-mono text-[10px] font-normal text-ink">
 											Enter
 										</kbd>
 										<span>{m.beeps_prompt_shortcut()}</span>
@@ -169,7 +169,7 @@ export function CreateBeepDialog({
 									disabled={isPending}
 									rows={2}
 									className={cn(
-										"w-full min-w-0 resize-none overflow-hidden rounded-lg border border-input bg-background/80 px-2.5 py-1.5 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/20",
+										"w-full min-w-0 resize-none overflow-hidden rounded-sm border border-line bg-ground px-3 py-2 text-sm text-ink transition-colors outline-none placeholder:text-gray focus-visible:border-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40",
 									)}
 								/>
 
@@ -180,7 +180,7 @@ export function CreateBeepDialog({
 											type="button"
 											disabled={isPending}
 											onClick={() => setPrompt(label())}
-											className="rounded-md border border-input/60 bg-background/60 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:bg-background hover:text-foreground dark:bg-input/10"
+											className="rounded-sm border border-line bg-ground px-2 py-0.5 text-[11px] text-gray transition-colors hover:border-ink hover:text-ink"
 										>
 											{label()}
 										</button>
@@ -212,17 +212,12 @@ export function CreateBeepDialog({
 						<div className="flex flex-col gap-4">
 							<div className="flex flex-col gap-2">
 								<Label>{m.beeps_type()}</Label>
-								<div className="flex rounded-lg border border-input bg-muted/30 p-1">
+								<div className="flex rounded-sm border border-line bg-wash p-1 gap-1">
 									<Button
 										type="button"
 										size="sm"
-										variant={kind === "once" ? "default" : "ghost"}
-										className={cn(
-											"flex-1 font-medium transition-colors",
-											kind === "once"
-												? "bg-background text-foreground shadow-sm dark:bg-card dark:text-foreground dark:ring-1 dark:ring-border/60"
-												: "text-muted-foreground hover:text-foreground",
-										)}
+										variant={kind === "once" ? "solid" : "ghost"}
+										className="flex-1"
 										disabled={isPending}
 										onClick={() => setKind("once")}
 									>
@@ -231,13 +226,8 @@ export function CreateBeepDialog({
 									<Button
 										type="button"
 										size="sm"
-										variant={kind === "recurring" ? "default" : "ghost"}
-										className={cn(
-											"flex-1 font-medium transition-colors",
-											kind === "recurring"
-												? "bg-background text-foreground shadow-sm dark:bg-card dark:text-foreground dark:ring-1 dark:ring-border/60"
-												: "text-muted-foreground hover:text-foreground",
-										)}
+										variant={kind === "recurring" ? "solid" : "ghost"}
+										className="flex-1"
 										disabled={isPending}
 										onClick={() => setKind("recurring")}
 									>
@@ -300,11 +290,11 @@ export function CreateBeepDialog({
 									</div>
 								</div>
 								{preview ? (
-									<div className="min-h-28 rounded-lg border border-input px-2.5 py-1.5 dark:bg-input/30">
+									<div className="min-h-28 rounded-sm border border-line px-3 py-2">
 										{body.trim() ? (
 											<BeepMarkdown source={body} />
 										) : (
-											<p className="text-sm text-muted-foreground">
+											<p className="text-sm text-gray">
 												{m.beeps_nothing_to_preview()}
 											</p>
 										)}
@@ -324,7 +314,7 @@ export function CreateBeepDialog({
 										disabled={isPending}
 										rows={4}
 										className={cn(
-											"w-full min-w-0 min-h-24 resize-none overflow-hidden rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30",
+											"w-full min-w-0 min-h-24 resize-none overflow-hidden rounded-sm border border-line bg-transparent px-3 py-2 text-base text-ink transition-colors outline-none placeholder:text-gray focus-visible:border-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40 md:text-sm",
 										)}
 									/>
 								)}
@@ -335,7 +325,7 @@ export function CreateBeepDialog({
 									<Label htmlFor={`beep-dialog-intent-${slug}`}>
 										{m.beeps_intent()}
 									</Label>
-									<span className="text-[11px] text-muted-foreground">
+									<span className="text-[11px] text-gray">
 										{m.common_optional()}
 									</span>
 								</div>
@@ -348,9 +338,7 @@ export function CreateBeepDialog({
 									disabled={isPending}
 									className="font-mono text-sm"
 								/>
-								<p className="text-[11px] text-muted-foreground">
-									{m.beeps_intent_hint()}
-								</p>
+								<p className="text-[11px] text-gray">{m.beeps_intent_hint()}</p>
 							</div>
 
 							<div className="flex flex-col gap-2">
@@ -358,7 +346,7 @@ export function CreateBeepDialog({
 									<Label htmlFor={`beep-dialog-metadata-${slug}`}>
 										{m.beeps_metadata()}
 									</Label>
-									<span className="text-[11px] text-muted-foreground">
+									<span className="text-[11px] text-gray">
 										{m.common_optional()}
 									</span>
 								</div>
@@ -377,9 +365,9 @@ export function CreateBeepDialog({
 									disabled={isPending}
 									rows={2}
 									className={cn(
-										"w-full min-w-0 min-h-16 resize-none font-mono text-sm rounded-lg border border-input bg-transparent px-2.5 py-1.5 transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 dark:bg-input/30",
+										"w-full min-w-0 min-h-16 resize-none font-mono text-sm rounded-sm border border-line bg-transparent px-3 py-2 text-ink transition-colors outline-none placeholder:text-gray focus-visible:border-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40",
 										fieldErrors.metadata &&
-											"border-destructive focus-visible:border-destructive",
+											"border-danger focus-visible:border-danger focus-visible:outline-danger",
 									)}
 								/>
 								{fieldErrors.metadata ? (
@@ -536,7 +524,7 @@ export function CreateBeepDialog({
 							{/* Notification Channels */}
 							<div className="flex flex-col gap-2">
 								<Label>{m.beeps_channels()}</Label>
-								<div className="flex flex-col gap-2 rounded-lg border border-input p-3 dark:bg-input/20">
+								<div className="flex flex-col gap-2 rounded-sm border border-line p-3">
 									{NOTIFICATION_CHANNELS.map((channel) => (
 										<Label
 											key={channel}
@@ -544,7 +532,7 @@ export function CreateBeepDialog({
 										>
 											<input
 												type="checkbox"
-												className="size-4 accent-primary rounded"
+												className="size-4 accent-primary rounded-sm"
 												checked={channels.includes(channel)}
 												disabled={isPending}
 												onChange={(e) =>

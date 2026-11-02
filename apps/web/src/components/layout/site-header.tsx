@@ -41,7 +41,7 @@ export function SiteHeader({
 					className="inline-flex items-center gap-2.5 text-ink hover:opacity-80 transition-opacity"
 				>
 					<LogoMark className="size-5 text-ink" />
-					<span className="type-kicker font-medium tracking-[0.18em] uppercase">
+					<span className="type-kicker font-medium tracking-[0.06em] uppercase">
 						{m.term_beep()}
 					</span>
 				</Link>

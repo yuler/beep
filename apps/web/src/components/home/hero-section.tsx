@@ -11,7 +11,7 @@ export function HeroSection() {
 			<div className="mx-auto max-w-[1080px] px-4 md:px-6 lg:px-8">
 				{/* Main heading & CTA */}
 				<div className="mx-auto flex max-w-3xl flex-col items-center text-center">
-					<div className="inline-flex items-center gap-2 border border-line px-3 py-1 type-kicker text-gray">
+					<div className="inline-flex items-center gap-2 rounded-sm border border-line px-3 py-1 type-kicker text-gray">
 						<Sparkles className="size-3 text-ink" />
 						<span>{m.marketing_badge()}</span>
 					</div>

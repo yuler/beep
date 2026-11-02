@@ -81,7 +81,7 @@ function SelectContent({
 					data-slot="select-content"
 					data-align-trigger={alignItemWithTrigger}
 					className={cn(
-						"relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 overflow-x-hidden overflow-y-auto rounded-sm border border-line bg-ground p-1 text-ink duration-100 outline-none",
+						"relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 overflow-x-hidden overflow-y-auto rounded-md border border-line bg-ground p-1 text-ink shadow-md shadow-black/20 duration-100 outline-none",
 						className,
 					)}
 					{...props}

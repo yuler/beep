@@ -38,7 +38,7 @@ export function DashboardTrendChart({
 	const hasData = chart.points.some((p) => p.total > 0);
 
 	return (
-		<Card className="bg-transparent border-t border-line sm:border sm:border-line">
+		<Card className="bg-transparent border border-line">
 			<CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
 				<div>
 					<CardTitle className="type-app-title font-medium text-ink">
@@ -50,11 +50,11 @@ export function DashboardTrendChart({
 							: "Daily execution volume and system stability over the last 7 days"}
 					</CardDescription>
 				</div>
-				<div className="flex items-center border border-line">
+				<div className="flex items-center overflow-hidden rounded-sm border border-line">
 					<Button
 						variant={chart.range === "24h" ? "solid" : "ghost"}
 						size="xs"
-						className="h-7 text-xs px-2.5 min-h-0 sm:min-h-0 border-0"
+						className="h-7 rounded-none text-xs px-2.5 min-h-0 sm:min-h-0 border-0"
 						onClick={() => onRangeChange("24h")}
 						disabled={isLoading}
 					>
@@ -63,7 +63,7 @@ export function DashboardTrendChart({
 					<Button
 						variant={chart.range === "7d" ? "solid" : "ghost"}
 						size="xs"
-						className="h-7 text-xs px-2.5 min-h-0 sm:min-h-0 border-0 border-l border-line"
+						className="h-7 rounded-none text-xs px-2.5 min-h-0 sm:min-h-0 border-0 border-l border-line"
 						onClick={() => onRangeChange("7d")}
 						disabled={isLoading}
 					>
@@ -73,7 +73,7 @@ export function DashboardTrendChart({
 			</CardHeader>
 			<CardContent className="pt-4">
 				{!hasData ? (
-					<div className="flex h-56 flex-col items-center justify-center border border-line text-gray">
+					<div className="flex h-56 flex-col items-center justify-center rounded-md border border-line text-gray">
 						<p className="text-sm font-normal text-ink">
 							No activity recorded yet
 						</p>

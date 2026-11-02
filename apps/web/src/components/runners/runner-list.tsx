@@ -131,7 +131,7 @@ export function RunnerList({
 
 	if (runners.length === 0) {
 		return (
-			<div className="flex flex-col items-center justify-center p-8 border border-line text-center text-gray">
+			<div className="flex flex-col items-center justify-center rounded-md p-8 border border-line text-center text-gray">
 				<Server className="size-8 mb-2 text-gray" />
 				<p className="type-app-title text-ink font-medium">
 					{m.runners_no_runners()}
@@ -158,7 +158,7 @@ export function RunnerList({
 						<Card
 							key={runner.id}
 							className={cn(
-								"relative flex flex-col justify-between border-t border-line sm:border sm:border-line bg-transparent transition-colors hover:bg-wash",
+								"relative flex flex-col justify-between border border-line bg-transparent transition-colors hover:bg-wash",
 								isBusy && "opacity-60 pointer-events-none",
 							)}
 						>
@@ -169,7 +169,7 @@ export function RunnerList({
 										params={{ account_slug: slug, runnerId: runner.id }}
 										className="flex items-center gap-2.5 min-w-0"
 									>
-										<div className="flex size-8 shrink-0 items-center justify-center border border-line text-ink">
+										<div className="flex size-8 shrink-0 items-center justify-center rounded-sm border border-line text-ink">
 											<Server className="size-4" />
 										</div>
 										<div className="min-w-0 flex-1">
@@ -239,7 +239,7 @@ export function RunnerList({
 								) : null}
 
 								{/* Metadata Grid */}
-								<div className="grid grid-cols-2 gap-2 border border-line p-2.5 font-mono text-[11px] text-gray">
+								<div className="grid grid-cols-2 gap-2 rounded-sm border border-line p-2.5 font-mono text-[11px] text-gray">
 									<div>
 										<span className="type-kicker text-gray block text-[10px]">
 											{m.runners_version()}

@@ -226,7 +226,7 @@ function OutageSceneIllustration() {
 				fontSize="11"
 				fontFamily="monospace"
 			>
-				api.checkout.prod · pool_exhausted (5000ms)
+				https://yuler.dev · https://beep.yuler.cc/up (5000ms)
 			</text>
 		</svg>
 	);
@@ -314,7 +314,7 @@ function ProbeCatchIllustration() {
 				fontSize="10"
 				fontFamily="monospace"
 			>
-				BEEPER · HTTP PROBE
+				BEEPER · site-uptime
 			</text>
 			{/* Status transition: OK -> ALERTING */}
 			<rect
@@ -366,7 +366,7 @@ function ProbeCatchIllustration() {
 				ALERTING
 			</text>
 
-			{/* Consecutive run dots (3 errors) */}
+			{/* Consecutive run dots (2 errors) */}
 			<text
 				x="196"
 				y="124"
@@ -374,12 +374,12 @@ function ProbeCatchIllustration() {
 				fontSize="10"
 				fontFamily="monospace"
 			>
-				RUN STREAK
+				yuler.dev · */5 * * * *
 			</text>
 			<circle cx="199" cy="138" r="4" fill="var(--success)" />
 			<circle cx="213" cy="138" r="4" fill="var(--success)" />
-			<circle cx="227" cy="138" r="4" fill="var(--warning)" />
-			<circle cx="241" cy="138" r="4" fill="var(--danger)" />
+			<circle cx="227" cy="138" r="4" fill="var(--success)" />
+			<circle cx="241" cy="138" r="4" fill="var(--warning)" />
 			<circle cx="255" cy="138" r="4" fill="var(--danger)" />
 			<circle
 				cx="269"
@@ -396,7 +396,7 @@ function ProbeCatchIllustration() {
 				fontSize="10"
 				fontFamily="monospace"
 			>
-				3/3 failed → trigger alert
+				2/2 failed → trigger alert
 			</text>
 		</svg>
 	);
@@ -499,7 +499,7 @@ function MultiChannelDispatchIllustration() {
 				fontSize="10"
 				fontFamily="monospace"
 			>
-				[ALERT] checkout-api 502
+				[ALERT] https://yuler.dev 502
 			</text>
 
 			{/* Channel 2: Email */}
@@ -521,7 +521,7 @@ function MultiChannelDispatchIllustration() {
 				fontSize="11"
 				fontFamily="monospace"
 			>
-				Email · oncall@team.dev
+				Email · is.yuler@gmail.com
 			</text>
 			<text
 				x="176"
@@ -530,7 +530,7 @@ function MultiChannelDispatchIllustration() {
 				fontSize="10"
 				fontFamily="monospace"
 			>
-				Incident #409 dispatched
+				site-uptime · yuler.dev alerting
 			</text>
 
 			{/* Channel 3: Webhook */}
@@ -552,7 +552,7 @@ function MultiChannelDispatchIllustration() {
 				fontSize="11"
 				fontFamily="monospace"
 			>
-				Webhook · POST /ops/hook
+				Webhook · beep.yuler.cc
 			</text>
 			<text
 				x="176"
@@ -596,7 +596,7 @@ function RecoverySceneIllustration() {
 				fontSize="12"
 				fontFamily="monospace"
 			>
-				api.checkout.prod
+				https://yuler.dev
 			</text>
 			<rect
 				x="236"
@@ -711,7 +711,7 @@ function NaturalLanguageParseIllustration() {
 				fontSize="10"
 				fontFamily="monospace"
 			>
-				PROMPT &gt;
+				https://beep.yuler.cc/yuler/beeps &gt;
 			</text>
 			<text x="34" y="62" fill="currentColor" fontSize="12">
 				{m.marketing_story_b_scene1_input()}
@@ -953,7 +953,7 @@ function StorySceneRow({
 			<div
 				className={cn("md:col-span-7", reverse ? "md:order-2" : "md:order-1")}
 			>
-				<div className="rounded-sm border border-line bg-ground p-3 sm:p-5">
+				<div className="rounded-md border border-line bg-ground p-3 sm:p-5">
 					{scene.illustration}
 				</div>
 			</div>

@@ -15,10 +15,7 @@ export function Panel({
 	return (
 		<div
 			className={cn(
-				"bg-transparent text-ink transition-colors",
-				borderAll
-					? "rounded-sm border border-line"
-					: "border-t border-line md:rounded-sm md:border md:border-line",
+				"rounded-md border border-line bg-transparent text-ink transition-colors",
 				className,
 			)}
 			{...props}

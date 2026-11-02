@@ -134,7 +134,7 @@ export function EditBeeperDialog({
 								value={editBody}
 								onChange={(e) => setEditBody(e.target.value)}
 								disabled={savingEdit}
-								className="w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 dark:bg-input/30"
+								className="w-full rounded-sm border border-line bg-transparent px-3 py-2 text-sm text-ink transition-colors outline-none placeholder:text-gray focus-visible:border-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink focus-visible:outline-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
 							/>
 						</div>
 
@@ -154,7 +154,7 @@ export function EditBeeperDialog({
 
 						<div className="flex flex-col gap-2">
 							<Label>{m.beepers_notification_channels()}</Label>
-							<div className="flex flex-col gap-2 rounded-lg border border-input p-3 dark:bg-input/20">
+							<div className="flex flex-col gap-2 rounded-sm border border-line p-3">
 								{NOTIFICATION_CHANNELS.map((channel) => (
 									<Label
 										key={channel}
@@ -162,7 +162,7 @@ export function EditBeeperDialog({
 									>
 										<input
 											type="checkbox"
-											className="size-4 accent-primary rounded"
+											className="size-4 accent-primary rounded-sm"
 											checked={editChannels.includes(channel)}
 											disabled={savingEdit}
 											onChange={(e) =>
@@ -221,7 +221,7 @@ export function EditBeeperDialog({
 							</div>
 						) : null}
 
-						<div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
+						<div className="rounded-sm border border-line bg-wash p-3 text-xs leading-relaxed text-gray">
 							<p className="font-medium text-foreground mb-1">
 								{m.beepers_edit_impact_title()}
 							</p>

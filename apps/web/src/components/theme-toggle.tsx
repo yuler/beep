@@ -2,15 +2,24 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { m } from "@/lib/locale";
-import { getStoredTheme, setTheme, type ThemePreference } from "@/lib/theme";
+import { cycleTheme, getStoredTheme, type ThemePreference } from "@/lib/theme";
+
+function preferenceLabel(preference: ThemePreference) {
+	if (preference === "light") return m.theme_light();
+	if (preference === "system") return m.theme_system();
+	return m.theme_dark();
+}
+
+function PreferenceIcon({ preference }: { preference: ThemePreference }) {
+	if (preference === "light") {
+		return <Sun className="size-4" aria-hidden="true" />;
+	}
+	if (preference === "system") {
+		return <Monitor className="size-4" aria-hidden="true" />;
+	}
+	return <Moon className="size-4" aria-hidden="true" />;
+}
 
 export function ThemeToggle({ className }: { className?: string }) {
 	const [preference, setPreference] = useState<ThemePreference>("dark");
@@ -28,46 +37,22 @@ export function ThemeToggle({ className }: { className?: string }) {
 		return () => window.removeEventListener("beep:theme-change", handler);
 	}, []);
 
-	function handleSelect(next: ThemePreference) {
-		setPreference(next);
-		setTheme(next);
-	}
+	const label = `${m.common_toggle_color_theme()}: ${preferenceLabel(preference)}`;
 
 	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger
-				render={
-					<Button
-						type="button"
-						variant="ghost"
-						size="icon"
-						aria-label={m.common_toggle_color_theme()}
-						className={className}
-					/>
-				}
-			>
-				<Sun className="hidden size-4 dark:block" />
-				<Moon className="block size-4 dark:hidden" />
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="min-w-36">
-				<DropdownMenuRadioGroup
-					value={preference}
-					onValueChange={(val) => handleSelect(val as ThemePreference)}
-				>
-					<DropdownMenuRadioItem value="dark">
-						<Moon className="size-4 text-gray" />
-						<span>{m.theme_dark()}</span>
-					</DropdownMenuRadioItem>
-					<DropdownMenuRadioItem value="light">
-						<Sun className="size-4 text-gray" />
-						<span>{m.theme_light()}</span>
-					</DropdownMenuRadioItem>
-					<DropdownMenuRadioItem value="system">
-						<Monitor className="size-4 text-gray" />
-						<span>{m.theme_system()}</span>
-					</DropdownMenuRadioItem>
-				</DropdownMenuRadioGroup>
-			</DropdownMenuContent>
-		</DropdownMenu>
+		<Button
+			type="button"
+			variant="ghost"
+			size="icon"
+			data-theme-toggle
+			aria-label={label}
+			title={label}
+			className={className}
+			onClick={(event) => {
+				setPreference(cycleTheme(event.currentTarget));
+			}}
+		>
+			<PreferenceIcon preference={preference} />
+		</Button>
 	);
 }

@@ -4,7 +4,10 @@
 
 界面采用移动端优先（Mobile First）。支持中英双语（保留 `LocaleSwitcher`）。颜色、字号和组件的名字用英文。
 
-**圆角规范**：所有带边框或底色的盒子统一采用 **`2px` 小圆角**（`--radius: 2px` / `rounded-sm`）；状态指示点、头像与进度条使用正圆（`rounded-full`）；紧贴屏幕边缘的全宽结构（顶栏、手机底部抽屉、通栏底边输入框）保持直角（`0px`）。
+**圆角规范**：采用克制的微圆角梯度，不再强制直角或剥离边框：
+- **基础控件（`2px` / `rounded-sm`）**：按钮（`Button`）、输入框（`Input` / `TextField`）、选择器触发器（`SelectTrigger`）、复选框（`Checkbox`）、状态标签（`StatusPill`）、分段控制器（`Segmented`）、验证码格（`OtpField`）与小图标框。
+- **容器与浮层（`4px` / `rounded-md`）**：卡片（`Card`）、面板（`Panel`）、数据表格外框（`DataTable`）、弹窗（`Dialog` / `AlertDialog`）、下拉菜单与浮层（`DropdownMenu` / `SelectContent` / `Popover`）、浏览器演示外框（`HeroBrowser`）；手机端底部抽屉（`Drawer`）顶部采用 `4px` 圆角（`rounded-t-md`）。
+- **正圆构件（`9999px` / `rounded-full`）**：状态指示点（`StatusDot`）、头像（`Avatar`）、进度条与窗口控制圆点。
 
 **色彩哲学**：界面骨架保持克制的黑白灰单色；不设独立品牌强调色（主操作、导航激活、焦点描边仍使用 `ink` / `solid`）。彩色**仅用于表达结果与健康状态**：绿色 `success`（成功 / 在线 / 健康）、黄色 `warning`（警告 / 降级）、红色 `danger`（失败 / 告警 / 危险操作）。生命周期状态（`active`、`paused`、`completed`）保持单色，`firing`（执行中）使用单色脉冲圆点表达。
 
@@ -35,7 +38,7 @@
 | `warning-soft` | `warning` 12% 透明混合 | `warning` 12% 透明混合 | 警告 `StatusPill` / `Badge` 的浅底色               |
 | `danger-soft`  | `danger` 12% 透明混合  | `danger` 12% 透明混合  | 失败/告警 `StatusPill` / `Badge` 的浅底色          |
 
-默认是黑（`dark`）。顶栏右上始终挂 `ThemeToggle` 下拉菜单，支持 **深色 (`dark`) / 浅色 (`light`) / 跟随系统 (`system`)** 三档切换，选择保存在 `localStorage`（键名 `theme`）。
+默认是黑（`dark`）。顶栏右上始终挂 `ThemeToggle` 按钮：每点一次在 **深色 (`dark`) / 浅色 (`light`) / 跟随系统 (`system`)** 三档间循环，图标跟着当前档走，解析主题变化时从按钮圆心做圆形擦除。选择保存在 `localStorage`（键名 `theme`）。
 
 ## Type
 
@@ -43,13 +46,13 @@
 
 字重只用两档：正文 400，标题 500。
 
-| Role          | Size               | Weight | Line height | 用在                         |
-| ------------- | ------------------ | ------ | ----------- | ---------------------------- |
-| `Kicker`      | 13px               | 400    | 1.4         | 导航、标签、App 名。字距 `0.18em` |
-| `Title`       | 28px               | 500    | 1.2         | 页面主标题                   |
-| `AppTitle`    | 22px               | 500    | 1.2         | 分区标题                     |
-| `Meta`        | 14px               | 400    | 1.45        | 说明文字、表格次要信息       |
-| `ButtonLabel` | 继承所在表面的正文 | 400    | 1.2         | 按钮字                       |
+| Role          | Size               | Weight | Line height | 用在                             |
+| ------------- | ------------------ | ------ | ----------- | -------------------------------- |
+| `Kicker`      | 13px               | 400    | 1.4         | 导航、标签、App 名。字距 `0.06em` |
+| `Title`       | 28px               | 500    | 1.2         | 页面主标题                       |
+| `AppTitle`    | 22px               | 500    | 1.2         | 分区标题                         |
+| `Meta`        | 14px               | 400    | 1.45        | 说明文字、表格次要信息           |
+| `ButtonLabel` | 继承所在表面的正文 | 400    | 1.2         | 按钮字                           |
 
 ## Components
 
@@ -59,9 +62,9 @@
 - `ButtonGhost`：透明底，1px `line` 边框，2px 圆角，内边距 8px 12px。悬停边框变 `ink`，按下 `wash` 底。选中态改为 `solid` 底、`solid-ink` 字。
 - `Button` (`variant="destructive"`)：底 `danger`，字 `danger-ink`，边框 1px `danger`，2px 圆角，用于删除、撤销等不可逆确认操作。
 
-### `TextField`
+### `TextField` / `Input`
 
-无底色，只有底边 1px `line`（复杂表单为 1px `line` 四周边框 + 2px 圆角）。上下内边距 8px。聚焦时 1px `ink` 外偏 2px 轮廓。校验出错（`aria-invalid="true"`）时底边/边框与焦点轮廓变为 `danger`，下方错误文案使用 `danger`。
+完整四周边框 1px `line`，2px 圆角（`rounded-sm`），左右内边距 12px，上下内边距 8px。聚焦时边框变 `ink` 并带 1px `ink` 外偏 2px 轮廓。校验出错（`aria-invalid="true"`）时边框与焦点轮廓变为 `danger`，下方错误文案使用 `danger`。
 
 ### `StatusPill` & `StatusDot`
 
@@ -95,10 +98,7 @@
 
 ### `Panel` & `Card`
 
-分区容器，不填底色（或 `ground` 底）。
-- 手机端（<768px）：仅保留上边 1px `line` 分隔，直角。
-- 平板与电脑端（≥768px）：四边 1px `line` 空心方框，2px 圆角。
-`wash` 只留给悬停或按下态反馈。
+分区容器，全端统一四边 1px `line` 边框 + `4px` 圆角（`rounded-md`），静态展示无阴影。`wash` 留给悬停或内嵌次级块反馈。
 
 ### `OtpField`
 
@@ -106,37 +106,38 @@
 
 ### `Segmented`
 
-视图与选项切换（如设置页的 通用 / 渠道 / 通知）。多枚等宽 `ButtonGhost`，选中项为 `solid` 底、`solid-ink` 字。
+视图与选项切换（如设置页的 通用 / 渠道 / 通知）。外框 1px `line` + 2px 圆角，选中项为 `solid` 底、`solid-ink` 字。
 
-### `Dialog / Drawer`
+### `Dialog / Drawer / Popover / Dropdown`
 
-弹层与模态操作：
-- 手机端（<768px）：底部抽屉，直角，仅顶部 1px `line` 边框。
-- 平板与电脑端（≥768px）：居中方框，四边 1px `line`，2px 圆角，无投影。
+弹层与浮层操作：
+- 手机端（<768px）：底部抽屉（`Drawer`），顶部 `4px` 圆角（`rounded-t-md`），顶部 1px `line` 边框 + 浮层阴影。
+- 平板与电脑端（≥768px）：居中弹窗（`Dialog` / `AlertDialog`），四边 1px `line`，`4px` 圆角（`rounded-md`），配克制的浮层微阴影以区分底层复杂卡片/表格。
+- 下拉与气泡（`DropdownMenu` / `SelectContent` / `Popover` / `Tooltip`）：1px `line` 边框 + `4px` 圆角（Tooltip 为 `2px`）+ 浮层微阴影。
 遮罩层采用 `ground` 配合 80% 半透明。
 
 ### `Table / List`
 
 - 手机端（<1024px）：采用 `Timeline` 风格的多行列表，主次分明，减少横向滚动。
-- 电脑端（≥1024px）：采用 1px `line` 网格的表格，外框 2px 圆角。
+- 电脑端（≥1024px）：采用 1px `line` 网格的表格，外框 `4px` 圆角（`rounded-md`）。
 
 ### `Homepage Story Illustrations`
 
-首页通过「服务异常告警与恢复（4 幕）」与「自然语言准时提醒（2 幕）」两组叙事插画传达产品价值：
-- 采用 `1.5px` 单色线稿（`currentColor` 跟随 `ink` / `gray`）+ 2px 圆角卡片构件，自动适配深浅主题。
+首页以真实站点（`https://beep.yuler.cc` 与 `https://yuler.dev`）为例，通过「`site-uptime` 探针异常告警与恢复（4 幕）」与「自然语言准时提醒（2 幕）」两组叙事插画传达产品价值：
+- 采用 `1.5px` 单色线稿（`currentColor` 跟随 `ink` / `gray`）+ 2px/4px 圆角卡片构件，自动适配深浅主题。
 - 仅在叙事关键节点点缀 `danger`（宕机/告警）、`warning`（延迟/即将到期）、`success`（恢复/准时送达），让语义色成为视觉叙事焦点。
 
 ## Layout
 
 移动优先。断点：`md` 768px、`lg` 1024px。
 
-|                | 手机 (<768)                | 平板 (768–1023)              | 电脑 (≥1024)   |
-| -------------- | -------------------------- | ---------------------------- | -------------- |
-| 页边距         | 16px                       | 24px                         | 32px           |
-| 顶栏高         | 56px                       | 64px                         | 64px           |
-| `Panel`        | 无底色，只留上边 1px `line` | 四边 1px `line` 空心框 (2px) | 同左           |
-| 表单主按钮     | 通栏                       | 自然宽度                     | 自然宽度       |
-| 任务与资源列表 | 行列表展示                 | 行列表展示                   | 数据表格展示   |
+|                | 手机 (<768)                  | 平板 (768–1023)              | 电脑 (≥1024)   |
+| -------------- | ---------------------------- | ---------------------------- | -------------- |
+| 页边距         | 16px                         | 24px                         | 32px           |
+| 顶栏高         | 56px                         | 64px                         | 64px           |
+| `Panel`        | 四边 1px `line` 空心框 (4px) | 四边 1px `line` 空心框 (4px) | 同左           |
+| 表单主按钮     | 通栏                         | 自然宽度                     | 自然宽度       |
+| 任务与资源列表 | 行列表展示                   | 行列表展示                   | 数据表格展示   |
 
 内容最大宽：首页、控制台 1080px，登录 440px。顶栏通栏，内容与内容区对齐。适配 `safe-area-inset-*`。
 
