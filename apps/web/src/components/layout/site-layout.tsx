@@ -3,10 +3,16 @@ import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 
-export function SiteLayout({ children }: { children: ReactNode }) {
+export function SiteLayout({
+	children,
+	header = "bar",
+}: {
+	children: ReactNode;
+	header?: "bar" | "actions";
+}) {
 	return (
 		<div className="flex min-h-svh flex-col bg-ground text-ink">
-			<SiteHeader />
+			<SiteHeader variant={header} />
 			{children}
 			<SiteFooter />
 		</div>

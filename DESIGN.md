@@ -51,7 +51,7 @@
 ### `AppBar`
 
 顶栏极简。
-- 公开页（首页、登录）：左侧 `LogoMark`（Beep 铃铛图标，颜色随 `ink`）+ `Beep` 字标；右侧为 `LocaleSwitcher` + 登录/控制台入口 + `ThemeSwitch`。
+- 公开页首页：不放顶栏，只在右上浮一层 `LocaleSwitcher` + 登录/控制台入口 + `ThemeSwitch`。登录页：左侧返回首页；右侧 `LocaleSwitcher` + `ThemeSwitch`。
 - 控制台内：左侧 `LogoMark` + `Beep` 字标 + 工作区选择器（`AccountSwitcher`）；右侧为 `LocaleSwitcher` + `ThemeSwitch` + 用户菜单（个人偏好、API Tokens、Admin、Dev、退出）。
 
 ### `Subnav`

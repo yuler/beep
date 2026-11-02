@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
 	return (
-		<SiteLayout>
+		<SiteLayout header="actions">
 			<main className="flex-1">
 				<HeroSection />
 				<FeaturesSection />
