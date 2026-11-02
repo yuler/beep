@@ -1,184 +1,153 @@
-# Design System
+# Theme
 
-A minimal, modern styling system for the Rails core app. Vanilla CSS, no build
-step — inspired by Basecamp's [Fizzy](https://github.com/basecamp/fizzy) and the
-[Modern CSS patterns in Campfire](https://dev.37signals.com/modern-css-patterns-and-techniques-in-campfire/)
-write-up (and its [notes](https://yuler.dev/posts/modern-css-design/)). Linear/Geist
-flavor: near-neutral grays plus a single indigo/violet accent, in light and dark
-modes.
+> Beep 页面映射：`/`（介绍首页）、`/sign`（邮箱魔法链接与验证码登录）、`/$account_slug`（控制台概览）、`/$account_slug/beeps`（任务监控）、`/$account_slug/beepers`（探测探针）、`/$account_slug/runners`（执行器）、`/$account_slug/settings`（通用 / 渠道 / 通知）。顶栏左边 SVG 铃铛 Logo（`LogoMark`）+ `Beep`，右边按登录态与当前区域组织。
 
-## Principles
+界面采用移动端优先（Mobile First）。支持中英双语（保留 `LocaleSwitcher`）。颜色、字号和组件的名字用英文。
 
-- **oklch over hex/rgb.** Colors are defined as `Lightness Chroma Hue` so you can
-  adjust shade without shifting hue, and add alpha trivially.
-- **Two layers of tokens.** Raw `--lch-*` values feed semantic `--color-*` tokens.
-  Components and utilities only ever consume the semantic layer.
-- **Theme via one attribute.** `[data-theme]` on `<html>` switches everything.
-  Default follows the OS; the user can override and the choice is remembered.
-- **No Tailwind, no Sass.** Styles are hand-written CSS organized into cascade
-  layers, shipped through Propshaft's no-build asset pipeline.
+**圆角规范**：采用克制的微圆角梯度，不再强制直角或剥离边框：
+- **基础控件（`2px` / `rounded-sm`）**：按钮（`Button`）、输入框（`Input` / `TextField`）、选择器触发器（`SelectTrigger`）、复选框（`Checkbox`）、状态标签（`StatusPill`）、分段控制器（`Segmented`）、验证码格（`OtpField`）与小图标框。
+- **容器与浮层（`4px` / `rounded-md`）**：卡片（`Card`）、面板（`Panel`）、数据表格外框（`DataTable`）、弹窗（`Dialog` / `AlertDialog`）、下拉菜单与浮层（`DropdownMenu` / `SelectContent` / `Popover`）、浏览器演示外框（`HeroBrowser`）；手机端底部抽屉（`Drawer`）顶部采用 `4px` 圆角（`rounded-t-md`）。
+- **正圆构件（`9999px` / `rounded-full`）**：状态指示点（`StatusDot`）、头像（`Avatar`）、进度条与窗口控制圆点。
 
-## Pipeline (no build step)
+**色彩哲学**：界面骨架保持克制的黑白灰单色；不设独立品牌强调色（主操作、导航激活、焦点描边仍使用 `ink` / `solid`）。彩色**仅用于表达结果与健康状态**：绿色 `success`（成功 / 在线 / 健康）、黄色 `warning`（警告 / 降级）、红色 `danger`（失败 / 告警 / 危险操作）。生命周期状态（`active`、`paused`、`completed`）保持单色，`firing`（执行中）使用单色脉冲圆点表达。
 
-`core/app/assets/stylesheets/application.css` declares the layer order and
-`@import`s every partial:
+## Color
 
-```css
-@layer reset, base, components, utilities;
+### Monochrome Skeleton
 
-@import url("reset.css");
-@import url("theme.css");
-@import url("base.css");
-/* …buttons, forms, tables, components, prose, header, footer, flash… */
-```
+| Token         | 黑 (默认) | 白        | 用在                             |
+| ------------- | --------- | --------- | -------------------------------- |
+| `ground`      | `#0a0a0a` | `#ffffff` | 所有页面的底、弹窗底色           |
+| `ink`         | `#fafafa` | `#0a0a0a` | 主文字、激活高亮、焦点描边       |
+| `gray`        | `#a1a1a1` | `#666666` | Meta、次要说明、已填/次要边框    |
+| `gray-subtle` | `#6b6b6b` | `#a3a3a3` | 占位符、离线圆点、弱化辅助信息   |
+| `line`        | `#262626` | `#e5e5e5` | 分割线、幽灵按钮边框、输入框边框 |
+| `wash`        | `#171717` | `#f5f5f5` | 浅底块、按钮/菜单悬停与按下反馈  |
+| `solid`       | `#fafafa` | `#0a0a0a` | 实心按钮的底、选中态背景         |
+| `solid-ink`   | `#0a0a0a` | `#ffffff` | 实心按钮的字、选中态文字         |
 
-Propshaft rewrites each `@import url("…")` to a fingerprinted, digested path at
-request time, so there is no compile step and nothing to watch. The layout links
-the single entry file:
+### Semantic Status
 
-```erb
-<%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
-```
+| Token          | 黑 (默认)              | 白                     | 用在                                               |
+| -------------- | ---------------------- | ---------------------- | -------------------------------------------------- |
+| `success`      | `#3dd68c`              | `#16a34a`              | 成功状态文字、在线/健康圆点、趋势图成功曲线        |
+| `warning`      | `#f5c542`              | `#b7791f`              | 警告状态文字、降级提示、Notice 警告竖线            |
+| `danger`       | `#ff5f57`              | `#dc2626`              | 失败/告警文字、表单校验错误、危险操作按钮、失败曲线 |
+| `danger-ink`   | `#0a0a0a`              | `#ffffff`              | 实心危险按钮（`destructive`）上的文字              |
+| `success-soft` | `success` 12% 透明混合 | `success` 12% 透明混合 | 成功 `StatusPill` / `Badge` 的浅底色               |
+| `warning-soft` | `warning` 12% 透明混合 | `warning` 12% 透明混合 | 警告 `StatusPill` / `Badge` 的浅底色               |
+| `danger-soft`  | `danger` 12% 透明混合  | `danger` 12% 透明混合  | 失败/告警 `StatusPill` / `Badge` 的浅底色          |
 
-## Cascade layers
+默认是黑（`dark`）。顶栏右上始终挂 `ThemeToggle` 按钮：每点一次在 **深色 (`dark`) / 浅色 (`light`) / 跟随系统 (`system`)** 三档间循环，图标跟着当前档走，解析主题变化时从按钮圆心做圆形擦除。选择保存在 `localStorage`（键名 `theme`）。
 
-Order is fixed in `application.css`; import order does not affect precedence:
+## Type
 
-1. `reset` — modern CSS reset (`.reset` file, sits in `@layer reset`).
-2. `base` — element defaults (`body`, `a`, `h1`–`h6`, `code`, focus rings…).
-3. `components` — reusable component classes (`.btn`, `.card`, `.alert`,
-   `.table`, `.field`, `.menu`, `.header`, `.footer`…).
-4. `utilities` — single-purpose helpers (`.flex`, `.gap`, `.txt-*`, `.pad`,
-   `.margin-*`, `.stack`, spacing and color utilities).
+全站一种无衬线，中文优先：`"Noto Sans CJK SC"`, `"Source Han Sans SC"`, `"Noto Sans SC"`, `sans-serif`。
 
-Utilities win over components when both apply.
+字重只用两档：正文 400，标题 500。
 
-## Token architecture
+| Role          | Size               | Weight | Line height | 用在                             |
+| ------------- | ------------------ | ------ | ----------- | -------------------------------- |
+| `Kicker`      | 13px               | 400    | 1.4         | 导航、标签、App 名。字距 `0.06em` |
+| `Title`       | 28px               | 500    | 1.2         | 页面主标题                       |
+| `AppTitle`    | 22px               | 500    | 1.2         | 分区标题                         |
+| `Meta`        | 14px               | 400    | 1.45        | 说明文字、表格次要信息           |
+| `ButtonLabel` | 继承所在表面的正文 | 400    | 1.2         | 按钮字                           |
 
-### 1. Raw scale — `--lch-*`
+## Components
 
-Just the three oklch channels, no color function. Readable and easy to tweak.
+### `Button`
 
-```css
---lch-gray-100: 98% 0.003 285;
---lch-violet:   285 80% 60%;
---lch-green:    145 60% 45%;
-```
+- `ButtonSolid`：底 `solid`，字 `solid-ink`，边框 1px `solid`，2px 圆角，内边距 10px 14px。
+- `ButtonGhost`：透明底，1px `line` 边框，2px 圆角，内边距 8px 12px。悬停边框变 `ink`，按下 `wash` 底。选中态改为 `solid` 底、`solid-ink` 字。
+- `Button` (`variant="destructive"`)：底 `danger`，字 `danger-ink`，边框 1px `danger`，2px 圆角，用于删除、撤销等不可逆确认操作。
 
-Grays sit at hue `285`, the accent at hue `285` too — same family, so the UI
-reads as one coherent palette. Accent is a Linear-style indigo/violet.
+### `TextField` / `Input`
 
-### 2. Semantic tokens — `--color-*`
+完整四周边框 1px `line`，2px 圆角（`rounded-sm`），左右内边距 12px，上下内边距 8px。聚焦时边框变 `ink` 并带 1px `ink` 外偏 2px 轮廓。校验出错（`aria-invalid="true"`）时边框与焦点轮廓变为 `danger`，下方错误文案使用 `danger`。
 
-Raw values wrapped in `oklch()`. This is the API you use.
+### `StatusPill` & `StatusDot`
 
-| Token | Purpose |
-| --- | --- |
-| `--color-canvas` | Page background |
-| `--color-shade` | Slightly recessed background |
-| `--color-ink` | Primary text |
-| `--color-ink-dark` | Secondary text |
-| `--color-ink-medium` | Tertiary text, placeholders |
-| `--color-ink-inverted` | Text on a dark/accent fill |
-| `--color-border` | Default hairline borders |
-| `--color-border-strong` | Emphasized borders |
-| `--color-accent` | Primary accent (links, active, focus) |
-| `--color-accent-hover` | Accent hover/active |
-| `--color-white` | Solid white (text on accent) |
-| `--color-link` | Inline link color |
-| `--color-selected` | Selection / highlight |
-| `--color-positive` | Success status |
-| `--color-negative` | Destructive / error status |
-| `--color-info` | Informational status |
+- **结果与健康状态**：使用 `success` / `warning` / `danger` 三档，样式为 `*-soft` 浅底 + 同色文字，2px 圆角。
+- **生命周期状态**：`active` 用 `outline`（1px `line` 边框 + `ink` 字），`paused` / `completed` 用 `muted`（1px `line` 边框 + `gray` 字），`firing`（执行中）用 `live`（1px `ink` 边框 + 脉冲圆点 `StatusDot`）。
+- **在线指示点 (`StatusDot`)**：正圆 `6px`，在线为 `success` 绿点，离线为 `gray-subtle` 灰点。
 
-Alpha is trivial with oklch:
+### `AppBar`
 
-```css
---color-accent-subtle: oklch(var(--lch-violet) / 0.12);
-```
+顶栏极简。
+- 公开页首页：不放顶栏，只在右上浮一层 `LocaleSwitcher` + `ThemeToggle`。登录页：左侧返回首页；右侧 `LocaleSwitcher` + `ThemeToggle`。
+- 控制台内：左侧 `LogoMark` + `Beep` 字标 + 工作区选择器（`AccountSwitcher`）；右侧为 `LocaleSwitcher` + `ThemeToggle` + 用户菜单（个人偏好、API Tokens、Admin、Dev、退出）。
 
-## Light & dark
+### `Subnav`
 
-- **Light** is the default, defined on `:root`.
-- **Dark** is defined on `:root[data-theme="dark"]`.
-- **No-JS fallback:** when `<html>` has no `data-theme`, `@media
-  (prefers-color-scheme: dark)` applies the dark values, so the OS preference is
-  honored even before any script runs.
+紧贴 `AppBar` 下方。采用 `Kicker` 风格字号与字距。
+- 账号工作区：`概览`、`Beeps`、`Beepers`、`Runners`、`设置`。
+- 管理后台：`← 工作区`、`任务`、`统计`。
+- 个人中心：`← 工作区`、`Tokens`、`偏好`。
+手机端支持横向滑动（`overflow-x-auto`），吸顶展示。当前激活项使用 `ink` 底部高亮边框。
 
-Only the semantic `--color-*` values change between themes; component CSS never
-needs color overrides for dark mode — it reads the tokens.
+### `Timeline`
 
-Files:
+时间线与紧凑行列表。每行上边框 1px `line`，上下内边距 10px。角色/标签前置，时间当天显示 `HH:mm`，跨天带日期。重要变动左侧加 1px `line` 竖线。
 
-- `core/app/assets/stylesheets/theme.css` — all `--lch-*` and `--color-*` tokens
-  and the light/dark blocks.
+### `Notice`
 
-## Theme switching
+一行状态或提示。无背景底色，左侧竖线 + 前置小号 `Kicker` 标签：
+- `default`：1px `line` 竖线，`gray` 标签。
+- `success` / `warning` / `danger`（或 `error`）：2px 对应语义色竖线与同色标签。
 
-1. **No-flash script** (`_head.html.erb`): runs before first paint. If
-   `localStorage.theme` holds `light`/`dark` it sets `data-theme` on `<html>`;
-   otherwise it leaves the attribute unset so the OS preference drives the theme
-   live (via the `:not([data-theme])` media block in `theme.css`).
-2. **Toggle** (`theme_controller.js`, button `.theme-toggle` in `_header.html.erb`):
-   flips light ⇄ dark, persists to `localStorage`, and swaps the sun/moon icon.
-3. **First visit** (nothing stored): follows `prefers-color-scheme`, and keeps
-   following it if the OS changes.
+### `Panel` & `Card`
 
-## Components & utilities
+分区容器，全端统一四边 1px `line` 边框 + `4px` 圆角（`rounded-md`），静态展示无阴影。`wash` 留给悬停或内嵌次级块反馈。
 
-Component classes live in their own partials and are documented by their class
-names:
+### `OtpField`
 
-- `.btn` with variants `.btn--primary`, `.btn--reversed`, `.btn--negative`,
-  `.btn--ghost`, `.btn--outline`, `.btn--plain`, sizes `.btn--small` /
-  `.btn--large`, `.btn--block`; circular icon buttons are automatic when the
-  label is visually hidden.
-- `.card` / `.card--raised` with `.card__body` and `.card__title`.
-- `.alert` with `.alert--success`, `.alert--error`, `.alert--info`.
-- `.table` / `.table--zebra`, `.table-scroll`.
-- `.field` (`.field__label`, `.field__hint`, `.field--with-icon`) + `.input`,
-  `.textarea`, `.select` (`.input--code`).
-- `.menu` dropdown (`.menu__trigger`, `.menu__content`, `.menu__title`,
-  `.menu__item`) — opens on `:focus-within`, no JS required.
-- `.header` / `.header__bar` / `.header__logo` / `.header__actions`,
-  `.theme-toggle`, `.footer` / `.footer__meta`.
-- `.page` width variants (`.page--sm/md/lg/xl`) and `.stage` for centered auth
-  screens.
-- Utilities: `.flex`, `.grid`, `.stack`, `.gap*`, `.items-*`, `.justify-*`,
-  `.txt-*` (size/color/weight), `.pad*`, `.margin-*`, `.fill*`, `.border*`,
-  `.visually-hidden`, etc.
+6 个等宽方格，2px 圆角，1px `line` 边，当前聚焦格 `ink` 边，已填格 `gray` 边。底层为透明的真实输入框，覆盖在方格上。自动填充、粘贴、退格走原生行为。填满 6 位自动提交；出错（`aria-invalid`）时格子变 `danger` 红边与红字。
 
-## Modern CSS conventions
+### `Segmented`
 
-- **Custom properties as a mini-API.** Expose component knobs with fallback
-  values, e.g. `color: var(--btn-color, var(--color-ink));`, and declare variants
-  by overriding the custom property, not the property.
-- **`:has()` instead of state classes.** Query content rather than adding
-  server- or JS-managed modifier classes.
-- **Capability queries.** Use `@media (any-hover: hover)` for hover affordances.
-- **Logical properties.** Prefer `inline-size`/`block-size`, `padding-inline`,
-  `margin-block-start` over physical `width`/`height`, `padding-left`, etc.
+视图与选项切换（如设置页的 通用 / 渠道 / 通知）。外框 1px `line` + 2px 圆角，选中项为 `solid` 底、`solid-ink` 字。
 
-## Usage examples
+### `Dialog / Drawer / Popover / Dropdown`
 
-```html
-<!-- Card -->
-<article class="card">
-  <div class="card__body">
-    <h3 class="card__title">Title</h3>
-    <p class="txt-muted">Supporting copy.</p>
-  </div>
-</article>
+弹层与浮层操作：
+- 手机端（<768px）：底部抽屉（`Drawer`），顶部 `4px` 圆角（`rounded-t-md`），顶部 1px `line` 边框 + 浮层阴影。
+- 平板与电脑端（≥768px）：居中弹窗（`Dialog` / `AlertDialog`），四边 1px `line`，`4px` 圆角（`rounded-md`），配克制的浮层微阴影以区分底层复杂卡片/表格。
+- 下拉与气泡（`DropdownMenu` / `SelectContent` / `Popover` / `Tooltip`）：1px `line` 边框 + `4px` 圆角（Tooltip 为 `2px`）+ 浮层微阴影。
+遮罩层采用 `ground` 配合 80% 半透明。
 
-<!-- Primary button -->
-<button class="btn btn--primary">Continue</button>
+### `Table / List`
 
-<!-- Field -->
-<div class="field">
-  <label class="field__label" for="email">Email</label>
-  <input id="email" class="input" type="email">
-</div>
+- 手机端（<1024px）：采用 `Timeline` 风格的多行列表，主次分明，减少横向滚动。
+- 电脑端（≥1024px）：采用 1px `line` 网格的表格，外框 `4px` 圆角（`rounded-md`）。
 
-<!-- Status -->
-<span class="txt-negative">Something went wrong</span>
-```
+### `Homepage Story Illustrations`
+
+首页以真实站点（`https://beep.yuler.cc` 与 `https://yuler.dev`）为例，通过「`site-uptime` 探针异常告警与恢复（4 幕）」与「自然语言准时提醒（2 幕）」两组叙事插画传达产品价值：
+- 采用 `1.5px` 单色线稿（`currentColor` 跟随 `ink` / `gray`）+ 2px/4px 圆角卡片构件，自动适配深浅主题。
+- 仅在叙事关键节点点缀 `danger`（宕机/告警）、`warning`（延迟/即将到期）、`success`（恢复/准时送达），让语义色成为视觉叙事焦点。
+
+## Layout
+
+移动优先。断点：`md` 768px、`lg` 1024px。
+
+|                | 手机 (<768)                  | 平板 (768–1023)              | 电脑 (≥1024)   |
+| -------------- | ---------------------------- | ---------------------------- | -------------- |
+| 页边距         | 16px                         | 24px                         | 32px           |
+| 顶栏高         | 56px                         | 64px                         | 64px           |
+| `Panel`        | 四边 1px `line` 空心框 (4px) | 四边 1px `line` 空心框 (4px) | 同左           |
+| 表单主按钮     | 通栏                         | 自然宽度                     | 自然宽度       |
+| 任务与资源列表 | 行列表展示                   | 行列表展示                   | 数据表格展示   |
+
+内容最大宽：首页、控制台 1080px，登录 440px。顶栏通栏，内容与内容区对齐。适配 `safe-area-inset-*`。
+
+## Interaction
+
+- 点击区至少 44px（电脑端 40px）。
+- 悬停效果仅在 `(hover: hover)` 设备上生效；触屏用 `:active` 给按下反馈。
+- 键盘焦点统一 1px `ink` 描边、外偏 2px（校验错误时为 `danger`）。
+- 有异步动作的按钮进入 `is-loading`：圆形转圈 + 「…中」文案，并禁用。
+- 不可逆操作（断开绑定、删除探针、撤销 Token 等）采用确认弹窗，确认按钮使用 `destructive` 红色样式。
+- 输入框按语义设 `inputMode` / `enterKeyHint` / `autoComplete`；手机端字号 ≥16px 防缩放。
+- 系统 `theme-color` 跟随 `ground`（深色 `#0a0a0a`，浅色 `#ffffff`）。
+- `prefers-reduced-motion` 时关掉过渡与动画。

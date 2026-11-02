@@ -1,8 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Toggles between light and dark themes by setting [data-theme] on <html>.
-// The choice is persisted to localStorage. When nothing is stored the theme
-// follows the OS preference (handled by the pre-paint script in the <head>).
+// Toggles between dark (default) and light themes by setting [data-theme] on <html>.
+// The choice is persisted to localStorage with key "theme".
 export default class extends Controller {
   static targets = [ "light", "dark" ]
 
@@ -13,31 +12,41 @@ export default class extends Controller {
   }
 
   toggle() {
-    const next = this.#current() === "dark" ? "light" : "dark"
-    localStorage.setItem(this.constructor.KEY, next)
+    const next = this.#effective() === "dark" ? "light" : "dark"
+    try {
+      localStorage.setItem(this.constructor.KEY, next)
+    } catch (e) {}
     document.documentElement.setAttribute("data-theme", next)
     this.#reflect(next)
   }
 
   #current() {
-    const stored = localStorage.getItem(this.constructor.KEY)
-    if (stored === "light" || stored === "dark") return stored
+    try {
+      const stored = localStorage.getItem(this.constructor.KEY)
+      if (stored === "light" || stored === "dark") return stored
+    } catch (e) {}
 
     return null
   }
 
   #effective() {
-    return this.#current() || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+    return this.#current() || "dark"
   }
 
   #reflect(theme) {
     if (this.hasLightTarget) this.lightTarget.hidden = theme === "dark"
     if (this.hasDarkTarget) this.darkTarget.hidden = theme !== "dark"
     this.#syncFavicon(theme)
+    this.#syncMetaTheme(theme)
   }
 
   #syncFavicon(theme) {
     const link = document.getElementById("favicon-theme")
     if (link) link.href = theme === "dark" ? "/icon-dark.svg" : "/icon-light.svg"
+  }
+
+  #syncMetaTheme(theme) {
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute("content", theme === "dark" ? "#000000" : "#ffffff")
   }
 }

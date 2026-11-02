@@ -1,8 +1,21 @@
-<h1 class="title"><%= t(:mailer_magic_link_title, default: "Sign in to your account") %></h1>
-<p class="subtitle"><%= t(:mailer_magic_link_subtitle, default: "Please enter this 6-character verification code on the sign-in page:") %></p>
+<div style="font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: #888888; margin-bottom: 8px;">
+  BEEP
+</div>
+<h1 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 500; color: #000000; line-height: 1.2;">
+  <%= t(:mailer_magic_link_title, default: "Sign in to your account") %>
+</h1>
+<p style="margin: 0 0 16px 0; color: #888888; font-size: 14px;">
+  <%= t(:mailer_magic_link_subtitle, default: "Please enter this 6-character verification code on the sign-in page:") %>
+</p>
 
-<strong class="txt-large"><%= @magic_link.code %></strong>
+<div style="display: inline-block; font-size: 28px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; letter-spacing: 6px; font-weight: 500; color: #000000; border: 1px solid #000000; padding: 12px 24px; margin: 16px 0;">
+  <%= @magic_link.code %>
+</div>
 
-<p><%= t(:mailer_magic_link_expiration, time: distance_of_time_in_words(MagicLink::EXPIRATION_TIME), default: "This code will work for %{time}.") %></p>
+<p style="margin: 16px 0; color: #888888; font-size: 13px;">
+  <%= t(:mailer_magic_link_expiration, time: distance_of_time_in_words(MagicLink::EXPIRATION_TIME), default: "This code will work for %{time}.") %>
+</p>
 
-<p class="footer"><%= t(:mailer_need_help, default: "Need help?") %> <%= mail_to "support@example.com", t(:mailer_send_email, default: "Send us an email") %>.</p>
+<p style="margin: 24px 0 0 0; font-size: 12px; color: #888888; border-top: 1px solid #e5e5e5; padding-top: 12px;">
+  <%= t(:mailer_need_help, default: "Need help?") %> <%= mail_to "support@example.com", t(:mailer_send_email, default: "Send us an email"), style: "color: #000000; text-decoration: underline;" %>.
+</p>

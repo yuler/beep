@@ -2,12 +2,47 @@
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-      /* Email styles need to be inline */
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #ffffff;
+        color: #000000;
+        font-family: -apple-system, BlinkMacSystemFont, "Noto Sans CJK SC", "Source Han Sans SC", "Noto Sans SC", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+        font-size: 14px;
+      }
+      .mail-container {
+        max-width: 540px;
+        margin: 32px auto;
+        padding: 24px;
+        background: #ffffff;
+        border: 1px solid #e5e5e5;
+      }
+      .mail-btn {
+        display: inline-block;
+        background-color: #000000;
+        color: #ffffff !important;
+        text-decoration: none;
+        padding: 12px 20px;
+        font-size: 14px;
+        border: 1px solid #000000;
+        border-radius: 0;
+      }
+      .mail-footer {
+        margin-top: 32px;
+        font-size: 12px;
+        color: #888888;
+        border-top: 1px solid #e5e5e5;
+        padding-top: 16px;
+      }
     </style>
   </head>
 
   <body>
-    <%= yield %>
+    <div class="mail-container">
+      <%= yield %>
+    </div>
   </body>
 </html>

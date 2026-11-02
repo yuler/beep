@@ -169,20 +169,27 @@ export function RunnerFormDialog({
 							<DialogDescription>{m.runners_description()}</DialogDescription>
 						</DialogHeader>
 
-						<div className="flex items-center gap-1 rounded-lg border border-input bg-muted/40 p-1">
+						<div className="flex items-center gap-1 rounded-sm border border-line bg-wash p-1">
 							<button
 								type="button"
 								onClick={() => setTab("connect")}
 								className={cn(
-									"flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+									"flex-1 flex items-center justify-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer",
 									tab === "connect"
-										? "bg-background text-foreground shadow-xs"
-										: "text-muted-foreground hover:text-foreground",
+										? "bg-solid text-solid-ink"
+										: "text-gray hover:text-ink",
 								)}
 							>
 								<Terminal className="size-3.5" />
 								<span>{m.runners_tab_connect()}</span>
-								<span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-semibold text-primary">
+								<span
+									className={cn(
+										"ml-1 rounded-sm px-1.5 py-0.2 text-[10px] font-medium",
+										tab === "connect"
+											? "bg-ground/20 text-solid-ink"
+											: "border border-line text-gray",
+									)}
+								>
 									{m.runners_tab_recommended()}
 								</span>
 							</button>
@@ -190,10 +197,10 @@ export function RunnerFormDialog({
 								type="button"
 								onClick={() => setTab("manual")}
 								className={cn(
-									"flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+									"flex-1 flex items-center justify-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer",
 									tab === "manual"
-										? "bg-background text-foreground shadow-xs"
-										: "text-muted-foreground hover:text-foreground",
+										? "bg-solid text-solid-ink"
+										: "text-gray hover:text-ink",
 								)}
 							>
 								<KeyRound className="size-3.5" />

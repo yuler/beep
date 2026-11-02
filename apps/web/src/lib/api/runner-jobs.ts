@@ -53,6 +53,17 @@ export function fetchRunnerJobs(accountSlug: string, runnerId: string) {
 	);
 }
 
+export function fetchRunnerJob(
+	accountSlug: string,
+	runnerId: string,
+	jobId: string,
+) {
+	return apiFetch<RunnerJob>(
+		`/api/v1/${accountSlug}/runners/${runnerId}/jobs/${jobId}`,
+		{ method: "GET" },
+	);
+}
+
 export function createRunnerJob(
 	accountSlug: string,
 	runnerId: string,

@@ -91,21 +91,21 @@ function formatWhen(value: string | null | undefined, fallback: string) {
 
 const RUN_STATUS_VARIANT: Record<
 	string,
-	"default" | "secondary" | "outline" | "destructive"
+	"default" | "secondary" | "outline" | "destructive" | "success" | "warning"
 > = {
 	pending: "secondary",
-	running: "default",
-	succeeded: "outline",
+	running: "outline",
+	succeeded: "success",
 	failed: "destructive",
 	skipped: "secondary",
-	expired: "destructive",
+	expired: "warning",
 };
 
 const SIGNAL_STATUS_VARIANT: Record<
 	string,
-	"default" | "secondary" | "outline" | "destructive"
+	"default" | "secondary" | "outline" | "destructive" | "success" | "warning"
 > = {
-	ok: "outline",
+	ok: "success",
 	alerting: "destructive",
 	error: "destructive",
 };
@@ -288,7 +288,9 @@ function BeeperDetailPage() {
 								variant={
 									beeperHealthIsDestructive(healthBeeper)
 										? "destructive"
-										: "outline"
+										: beeperHealthLabel(healthBeeper) === "ok"
+											? "success"
+											: "warning"
 								}
 							>
 								{healthStatusLabel(beeperHealthLabel(healthBeeper))}
@@ -403,7 +405,7 @@ function BeeperDetailPage() {
 								>
 									{hasCopiedPing ? (
 										<>
-											<Check className="size-3.5 text-green-500" />
+											<Check className="size-3.5 text-success" />
 											<span>{m.beepers_copied()}</span>
 										</>
 									) : (

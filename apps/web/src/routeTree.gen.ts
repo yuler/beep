@@ -40,6 +40,8 @@ import { Route as Account_slugSettingsIndexRouteImport } from './routes/$account
 import { Route as Account_slugSettingsChannelsRouteImport } from './routes/$account_slug/settings/channels'
 import { Route as Account_slugSettingsGeneralRouteImport } from './routes/$account_slug/settings/general'
 import { Route as Account_slugSettingsNotificationsRouteImport } from './routes/$account_slug/settings/notifications'
+import { Route as Account_slugRunnersRunnerIdJobsJobIdRouteImport } from './routes/$account_slug/runners_.$runnerId_.jobs.$jobId'
+import { Route as Account_slugRunnersRunnerIdJobsJobIdRunsRunIdRouteImport } from './routes/$account_slug/runners_.$runnerId_.jobs.$jobId_.runs.$runId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -204,6 +206,18 @@ const Account_slugSettingsNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => Account_slugSettingsRoute,
   } as any)
+const Account_slugRunnersRunnerIdJobsJobIdRoute =
+  Account_slugRunnersRunnerIdJobsJobIdRouteImport.update({
+    id: '/runners_/$runnerId_/jobs/$jobId',
+    path: '/runners/$runnerId/jobs/$jobId',
+    getParentRoute: () => Account_slugRoute,
+  } as any)
+const Account_slugRunnersRunnerIdJobsJobIdRunsRunIdRoute =
+  Account_slugRunnersRunnerIdJobsJobIdRunsRunIdRouteImport.update({
+    id: '/runners_/$runnerId_/jobs/$jobId_/runs/$runId',
+    path: '/runners/$runnerId/jobs/$jobId/runs/$runId',
+    getParentRoute: () => Account_slugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -237,6 +251,8 @@ export interface FileRoutesByFullPath {
   '/$account_slug/settings/general': typeof Account_slugSettingsGeneralRoute
   '/$account_slug/settings/notifications': typeof Account_slugSettingsNotificationsRoute
   '/$account_slug/settings/': typeof Account_slugSettingsIndexRoute
+  '/$account_slug/runners/$runnerId/jobs/$jobId': typeof Account_slugRunnersRunnerIdJobsJobIdRoute
+  '/$account_slug/runners/$runnerId/jobs/$jobId/runs/$runId': typeof Account_slugRunnersRunnerIdJobsJobIdRunsRunIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -267,6 +283,8 @@ export interface FileRoutesByTo {
   '/$account_slug/settings/general': typeof Account_slugSettingsGeneralRoute
   '/$account_slug/settings/notifications': typeof Account_slugSettingsNotificationsRoute
   '/$account_slug/settings': typeof Account_slugSettingsIndexRoute
+  '/$account_slug/runners/$runnerId/jobs/$jobId': typeof Account_slugRunnersRunnerIdJobsJobIdRoute
+  '/$account_slug/runners/$runnerId/jobs/$jobId/runs/$runId': typeof Account_slugRunnersRunnerIdJobsJobIdRunsRunIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -301,6 +319,8 @@ export interface FileRoutesById {
   '/$account_slug/settings/general': typeof Account_slugSettingsGeneralRoute
   '/$account_slug/settings/notifications': typeof Account_slugSettingsNotificationsRoute
   '/$account_slug/settings/': typeof Account_slugSettingsIndexRoute
+  '/$account_slug/runners_/$runnerId_/jobs/$jobId': typeof Account_slugRunnersRunnerIdJobsJobIdRoute
+  '/$account_slug/runners_/$runnerId_/jobs/$jobId_/runs/$runId': typeof Account_slugRunnersRunnerIdJobsJobIdRunsRunIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -336,6 +356,8 @@ export interface FileRouteTypes {
     | '/$account_slug/settings/general'
     | '/$account_slug/settings/notifications'
     | '/$account_slug/settings/'
+    | '/$account_slug/runners/$runnerId/jobs/$jobId'
+    | '/$account_slug/runners/$runnerId/jobs/$jobId/runs/$runId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -366,6 +388,8 @@ export interface FileRouteTypes {
     | '/$account_slug/settings/general'
     | '/$account_slug/settings/notifications'
     | '/$account_slug/settings'
+    | '/$account_slug/runners/$runnerId/jobs/$jobId'
+    | '/$account_slug/runners/$runnerId/jobs/$jobId/runs/$runId'
   id:
     | '__root__'
     | '/'
@@ -399,6 +423,8 @@ export interface FileRouteTypes {
     | '/$account_slug/settings/general'
     | '/$account_slug/settings/notifications'
     | '/$account_slug/settings/'
+    | '/$account_slug/runners_/$runnerId_/jobs/$jobId'
+    | '/$account_slug/runners_/$runnerId_/jobs/$jobId_/runs/$runId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -633,6 +659,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Account_slugSettingsNotificationsRouteImport
       parentRoute: typeof Account_slugSettingsRoute
     }
+    '/$account_slug/runners_/$runnerId_/jobs/$jobId': {
+      id: '/$account_slug/runners_/$runnerId_/jobs/$jobId'
+      path: '/runners/$runnerId/jobs/$jobId'
+      fullPath: '/$account_slug/runners/$runnerId/jobs/$jobId'
+      preLoaderRoute: typeof Account_slugRunnersRunnerIdJobsJobIdRouteImport
+      parentRoute: typeof Account_slugRoute
+    }
+    '/$account_slug/runners_/$runnerId_/jobs/$jobId_/runs/$runId': {
+      id: '/$account_slug/runners_/$runnerId_/jobs/$jobId_/runs/$runId'
+      path: '/runners/$runnerId/jobs/$jobId/runs/$runId'
+      fullPath: '/$account_slug/runners/$runnerId/jobs/$jobId/runs/$runId'
+      preLoaderRoute: typeof Account_slugRunnersRunnerIdJobsJobIdRunsRunIdRouteImport
+      parentRoute: typeof Account_slugRoute
+    }
   }
 }
 
@@ -665,6 +705,8 @@ interface Account_slugRouteChildren {
   Account_slugDeviceChannelRoute: typeof Account_slugDeviceChannelRoute
   Account_slugDeviceRunnerRoute: typeof Account_slugDeviceRunnerRoute
   Account_slugRunnersRunnerIdRoute: typeof Account_slugRunnersRunnerIdRoute
+  Account_slugRunnersRunnerIdJobsJobIdRoute: typeof Account_slugRunnersRunnerIdJobsJobIdRoute
+  Account_slugRunnersRunnerIdJobsJobIdRunsRunIdRoute: typeof Account_slugRunnersRunnerIdJobsJobIdRunsRunIdRoute
 }
 
 const Account_slugRouteChildren: Account_slugRouteChildren = {
@@ -678,6 +720,10 @@ const Account_slugRouteChildren: Account_slugRouteChildren = {
   Account_slugDeviceChannelRoute: Account_slugDeviceChannelRoute,
   Account_slugDeviceRunnerRoute: Account_slugDeviceRunnerRoute,
   Account_slugRunnersRunnerIdRoute: Account_slugRunnersRunnerIdRoute,
+  Account_slugRunnersRunnerIdJobsJobIdRoute:
+    Account_slugRunnersRunnerIdJobsJobIdRoute,
+  Account_slugRunnersRunnerIdJobsJobIdRunsRunIdRoute:
+    Account_slugRunnersRunnerIdJobsJobIdRunsRunIdRoute,
 }
 
 const Account_slugRouteWithChildren = Account_slugRoute._addFileChildren(

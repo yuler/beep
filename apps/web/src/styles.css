@@ -5,102 +5,120 @@
 @import "tailwindcss" source("./");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
-@import "./styles/beautiful-ui.css";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design tokens — oklch, aligned with DESIGN.md.
- * Raw --lch-* values feed semantic shadcn tokens.
+ * Design tokens — strictly aligned with DESIGN.md (monochrome skeleton,
+ * semantic success / warning / danger, 2px corners).
  */
 
 :root {
-  --lch-canvas: 100% 0 0;
-  --lch-shade: 97% 0.002 285;
-  --lch-ink: 14% 0.005 285;
-  --lch-ink-dark: 45% 0.003 285;
-  --lch-ink-medium: 55% 0.002 285;
-  --lch-border: 93% 0.003 285;
-  --lch-violet: 60% 0.18 285;
-  --lch-violet-dark: 52% 0.18 285;
-  --lch-violet-foreground: 98% 0.01 285;
-  --lch-negative: 55% 0.2 25;
+  --ground: #0a0a0a;
+  --ink: #fafafa;
+  --gray: #a1a1a1;
+  --gray-subtle: #6b6b6b;
+  --line: #262626;
+  --wash: #171717;
+  --solid: #fafafa;
+  --solid-ink: #0a0a0a;
 
-  --background: oklch(var(--lch-canvas));
-  --foreground: oklch(var(--lch-ink));
-  --card: oklch(var(--lch-canvas));
-  --card-foreground: oklch(var(--lch-ink));
-  --popover: oklch(var(--lch-canvas));
-  --popover-foreground: oklch(var(--lch-ink));
-  --primary: oklch(var(--lch-violet));
-  --primary-foreground: oklch(var(--lch-violet-foreground));
-  --secondary: oklch(var(--lch-shade));
-  --secondary-foreground: oklch(var(--lch-ink));
-  --muted: oklch(var(--lch-shade));
-  --muted-foreground: oklch(var(--lch-ink-dark));
-  --accent: oklch(var(--lch-shade));
-  --accent-foreground: oklch(var(--lch-ink));
-  --destructive: oklch(var(--lch-negative));
-  --border: oklch(var(--lch-border));
-  --input: oklch(var(--lch-border));
-  --ring: oklch(var(--lch-violet));
-  --radius: 0.5rem;
-  --sidebar: oklch(var(--lch-shade));
-  --sidebar-foreground: oklch(var(--lch-ink));
-  --sidebar-primary: oklch(var(--lch-violet));
-  --sidebar-primary-foreground: oklch(var(--lch-violet-foreground));
-  /* Distinct from --sidebar so menu hover/active is visible */
-  --sidebar-accent: oklch(94% 0.003 285);
-  --sidebar-accent-foreground: oklch(var(--lch-ink));
-  --sidebar-border: oklch(var(--lch-border));
-  --sidebar-ring: oklch(var(--lch-violet));
+  --success: #3dd68c;
+  --warning: #f5c542;
+  --danger: #ff5f57;
+  --danger-ink: #0a0a0a;
+
+  --success-soft: color-mix(in srgb, var(--success) 12%, transparent);
+  --warning-soft: color-mix(in srgb, var(--warning) 12%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger) 12%, transparent);
+
+  --background: var(--ground);
+  --foreground: var(--ink);
+  --card: var(--ground);
+  --card-foreground: var(--ink);
+  --popover: var(--ground);
+  --popover-foreground: var(--ink);
+  --primary: var(--solid);
+  --primary-foreground: var(--solid-ink);
+  --secondary: var(--wash);
+  --secondary-foreground: var(--ink);
+  --muted: var(--wash);
+  --muted-foreground: var(--gray);
+  --accent: var(--wash);
+  --accent-foreground: var(--ink);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-ink);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--ink);
+  --radius: 2px;
+
+  --sidebar: var(--ground);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--solid);
+  --sidebar-primary-foreground: var(--solid-ink);
+  --sidebar-accent: var(--wash);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--ink);
 }
 
-.dark {
-  --lch-canvas: 14% 0.005 285;
-  --lch-shade: 20% 0.006 285;
-  --lch-ink: 97% 0.002 285;
-  --lch-ink-dark: 72% 0.004 285;
-  --lch-ink-medium: 55% 0.004 285;
-  --lch-border: 26% 0.006 285;
-  --lch-violet: 72% 0.14 285;
-  --lch-violet-dark: 78% 0.12 285;
-  --lch-violet-foreground: 14% 0.005 285;
-  --lch-negative: 68% 0.19 25;
+html:not(.dark),
+.light {
+  color-scheme: light;
+  --ground: #ffffff;
+  --ink: #0a0a0a;
+  --gray: #666666;
+  --gray-subtle: #a3a3a3;
+  --line: #e5e5e5;
+  --wash: #f5f5f5;
+  --solid: #0a0a0a;
+  --solid-ink: #ffffff;
 
-  --background: oklch(var(--lch-canvas));
-  --foreground: oklch(var(--lch-ink));
-  --card: oklch(20% 0.006 285);
-  --card-foreground: oklch(var(--lch-ink));
-  --popover: oklch(20% 0.006 285);
-  --popover-foreground: oklch(var(--lch-ink));
-  --primary: oklch(var(--lch-violet));
-  --primary-foreground: oklch(var(--lch-violet-foreground));
-  --secondary: oklch(var(--lch-shade));
-  --secondary-foreground: oklch(var(--lch-ink));
-  --muted: oklch(var(--lch-shade));
-  --muted-foreground: oklch(var(--lch-ink-dark));
-  --accent: oklch(var(--lch-shade));
-  --accent-foreground: oklch(var(--lch-ink));
-  --destructive: oklch(var(--lch-negative));
-  --border: oklch(var(--lch-border));
-  --input: oklch(var(--lch-border));
-  --ring: oklch(var(--lch-violet));
-  --sidebar: oklch(20% 0.006 285);
-  --sidebar-foreground: oklch(var(--lch-ink));
-  --sidebar-primary: oklch(var(--lch-violet));
-  --sidebar-primary-foreground: oklch(var(--lch-violet-foreground));
-  /* Distinct from --sidebar so menu hover/active is visible */
-  --sidebar-accent: oklch(26% 0.006 285);
-  --sidebar-accent-foreground: oklch(var(--lch-ink));
-  --sidebar-border: oklch(var(--lch-border));
-  --sidebar-ring: oklch(var(--lch-violet));
+  --success: #16a34a;
+  --warning: #b7791f;
+  --danger: #dc2626;
+  --danger-ink: #ffffff;
+}
+
+html.dark {
+  color-scheme: dark;
+  --ground: #0a0a0a;
+  --ink: #fafafa;
+  --gray: #a1a1a1;
+  --gray-subtle: #6b6b6b;
+  --line: #262626;
+  --wash: #171717;
+  --solid: #fafafa;
+  --solid-ink: #0a0a0a;
+
+  --success: #3dd68c;
+  --warning: #f5c542;
+  --danger: #ff5f57;
+  --danger-ink: #0a0a0a;
 }
 
 @theme inline {
-  --font-sans: "Geist Variable", sans-serif;
+  --font-sans: "Noto Sans CJK SC", "Source Han Sans SC", "Noto Sans SC", sans-serif;
   --font-heading: var(--font-sans);
+
+  --color-ground: var(--ground);
+  --color-ink: var(--ink);
+  --color-gray: var(--gray);
+  --color-gray-subtle: var(--gray-subtle);
+  --color-line: var(--line);
+  --color-wash: var(--wash);
+  --color-solid: var(--solid);
+  --color-solid-ink: var(--solid-ink);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
+  --color-success-soft: var(--success-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger-soft: var(--danger-soft);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -116,9 +134,11 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -127,29 +147,53 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 4px;
+  --radius-4xl: 4px;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--line);
+  }
+
+  *:focus-visible {
+    outline: 1px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  *[aria-invalid="true"]:focus-visible {
+    outline-color: var(--danger);
   }
 
   html {
-    @apply bg-sidebar;
+    background-color: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
 
   body {
-    @apply bg-sidebar font-sans text-foreground antialiased;
+    background-color: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
   }
 
-  /* Hide the page-level vertical scrollbar; scrolling still works. */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 500;
+  }
+
+  /* Hide scrollbars cleanly */
   html,
   body,
   #app {
@@ -161,40 +205,194 @@
   body::-webkit-scrollbar,
   #app::-webkit-scrollbar {
     width: 0;
-    height: auto;
+    height: 0;
     display: none;
   }
+}
 
-  :is([data-slot="button"], .group\/button) {
-    cursor: pointer;
-    transition:
-      filter 0.15s ease,
-      background-color 0.15s ease,
-      border-color 0.15s ease,
-      color 0.15s ease;
+.type-kicker {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+}
 
-    @media (any-hover: hover) {
-      &:hover:not(:disabled):not([aria-disabled="true"]) {
-        filter: brightness(var(--btn-hover-brightness, 0.94));
-      }
-    }
+.type-title {
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.type-app-title {
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.type-meta {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--gray);
+}
+
+@keyframes square-spin {
+  0% {
+    transform: rotate(0deg);
   }
-
-  .dark :is([data-slot="button"], .group\/button) {
-    --btn-hover-brightness: 1.12;
+  100% {
+    transform: rotate(360deg);
   }
 }
 
-* {
-  box-sizing: border-box;
+.is-loading-spin {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 9999px;
+  animation: square-spin 0.75s linear infinite;
 }
 
-html,
-body,
-#app {
-  min-height: 100%;
+@keyframes status-dot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 60%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 5px transparent;
+  }
 }
 
-body {
-  margin: 0;
+.status-dot-pulse {
+  color: var(--ink);
+  animation: status-dot-pulse 1.4s ease-out infinite;
+}
+
+@keyframes story-pulse-danger {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(1.22);
+  }
+}
+
+@keyframes story-bell-swing {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(11deg);
+  }
+  40% {
+    transform: rotate(-9deg);
+  }
+  60% {
+    transform: rotate(5deg);
+  }
+  80% {
+    transform: rotate(-3deg);
+  }
+}
+
+@keyframes story-dash-flow {
+  0% {
+    stroke-dashoffset: 24;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.story-pulse-danger {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: story-pulse-danger 1.8s ease-in-out infinite;
+}
+
+.story-bell-swing {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation: story-bell-swing 2.4s ease-in-out infinite;
+}
+
+.story-dash-flow {
+  stroke-dasharray: 4 4;
+  animation: story-dash-flow 1.4s linear infinite;
+}
+
+/* Circular theme wipe. The clip is CSS-driven so the first composited frame
+   is already cropped — animating in transition.ready is one frame too late
+   and flashes the incoming snapshot. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+  opacity: 1;
+}
+
+@keyframes beep-theme-expand {
+  from {
+    clip-path: circle(0px at var(--vt-x) var(--vt-y));
+  }
+  to {
+    clip-path: circle(var(--vt-r) at var(--vt-x) var(--vt-y));
+  }
+}
+
+@keyframes beep-theme-shrink {
+  from {
+    clip-path: circle(var(--vt-r) at var(--vt-x) var(--vt-y));
+  }
+  to {
+    clip-path: circle(0px at var(--vt-x) var(--vt-y));
+  }
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+  animation: none;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+  animation: beep-theme-expand 450ms ease-in-out both;
+}
+
+html.theme-reveal-old::view-transition-old(root) {
+  z-index: 2147483646;
+  animation: beep-theme-shrink 450ms ease-in-out both;
+}
+
+html.theme-reveal-old::view-transition-new(root) {
+  z-index: 0;
+  animation: none;
+}
+
+::view-transition-group(root) {
+  animation: none;
+}
+
+::view-transition {
+  background-color: var(--vt-bg);
+}
+
+html.theme-transitioning,
+html.theme-transitioning * {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

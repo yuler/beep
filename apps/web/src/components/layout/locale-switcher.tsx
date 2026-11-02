@@ -79,7 +79,7 @@ export function LocaleSwitcher({
 				render={
 					<Button
 						type="button"
-						variant="outline"
+						variant="ghost"
 						size="icon"
 						className={className}
 						aria-label={m.common_language()}

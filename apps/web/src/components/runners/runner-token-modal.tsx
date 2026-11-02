@@ -47,8 +47,8 @@ function CodeSnippet({ label, code, copied, onCopy }: CodeSnippetProps) {
 				>
 					{copied ? (
 						<>
-							<Check className="size-3.5 text-emerald-500" />
-							<span className="text-emerald-500">{m.runners_copied()}</span>
+							<Check className="size-3.5 text-success" />
+							<span className="text-success">{m.runners_copied()}</span>
 						</>
 					) : (
 						<>
@@ -100,7 +100,7 @@ beep runner up`;
 				</DialogHeader>
 
 				<div className="flex flex-col gap-6 py-2 min-w-0 max-w-full overflow-x-hidden">
-					<Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+					<Alert variant="warning">
 						<AlertTitle className="text-xs font-semibold uppercase tracking-wider">
 							{m.common_tips()}
 						</AlertTitle>
@@ -144,10 +144,8 @@ beep runner up`;
 								>
 									{tokenCopy.copied ? (
 										<>
-											<Check className="size-3.5 text-emerald-500" />
-											<span className="text-emerald-500">
-												{m.runners_copied()}
-											</span>
+											<Check className="size-3.5 text-success" />
+											<span className="text-success">{m.runners_copied()}</span>
 										</>
 									) : (
 										<>

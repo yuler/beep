@@ -13,14 +13,14 @@ import { m } from "@/locale/paraglide/messages";
 
 const RUN_STATUS_VARIANT: Record<
 	string,
-	"default" | "secondary" | "outline" | "destructive"
+	"default" | "secondary" | "outline" | "destructive" | "success" | "warning"
 > = {
 	pending: "secondary",
-	running: "default",
-	succeeded: "outline",
+	running: "outline",
+	succeeded: "success",
 	failed: "destructive",
 	skipped: "secondary",
-	expired: "destructive",
+	expired: "warning",
 };
 
 export function BeepRuns({

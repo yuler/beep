@@ -3,17 +3,23 @@
   inset-block-start: 1.25rem;
   inset-inline-end: 1.25rem;
   z-index: var(--z-flash);
-  max-inline-size: 600px;
-  animation: appear-then-fade 3s 300ms both;
+  max-inline-size: 500px;
+  background-color: var(--ground);
+  border: 1px solid var(--line);
+  border-inline-start: 2px solid var(--ink);
+  border-radius: 0;
+  box-shadow: none;
+  animation: appear-then-fade 4s 200ms both;
 }
 
 .flash img,
 .flash svg {
-  block-size: 1.4rem;
-  inline-size: 1.4rem;
+  block-size: 1.2rem;
+  inline-size: 1.2rem;
+  color: currentColor;
 }
 
 @keyframes appear-then-fade {
-  0%,100% { opacity: 0; }
-  5%,60%  { opacity: 1; }
+  0%, 100% { opacity: 0; transform: translateY(-4px); }
+  5%, 85%  { opacity: 1; transform: translateY(0); }
 }

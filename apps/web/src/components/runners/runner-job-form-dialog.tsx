@@ -207,7 +207,7 @@ export function RunnerJobFormDialog({
 								disabled={submitting}
 							/>
 							{isEdit && job && jobSlug.trim() !== job.slug ? (
-								<p className="text-[11px] text-amber-600 dark:text-amber-400">
+								<p className="text-[11px] text-warning">
 									Changing the slug requires renaming the local script on the
 									runner host.
 								</p>

@@ -19,7 +19,7 @@ export function CopyButton({
 			variant="outline"
 			size="icon-xs"
 			className={cn(
-				"absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity bg-background/90 hover:bg-background border shadow-xs",
+				"absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity bg-ground hover:bg-wash border border-line",
 				className,
 			)}
 			onClick={onCopy}
@@ -27,7 +27,7 @@ export function CopyButton({
 			title={label}
 		>
 			{copied ? (
-				<Check className="size-3 text-emerald-500" />
+				<Check className="size-3 text-success" />
 			) : (
 				<Copy className="size-3" />
 			)}
@@ -51,7 +51,7 @@ export function CopyableCode({
 	return (
 		<div
 			className={cn(
-				"relative group min-w-0 max-w-full rounded-lg border bg-muted/60",
+				"relative group min-w-0 max-w-full rounded-sm border border-line bg-wash",
 				className,
 			)}
 		>

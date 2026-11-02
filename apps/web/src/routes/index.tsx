@@ -4,7 +4,7 @@ import {
 	FaqSection,
 	FeaturesSection,
 	HeroSection,
-	HowItWorksSection,
+	StorySection,
 	TestimonialsSection,
 } from "@/components/home";
 import { SiteLayout } from "@/components/layout";
@@ -13,11 +13,11 @@ export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
 	return (
-		<SiteLayout>
+		<SiteLayout header="actions">
 			<main className="flex-1">
 				<HeroSection />
+				<StorySection />
 				<FeaturesSection />
-				<HowItWorksSection />
 				<TestimonialsSection />
 				<FaqSection />
 				<CtaSection />

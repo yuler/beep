@@ -79,18 +79,16 @@ function RunnersPage() {
 				]}
 			/>
 
-			<div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+			<div className="flex flex-1 flex-col gap-6">
 				<div className="flex flex-wrap items-center justify-between gap-4">
 					<div className="flex flex-col gap-1">
-						<h1 className="font-heading text-2xl font-bold tracking-tight sm:text-3xl">
+						<h1 className="type-title text-ink font-medium">
 							{m.runners_title()}
 						</h1>
-						<p className="text-sm text-muted-foreground">
-							{m.runners_description()}
-						</p>
+						<p className="type-meta text-gray">{m.runners_description()}</p>
 					</div>
 
-					<Button size="sm" onClick={handleOpenAdd}>
+					<Button variant="solid" size="sm" onClick={handleOpenAdd}>
 						<Plus data-icon="inline-start" />
 						{m.runners_add_runner()}
 					</Button>
